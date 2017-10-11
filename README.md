@@ -43,4 +43,4 @@ Sanity check a family directory:
 
 ## License
 
-The tools and files under this directory are available under the Apache License v2.0, for details see [LICENSE.txt](LICENSE.txt)
+The tools and files under this directory are available under the Apache License v2.0, for details see [LICENSE](LICENSE)
