@@ -39,8 +39,8 @@ def main():
     expected.update(codepointsInNamelist(nam_filepath))
 
   filename = sys.argv[1]
-  cps = CodepointsInFont(filename)
-  diff = cps - expected
+  diff = expected - CodepointsInFont(filename)
+
   print filename,
   if bool(diff):
     print 'missing',
