@@ -41,12 +41,13 @@ def main():
   filename = sys.argv[1]
   cps = CodepointsInFont(filename)
   diff = cps - expected
+  print filename,
   if bool(diff):
-    print 'The following codepoints are\n missing on %s:\n' % (filename)
+    print 'missing',
     for c in sorted(diff):
-      print '0x%04X' % (c)
+      print '0x%04X' % (c),
   else:
-    print '%s contains all chars in the GF glyph-sets!' % (filename)
+    print 'OK'
 
 
 if __name__ == '__main__':
