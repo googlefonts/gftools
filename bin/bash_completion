@@ -1,0 +1,14 @@
+# bash completion for gftools
+which gftools &&
+function _gftools {
+    local  cur prev subcommands
+    COMPREPLY=()
+    cur="$(_get_cword)"
+    prev="$3"
+    # if prev is empty
+    if [ $COMP_CWORD == 1 ] ; then
+        subcommands="$(gftools --list-subcommands)"
+        COMPREPLY=( $(compgen -W "$subcommands" -- "$cur") )
+    fi
+} &&
+complete -o default -F _gftools gftools
