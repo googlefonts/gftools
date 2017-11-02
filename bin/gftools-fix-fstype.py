@@ -14,14 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import argparse
-from argparse import RawTextHelpFormatter
-from fontTools.ttLib import TTFont
-
-description = """
-gftools fix-fstype
-~~~~~~~~~~~~~~~~~~~~~~~~
-
+"""
 Update a collection of fonts fsType value to Installable Embedding.
 
 Google Fonts requires Installable Embedding (0):
@@ -29,14 +22,12 @@ https://github.com/googlefonts/gf-docs/blob/master/ProjectChecklist.md#fstype
 
 Microsoft OpenType specification:
 https://www.microsoft.com/typography/otspec/os2.htm#fst
-
-e.g:
-gftools fix-fstype [fonts]
-
 """
-
-parser = argparse.ArgumentParser(description=description,
-                                 formatter_class=RawTextHelpFormatter)
+from argparse import (ArgumentParser,
+                      RawTextHelpFormatter)
+from fontTools.ttLib import TTFont
+parser = ArgumentParser(description=__doc__,
+                        formatter_class=RawTextHelpFormatter)
 parser.add_argument('fonts',
                     nargs="+",
                     help="Fonts in OpenType (TTF/OTF) format")

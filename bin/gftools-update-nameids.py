@@ -15,14 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from fontTools.ttLib import TTFont
-import argparse
-from argparse import RawTextHelpFormatter
-
-description = """
-gftools update-nameids
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+"""
 Update specific nameIDs in a collection of fonts with new strings.
 
 Examples:
@@ -33,7 +26,9 @@ $ gftools update-nameids -v="4.000" -ul="http://license.org" [fonts.ttf]
 if you need to change the name or style of a collection of font families,
 use gftools nametable-from-filename instead.
 """
-
+from fontTools.ttLib import TTFont
+from argparse import (ArgumentParser,
+                      RawTextHelpFormatter)
 
 NAME_IDS = {
   0: 'copyright',
@@ -63,9 +58,8 @@ def update_field(arg, args, fields, nametable):
       swap_name(fields, nametable, text)
 
 
-
-parser = argparse.ArgumentParser(description=description,
-                 formatter_class=RawTextHelpFormatter)
+parser = ArgumentParser(description=__doc__,
+                        formatter_class=RawTextHelpFormatter)
 parser.add_argument('fonts', nargs="+")
 parser.add_argument('-c', '--copyright', type=str,
                     help='Update copyright string')

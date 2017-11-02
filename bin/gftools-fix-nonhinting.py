@@ -39,14 +39,17 @@
 # $ gftools fix-nonhinting FontIn.ttf FontOut.ttf
 
 # Import our system library and fontTools ttLib
-import argparse
+"""
+Fixes TTF GASP table so that its program
+contains the minimal recommended instructions.
+"""
+from argparse import (ArgumentParser,
+                      RawTextHelpFormatter)
 import os
 from fontTools import ttLib
 from fontTools.ttLib.tables import ttProgram
-
-description = 'Fixes TTF GASP table so that its program ' \
-              'contains the minimal recommended instructions'
-parser = argparse.ArgumentParser(description=description)
+parser = ArgumentParser(description=__doc__,
+                        formatter_class=RawTextHelpFormatter)
 parser.add_argument('fontfile_in',
                      nargs=1,
                     help="Font in OpenType (TTF/OTF) format")

@@ -16,19 +16,14 @@
 #
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
 #
-import argparse
+"""
+Check a hinted font will successfully transfer
+  vtt instructions to an unhinted font.
+"""
+from argparse import (ArgumentParser,
+                      RawTextHelpFormatter)
 from fontTools.ttLib import TTFont
 import logging
-
-description = """
-check-vtt-compatibility
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Check a hinted font will successfully transfer vtt instructions to an
-unhinted font
-
-$ gftools check-vtt-compatibility hinted.ttf unhinted.ttf
-"""
 
 
 def font_glyphs(font):
@@ -64,9 +59,8 @@ def compare_glyph_count(font1, name1, name2):
     logging.info('%s %s glyphs match' % (name1, name2))
 
 
-parser = argparse.ArgumentParser(
-  description=description,
-  formatter_class=argparse.RawTextHelpFormatter)
+parser = ArgumentParser(description=__doc__,
+                        formatter_class=RawTextHelpFormatter)
 parser.add_argument('hinted', help='Hinted font')
 parser.add_argument('unhinted', help='Unhinted font')
 parser.add_argument('--count', action="store_true", default=True,

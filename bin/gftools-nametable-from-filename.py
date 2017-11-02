@@ -15,23 +15,18 @@
 # limitations under the License.
 #
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
+"""
+Replace a collection of fonts nametable's with new tables based on
+the Google Fonts naming spec from just the filename.
+
+The fsSelection, fsType and macStyle also get updated
+to reflect the new names.
+"""
 import re
 import ntpath
-import argparse
-from argparse import RawTextHelpFormatter
+from argparse import (ArgumentParser,
+                      RawTextHelpFormatter)
 from fontTools.ttLib import TTFont, newTable
-
-
-description = """
-gftools nametable-from-filename
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Replace a collection of fonts nametable's with new tables based on the Google
-Fonts naming spec from just the filename.
-
-The fsSelection, fsType and macStyle also get updated to reflect the new
-names.
-"""
 
 WIN_SAFE_STYLES = [
   'Regular',
@@ -267,8 +262,8 @@ def nametable_from_filename(filepath):
   return new_table
 
 
-parser = argparse.ArgumentParser(description=description,
-                                 formatter_class=RawTextHelpFormatter)
+parser = ArgumentParser(description=__doc__,
+                        formatter_class=RawTextHelpFormatter)
 parser.add_argument('fonts', nargs="+")
 
 

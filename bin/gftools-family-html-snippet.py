@@ -42,7 +42,8 @@ $ fontbakery family-html-snippet "Exo" "Hello World"
 import json
 import requests
 import sys
-from argparse import ArgumentParser
+from argparse import (ArgumentParser,
+                      RawTextHelpFormatter)
 
 GF_API = "https://www.googleapis.com/webfonts/v1/webfonts?key={}"
 
@@ -177,7 +178,8 @@ def gen_body_text(styles, sample_text):
 
 
 def main():
-  parser = ArgumentParser(description=__doc__)
+  parser = ArgumentParser(description=__doc__,
+                          formatter_class=RawTextHelpFormatter)
   parser.add_argument('key',
                       help='Key from Google Fonts Developer API')
   parser.add_argument('family',
