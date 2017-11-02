@@ -18,23 +18,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-import argparse
-from argparse import RawTextHelpFormatter
-from fontTools.ttLib import TTFont
-
-description = """
-gftools update-version
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+"""
 Update a collection of fonts version number to a new version number.
 
 e.g:
 gftools update-version [fonts] 2.300 2.301
-
 """
+from argparse import (ArgumentParser,
+                      RawTextHelpFormatter)
+from fontTools.ttLib import TTFont
 
-parser = argparse.ArgumentParser(description=description,
-                                 formatter_class=RawTextHelpFormatter)
+parser = ArgumentParser(description=__doc__,
+                        formatter_class=RawTextHelpFormatter)
 parser.add_argument('fonts',
           nargs="+",
           help="Fonts in OpenType (TTF/OTF) format")

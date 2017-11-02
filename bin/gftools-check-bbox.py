@@ -18,46 +18,31 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-import argparse
-from argparse import RawTextHelpFormatter
-import csv
-import sys
-from fontTools.ttLib import TTFont
-import tabulate
-
-description = """
-gftools check-bbox
-~~~~~~~~~~~~~~~~~~~~~~~~
-
+"""
 A Python script for printing bounding boxes to stdout.
 
 Users can either check a collection of fonts bounding boxes (--family) or
 the bounding box for each glyph in the collection of fonts (--glyphs).
-
-Extremes coordinates for each category can be returned with the argument
---extremes.
-
-e.g:
-
-Check bounding boxes of fonts in collection:
-gftools check-bbox --family [fonts]
-
-Check bounding boxes of glyphs in fonts collection:
-gftools check-bbox --glyphs [fonts]
-
-Find the extreme coordinates for the bounding boxes in the fonts collection:
-gftools check-bbox --family --extremes [fonts]
-
 """
-parser = argparse.ArgumentParser(description=description,
-                                 formatter_class=RawTextHelpFormatter)
+from argparse import (ArgumentParser,
+                      RawTextHelpFormatter)
+import csv
+import sys
+from fontTools.ttLib import TTFont
+import tabulate
+parser = ArgumentParser(description=__doc__,
+                        formatter_class=RawTextHelpFormatter)
 parser.add_argument('fonts',
-                    nargs="+",
-                    help="Fonts in OpenType (TTF/OTF) format")
-parser.add_argument('--csv', default=False, action='store_true')
-parser.add_argument('--extremes', default=False, action='store_true')
+                    nargs='+',
+                    help='Fonts in OpenType (TTF/OTF) format')
+parser.add_argument('--csv', default=False, action='store_true',
+                    help='Output data in comma-separated-values format')
+parser.add_argument('--extremes', default=False, action='store_true',
+                    help='Print extremes coordinates for each category')
 group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument('--glyphs', default=False, action="store_true")
+group.add_argument('--glyphs', default=False, action='store_true',
+                   help=('Return the bounds for glyphs'
+                         ' in a collection of fonts'))
 group.add_argument('--family', default=False, action="store_true",
                    help='Return the bounds for a family of fonts')
 

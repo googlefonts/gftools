@@ -55,6 +55,7 @@ setup(
 #                      see: https://github.com/fontforge/fontforge/issues/2048
         'FontTools',
         'Flask',
+        'glyphsLib',
         'pillow',
         'protobuf',
         'requests',
