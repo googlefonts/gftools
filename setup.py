@@ -50,13 +50,15 @@ setup(
         'Programming Language :: Python :: 2.7'
     ],
     install_requires=[
-# TODO: Review this:
-#
-#        'lxml',
-#        'defusedxml',
-#        'requests',
-#        'unidecode',
-#        'protobuf',
-#        'bs4'
+#       'fontforge', # needed by build-font2ttf script
+#                      but there's no fontforge package on pypi
+#                      see: https://github.com/fontforge/fontforge/issues/2048
+        'FontTools',
+        'Flask',
+        'pillow',
+        'protobuf',
+        'requests',
+        'tabulate',
+        'unidecode'
     ]
 )

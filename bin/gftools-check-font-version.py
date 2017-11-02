@@ -15,24 +15,7 @@
 # limitations under the License.
 #
 """
-gftools check-font-version
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Check the version number of a family hosted on fonts.google.com.
-
-`gftools check-font-version "Roboto"`
-
-
-Comparison against a local family can be made using the -lc argument:
-
-`gftools check-font-version "Roboto" -lc [/dir/Roboto-Regular.ttf, ...]`
-
-
-Comparison against a url containing a zipped family can be made using
-the -wc argument:
-
-`gftools check-font-version "Roboto" -wc=http://roboto.com/roboto.zip`
-
 """
 from __future__ import print_function
 from argparse import ArgumentParser

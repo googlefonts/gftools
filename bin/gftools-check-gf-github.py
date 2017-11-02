@@ -29,7 +29,8 @@ The title and url of each issues/pr can be displayed by using the
 import requests
 import re
 from datetime import datetime
-from argparse import ArgumentParser
+from argparse import (ArgumentParser,
+                      RawTextHelpFormatter)
 
 
 def get_pagination_urls(request):
@@ -123,7 +124,8 @@ def iso8601_to_date(date_string):
 
 
 def main():
-  parser = ArgumentParser(description=__doc__)
+  parser = ArgumentParser(description=__doc__,
+                          formatter_class=RawTextHelpFormatter)
   parser.add_argument('username',
                       help="Your Github username")
   parser.add_argument('password',

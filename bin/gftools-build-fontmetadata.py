@@ -22,13 +22,6 @@
 #
 # gftools build-fontmetadata -h
 #
-# DEPENDENCIES
-#
-# The script depends on the PIL API (Python Imaging Library)
-# If you have pip <https://pypi.python.org/pypi/pip> installed, run:
-#
-#     $ sudo pip install pillow protobuf gftools
-
 import argparse
 import collections
 import csv

@@ -25,11 +25,15 @@
 # $ gftools build-font2ttf font.otf font.ttf
 from __future__ import print_function
 
+import sys
 import argparse
-import fontforge
 import logging
 import os
-import sys
+
+try:
+  import fontforge
+except:
+  sys.exit("To run this tool you'll need to install FontForge.")
 
 log_format = '%(levelname)-8s %(message)s'
 logger = logging.getLogger()
