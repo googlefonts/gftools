@@ -1,10 +1,21 @@
-
+#!/usr/bin/env python2
+# Copyright 2017 The Google Font Tools Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 import collections
 import warnings
-
-
 from fontTools import ttLib
-
 from google.apputils import app
 
 DiffTuple = collections.namedtuple('DiffTuple', ['name', 'lhs', 'rhs'])
@@ -50,7 +61,6 @@ def _DiffFont(lhs, rhs):
     'rhs', indicating only one side has the table. diff_tuples is a list of
     DiffTuple.
   """
-
   results = []
   for tag, one_side in _KeyMatch(lhs.reader.keys(), rhs.reader.keys()):
     diff_tuples = []

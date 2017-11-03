@@ -17,33 +17,37 @@
 # Contributors: Rod Sheeter (rsheeter google com)
 #
 # Converts a .nam file to a list of ranges.
-
 import sys
 import tokenize
 
-if len(sys.argv) != 2:
-  print "Usage: rangify <nam file>"
-  sys.exit(1)
 
 def handle_num(type, token, (srow, scol), (erow, ecol), line):
   global cps
   if type == tokenize.NUMBER:
     cps.append(int(token, 16))
 
-cps = []
-tokenize.tokenize(open(sys.argv[1]).readline, handle_num)
-cps.sort()
 
-seqs = []
-seq = (None,)
-for cp in cps:
-  if seq[0] is None:
-    seq = (cp,cp)
-  elif seq[1] == cp - 1:
-    seq = (seq[0], cp)
-  else:
-    seqs.append(seq)
-    seq = (None,)
+def main():
+  if len(sys.argv) != 2:
+    sys.exit("Usage: rangify <nam file>")
 
-for seq in seqs:
-  print seq
+  cps = []
+  tokenize.tokenize(open(sys.argv[1]).readline, handle_num)
+  cps.sort()
+
+  seqs = []
+  seq = (None,)
+  for cp in cps:
+    if seq[0] is None:
+      seq = (cp,cp)
+    elif seq[1] == cp - 1:
+      seq = (seq[0], cp)
+    else:
+      seqs.append(seq)
+      seq = (None,)
+
+  for seq in seqs:
+    print seq
+
+if __name__ == '__main__':
+  main()

@@ -43,6 +43,7 @@ import codecs
 from util import google_fonts
 from util  import filter_lists
 
+
 def _get_basechar_unicode(name):
     codepoint = filter_lists.get_unicode_by_name(name)
     if codepoint is not None:
@@ -53,6 +54,7 @@ def _get_basechar_unicode(name):
     if '.' in name:
         return _get_basechar_unicode(name.split('.')[0])
     return None
+
 
 def _sortkey_namelist_entries(entry):
     codepoint, name, _, _ = entry
@@ -76,6 +78,7 @@ def _sortkey_namelist_entries(entry):
         , name
     ])
 
+
 def reformat_namelist(filename, out=None):
     if out is None:
         out = sys.stdout
@@ -84,6 +87,7 @@ def reformat_namelist(filename, out=None):
         return
     with codecs.open(filename, 'r', encoding='utf-8') as f:
         _reformat_namelist(f, out)
+
 
 def _reformat_namelist(f, out=None):
     entries = []
@@ -141,12 +145,14 @@ def _names_generator(filename):
                 # unencoded name
                 yield line.rsplit(' ', 1)[1]
 
+
 def _mkdir(path):
     try:
         os.makedirs(path)
     except OSError as exc:
         if not os.path.isdir(path):
           raise exc
+
 
 def generate_filter_lists(filename):
     # 'GF-{script}-rest.nam' => {script}-rest
@@ -165,6 +171,7 @@ def generate_filter_lists(filename):
             print(filter_lists.translate_name(name, production_name=False), file=niceNamesFile)
             print(filter_lists.translate_name(name, production_name=True), file=prodNamesFile)
 
+
 def _format_codepoint(codepoint):
     if 0xE000 <= codepoint <= 0xF8FF:
         item_description = 'PRIVATE USE AREA U+{0:04X}'.format(codepoint)
@@ -181,8 +188,10 @@ def _format_codepoint(codepoint):
           , char
           , item_description)
 
+
 def format_codepoint(codepoint):
     return ' '.join(_format_codepoint(codepoint))
+
 
 def namelist_from_font(file_name, out=None):
     if out is None:
@@ -201,6 +210,7 @@ def namelist_from_font(file_name, out=None):
             print(hexchar, char, item_description, file=out)
     font.close()
 
+
 def main(*args):
     if args[0] == 'reformat':
         reformat_namelist(args[1])
@@ -208,6 +218,7 @@ def main(*args):
         generate_filter_lists(args[1])
     else:
         namelist_from_font(args[0])
+
 
 if __name__ == '__main__':
     sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
