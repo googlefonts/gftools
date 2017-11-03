@@ -1,21 +1,29 @@
-
-
+#!/usr/bin/env python2
+# Copyright 2017 The Google Font Tools Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 import collections
 import contextlib
 import os
 import re
 import sys
-
-
 from fontTools import ttLib
-
 from google.apputils import app
 import gflags as flags
-
 from util import google_fonts as fonts
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_boolean('suppress_pass', True, 'Whether to print pass: results')
 flags.DEFINE_boolean('check_metadata', True, 'Whether to check METADATA values')
 flags.DEFINE_boolean('check_font', True, 'Whether to check font values')
@@ -25,8 +33,6 @@ _FIX_TYPE_OPTS = ['all', 'name', 'filename', 'postScriptName', 'fullName',
 flags.DEFINE_multistring('fix_type', 'all',
                          'What types of problems should be fixed by '
                          'repair_script. Choices: ' + ', '.join(_FIX_TYPE_OPTS))
-
-
 ResultMessageTuple = collections.namedtuple(
     'ResultMessageTuple', ['happy', 'message', 'path', 'repair_script'])
 
@@ -417,8 +423,6 @@ def _CheckFontInternalValues(path):
   return results
 
 
-
-
 def _WriteRepairScript(dest_file, results):
   with open(dest_file, 'w') as out:
     out.write('import collections\n')
@@ -441,7 +445,6 @@ def _WriteRepairScript(dest_file, results):
     for path in sorted(by_path.keys()):
       out.write('# repair %s\n' % os.path.basename(path))
       _, ext = os.path.splitext(path)
-
 
       prefix = ''
       if ext == '.ttf':

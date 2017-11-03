@@ -1,3 +1,18 @@
+#!/usr/bin/env python2
+# Copyright 2017 The Google Font Tools Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """
 add_font.py:
 ~~~~~~~~~~~~
@@ -34,16 +49,14 @@ import os
 import re
 import sys
 import time
-
 import fonts_public_pb2 as fonts_pb2
 from google.protobuf import text_format
 from google.apputils import app
 import gflags as flags
-
 from util import google_fonts as fonts
 
-FLAGS = flags.FLAGS
 
+FLAGS = flags.FLAGS
 flags.DEFINE_integer('min_pct', 50,
                      'What percentage of subset codepoints have to be supported'
                      ' for a non-ext subset.')
@@ -53,8 +66,6 @@ flags.DEFINE_integer('min_pct_ext', 10,
 flags.DEFINE_boolean('update', False,
                      'If a family is getting updated, keep the designer,'
                      ' category and date added values')
-
-
 
 
 def _FileFamilyStyleWeights(fontdir):
@@ -87,7 +98,6 @@ def _FileFamilyStyleWeights(fontdir):
   if len(family_names) > 1:
     raise RuntimeError('Ambiguous family name; possibilities: %s'
                        % family_names)
-
   return result
 
 
@@ -108,7 +118,6 @@ def _MakeMetadata(fontdir):
   old_metadata_file = os.path.join(fontdir, 'METADATA.pb')
 
   font_license = fonts.LicenseFromPath(fontdir)
-
 
   metadata = fonts_pb2.FamilyProto()
   metadata.name = file_family_style_weights[0].family
@@ -173,8 +182,6 @@ def _WriteTextFile(filename, text):
   print 'Wrote %s' % filename
 
 
-
-
 def main(argv):
   if len(argv) != 2:
     sys.exit('One argument, a directory containing a font family')
@@ -190,7 +197,6 @@ def main(argv):
     _WriteTextFile(desc, 'N/A')
 
   _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
-
 
 
 if __name__ == '__main__':
