@@ -49,7 +49,7 @@ import os
 import re
 import sys
 import time
-import fonts_public_pb2 as fonts_pb2
+import gftools.fonts_public_pb2 as fonts_pb2
 from google.protobuf import text_format
 from google.apputils import app
 import gflags as flags

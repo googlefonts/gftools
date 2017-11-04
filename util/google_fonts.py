@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
 from fontTools import ttLib
 
-import fonts_public_pb2 as fonts_pb2
+import gftools.fonts_public_pb2 as fonts_pb2
 from google.protobuf import text_format
 import gflags as flags
 from util import py_subsets
