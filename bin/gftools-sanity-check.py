@@ -429,8 +429,8 @@ def _WriteRepairScript(dest_file, results):
     out.write('import contextlib\n')
     out.write('from fontTools import ttLib\n')
     out.write('from google.protobuf.text_format import text_format\n')
-    out.write('from fonts_public_pb2 import fonts_pb2\n')
-    out.write('from fonts_public_pb2 '
+    out.write('from gftools.fonts_public_pb2 import fonts_pb2\n')
+    out.write('from gftools.fonts_public_pb2 '
               'import fonts_metadata_pb2\n')
     out.write('\n')
 
