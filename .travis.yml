@@ -1,0 +1,10 @@
+language: python
+python:
+- '2.7'
+before_install:
+  - pip install --upgrade pip
+install:
+  - pip install pytest
+  - pip setup.py install
+script:
+  - pytest Lib/gftools --verbose
