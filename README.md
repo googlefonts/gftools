@@ -1,7 +1,14 @@
-# Tools
+# Google Fonts Tools
 
-This directory contains miscellaneous tools for working with the Google Fonts collection.
+This project contains miscellaneous tools for working with the Google Fonts collection.
 **Glyph set documentation is in the encoding subdirectory.**
+
+# Install Instructions
+
+Please install these tools using our pip package hosted on PyPI:
+
+    sudo easy_install pip
+    pip install --upgrade gftools
 
 ## Requirements and Dependencies
 
@@ -14,12 +21,7 @@ Make sure the submodule is up to date by running:
 
     git submodule update --init --recursive
 
-Also `compare_font.py` and `sanity_check.py` have additional dependencies that can be installed with pip:
-
-    sudo easy_install pip;
-    pip install --user google-apputils protobuf git+git://github.com/behdad/fonttools.git;
-
-Upstreams:
+Upstream project repos:
 
 * https://github.com/schriftgestalt/GlyphsInfo
 * https://github.com/google/google-apputils
@@ -30,16 +32,16 @@ Upstreams:
 
 Compare fonts:
 
-    python compare_font.py font1.ttf font2.ttf;
+    gftools compare-font font1.ttf font2.ttf
 
 Add a METADATA.pb to a family directory
 
-    python add_font.py ../ofl/newfamily;
+    gftools add-font ../ofl/newfamily
 
 Sanity check a family directory:
 
-    python sanity_check.py --repair_script=/tmp/fix.py ../ofl/josefinsans;
-    python sanity_check.py --repair_script=/tmp/fix.py --fix_type=fsSelection ../ufl;
+    gftools sanity-check --repair_script=/tmp/fix.py ../ofl/josefinsans
+    gftools sanity-check --repair_script=/tmp/fix.py --fix_type=fsSelection ../ufl
 
 ## License
 
