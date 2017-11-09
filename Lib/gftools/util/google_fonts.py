@@ -30,7 +30,7 @@ from fontTools import ttLib
 import gftools.fonts_public_pb2 as fonts_pb2
 from google.protobuf import text_format
 import gflags as flags
-from util import py_subsets
+from gftools.util import py_subsets
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('nam_dir', 'encodings/', 'nam file dir')

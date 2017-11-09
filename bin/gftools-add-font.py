@@ -53,7 +53,7 @@ import gftools.fonts_public_pb2 as fonts_pb2
 from google.protobuf import text_format
 from google.apputils import app
 import gflags as flags
-from util import google_fonts as fonts
+from gftools.util import google_fonts as fonts
 
 
 FLAGS = flags.FLAGS

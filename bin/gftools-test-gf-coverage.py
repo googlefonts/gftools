@@ -16,8 +16,8 @@
 #
 import os
 import sys
-from util.google_fonts import (CodepointsInFont,
-                               codepointsInNamelist)
+from gftools.util.google_fonts import (CodepointsInFont,
+                                       codepointsInNamelist)
 
 NAM_DIR = os.path.join("encodings", "GF Glyph Sets")
 NAM_FILES = [

@@ -21,7 +21,7 @@ import sys
 from fontTools import ttLib
 from google.apputils import app
 import gflags as flags
-from util import google_fonts as fonts
+from gftools.util import google_fonts as fonts
 
 FLAGS = flags.FLAGS
 flags.DEFINE_boolean('suppress_pass', True, 'Whether to print pass: results')

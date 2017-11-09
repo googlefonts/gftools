@@ -17,7 +17,7 @@ import contextlib
 import os
 from fontTools import ttLib
 from google.apputils import app
-from util import google_fonts as fonts
+from gftools.util import google_fonts as fonts
 
 
 def ListFeatures(font, table, name_fn):

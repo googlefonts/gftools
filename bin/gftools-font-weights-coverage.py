@@ -30,7 +30,7 @@ import os
 from os import listdir
 import sys
 from google.apputils import app
-from util import google_fonts as fonts
+from gftools.util import google_fonts as fonts
 
 
 def main(argv):
