@@ -66,7 +66,7 @@ import sys
 from fontTools.ttLib import sfnt
 from google.apputils import app
 import gflags as flags
-from util import google_fonts as fonts
+from gftools.util import google_fonts as fonts
 
 FLAGS = flags.FLAGS
 flags.DEFINE_boolean('diff_tables', True, 'Whether to print table size diffs')

@@ -37,7 +37,8 @@ setup(
             'Roderick Sheeter'),
     author_email='dave@lab6.com',
     package_dir={'': 'Lib'},
-    packages=['gftools'],
+    packages=['gftools',
+              'gftools.util'],
     scripts=gftools_scripts(),
     zip_safe=False,
     classifiers=[
