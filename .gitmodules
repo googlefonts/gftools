@@ -1,4 +1,4 @@
-[submodule "util/GlyphsInfo"]
-	path = util/GlyphsInfo
+[submodule "Lib/gftools/util/GlyphsInfo"]
+	path = Lib/gftools/util/GlyphsInfo
 	url = https://github.com/schriftgestalt/GlyphsInfo
 	branch = master
