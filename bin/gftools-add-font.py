@@ -1,33 +1,31 @@
 #!/usr/bin/env python2
-# Copyright 2017 The Google Font Tools Authors
+#
+# Copyright 2017 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
+# distributed under the License is distributed on an "AS-IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-add_font.py:
-~~~~~~~~~~~~
+"""Utility to setup a font for addition to Piper.
+
 
 Generate METADATA.pb files for font families.
 
 METADATA.pb files are used to serve the families on http://fonts.google.com.
-
 Font families are stored in this repo by license type. The following
 directories contain font families:
 
 ../fonts/ofl
 ../fonts/apache
 ../fonts/ufl
-
 
 Generating a METADATA.pb file for a new family:
 
@@ -37,26 +35,26 @@ Generating a METADATA.pb file for a new family:
 4. Run the following: python add_font.py /path/to/new/family
 5. Update the category field in the generated METADATA.pb file.
 
-
 Generating a METADATA.pb file for an existing family:
 
 1. run the following: python add_font.py --update /path/to/existing/family
-
 """
+
 import errno
 import glob
 import os
-import re
 import sys
 import time
-import gftools.fonts_public_pb2 as fonts_pb2
-from google.protobuf import text_format
-from google.apputils import app
-import gflags as flags
-from gftools.util import google_fonts as fonts
 
+
+import gflags as flags
+import gftools.fonts_public_pb2 as fonts_pb2
+from gftools.util import google_fonts as fonts
+from google.apputils import app
+from google.protobuf import text_format
 
 FLAGS = flags.FLAGS
+
 flags.DEFINE_integer('min_pct', 50,
                      'What percentage of subset codepoints have to be supported'
                      ' for a non-ext subset.')
@@ -85,7 +83,7 @@ def _FileFamilyStyleWeights(fontdir):
   if not os.path.isdir(fontdir):
     raise OSError(errno.ENOTDIR, 'No such directory', fontdir)
 
-  files = glob.glob(os.path.join(fontdir, '*.ttf'))
+  files = glob.glob(os.path.join(fontdir, '*.[ot]tf'))
   if not files:
     raise OSError(errno.ENOENT, 'no font files found')
 
@@ -98,6 +96,7 @@ def _FileFamilyStyleWeights(fontdir):
   if len(family_names) > 1:
     raise RuntimeError('Ambiguous family name; possibilities: %s'
                        % family_names)
+
   return result
 
 
@@ -116,7 +115,6 @@ def _MakeMetadata(fontdir):
                                                           FLAGS.min_pct,
                                                           FLAGS.min_pct_ext)]
   old_metadata_file = os.path.join(fontdir, 'METADATA.pb')
-
   font_license = fonts.LicenseFromPath(fontdir)
 
   metadata = fonts_pb2.FamilyProto()
@@ -124,7 +122,7 @@ def _MakeMetadata(fontdir):
 
   if FLAGS.update and os.path.isfile(old_metadata_file):
     old_metadata = fonts_pb2.FamilyProto()
-    with open(old_metadata_file, "rb") as old_meta:
+    with open(old_metadata_file, 'rb') as old_meta:
       text_format.Parse(old_meta.read(), old_metadata)
       metadata.designer = old_metadata.designer
       metadata.category = old_metadata.category
@@ -143,7 +141,8 @@ def _MakeMetadata(fontdir):
     filename = os.path.basename(fontfile)
     font_psname = fonts.ExtractName(fontfile, fonts.NAME_PSNAME,
                                     os.path.splitext(filename)[0])
-    font_copyright = fonts.ExtractName(fontfile, fonts.NAME_COPYRIGHT, '???.')
+    font_copyright = fonts.ExtractName(fontfile, fonts.NAME_COPYRIGHT,
+                                       '???.').strip()
 
     font_metadata = metadata.fonts.add()
     font_metadata.name = family
@@ -157,6 +156,21 @@ def _MakeMetadata(fontdir):
     font_metadata.copyright = font_copyright
 
   return metadata
+
+
+def _GetAvgSize(file_family_style_weights):
+  """Gets average file size of all font weights.
+
+  Returns:
+       average file size.
+
+  Args:
+    file_family_style_weights: List of fonts.FileFamilyStyleWeightTuple.
+  """
+  total_size = 0
+  for list_tuple in file_family_style_weights:
+    total_size += os.stat(list_tuple.file).st_size
+  return total_size / len(file_family_style_weights)
 
 
 def _WriteTextFile(filename, text):
@@ -182,6 +196,8 @@ def _WriteTextFile(filename, text):
   print 'Wrote %s' % filename
 
 
+
+
 def main(argv):
   if len(argv) != 2:
     sys.exit('One argument, a directory containing a font family')
@@ -197,6 +213,7 @@ def main(argv):
     _WriteTextFile(desc, 'N/A')
 
   _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
+
 
 
 if __name__ == '__main__':

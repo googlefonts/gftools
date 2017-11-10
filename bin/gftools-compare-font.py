@@ -1,14 +1,15 @@
 #!/usr/bin/env python2
-# Copyright 2017 The Google Font Tools Authors
+#
+# Copyright 2017 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
+# distributed under the License is distributed on an "AS-IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -60,17 +61,21 @@ Roboto-Regular.ttf (162876) vs Roboto2-Regular.ttf (145256) (-17620)
     vmtx, +0, 0=>0, 0.0%
     TOTAL, -17611, 162569=>144958, -10.8%
 """
+
 import errno
 import os
 import sys
+
 from fontTools.ttLib import sfnt
-from google.apputils import app
 import gflags as flags
 from gftools.util import google_fonts as fonts
+from google.apputils import app
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_boolean('diff_tables', True, 'Whether to print table size diffs')
 flags.DEFINE_boolean('diff_coverage', True, 'Whether to print coverage diffs')
+
 _KNOWN_TABLES = ('BASE', 'CFF ', 'DSIG', 'GDEF', 'GPOS', 'GSUB', 'LTSH',
                  'OS/2', 'VORG', 'cmap', 'cvt ', 'fpgm', 'gasp', 'glyf', 'hdmx',
                  'head', 'hhea', 'hmtx', 'loca', 'maxp', 'name', 'post', 'prep',

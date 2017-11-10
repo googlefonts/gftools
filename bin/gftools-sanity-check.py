@@ -1,38 +1,49 @@
 #!/usr/bin/env python2
-# Copyright 2017 The Google Font Tools Authors
+#
+# Copyright 2017 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
+# distributed under the License is distributed on an "AS-IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+r"""Tool to identify problems with fonts.
+
+"""
+
 import collections
 import contextlib
 import os
 import re
 import sys
+
 from fontTools import ttLib
-from google.apputils import app
 import gflags as flags
 from gftools.util import google_fonts as fonts
+from google.apputils import app
 
 FLAGS = flags.FLAGS
+
 flags.DEFINE_boolean('suppress_pass', True, 'Whether to print pass: results')
 flags.DEFINE_boolean('check_metadata', True, 'Whether to check METADATA values')
 flags.DEFINE_boolean('check_font', True, 'Whether to check font values')
 flags.DEFINE_string('repair_script', None, 'Where to write a repair script')
-_FIX_TYPE_OPTS = ['all', 'name', 'filename', 'postScriptName', 'fullName',
-                  'fsSelection', 'fsType', 'usWeightClass', 'emptyGlyphLSB']
-flags.DEFINE_multistring('fix_type', 'all',
-                         'What types of problems should be fixed by '
-                         'repair_script. Choices: ' + ', '.join(_FIX_TYPE_OPTS))
+_FIX_TYPE_OPTS = [
+    'all', 'name', 'filename', 'postScriptName', 'fullName', 'fsSelection',
+    'fsType', 'usWeightClass', 'emptyGlyphLSB'
+]
+flags.DEFINE_multi_string('fix_type', 'all',
+                          'What types of problems should be fixed by '
+                          'repair_script. '
+                          'Choices: ' + ', '.join(_FIX_TYPE_OPTS))
+
 ResultMessageTuple = collections.namedtuple(
     'ResultMessageTuple', ['happy', 'message', 'path', 'repair_script'])
 
@@ -106,8 +117,8 @@ def _CheckLicense(path):
   result = _HappyResult('License consistantly %s' % lic, path)
   # if we were Python 3 we'd use casefold(); this will suffice
   if lic_dir.lower() != lic.lower():
-    result = _SadResult(
-        'Dir license != METADATA license: %s != %s' % (lic_dir, lic), path)
+    result = _SadResult('Dir license != METADATA license: %s != %s' %
+                        (lic_dir, lic), path)
 
   return [result]
 
@@ -128,25 +139,23 @@ def _CheckNameMatching(path):
     # We assume style/weight is correct in METADATA
     style = font.style
     weight = font.weight
-    values = [
-        ('name', name, font.name),
-        ('filename', fonts.FilenameFor(name, style, weight, '.ttf'),
-         font.filename),
-        ('postScriptName', fonts.FilenameFor(name, style, weight),
-         font.post_script_name),
-        ('fullName', fonts.FullnameFor(name, style, weight), font.full_name)
-    ]
+    values = [('name', name, font.name), ('filename', fonts.FilenameFor(
+        name, style, weight, '.ttf'), font.filename),
+              ('postScriptName', fonts.FilenameFor(name, style, weight),
+               font.post_script_name), ('fullName', fonts.FullnameFor(
+                   name, style, weight), font.full_name)]
 
     for (key, expected, actual) in values:
       if expected != actual:
-        results.append(_SadResult(
-            '%s METADATA %s/%d %s expected %s, got %s' %
-            (name, style, weight, key, expected, actual), path,
-            _FixMetadata(style, weight, key, expected)))
+        results.append(
+            _SadResult('%s METADATA %s/%d %s expected %s, got %s' %
+                       (name, style, weight, key, expected, actual), path,
+                       _FixMetadata(style, weight, key, expected)))
 
   if not results:
-    results.append(_HappyResult('METADATA name consistently derived from "%s"'
-                                % name, path))
+    results.append(
+        _HappyResult('METADATA name consistently derived from "%s"' % name,
+                     path))
 
   return results
 
@@ -169,8 +178,7 @@ def _IsBold(weight):
 
 
 def _ShouldFix(key):
-  return (FLAGS.fix_type and (
-      key in FLAGS.fix_type or 'all' in FLAGS.fix_type))
+  return FLAGS.fix_type and (key in FLAGS.fix_type or 'all' in FLAGS.fix_type)
 
 
 def _FixMetadata(style, weight, key, expected):
@@ -182,8 +190,8 @@ def _FixMetadata(style, weight, key, expected):
 
   return ('[f for f in metadata.fonts if f.style == \'%s\' '
           'and f.weight == %d][0].%s = %s') % (
-              style, weight, re.sub('([a-z])([A-Z])', r'\1_\2', key)
-              .lower(), expected)
+              style, weight, re.sub('([a-z])([A-Z])', r'\1_\2', key).lower(),
+              expected)
 
 
 def _FixFsSelectionBit(key, expected):
@@ -218,7 +226,7 @@ def _FixFsType(expected):
 def _FixWeightClass(expected):
   if not _ShouldFix('usWeightClass'):
     return None
-  return 'ttf[\'OS/2\'].usWeightClass = %d' %  expected
+  return 'ttf[\'OS/2\'].usWeightClass = %d' % expected
 
 
 def _FixBadNameRecord(friendly_name, name_id, expected):
@@ -226,8 +234,8 @@ def _FixBadNameRecord(friendly_name, name_id, expected):
     return None
 
   return ('for nr in [n for n in ttf[\'name\'].names if n.nameID == %d]:\n'
-          '  nr.string = \'%s\'.encode(nr.getEncoding())  # Fix %s'
-          % (name_id, expected, friendly_name))
+          '  nr.string = \'%s\'.encode(nr.getEncoding())  # Fix %s' %
+          (name_id, expected, friendly_name))
 
 
 def _FixMissingNameRecord(friendly_name, name_id, expected):
@@ -240,8 +248,8 @@ def _FixMissingNameRecord(friendly_name, name_id, expected):
           'nr.platEncID = 1\n'
           'nr.platformID = 3\n'
           'nr.string = \'%s\'.encode(nr.getEncoding())\n'
-          'ttf[\'name\'].names.append(nr)\n' % (
-              name_id, friendly_name, expected))
+          'ttf[\'name\'].names.append(nr)\n' % (name_id, friendly_name,
+                                                expected))
 
 
 def _FixEmptyGlyphLsb(glyph_name):
@@ -285,22 +293,25 @@ def _CheckFontOS2Values(path, font, ttf):
   # Per Dave C, we should NEVER set oblique, use 0 for italic
   expect_oblique = False
 
-  results.append(ResultMessageTuple(
-      marked_italic == expect_italic,
-      '%s %s/%d fsSelection marked_italic %d' % (
-          font_file, expected_style, expected_weight, marked_italic),
-      full_font_file, _FixFsSelectionBit('ITALIC', expect_italic)))
-  results.append(ResultMessageTuple(
-      marked_bold == expect_bold,
-      '%s %s/%d fsSelection marked_bold %d' %
-      (font_file, expected_style, expected_weight, marked_bold), full_font_file,
-      _FixFsSelectionBit('BOLD', expect_bold)))
+  results.append(
+      ResultMessageTuple(marked_italic == expect_italic,
+                         '%s %s/%d fsSelection marked_italic %d' %
+                         (font_file, expected_style, expected_weight,
+                          marked_italic), full_font_file,
+                         _FixFsSelectionBit('ITALIC', expect_italic)))
+  results.append(
+      ResultMessageTuple(marked_bold == expect_bold,
+                         '%s %s/%d fsSelection marked_bold %d' %
+                         (font_file, expected_style, expected_weight,
+                          marked_bold), full_font_file,
+                         _FixFsSelectionBit('BOLD', expect_bold)))
 
-  results.append(ResultMessageTuple(
-      marked_oblique == expect_oblique,
-      '%s %s/%d fsSelection marked_oblique %d' % (
-          font_file, expected_style, expected_weight, marked_oblique),
-      full_font_file, _FixFsSelectionBit('OBLIQUE', expect_oblique)))
+  results.append(
+      ResultMessageTuple(marked_oblique == expect_oblique,
+                         '%s %s/%d fsSelection marked_oblique %d' %
+                         (font_file, expected_style, expected_weight,
+                          marked_oblique), full_font_file,
+                         _FixFsSelectionBit('OBLIQUE', expect_oblique)))
 
   # For weight < 300, just confirm weight [250, 300)
   # TODO(user): we should also verify ordering is correct
@@ -310,18 +321,20 @@ def _CheckFontOS2Values(path, font, ttf):
     weight_ok = actual_weight >= 250 and actual_weight < 300
     weight_msg = '[250, 300)'
 
-  results.append(ResultMessageTuple(
-      weight_ok,
-      '%s %s/%d weight expected: %s usWeightClass: %d' %
-      (font_file, expected_style, expected_weight, weight_msg, actual_weight),
-      full_font_file, _FixWeightClass(expected_weight)))
+  results.append(
+      ResultMessageTuple(weight_ok,
+                         '%s %s/%d weight expected: %s usWeightClass: %d' %
+                         (font_file, expected_style, expected_weight,
+                          weight_msg, actual_weight), full_font_file,
+                         _FixWeightClass(expected_weight)))
 
   expected_fs_type = 0
-  results.append(ResultMessageTuple(
-      expected_fs_type == fs_type,
-      '%s %s/%d fsType expected: %d fsType: %d' %
-      (font_file, expected_style, expected_weight, expected_fs_type, fs_type),
-      full_font_file, _FixFsType(expected_fs_type)))
+  results.append(
+      ResultMessageTuple(expected_fs_type == fs_type,
+                         '%s %s/%d fsType expected: %d fsType: %d' %
+                         (font_file, expected_style, expected_weight,
+                          expected_fs_type, fs_type), full_font_file,
+                         _FixFsType(expected_fs_type)))
 
   return results
 
@@ -345,29 +358,30 @@ def _CheckFontNameValues(path, name, font, ttf):
   weight = font.weight
   full_font_file = os.path.join(path, font.filename)
 
-  expectations = [
-      ('family', fonts.NAME_FAMILY, name),
-      ('postScriptName', fonts.NAME_PSNAME,
-       fonts.FilenameFor(name, style, weight)),
-      ('fullName', fonts.NAME_FULLNAME, fonts.FullnameFor(name, style, weight))]
+  expectations = [('family', fonts.NAME_FAMILY, name),
+                  ('postScriptName', fonts.NAME_PSNAME, fonts.FilenameFor(
+                      name, style, weight)), ('fullName', fonts.NAME_FULLNAME,
+                                              fonts.FullnameFor(
+                                                  name, style, weight))]
 
   for (friendly_name, name_id, expected) in expectations:
     # If you have lots of name records they should ALL have the right value
     actuals = fonts.ExtractNames(ttf, name_id)
     for (idx, actual) in enumerate(actuals):
-      results.append(ResultMessageTuple(
-          expected == actual,
-          '%s %s/%d \'name\' %s[%d] expected %s, got %s' %
-          (name, style, weight, friendly_name, idx, expected, actual),
-          full_font_file,
-          _FixBadNameRecord(friendly_name, name_id, expected)))
+      results.append(
+          ResultMessageTuple(expected == actual,
+                             '%s %s/%d \'name\' %s[%d] expected %s, got %s' %
+                             (name, style, weight, friendly_name, idx, expected,
+                              actual), full_font_file,
+                             _FixBadNameRecord(friendly_name, name_id,
+                                               expected)))
 
     # should have at least one actual
     if not actuals:
-      results.append(_SadResult(
-          '%s %s/%d \'name\' %s has NO values' %
-          (name, style, weight, friendly_name), full_font_file,
-          _FixMissingNameRecord(friendly_name, name_id, expected)))
+      results.append(
+          _SadResult('%s %s/%d \'name\' %s has NO values' %
+                     (name, style, weight, friendly_name), full_font_file,
+                     _FixMissingNameRecord(friendly_name, name_id, expected)))
 
   return results
 
@@ -391,10 +405,11 @@ def _CheckLSB0ForEmptyGlyphs(path, font, ttf):
     is_empty = ttf['loca'][glyph_index] == ttf['loca'][glyph_index + 1]
     lsb = ttf['hmtx'][glyph_name][1]
     if is_empty and lsb != 0:
-      results.append(_SadResult(
-          '%s %s/%d [\'hmtx\'][\'%s\'][1] (lsb) should be 0 but is %d' %
-          (font.name, font.style, font.weight, glyph_name, lsb),
-          os.path.join(path, font.filename), _FixEmptyGlyphLsb(glyph_name)))
+      results.append(
+          _SadResult(
+              '%s %s/%d [\'hmtx\'][\'%s\'][1] (lsb) should be 0 but is %d' %
+              (font.name, font.style, font.weight, glyph_name, lsb),
+              os.path.join(path, font.filename), _FixEmptyGlyphLsb(glyph_name)))
   return results
 
 
@@ -428,7 +443,8 @@ def _WriteRepairScript(dest_file, results):
     out.write('import collections\n')
     out.write('import contextlib\n')
     out.write('from fontTools import ttLib\n')
-    out.write('from google.protobuf.text_format import text_format\n')
+    out.write('from google.protobuf.text_format '
+              'import text_format\n')
     out.write('from gftools.fonts_public_pb2 import fonts_pb2\n')
     out.write('from gftools.fonts_public_pb2 '
               'import fonts_metadata_pb2\n')
@@ -449,8 +465,8 @@ def _WriteRepairScript(dest_file, results):
       prefix = ''
       if ext == '.ttf':
         prefix = '  '
-        out.write('with contextlib.closing(ttLib.TTFont(\'%s\')) as ttf:\n'
-                  % path)
+        out.write(
+            'with contextlib.closing(ttLib.TTFont(\'%s\')) as ttf:\n' % path)
       elif os.path.isdir(path):
         metadata_file = os.path.join(path, 'METADATA.pb')
         out.write('metadata = fonts_pb2.FamilyProto()\n')

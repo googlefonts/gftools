@@ -1,25 +1,29 @@
 #!/usr/bin/env python2
-# Copyright 2017 The Google Font Tools Authors
+#
+# Copyright 2017 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
+# distributed under the License is distributed on an "AS-IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-Lists which variable font axes and named-instances are
-  declared in the 'fvar' table of a given TTF file.
+"""Utility to dump variation font info.
+
+Lists which variable font axes and named-instances are declared in the 'fvar'
+table of a given TTF file.
+
 """
 import contextlib
 import sys
 from fontTools import ttLib
+
 
 def _ResolveName(ttf, name_id):
   if name_id == 0xFFFF:
@@ -35,28 +39,27 @@ def _ResolveName(ttf, name_id):
 
 def main(argv):
   if len(argv) < 2:
-    sys.exit(("{}\n"
-              "usage:\n"
-              "       gftools varfont-info fontfile.ttf").format(__doc__))
-
+    sys.exit(('{}\n'
+              'usage:\n'
+              '       gftools varfont-info fontfile.ttf').format(__doc__))
   for filename in argv[1:]:
     with contextlib.closing(ttLib.TTFont(filename)) as ttf:
-      print (filename)
+      print filename
       if 'fvar' not in ttf:
-        print ("This font file lacks an 'fvar' table.")
+        print "This font file lacks an 'fvar' table."
       else:
         fvar = ttf['fvar']
-        print (' axes')
+        print ' axes'
         axes = [(a.axisTag, a.minValue, a.defaultValue, a.maxValue)
                 for a in fvar.axes]
         for tag, minv, defv, maxv in axes:
-          print ("  '%s' %d-%d, default %d" % (tag, minv, maxv, defv))
+          print "  '%s' %d-%d, default %d" % (tag, minv, maxv, defv)
 
         if fvar.instances:
-          print (' named-instances')
+          print ' named-instances'
           for inst in fvar.instances:
-            print ('   %s %s' % (_ResolveName(ttf, inst.postscriptNameID),
-                                 inst.coordinates))
+            print '   %s %s' % (_ResolveName(ttf, inst.postscriptNameID),
+                                inst.coordinates)
 
 if __name__ == '__main__':
   main(sys.argv)
