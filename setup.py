@@ -39,6 +39,7 @@ setup(
     package_dir={'': 'Lib'},
     packages=['gftools',
               'gftools.util'],
+    package_data={'gftools.util': ["GlyphsInfo/*.xml"]},
     scripts=gftools_scripts(),
     zip_safe=False,
     classifiers=[
