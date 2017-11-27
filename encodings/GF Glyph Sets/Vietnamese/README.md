@@ -3,6 +3,7 @@
 Here is how to create localized Vietnamese glyphs, different from default Latin ones, in Glyphs App.
 
 First, let's create glyphs for localized Vietnamese accents. 
+
 Go to `Glyphs > Add Glyphs`, copy and paste the command below:
 
 ```
@@ -16,7 +17,9 @@ tildecomb=tildecomb.loclVIT
 ![Vietnamese accents](img/VIT_accents.jpg)
 
 Adjust the new accents to your liking. 
+
 Then add localised Vietnamese glyphs with the next command. 
+
 Go to `Glyphs > Add Glyphs`, copy and paste the code below:
 
 ```
@@ -90,7 +93,9 @@ u+tildecomb.loclVIT=utilde
 y+tildecomb.loclVIT=ytilde
 ```
 
-Then, the following command will create new unique Vietnamese glyphs with special accents, and generate additional localized variants for these glyphs:
+Then, create new unique Vietnamese glyphs with special accents, and generate additional localized variants for these glyphs.
+
+Go to `Glyphs > Add Glyphs`, copy and paste the command below:
 
 ```
 Aacute.loclVIT Abreve.loclVIT Acircumflex.loclVIT Agrave.loclVIT Atilde.loclVIT Eacute.loclVIT Ecircumflex.loclVIT Egrave.loclVIT Iacute.loclVIT Igrave.loclVIT Oacute.loclVIT Ocircumflex.loclVIT Ograve.loclVIT Otilde.loclVIT Uacute.loclVIT Ugrave.loclVIT Yacute.loclVIT Ygrave.loclVIT aacute.loclVIT abreve.loclVIT acircumflex.loclVIT agrave.loclVIT atilde.loclVIT eacute.loclVIT ecircumflex.loclVIT egrave.loclVIT iacute.loclVIT igrave.loclVIT oacute.loclVIT ocircumflex.loclVIT ograve.loclVIT otilde.loclVIT uacute.loclVIT ugrave.loclVIT yacute.loclVIT ygrave.loclVIT
@@ -98,7 +103,9 @@ Aacute.loclVIT Abreve.loclVIT Acircumflex.loclVIT Agrave.loclVIT Atilde.loclVIT 
 
 ![Vietnamese accents](img/VIT_glyphs.jpg)
 
-Now update your `locl` OT feature:
+Finally, update your `locl` OT feature. 
+
+Go to `File > Font Info`, Features tab, `locl` sidebar item, and check the "generate Feature automatically" checkbox at the top, then click the "Update" (rotating arrow symbol) to refresh the code:
 
 ![Update locl feature](img/locl.png)
 
