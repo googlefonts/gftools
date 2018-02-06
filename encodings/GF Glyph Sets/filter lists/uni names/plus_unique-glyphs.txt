@@ -313,8 +313,6 @@ uni1EF8
 uni1EF9
 uni2010
 dagger
-dagger
-daggerdbl
 daggerdbl
 perthousand
 minute
