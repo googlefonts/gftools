@@ -313,8 +313,6 @@ Ytilde
 ytilde
 hyphentwo
 dagger
-dagger
-daggerdbl
 daggerdbl
 perthousand
 minute
