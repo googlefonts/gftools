@@ -2,7 +2,6 @@
 import sys
 target_modules = [
   "gftools-build-font2ttf",
-  "gftools-build-fontmetadata",
   "gftools-fix-ascii-fontmetadata",
   "gftools-fix-familymetadata",
   "gftools-fix-fsselection",

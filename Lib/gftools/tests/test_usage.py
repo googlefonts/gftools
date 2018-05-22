@@ -67,9 +67,6 @@ class TestGFToolsScripts(unittest.TestCase):
         stdout, stderr = process.communicate()
         self.assertNotIn('Err', stderr, ' '.join(command) + ':\n\n' + stderr)
 
-    def test_build_fontmetadata(self):
-        self.check_script(['python', self.get_path('build-fontmetadata'), self.example_font])
-
     def test_build_ofl(self):
         self.check_script(['python', self.get_path('build-ofl'), self.example_dir])
 
