@@ -38,11 +38,10 @@ def fonts_are_same_family(ttfonts):
 def fix_nametable(ttfont):
     """Cleanup nametable issues caused by fontmake"""
     table = ttfont['name']
-    style = table.getName(2, 3, 1, 1033).toUnicode()
-    font_type = _get_vf_style(ttfont)
     family_name = table.getName(1, 3, 1, 1033).toUnicode()
 
-    # Remove styles from family name. Often happens for Italic fonts
+    # Remove style from family name. Often happens for Italic fonts
+    # Family Name Light --> Family Name
     for style in (' Regular', ' Light', ' Bold'):
         if style in family_name:
             table.setName(family_name.replace(style, ''), 1, 3, 1, 1033)
@@ -55,11 +54,22 @@ def fix_nametable(ttfont):
         else:
             idx += 1
 
-    # Update uniquid, psname, fullname to avoid font namespace collisions
-    for ids in (3, 4, 6):
-        for style in ('Regular', 'Light', 'Bold'):
-            name = table.getName(ids, 3, 1, 1033).toUnicode()
-            table.setName(name.replace(style, font_type), ids, 3, 1, 1033)
+    # Update existing nameids based on the varfont's default style
+    default_style = _get_vf_default_style(ttfont)
+    family_name = table.getName(1, 3, 1, 1033).toUnicode()
+    table.setName(default_style, 2, 3, 1, 1033)
+
+    fullname = '{} {}'.format(family_name, default_style)
+    table.setName(unicode(fullname), 4, 3, 1, 1033)
+
+    psname = '{}-{}'.format(family_name, default_style.replace(' ', ''))
+    table.setName(unicode(psname), 6, 3, 1, 1033)
+
+    # uniqueid basedon fontmake output version;vendorid;psname
+    font_version = format(ttfont['head'].fontRevision, '.3f')
+    vendor = ttfont['OS/2'].achVendID
+    uniqueid = '{};{};{}'.format(font_version, vendor, psname)
+    table.setName(unicode(uniqueid), 3, 3, 1, 1033)
 
 
 def create_stat_table(ttfont):
@@ -92,20 +102,31 @@ def create_stat_table(ttfont):
         append_stat_record(stat, 0, instance.coordinates.values()[0], instance.subfamilyNameID)
 
     # Set ElidedFallbackNameID
-    stat.table.ElidedFallbackNameID = 2  # nameID 2 so either Regular or Italic
+    stat.table.ElidedFallbackNameID = 2
     ttfont['STAT'] = stat
 
 
-def _get_vf_styles(ttfonts):
+def _get_vf_types(ttfonts):
     styles = []
     for ttfont in ttfonts:
-        styles.append(_get_vf_style(ttfont))
+        styles.append(_get_vf_type(ttfont))
     return styles
 
 
-def _get_vf_style(ttfont):
+def _get_vf_type(ttfont):
     style = ttfont['name'].getName(2, 3, 1, 1033).toUnicode()
-    return 'Roman' if style == 'Regular' else style
+    return 'Italic' if 'Italic' in style else 'Roman'
+
+
+def _get_vf_default_style(ttfont):
+    """Return the name record string of the default style"""
+    default_fvar_val = ttfont['fvar'].axes[0].defaultValue
+
+    name_id = None
+    for inst in ttfont['fvar'].instances:
+        if inst.coordinates['wght'] == default_fvar_val:
+            name_id = inst.subfamilyNameID
+    return ttfont['name'].getName(name_id, 1, 0, 0).toUnicode()
 
 
 def add_other_vf_styles_to_nametable(ttfont, text_records):
@@ -181,7 +202,7 @@ def get_stat_axis_index(ttfont, axis_name):
 def set_stat_for_font_in_family(ttfont, family_styles):
     """Based on examples from:
     https://docs.microsoft.com/en-us/typography/opentype/spec/stat"""
-    font_type = _get_vf_style(ttfont)
+    font_type = _get_vf_type(ttfont)
     # See example 5
     if font_type == 'Roman' and 'Italic' in family_styles:
         name_record = get_custom_name_record(ttfont, 'Italic')
@@ -206,7 +227,7 @@ def harmonize_vf_families(ttfonts):
     https://docs.microsoft.com/en-us/typography/opentype/spec/stat
 
     """
-    family_styles = _get_vf_styles(ttfonts)
+    family_styles = _get_vf_types(ttfonts)
     for ttfont in ttfonts:
         add_other_vf_styles_to_nametable(ttfont, family_styles)
         set_stat_for_font_in_family(ttfont, family_styles)
