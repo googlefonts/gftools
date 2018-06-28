@@ -1,6 +1,6 @@
 # Google Fonts Tools
 
-This project contains miscellaneous tools for working with the Google Fonts collection, plus **Google Fonts Glyph Set Documentation** in the [/encoding](/encoding) subdirectory.
+This project contains miscellaneous tools for working with the Google Fonts collection, plus **Google Fonts Glyph Set Documentation** in the [/encodings](/encodings) subdirectory.
 
 The tools and files under this directory are available under the Apache License v2.0, for details see [LICENSE](LICENSE)
 
