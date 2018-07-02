@@ -22,6 +22,64 @@ from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import otTables
 
 
+OS_2_WEIGHT_CLASS = {
+    'Thin': 250,
+    'ExtraLight': 275,
+    'Light': 300,
+    'Regular': 400,
+    '': 400,
+    'Medium': 500,
+    'SemiBold': 600,
+    'Bold': 700,
+    'ExtraBold': 800,
+    'Black': 900,
+}
+
+
+def _parse_styles(stylename):
+    bold, italic = False, False
+    if 'Italic' in stylename:
+        italic = True
+        bold = False
+    if 'Bold' == stylename or 'Bold Italic' == stylename:
+        bold = True
+    return bold, italic
+
+
+def set_fsselection(style, fsselection,):
+    bold, italic = _parse_styles(style)
+
+    mask = 0b1100001
+    fsselection = (fsselection | mask) ^ mask
+
+    if bold:
+        fsselection |= 0b100000
+    else:
+        fsselection |= 0b1000000
+    if italic:
+        # unset Reg bit
+        fsselection = (fsselection | 0b1000000) ^ 0b1000000
+        fsselection |= 0b1
+    return fsselection
+
+
+def set_mac_style(stylename, macstyle):
+    bold, italic = _parse_styles(stylename)
+
+    mask = ~0b11
+    bold_bit = 0b1 if bold else 0b0
+    italic_bit = 0b10 if italic else 0b0
+
+    macstyle = (macstyle | mask) ^ mask
+    macstyle |= (bold_bit + italic_bit)
+    return macstyle
+
+
+def set_weight_class(stylename):
+    weight = stylename.replace('Italic', '').replace(' ', '')
+    return OS_2_WEIGHT_CLASS[weight]
+
+
 def fonts_are_same_family(ttfonts):
     """Check fonts have the same preferred family name or family name"""
     family_names = []
@@ -70,6 +128,21 @@ def fix_nametable(ttfont):
     vendor = ttfont['OS/2'].achVendID
     uniqueid = '{};{};{}'.format(font_version, vendor, psname)
     table.setName(unicode(uniqueid), 3, 3, 1, 1033)
+
+
+def fix_bits(ttfont):
+    """Set fsSelection, macStyle and usWeightClass to correct values.
+
+    The values must be derived from the default style. By default, the
+    Regular instance's values are used"""
+    dflt_style = _get_vf_default_style(ttfont)
+    ttfont['OS/2'].fsSelection = set_fsselection(
+        dflt_style, ttfont['OS/2'].fsSelection
+    )
+    ttfont['OS/2'].usWeightClass = set_weight_class(dflt_style)
+    ttfont['head'].macStyle = set_mac_style(
+        dflt_style, ttfont['head'].macStyle
+    )
 
 
 def create_stat_table(ttfont):
@@ -246,6 +319,7 @@ def main():
         ))
 
     map(fix_nametable, ttfonts)
+    map(fix_bits, ttfonts)
     map(create_stat_table, ttfonts)
     harmonize_vf_families(ttfonts)
 
