@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 #
-# Copyright 2017 Google Inc. All Rights Reserved.
+# Copyright 2018 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,11 +40,13 @@ Generating a METADATA.pb file for an existing family:
 1. run the following: python add_font.py --update /path/to/existing/family
 """
 
+import contextlib
 import errno
 import glob
 import os
 import sys
 import time
+from fontTools import ttLib
 
 
 import gflags as flags
@@ -61,9 +63,6 @@ flags.DEFINE_integer('min_pct', 50,
 flags.DEFINE_integer('min_pct_ext', 10,
                      'What percentage of subset codepoints have to be supported'
                      ' for a -ext subset.')
-flags.DEFINE_boolean('update', False,
-                     'If a family is getting updated, keep the designer,'
-                     ' category and date added values')
 
 
 def _FileFamilyStyleWeights(fontdir):
@@ -100,13 +99,17 @@ def _FileFamilyStyleWeights(fontdir):
   return result
 
 
-def _MakeMetadata(fontdir):
+def _MakeMetadata(fontdir, is_new):
   """Builds a dictionary matching a METADATA.pb file.
 
   Args:
     fontdir: Directory containing font files for which we want metadata.
+    is_new: Whether this is an existing or new family.
   Returns:
     OrderedDict of a complete METADATA.pb structure.
+  Raises:
+    RuntimeError: If the variable font axes info differs between font files of
+    same family.
   """
   file_family_style_weights = _FileFamilyStyleWeights(fontdir)
 
@@ -120,14 +123,16 @@ def _MakeMetadata(fontdir):
   metadata = fonts_pb2.FamilyProto()
   metadata.name = file_family_style_weights[0].family
 
-  if FLAGS.update and os.path.isfile(old_metadata_file):
+  if not is_new:
     old_metadata = fonts_pb2.FamilyProto()
     with open(old_metadata_file, 'rb') as old_meta:
       text_format.Parse(old_meta.read(), old_metadata)
       metadata.designer = old_metadata.designer
       metadata.category = old_metadata.category
       metadata.date_added = old_metadata.date_added
+      metadata.version = 'v' + str(int(old_metadata.version[1:]) + 1)
   else:
+    metadata.version = 'v1'
     metadata.designer = 'UNKNOWN'
     metadata.category = 'SANS_SERIF'
     metadata.date_added = time.strftime('%Y-%m-%d')
@@ -155,7 +160,41 @@ def _MakeMetadata(fontdir):
                                                 default_fullname)
     font_metadata.copyright = font_copyright
 
+  axes_info_from_font_files \
+    = {_AxisInfo(f.file) for f in file_family_style_weights}
+  if len(axes_info_from_font_files) != 1:
+    raise RuntimeError('Variable axes info not matching between font files')
+
+  for axes_info in axes_info_from_font_files:
+    if axes_info:
+      for axes in axes_info:
+        var_axes = metadata.axes.add()
+        var_axes.tag = axes[0]
+        var_axes.min_value = axes[1]
+        var_axes.default_value = axes[2]
+        var_axes.max_value = axes[3]
+
   return metadata
+
+
+def _AxisInfo(fontfile):
+  """Gets variable axes info.
+
+  Args:
+    fontfile: Font file to look at for variation info
+
+  Returns:
+    Variable axes info
+  """
+  with contextlib.closing(ttLib.TTFont(fontfile)) as font:
+    if 'fvar' not in font:
+      return frozenset()
+    else:
+      fvar = font['fvar']
+      axis_info = [
+          (a.axisTag, a.minValue, a.defaultValue, a.maxValue) for a in fvar.axes
+      ]
+      return tuple(sorted(axis_info))
 
 
 def _GetAvgSize(file_family_style_weights):
@@ -198,12 +237,22 @@ def _WriteTextFile(filename, text):
 
 
 
+def _AddHumanReadableDateComment(text_proto):
+  return re.sub(r'(date_added: \d+)',
+                r'\1  # ' + time.strftime('%Y-%m-%d'), text_proto)
+
+
 def main(argv):
   if len(argv) != 2:
     sys.exit('One argument, a directory containing a font family')
   fontdir = argv[1]
 
-  metadata = _MakeMetadata(fontdir)
+  is_new = True
+  old_metadata_file = os.path.join(fontdir, 'METADATA.pb')
+  if os.path.isfile(old_metadata_file):
+    is_new = False
+
+  metadata = _MakeMetadata(fontdir, is_new)
   text_proto = text_format.MessageToString(metadata)
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
