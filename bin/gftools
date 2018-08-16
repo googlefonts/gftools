@@ -72,7 +72,7 @@ if __name__ == '__main__':
                                    stderr=sys.stderr)
         sys.exit(p.wait())
     elif "--list-subcommands" in sys.argv:
-        print ' '.join(subcommands.keys())
+        print(' '.join(list(subcommands.keys())))
     else:
         # shows help if no args
         args = parser.parse_args()
