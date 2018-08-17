@@ -76,7 +76,6 @@
           lcommaaccent.sc
           ldot.sc
           nacute.sc
-          napostrophe.sc
           ncaron.sc
           ncommaaccent.sc
           ntilde.sc
