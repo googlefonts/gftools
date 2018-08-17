@@ -128,7 +128,6 @@ lslash.sc
 nacute.sc
 uni0146.sc
 ncaron.sc
-napostrophe.sc
 eng.sc
 omacron.sc
 obreve.sc

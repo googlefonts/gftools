@@ -128,7 +128,6 @@ lslash.sc
 nacute.sc
 ncommaaccent.sc
 ncaron.sc
-napostrophe.sc
 eng.sc
 omacron.sc
 obreve.sc
