@@ -120,7 +120,8 @@ def DiffTables(font_filename1, font_filename2):
   Returns:
     String describing size difference. One line per unique table in either font.
   """
-  result = ['  Table Changes (delta bytes, from=>to, % change)']
+  result = ['    Table    Changes  Delta-Bytes(from=>to)  % Change']
+  result.append('    -------------------------------------------------')
   sfnt1 = sfnt.SFNTReader(open(font_filename1))
   sfnt2 = sfnt.SFNTReader(open(font_filename2))
 
@@ -131,19 +132,19 @@ def DiffTables(font_filename1, font_filename2):
 
   table_l1_l2s = []
   for t in fonts.UniqueSort(sfnt1.tables, sfnt2.tables, _KNOWN_TABLES):
-    table1_sz = sfnt1.tables[t].length if sfnt1.has_key(t) else 0
-    table2_sz = sfnt2.tables[t].length if sfnt2.has_key(t) else 0
+    table1_sz = sfnt1.tables[t].length if t in sfnt1 else 0
+    table2_sz = sfnt2.tables[t].length if t in sfnt2 else 0
     sum_tables1 += table1_sz
     sum_tables2 += table2_sz
     table_l1_l2s.append((t, table1_sz, table2_sz))
 
   for (table, table1_sz, table2_sz) in table_l1_l2s:
     delta_pct = float(table2_sz - table1_sz) / font_sz1 * 100
-    result.append('    %s, %+d, %d=>%d, %.1f%%' % (
+    result.append('    %s  %+6d      %06d => %06d %+10.1f%%' % (
         table, table2_sz - table1_sz, table1_sz, table2_sz, delta_pct))
 
   delta_pct = float(sum_tables2 - sum_tables1) / font_sz1 * 100
-  result.append('    TOTAL, %+d, %d=>%d, %.1f%%' % (
+  result.append('    TOTAL %+6d      %06d => %06d %+10.1f%%' % (
       sum_tables2 - sum_tables1, sum_tables1, sum_tables2, delta_pct))
 
   return '\n'.join(result)
@@ -169,9 +170,9 @@ def DiffCoverage(font_filename1, font_filename2, subset):
 
   subset_cp_str = ('/%d' % len(subset_cps)) if subset_cps is not None else ''
 
-  print '  %s %+d (%d%s => %d%s)' % (
+  print('  %s %+d (%d%s => %d%s)' % (
       subset, len(f2cps) - len(f1cps), len(f1cps), subset_cp_str, len(f2cps),
-      subset_cp_str)
+      subset_cp_str))
 
 
 def CompareDirs(font1, font2):
@@ -188,16 +189,16 @@ def CompareDirs(font1, font2):
   font_filename2 = os.path.join(font2, fonts.RegularWeight(m2))
 
   if FLAGS.diff_coverage:
-    print 'Subset Coverage Change (codepoints)'
+    print('Subset Coverage Change (codepoints)')
     for subset in subsets_to_compare:
       DiffCoverage(font_filename1, font_filename2, subset)
 
-  print CompareSize(font_filename1, font_filename2)
+  print(CompareSize(font_filename1, font_filename2))
 
 
 def CompareFiles(font1, font2):
   """Compares fonts assuming font1/2 are font files."""
-  print CompareSize(font1, font2)
+  print(CompareSize(font1, font2))
 
 
 def main(_):
@@ -211,8 +212,8 @@ def main(_):
   files = os.path.isfile(font1) and os.path.isfile(font2)
 
   if not dirs and not files:
-    print '%s and %s must both point to directories or font files' % (
-        font1, font2)
+    print('%s and %s must both point to directories or font files' % (
+        font1, font2))
     sys.exit(1)
 
   if dirs:
