@@ -1,4 +1,6 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
+# coding: utf-8
+#
 # Copyright 2016 The Fontbakery Authors
 # Copyright 2017 The Google Font Tools Authors
 #
@@ -14,6 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+Generate an OFL.txt license document
+"""
 import argparse
 import os
 import logging
