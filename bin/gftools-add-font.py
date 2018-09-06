@@ -130,9 +130,7 @@ def _MakeMetadata(fontdir, is_new):
       metadata.designer = old_metadata.designer
       metadata.category = old_metadata.category
       metadata.date_added = old_metadata.date_added
-      metadata.version = 'v' + str(int(old_metadata.version[1:]) + 1)
   else:
-    metadata.version = 'v1'
     metadata.designer = 'UNKNOWN'
     metadata.category = 'SANS_SERIF'
     metadata.date_added = time.strftime('%Y-%m-%d')
