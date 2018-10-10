@@ -34,6 +34,7 @@ setup(
             'Felipe Sanches, '
             'Lasse Fister, '
             'Marc Foley, '
+            'Eli Heuer, '
             'Roderick Sheeter'),
     author_email='dave@lab6.com',
     package_dir={'': 'Lib'},
@@ -48,8 +49,9 @@ setup(
         'Topic :: Text Processing :: Fonts',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7'
+        'Programming Language :: Python :: 2'
+        'Programming Language :: Python :: 3'
     ],
     install_requires=[
 #       'fontforge', # needed by build-font2ttf script
