@@ -1,10 +1,10 @@
 # Google Fonts Tools
 
-This project contains miscellaneous tools for working with the Google Fonts collection, plus **Google Fonts Glyph Set Documentation** in the [/encodings](/encodings) subdirectory.
+This project contains tools used for working with the Google Fonts collection, plus **Google Fonts Glyph Set Documentation** in the [/encodings](/encodings) subdirectory. While these tools are primarily intended for contributors to the Google Fonts project, anyone who works with fonts could find them useful.
 
 The tools and files under this directory are available under the Apache License v2.0, for details see [LICENSE](LICENSE)
 
-## Usage
+## Usage Examples
 
 Compare fonts:
 
@@ -21,16 +21,13 @@ Sanity check a family directory:
 
 ## Installation
 
-Please install these tools using our pip package hosted on PyPI:
+Please install these tools using our [pip](https://pip.pypa.io/en/stable/installing/) package hosted on [PyPI](https://pypi.org/project/gftools/):
 
-    sudo easy_install pip
     pip install --upgrade gftools
 
 ### Requirements and Dependencies
 
-These tools are intended to work with Python 2.7 systems. 
-While these tools may work with Python 3.x, if so, that's a happy accident.
-Pull Requests welcome! :)
+These tools are intended to work with both Python 2.7 and Python 3, If a tool isn't working with Python 3 please make an issue. Python 2 support is being phased out and `gftools` will be Python 3 only soon. Pull Requests welcome! :)
 
 These tools depend on the submodule `GlyphsInfo`.
 Make sure the submodule is up to date by running:
