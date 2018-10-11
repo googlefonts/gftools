@@ -25,7 +25,7 @@ def gftools_scripts():
 
 setup(
     name="gftools",
-    version='0.1.0-git',
+    version='0.2.0',
     url='https://github.com/googlefonts/tools/',
     description='Google Fonts Tools is a set of command-line tools'
                 ' for testing font projects',
@@ -49,8 +49,7 @@ setup(
         'Topic :: Text Processing :: Fonts',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7'
-        'Programming Language :: Python :: 2'
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'
     ],
     install_requires=[
