@@ -1,6 +1,6 @@
 # coding: utf-8
 # Copyright 2013 The Font Bakery Authors.
-# Copyright 2017 The Google Fonts Tools Authors.
+# Copyright 2017 The Google Fonts Toolis Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,9 +19,13 @@ import os
 from setuptools import setup
 
 def gftools_scripts():
-  scripts = [os.path.join('bin', f) for f in os.listdir('bin') if f.startswith('gftools-')]
-  scripts.append(os.path.join('bin', 'gftools'))
-  return scripts
+    scripts = [os.path.join('bin', f) for f in os.listdir('bin') if f.startswith('gftools-')]
+    scripts.append(os.path.join('bin', 'gftools'))
+    return scripts
+
+# Read the contents of the README file
+with open('README.md') as f:
+    long_description = f.read()
 
 setup(
     name="gftools",
@@ -29,6 +33,8 @@ setup(
     url='https://github.com/googlefonts/tools/',
     description='Google Fonts Tools is a set of command-line tools'
                 ' for testing font projects',
+    long_description=long_description,
+    long_description_content_type='text/markdown',  # This is important!
     author=('Google Fonts Tools Authors: '
             'Dave Crossland, '
             'Felipe Sanches, '
