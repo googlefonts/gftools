@@ -18,9 +18,9 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='fonts_public.proto',
   package='google.fonts',
-  serialized_pb=_b('\n\x12\x66onts_public.proto\x12\x0cgoogle.fonts\"\xae\x01\n\x0b\x46\x61milyProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x65signer\x18\x02 \x02(\t\x12\x0f\n\x07license\x18\x03 \x02(\t\x12\x10\n\x08\x63\x61tegory\x18\x04 \x02(\t\x12\x12\n\ndate_added\x18\x05 \x02(\t\x12&\n\x05\x66onts\x18\x06 \x03(\x0b\x32\x17.google.fonts.FontProto\x12\x0f\n\x07\x61liases\x18\x07 \x03(\t\x12\x0f\n\x07subsets\x18\x08 \x03(\t\"\x8a\x01\n\tFontProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\r\n\x05style\x18\x02 \x02(\t\x12\x0e\n\x06weight\x18\x03 \x02(\x05\x12\x10\n\x08\x66ilename\x18\x04 \x02(\t\x12\x18\n\x10post_script_name\x18\x05 \x02(\t\x12\x11\n\tfull_name\x18\x06 \x02(\t\x12\x11\n\tcopyright\x18\x07 \x01(\tB%\n\x16\x63om.google.fonts.protoB\x0b\x46ontsPublic')
+  syntax='proto2',
+  serialized_pb=_b('\n\x12\x66onts_public.proto\x12\x0cgoogle.fonts\"\xf0\x01\n\x0b\x46\x61milyProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x65signer\x18\x02 \x02(\t\x12\x0f\n\x07license\x18\x03 \x02(\t\x12\x10\n\x08\x63\x61tegory\x18\x04 \x02(\t\x12\x12\n\ndate_added\x18\x05 \x02(\t\x12&\n\x05\x66onts\x18\x06 \x03(\x0b\x32\x17.google.fonts.FontProto\x12\x0f\n\x07\x61liases\x18\x07 \x03(\t\x12\x0f\n\x07subsets\x18\x08 \x03(\t\x12\x19\n\x11ttf_autohint_args\x18\t \x01(\t\x12%\n\x04\x61xes\x18\n \x03(\x0b\x32\x17.google.fonts.AxisProto\"\x8a\x01\n\tFontProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\r\n\x05style\x18\x02 \x02(\t\x12\x0e\n\x06weight\x18\x03 \x02(\x05\x12\x10\n\x08\x66ilename\x18\x04 \x02(\t\x12\x18\n\x10post_script_name\x18\x05 \x02(\t\x12\x11\n\tfull_name\x18\x06 \x02(\t\x12\x11\n\tcopyright\x18\x07 \x01(\t\"U\n\tAxisProto\x12\x0b\n\x03tag\x18\x01 \x01(\t\x12\x11\n\tmin_value\x18\x02 \x01(\x02\x12\x15\n\rdefault_value\x18\x03 \x01(\x02\x12\x11\n\tmax_value\x18\x04 \x01(\x02\x42%\n\x16\x63om.google.fonts.protoB\x0b\x46ontsPublic')
 )
-_sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 
 
@@ -88,6 +88,20 @@ _FAMILYPROTO = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='ttf_autohint_args', full_name='google.fonts.FamilyProto.ttf_autohint_args', index=8,
+      number=9, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='axes', full_name='google.fonts.FamilyProto.axes', index=9,
+      number=10, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -96,11 +110,12 @@ _FAMILYPROTO = _descriptor.Descriptor(
   ],
   options=None,
   is_extendable=False,
+  syntax='proto2',
   extension_ranges=[],
   oneofs=[
   ],
   serialized_start=37,
-  serialized_end=211,
+  serialized_end=277,
 )
 
 
@@ -168,16 +183,72 @@ _FONTPROTO = _descriptor.Descriptor(
   ],
   options=None,
   is_extendable=False,
+  syntax='proto2',
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=214,
-  serialized_end=352,
+  serialized_start=280,
+  serialized_end=418,
+)
+
+
+_AXISPROTO = _descriptor.Descriptor(
+  name='AxisProto',
+  full_name='google.fonts.AxisProto',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='tag', full_name='google.fonts.AxisProto.tag', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='min_value', full_name='google.fonts.AxisProto.min_value', index=1,
+      number=2, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='default_value', full_name='google.fonts.AxisProto.default_value', index=2,
+      number=3, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='max_value', full_name='google.fonts.AxisProto.max_value', index=3,
+      number=4, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto2',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=420,
+  serialized_end=505,
 )
 
 _FAMILYPROTO.fields_by_name['fonts'].message_type = _FONTPROTO
+_FAMILYPROTO.fields_by_name['axes'].message_type = _AXISPROTO
 DESCRIPTOR.message_types_by_name['FamilyProto'] = _FAMILYPROTO
 DESCRIPTOR.message_types_by_name['FontProto'] = _FONTPROTO
+DESCRIPTOR.message_types_by_name['AxisProto'] = _AXISPROTO
+_sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 FamilyProto = _reflection.GeneratedProtocolMessageType('FamilyProto', (_message.Message,), dict(
   DESCRIPTOR = _FAMILYPROTO,
@@ -192,6 +263,13 @@ FontProto = _reflection.GeneratedProtocolMessageType('FontProto', (_message.Mess
   # @@protoc_insertion_point(class_scope:google.fonts.FontProto)
   ))
 _sym_db.RegisterMessage(FontProto)
+
+AxisProto = _reflection.GeneratedProtocolMessageType('AxisProto', (_message.Message,), dict(
+  DESCRIPTOR = _AXISPROTO,
+  __module__ = 'fonts_public_pb2'
+  # @@protoc_insertion_point(class_scope:google.fonts.AxisProto)
+  ))
+_sym_db.RegisterMessage(AxisProto)
 
 
 DESCRIPTOR.has_options = True
