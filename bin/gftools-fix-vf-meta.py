@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 """
 Fontmake can only generate a single variable font. It cannot generate a
 family of variable fonts, that are related to one another.
@@ -21,7 +22,9 @@ from argparse import ArgumentParser
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import otTables
 import os
-
+import sys
+if sys.version_info.major == 3:
+    unicode = str
 
 OS_2_WEIGHT_CLASS = {
     'Thin': 250,
@@ -173,7 +176,7 @@ def create_stat_table(ttfont):
     stat.table.AxisValueArray.AxisValue = []
 
     for idx, instance in enumerate(ttfont['fvar'].instances):
-        append_stat_record(stat, 0, instance.coordinates.values()[0], instance.subfamilyNameID)
+        append_stat_record(stat, 0, list(instance.coordinates.values())[0], instance.subfamilyNameID)
 
     # Set ElidedFallbackNameID
     stat.table.ElidedFallbackNameID = 2
@@ -319,9 +322,10 @@ def main():
             ', '.join(map(os.path.basename, ttfonts))
         ))
 
-    map(fix_nametable, ttfonts)
-    map(fix_bits, ttfonts)
-    map(create_stat_table, ttfonts)
+    for ttfont in ttfonts:
+        fix_nametable(ttfont)
+        fix_bits(ttfont)
+        create_stat_table(ttfont)
     harmonize_vf_families(ttfonts)
 
     for path, ttfont in zip(font_paths, ttfonts):
