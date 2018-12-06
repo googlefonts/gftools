@@ -70,6 +70,9 @@ setup(
         'protobuf',
         'requests',
         'tabulate',
-        'unidecode'
+        'unidecode',
+        'fontbakery',
+        'fontdiffenator',
+        'gfdiffbrowsers',
     ]
-)
+    )
