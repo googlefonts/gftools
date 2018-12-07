@@ -18,6 +18,31 @@
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
 """
 Builds variable fonts using flags for input.
+
+NOTE: Not ready for UFOS.
+
+This is the python variable font build script I have been using, but all the settings have been moved to args so it's easier to maintain. 
+
+For example, I'm using the following command to build Orbitron, run from the font repo root directory:
+
+    gftools build-vf --googlefonts \
+      ~/Google/fonts/ofl/orbitron \
+      --fontbakery \
+      --drawbot \
+      --ttfautohint "-I -W --increase-x-height=0 --stem-width-mode=sss --default-script=latn";
+
+This will do the following:
+
+1. Build the font with fontmake
+2. Run ttfautohint with the given given args
+3. Copy new fonts to the Google fonts directory
+4. Generate new DrawBot specimens
+5. Run FontBakery in the GoogleFonts directory
+6. Add a new FontBakery report to the docs directory   
+
+A video demo of how this works is here:
+
+https://www.youtube.com/watch?v=l59jWpiR3xs
 """
 import argparse
 import glob
