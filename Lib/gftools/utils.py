@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 from fontTools import ttLib
-from StringIO import StringIO
-from urllib import urlopen
+import requests
+from io import BytesIO
 from zipfile import ZipFile
 
 # =====================================
@@ -29,8 +29,8 @@ def download_family_from_Google_Fonts(family_name):
 
 
 def download_file(url):
-    request = urlopen(url)
-    return StringIO(request.read())
+    request = requests.get(url, stream=True)
+    return BytesIO(request.content)
 
 
 def fonts_from_zip(zipfile):
@@ -40,3 +40,16 @@ def fonts_from_zip(zipfile):
     if file_name.endswith(".ttf"):
       fonts.append([file_name, ttLib.TTFont(zipfile.open(file_name))])
   return fonts
+
+
+def cmp(x, y):
+    """
+    Replacement for built-in function cmp that was removed in Python 3
+
+    Compare the two objects x and y and return an integer according to
+    the outcome. The return value is negative if x < y, zero if x == y
+    and strictly positive if x > y.
+    """
+
+    return (x > y) - (x < y)
+

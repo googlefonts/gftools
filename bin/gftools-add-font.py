@@ -39,7 +39,8 @@ Generating a METADATA.pb file for an existing family:
 
 1. run the following: python add_font.py --update /path/to/existing/family
 """
-
+from __future__ import print_function
+from functools import cmp_to_key
 import contextlib
 import errno
 import glob
@@ -49,10 +50,11 @@ import time
 from fontTools import ttLib
 
 
-import gflags as flags
+from absl import flags
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
-from google.apputils import app
+from gftools.utils import cmp
+from absl import app
 from google.protobuf import text_format
 
 FLAGS = flags.FLAGS
@@ -89,7 +91,7 @@ def _FileFamilyStyleWeights(fontdir):
   result = [fonts.FileFamilyStyleWeight(f) for f in files]
   def _Cmp(r1, r2):
     return cmp(r1.weight, r2.weight) or -cmp(r1.style, r2.style)
-  result = sorted(result, _Cmp)
+  result = sorted(result, key=cmp_to_key(_Cmp))
 
   family_names = {i.family for i in result}
   if len(family_names) > 1:
@@ -225,12 +227,12 @@ def _WriteTextFile(filename, text):
     with open(filename, 'r') as f:
       current = f.read()
     if current == text:
-      print 'No change to %s' % filename
+      print('No change to %s' % filename)
       return
 
   with open(filename, 'w') as f:
     f.write(text)
-  print 'Wrote %s' % filename
+  print('Wrote %s' % filename)
 
 
 
@@ -255,7 +257,7 @@ def main(argv):
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
   if os.path.isfile(desc):
-    print 'DESCRIPTION.en_us.html exists'
+    print('DESCRIPTION.en_us.html exists')
   else:
     _WriteTextFile(desc, 'N/A')
 
@@ -264,4 +266,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-  app.run()
+    app.run(main)
