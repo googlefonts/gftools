@@ -332,13 +332,16 @@ def CodepointFileForSubset(subset):
   Returns:
     Full path to the file containing the codepoint file for subset or None if it
     could not be located.
-  Raises:
-    OSError: If the --nam_dir doesn't exist. errno.ENOTDIR.
+
+    If the --nam_dir flag doesn't exist, a path to the local gftools encodings
+    is created.
   """
   # expanduser so we can do things like --nam_dir=~/oss/googlefontdirectory/
   enc_path = os.path.expanduser(FLAGS.nam_dir)
   if not os.path.exists(enc_path):
-    raise OSError(errno.ENOTDIR, 'No such directory', enc_path)
+    user_path = sys.path[0][:-3]
+    relative_enc_path = enc_path
+    enc_path = os.path.join(user_path, relative_enc_path)
 
   filename = os.path.join(enc_path, '%s_unique-glyphs.nam' % subset)
   if not os.path.isfile(filename):
