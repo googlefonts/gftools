@@ -46,9 +46,9 @@ if __name__ == '__main__':
 
 import gftools.fonts_public_pb2 as fonts_pb2
 from fontTools import ttLib
-import gflags as flags
+from absl import flags
 from gftools.util import py_subsets
-from google.apputils import app
+from absl import app
 from google.protobuf import text_format
 
 
