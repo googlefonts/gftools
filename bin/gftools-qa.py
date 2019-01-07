@@ -15,6 +15,7 @@ import tempfile
 import logging
 import requests
 from io import BytesIO
+import json
 from zipfile import ZipFile
 from gftools.utils import (
     download_family_from_Google_Fonts,
@@ -183,6 +184,8 @@ def run_diffbrowsers(font_before, font_after, out, auth, local=False,
         'fvar' in TTFont(font_before).keys(),
         'fvar' in TTFont(font_after).keys()
     ])
+    info = os.path.join(out, "info.json")
+    json.dump(diff_browsers.stats, open(info, "w"))
     if has_vfs:
         for i in range(14, 17):    
             diff_browsers.diff_view("glyphs_all", pt=i)
