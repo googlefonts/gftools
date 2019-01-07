@@ -17,6 +17,7 @@ import requests
 from io import BytesIO
 from zipfile import ZipFile
 from gftools.utils import (
+    download_family_from_Google_Fonts,
     Google_Fonts_has_family,
     load_Google_Fonts_api_key,
 )
@@ -86,38 +87,6 @@ def family_name_from_fonts(fonts):
         family_name = mode([f['name'].getName(1, 3, 1, 1033).toUnicode() for f in
             fonts]) 
     return family_name
-
-
-
-def from_googlefonts(family, dir_out=tempfile.mkdtemp()):
-    """Download a font family from Google Fonts"""
-    url = 'https://fonts.google.com/download?family={}'.format(
-        family.replace(' ', '%20')
-    )
-    fonts_zip = ZipFile(download_file(url))
-    fonts_paths = _fonts_from_zip(fonts_zip, dir_out)
-    return fonts_paths
-
-
-def download_file(url, dst_path=None):
-    """Download a file from a url. If no url is specified, store the file
-    as a BytesIO object"""
-    request = requests.get(url, stream=True)
-    if not dst_path:
-        return BytesIO(request.content)
-    with open(dst_path, 'wb') as downloaded_file:
-        shutil.copyfileobj(request.raw, downloaded_file)
-
-
-def _fonts_from_zip(zipfile, dst):
-    """download the fonts and store them locally"""
-    fonts = []
-    for filename in zipfile.namelist():
-        if filename.endswith(".ttf"):
-            target = os.path.join(dst, filename)
-            zipfile.extract(filename, dst)
-            fonts.append(target)
-    return fonts
 
 
 def mkdir(path, overwrite=True):
@@ -291,7 +260,8 @@ def main():
 
     if fonts_previous:
         if args.from_googlefonts:
-            fonts_before = from_googlefonts(family_name)
+            fonts_before = download_family_from_Google_Fonts(
+                    family_name, tempfile.mkdtemp())
         else:
             fonts_before = args.fonts_before
 
@@ -299,7 +269,8 @@ def main():
     family_on_gf = Google_Fonts_has_family(family_name)
     if args.auto_qa and family_on_gf:
         logging.info("Family exists on GF. Running regression checks")
-        fonts_before = from_googlefonts(family_name)
+        fonts_before = download_family_from_Google_Fonts(
+                family_name, tempfile.mkdtemp())
 
         fb_out_dir = os.path.join(args.out, "Fontbakery")
         mkdir(fb_out_dir)

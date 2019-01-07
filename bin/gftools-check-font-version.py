@@ -21,7 +21,7 @@ from __future__ import print_function
 from argparse import ArgumentParser
 from fontTools.ttLib import TTFont
 from ntpath import basename
-
+from zipfile import ZipFile
 from gftools.utils import (
   download_family_from_Google_Fonts,
   download_file,
@@ -50,16 +50,18 @@ def main():
                       help='Compare against a set of local ttfs')
   args = parser.parse_args()
 
-  google_family_zip = download_family_from_Google_Fonts(args.family)
-  google_family_fonts = [f[1] for f in fonts_from_zip(google_family_zip)]
+  google_family = download_family_from_Google_Fonts(args.family)
+  google_family_fonts = [TTFont(f) for f in google_family]
   google_family_version = parse_version_head(google_family_fonts)
+
 
   if args.web_compare:
     if args.web_compare.endswith('.zip'):
-      web_family_zip = download_file(args.web_compare)
+      web_family_zip = ZipFile(download_file(args.web_compare))
       web_family = fonts_from_zip(web_family_zip)
-      web_family_fonts = [f[1] for f in web_family]
-      web_family_name = set(f[0].split('-')[0] for f in web_family)
+      web_family_fonts = [TTFont(f) for f in web_family
+                          if f.name.endswith(".ttf")]
+      web_family_name = set(f.reader.file.name.split('-')[0] for f in web_family)
       web_family_version = parse_version_head(web_family_fonts)
     print('Google Fonts Version of %s is v%s' % (
       args.family,
