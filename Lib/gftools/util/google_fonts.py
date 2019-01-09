@@ -37,6 +37,7 @@ import os
 import re
 import sys
 import unittest
+from pkg_resources import resource_filename
 from warnings import warn
 
 if __name__ == '__main__':
@@ -53,7 +54,8 @@ from google.protobuf import text_format
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('nam_dir', 'encodings/', 'nam file dir')
+flags.DEFINE_string('nam_dir',
+                    resource_filename("gftools", "encodings"), 'nam file dir')
 
 # See https://www.microsoft.com/typography/otspec/name.htm.
 NAME_COPYRIGHT = 0
@@ -332,16 +334,13 @@ def CodepointFileForSubset(subset):
   Returns:
     Full path to the file containing the codepoint file for subset or None if it
     could not be located.
-
-    If the --nam_dir flag doesn't exist, a path to the local gftools encodings
-    is created.
+  Raises:
+    OSError: If the --nam_dir doesn't exist. errno.ENOTDIR.
   """
   # expanduser so we can do things like --nam_dir=~/oss/googlefontdirectory/
   enc_path = os.path.expanduser(FLAGS.nam_dir)
   if not os.path.exists(enc_path):
-    user_path = sys.path[0][:-3]
-    relative_enc_path = enc_path
-    enc_path = os.path.join(user_path, relative_enc_path)
+    raise OSError(errno.ENOTDIR, 'No such directory', enc_path)
 
   filename = os.path.join(enc_path, '%s_unique-glyphs.nam' % subset)
   if not os.path.isfile(filename):
