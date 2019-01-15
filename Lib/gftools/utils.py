@@ -17,29 +17,75 @@ from fontTools import ttLib
 import requests
 from io import BytesIO
 from zipfile import ZipFile
+import sys
+import os
+import shutil
+if sys.version_info[0] == 3:
+    from configparser import ConfigParser
+else:
+    from ConfigParser import ConfigParser
 
 # =====================================
 # HELPER FUNCTIONS
 
-def download_family_from_Google_Fonts(family_name):
-    """Return a zipfile containing a font family hosted on fonts.google.com"""
-    url_prefix = 'https://fonts.google.com/download?family='
-    url = '%s%s' % (url_prefix, family_name.replace(' ', '+'))
-    return ZipFile(download_file(url))
+def download_family_from_Google_Fonts(family, dst=None):
+    """Download a font family from Google Fonts"""
+    url = 'https://fonts.google.com/download?family={}'.format(
+        family.replace(' ', '%20')
+    )
+    fonts_zip = ZipFile(download_file(url))
+    if dst:
+        return fonts_from_zip(fonts_zip, dst)
+    return fonts_from_zip(fonts_zip)
 
 
-def download_file(url):
+def Google_Fonts_has_family(family):
+    """Check if Google Fonts has the specified font family"""
+    gf_api_key = load_Google_Fonts_api_key() or os.environ.get("GF_API_KEY")
+    if not gf_api_key:
+        raise FileNotFoundError("~/.gf-api-key or env not found. See ReadMe to create one")
+    api_url = 'https://www.googleapis.com/webfonts/v1/webfonts?key={}'.format(gf_api_key)
+    r = requests.get(api_url)
+    families_on_gf = [f['family'] for f in r.json()['items']]
+
+    if family in families_on_gf:
+        return True
+    return False
+
+
+def load_Google_Fonts_api_key():
+    config = ConfigParser()
+    config_filepath = os.path.expanduser("~/.gf-api-key")
+
+    if os.path.isfile(config_filepath):
+        config.read(config_filepath)
+        credentials = config.items("Credentials")
+        return credentials[0][1]
+    return None
+
+
+def download_file(url, dst_path=None):
+    """Download a file from a url. If no dst_path is specified, store the file
+    as a BytesIO object"""
     request = requests.get(url, stream=True)
-    return BytesIO(request.content)
+    if not dst_path:
+        return BytesIO(request.content)
+    with open(dst_path, 'wb') as downloaded_file:
+        shutil.copyfileobj(request.raw, downloaded_file)
 
 
-def fonts_from_zip(zipfile):
-  '''return a list of fontTools TTFonts'''
-  fonts = []
-  for file_name in zipfile.namelist():
-    if file_name.endswith(".ttf"):
-      fonts.append([file_name, ttLib.TTFont(zipfile.open(file_name))])
-  return fonts
+def fonts_from_zip(zipfile, dst=None):
+    """Unzip fonts. If not dst is given unzip as BytesIO objects"""
+    fonts = []
+    for filename in zipfile.namelist():
+        if filename.endswith(".ttf"):
+            if dst:
+                target = os.path.join(dst, filename)
+                zipfile.extract(filename, dst)
+                fonts.append(target)
+            else:
+                fonts.append(BytesIO(zipfile.read(filename)))
+    return fonts
 
 
 def cmp(x, y):

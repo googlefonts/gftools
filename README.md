@@ -34,7 +34,18 @@ Make sure the submodule is up to date by running:
 
     git submodule update --init --recursive
 
-Upstream project repos:
+
+### Google Fonts API Key
+
+In order to use the scripts **gftools qa** and **gftools family-html-snippet**, you will need to generate a Google Fonts api key, https://developers.google.com/fonts/. You will then need to create a new file located on your system at `~/.gf-api-key`, which contains the following:
+
+```
+[Credentials]
+key = your-newly-generated-googlefonts-api-key
+
+```
+
+**Upstream project repos**
 
 * https://github.com/schriftgestalt/GlyphsInfo
 * https://github.com/google/google-apputils
