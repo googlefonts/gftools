@@ -203,7 +203,7 @@ def _get_vf_default_style(ttfont):
     for inst in ttfont['fvar'].instances:
         if inst.coordinates['wght'] == default_fvar_val:
             name_id = inst.subfamilyNameID
-    return ttfont['name'].getName(name_id, 1, 0, 0).toUnicode()
+    return ttfont['name'].getName(name_id, 3, 1, 1033).toUnicode()
 
 
 def add_other_vf_styles_to_nametable(ttfont, text_records):
