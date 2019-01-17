@@ -37,6 +37,7 @@ import os
 import re
 import sys
 import unittest
+from pkg_resources import resource_filename
 from warnings import warn
 
 if __name__ == '__main__':
@@ -53,7 +54,8 @@ from google.protobuf import text_format
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('nam_dir', 'encodings/', 'nam file dir')
+flags.DEFINE_string('nam_dir',
+                    resource_filename("gftools", "encodings"), 'nam file dir')
 
 # See https://www.microsoft.com/typography/otspec/name.htm.
 NAME_COPYRIGHT = 0

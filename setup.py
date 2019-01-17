@@ -46,7 +46,8 @@ setup(
     package_dir={'': 'Lib'},
     packages=['gftools',
               'gftools.util'],
-    package_data={'gftools.util': ["GlyphsInfo/*.xml"]},
+    package_data={'gftools.util': ["GlyphsInfo/*.xml"],
+                  'gftools': ["encodings/*.nam"]},
     scripts=gftools_scripts(),
     zip_safe=False,
     classifiers=[
@@ -58,10 +59,12 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'
     ],
+    setup_requires=['setuptools_scm'],
     install_requires=[
 #       'fontforge', # needed by build-font2ttf script
 #                      but there's no fontforge package on pypi
 #                      see: https://github.com/fontforge/fontforge/issues/2048
+        'setuptools',
         'FontTools',
         'Flask',
         'absl-py',
