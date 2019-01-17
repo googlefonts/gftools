@@ -319,7 +319,7 @@ def main():
     ttfonts = [TTFont(p) for p in font_paths]
     if not fonts_are_same_family(ttfonts):
         raise Exception('Fonts have different family_names: [{}]'.format(
-            ', '.join(map(os.path.basename, ttfonts))
+            ', '.join(map(os.path.basename, font_paths))
         ))
 
     for ttfont in ttfonts:
