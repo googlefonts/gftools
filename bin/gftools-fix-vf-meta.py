@@ -97,43 +97,6 @@ def fonts_are_same_family(ttfonts):
     return True
 
 
-def fix_nametable(ttfont):
-    """Cleanup nametable issues caused by fontmake"""
-    table = ttfont['name']
-    family_name = table.getName(1, 3, 1, 1033).toUnicode()
-
-    # Remove style from family name. Often happens for Italic fonts
-    # Family Name Light --> Family Name
-    for style in (' Regular', ' Light', ' Bold'):
-        if style in family_name:
-            table.setName(family_name.replace(style, ''), 1, 3, 1, 1033)
-    # Remove preferred family name and prefered style
-    idx = 0
-    while idx < len(table.names) - 1:
-        if table.names[idx].nameID in [16, 17]:
-            table.names.pop(idx)
-            idx = 0
-        else:
-            idx += 1
-
-    # Update existing nameids based on the varfont's default style
-    default_style = _get_vf_default_style(ttfont)
-    family_name = table.getName(1, 3, 1, 1033).toUnicode()
-    table.setName(default_style, 2, 3, 1, 1033)
-
-    fullname = '{} {}'.format(family_name, default_style)
-    table.setName(unicode(fullname), 4, 3, 1, 1033)
-
-    psname = '{}-{}'.format(family_name.replace(' ', ''), default_style.replace(' ', ''))
-    table.setName(unicode(psname), 6, 3, 1, 1033)
-
-    # uniqueid basedon fontmake output version;vendorid;psname
-    font_version = format(ttfont['head'].fontRevision, '.3f')
-    vendor = ttfont['OS/2'].achVendID
-    uniqueid = '{};{};{}'.format(font_version, vendor, psname)
-    table.setName(unicode(uniqueid), 3, 3, 1, 1033)
-
-
 def fix_bits(ttfont):
     """Set fsSelection, macStyle and usWeightClass to correct values.
 
@@ -323,7 +286,6 @@ def main():
         ))
 
     for ttfont in ttfonts:
-        fix_nametable(ttfont)
         fix_bits(ttfont)
         create_stat_table(ttfont)
     harmonize_vf_families(ttfonts)
@@ -333,3 +295,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
