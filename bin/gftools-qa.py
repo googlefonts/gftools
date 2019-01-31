@@ -24,8 +24,8 @@ from gftools.utils import (
     load_Google_Fonts_api_key,
 )
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 DIFFENATOR_THRESHOLDS = {
     "weak": dict(
