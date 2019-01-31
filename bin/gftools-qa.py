@@ -4,6 +4,7 @@ from fontTools.ttLib import TTFont
 from diffenator.diff import DiffFonts
 from diffenator.font import DFont
 from diffbrowsers.diffbrowsers import DiffBrowsers
+from diffbrowsers.utils import load_browserstack_credentials
 from diffbrowsers.browsers import test_browsers
 from statistics import mode
 import argparse
@@ -23,9 +24,8 @@ from gftools.utils import (
     load_Google_Fonts_api_key,
 )
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
+logger.setLevel(logging.INFO)
 
 DIFFENATOR_THRESHOLDS = {
     "weak": dict(
@@ -99,15 +99,14 @@ def mkdir(path, overwrite=True):
 
 def get_bstack_credentials():
     """Return the users Browserstack credentials"""
-    try:
-        from diffbrowsers.utils import load_browserstack_credentials
-        return load_browserstack_credentials()
-    except:
+    credentials = load_browserstack_credentials()
+    if not credentials:
         username = os.environ.get("BSTACK_USERNAME")
         access_key = os.environ.get("BSTACK_ACCESS_KEY")
         if all([username, access_key]):
             return (username, access_key)
         return False
+    return credentials
 
 
 def run_fontbakery(fonts_paths, out):
