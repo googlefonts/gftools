@@ -27,7 +27,7 @@ Latin
 
 Structure and Hierarchy of Glyph Sets for Latin:
 
-1. **Core** A Basic Latin set for Western Europe (defined [here](https://github.com/googlefonts/tools/blob/master/encodings/latin_unique-glyphs.nam))
+1. **Core** A Basic Latin set for Western Europe (defined in [encodings/latin_unique-glyphs.nam](https://github.com/googlefonts/gftools/blob/master/Lib/gftools/encodings/latin_unique-glyphs.nam))
 2. **Plus** For all fonts in the library, an Extended Latin with wide language support (Central and Eastern European languages and Vietnamese)
 3. **Pro** For casual and headline fonts that need a little more typographic sophistication, an extra 171 glyphs
 4. **Expert** For text and workhorse typefaces that must supply everything typographers need, such as small caps, an additional 300 glyphs
