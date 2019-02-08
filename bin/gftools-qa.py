@@ -211,7 +211,7 @@ def run_diffenator(font_before, font_after, out, thresholds):
     diff.to_gifs(dst=out)
     diff.to_txt(20, os.path.join(out, "report.txt"))
     diff.to_md(20, os.path.join(out, "report.md"))
-
+    diff.to_html(20, os.path.join(out, "report.html"), image_dir=".")
 
 def main():
     parser = argparse.ArgumentParser()
