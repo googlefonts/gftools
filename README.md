@@ -4,6 +4,10 @@ This project contains tools used for working with the Google Fonts collection, p
 
 The tools and files under this directory are available under the Apache License v2.0, for details see [LICENSE](LICENSE)
 
+## Google Fonts Official Glyph Sets (Encodings)
+
+<https://github.com/googlefonts/gftools/tree/master/Lib/gftools/encodings>
+
 ## Usage Examples
 
 Compare fonts:
