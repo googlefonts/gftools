@@ -20,7 +20,7 @@
 """
 It is important for monospaced fonts to have the 'isFixedPitch' flag set to 1
 in the post table. If it is set to 0, Windows coding programs categorize them
-as proportional fonts, and they will not appear as options font selection 
+as proportional fonts, and they will not appear as options in font selection 
 preferences.
 \n
 This script checks whether a font or collection of fonts appears to be monospaced 
@@ -30,7 +30,7 @@ set to 0.
 
 Usage:
 
-gftools-fix-isfixedpitch --fonts <font> <font> <font>
+gftools-fix-isfixedpitch --fonts [font1.ttf font2.ttf ...]
 
 """
 
