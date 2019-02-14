@@ -134,7 +134,7 @@ def run_plot_glyphs(fonts, out):
 
 
 def run_browser_previews(fonts, out, auth, local=False,
-        gfr_url="http://159.65.243.73/"):
+        gfr_url="http://35.188.158.120/"):
     browsers_to_test = test_browsers["vf_browsers"]
     for font_path in fonts:
         font_name = os.path.basename(font_path)[:-4]
@@ -168,7 +168,7 @@ def on_each_matching_font(func):
 
 @on_each_matching_font
 def run_diffbrowsers(font_before, font_after, out, auth, local=False,
-                     gfr_url="http://159.65.243.73/"):
+                     gfr_url="http://35.188.158.120/"):
     browsers_to_test = test_browsers["vf_browsers"]
     diff_browsers = DiffBrowsers(
         auth=auth,
@@ -253,7 +253,7 @@ def main():
         # To view font diffs in a browser, run GFR locally. This script gens
         # font diffs using diffenator's to_gifs method, which relies on the
         # free rendering stack.
-        gfr_url = "http://159.65.243.73/"
+        gfr_url = "http://35.188.158.120/"
 
     bstack_credentials = get_bstack_credentials()
 
