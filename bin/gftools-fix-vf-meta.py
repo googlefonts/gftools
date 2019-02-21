@@ -27,8 +27,8 @@ if sys.version_info.major == 3:
     unicode = str
 
 OS_2_WEIGHT_CLASS = {
-    'Thin': 250,
-    'ExtraLight': 275,
+    'Thin': 100,
+    'ExtraLight': 200,
     'Light': 300,
     'Regular': 400,
     '': 400,
