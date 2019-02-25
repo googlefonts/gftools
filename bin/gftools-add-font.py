@@ -123,7 +123,7 @@ def _MakeMetadata(fontdir, is_new):
   font_license = fonts.LicenseFromPath(fontdir)
 
   metadata = fonts_pb2.FamilyProto()
-  metadata.name = file_family_style_weights[0].family
+  metadata.name = _getFontFamilyName(first_file)
 
   if not is_new:
     old_metadata = fonts_pb2.FamilyProto()
@@ -150,7 +150,7 @@ def _MakeMetadata(fontdir, is_new):
                                        '???.').strip()
 
     font_metadata = metadata.fonts.add()
-    font_metadata.name = family
+    font_metadata.name = _getFontFamilyName(first_file)
     font_metadata.style = style
     font_metadata.weight = weight
     font_metadata.filename = filename
@@ -175,6 +175,23 @@ def _MakeMetadata(fontdir, is_new):
         var_axes.max_value = axes[3]
 
   return metadata
+
+
+def _getFontFamilyName(fontfile):
+  font = ttLib.TTFont(fontfile)
+  
+  nametable = font['name']
+
+  help(nametable.getName)
+
+  family_name = None
+  typographic_name = nametable.getName(16, 3, 1, 1033)
+  if typographic_name:
+      family_name = typographic_name.toUnicode()
+  else:
+      family_name = nametable.getName(1, 3, 1, 1033).toUnicode()
+
+  return family_name
 
 
 def _AxisInfo(fontfile):
