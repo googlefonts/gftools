@@ -62,9 +62,10 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('min_pct', 50,
                      'What percentage of subset codepoints have to be supported'
                      ' for a non-ext subset.')
-flags.DEFINE_integer('min_pct_ext', 10,
-                     'What percentage of subset codepoints have to be supported'
-                     ' for a -ext subset.')
+# if a single glyph from the 81 glyphs in *-ext_unique-glyphs.nam file is present, the font can have the "ext" subset
+flags.DEFINE_float('min_pct_ext', 0.01,
+                   'What percentage of subset codepoints have to be supported'
+                   ' for a -ext subset.')
 
 
 def _FileFamilyStyleWeights(fontdir):
