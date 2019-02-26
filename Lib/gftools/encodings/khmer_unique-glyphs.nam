@@ -1,3 +1,5 @@
+# Khmer has a special setup and requires the 'latin' characters (everything in
+# the range U+0000..U+00FF) to be present in the subset. Do not remove them.
 0x0000    .null
 0x000D    nonmarkingreturn
 0x0020    SPACE
