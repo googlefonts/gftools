@@ -179,11 +179,7 @@ def _MakeMetadata(fontdir, is_new):
 
 def _getFontFamilyName(fontfile):
   font = ttLib.TTFont(fontfile)
-  
   nametable = font['name']
-
-  help(nametable.getName)
-
   family_name = None
   typographic_name = nametable.getName(16, 3, 1, 1033)
   if typographic_name:
