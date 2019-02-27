@@ -186,7 +186,7 @@ def run_diffbrowsers(font_before, font_after, out, auth, local=False,
     info = os.path.join(out, "info.json")
     json.dump(diff_browsers.stats, open(info, "w"))
     if has_vfs:
-        for i in range(14, 17):    
+        for i in range(15, 17):    
             diff_browsers.diff_view("glyphs_all", pt=i)
 
 
