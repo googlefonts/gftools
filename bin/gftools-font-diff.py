@@ -19,11 +19,12 @@
 Attempts to highlight the variable(s) that differ table by table.
 
 """
+from __future__ import print_function
 import collections
 import warnings
 
 from fontTools import ttLib
-from google.apputils import app
+from absl import app
 
 DiffTuple = collections.namedtuple('DiffTuple', ['name', 'lhs', 'rhs'])
 
@@ -99,7 +100,7 @@ def _DiffFont(lhs, rhs):
 
 
 def main(argv):
-  print argv
+  print(argv)
   if len(argv) != 3:
     raise ValueError('Specify two files to diff')
 
@@ -112,17 +113,17 @@ def main(argv):
 
   for tag, one_side, diff_tuples, error in font_diff:
     if error:
-      print '%s %s' % (tag, error)
+      print('%s %s' % (tag, error))
     elif one_side:
-      print 'Only %s has %s' % (one_side.upper(), str(tag))
+      print('Only %s has %s' % (one_side.upper(), str(tag)))
     elif not diff_tuples:
-      print '%s identical' % tag
+      print('%s identical' % tag)
     else:
-      print '%s DIFF' % tag
+      print('%s DIFF' % tag)
 
     for name, lhs, rhs in diff_tuples:
-      print '  %s %s != %s' % (name, _ShortDisplay(lhs), _ShortDisplay(rhs))
+      print('  %s %s != %s' % (name, _ShortDisplay(lhs), _ShortDisplay(rhs)))
 
 
 if __name__ == '__main__':
-  app.run()
+  app.run(main)

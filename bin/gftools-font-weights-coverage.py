@@ -26,10 +26,11 @@ FamilyName-Bold.ttf failed
 0x0041
 FamilyName-Light.ttf passed
 """
+from __future__ import print_function
 import os
 from os import listdir
 import sys
-from google.apputils import app
+from absl import app
 from gftools.util import google_fonts as fonts
 
 
@@ -45,11 +46,11 @@ def main(argv):
   for f in _GetFontFiles(dirpath):
     diff = cps - fonts.CodepointsInFont(os.path.join(dirpath, f))
     if bool(diff):
-      print '%s failed' % (f)
+      print('%s failed' % (f))
       for c in diff:
-        print '0x%04X' % (c)
+        print('0x%04X' % (c))
     else:
-      print '%s passed' % (f)
+      print('%s passed' % (f))
 
 
 def _GetFontFiles(path):
@@ -65,4 +66,4 @@ def _GetFontFiles(path):
 
 
 if __name__ == '__main__':
-  app.run()
+  app.run(main)

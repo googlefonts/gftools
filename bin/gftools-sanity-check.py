@@ -17,7 +17,7 @@
 r"""Tool to identify problems with fonts.
 
 """
-
+from __future__ import print_function
 import collections
 import contextlib
 import os
@@ -25,9 +25,8 @@ import re
 import sys
 
 from fontTools import ttLib
-import gflags as flags
+from absl import flags, app
 from gftools.util import google_fonts as fonts
-from google.apputils import app
 
 FLAGS = flags.FLAGS
 
@@ -508,7 +507,7 @@ def main(argv):
           result_code = 1
           result_msg = 'FAIL'
         if not result.happy or not FLAGS.suppress_pass:
-          print '%s: %s (%s)' % (result_msg, result.message, font_dir)
+          print('%s: %s (%s)' % (result_msg, result.message, font_dir))
 
   if FLAGS.repair_script:
     _WriteRepairScript(FLAGS.repair_script, all_results)
@@ -517,4 +516,5 @@ def main(argv):
 
 
 if __name__ == '__main__':
-  app.run()
+  app.run(main)
+

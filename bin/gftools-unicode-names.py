@@ -20,11 +20,10 @@
 Input file should have one codepoint per line in hex (0xXXXX).
 
 """
-
+from __future__ import print_function
 import unicodedata
 
-import gflags as flags
-from google.apputils import app
+from absl import flags, app
 
 FLAGS = flags.FLAGS
 
@@ -34,7 +33,7 @@ flags.DEFINE_string('nam_file', None, 'Location of nam file')
 def main(_):
   with open(FLAGS.nam_file, 'r') as f:
     for line in f:
-      print _ReformatLine(line)
+      print(_ReformatLine(line))
 
 
 def _ReformatLine(line):
@@ -47,4 +46,4 @@ def _ReformatLine(line):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('nam_file')
-  app.run()
+  app.run(main)

@@ -17,11 +17,12 @@
 r"""Utility to print Unicode 'name' table values from font(s).
 
 """
+from __future__ import print_function
 import contextlib
 import os
 
 from fontTools import ttLib
-from google.apputils import app
+from absl import app
 
 
 def main(argv):
@@ -32,12 +33,12 @@ def main(argv):
         if 'name' not in ttf:
           continue
         for name in ttf['name'].names:
-          print '%s %d %d %d %s %s' % (filename, name.platformID,
+          print('%s %d %d %d %s %s' % (filename, name.platformID,
                                        name.platEncID, name.langID, name.nameID,
-                                       name.toUnicode())
+                                       name.toUnicode()))
     except ttLib.TTLibError as e:
-      print 'BAD_FILE', font_file, e
+      print('BAD_FILE', font_file, e)
 
 
 if __name__ == '__main__':
-  app.run()
+  app.run(main)

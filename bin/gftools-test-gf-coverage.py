@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 import os
 import sys
 from gftools.util.google_fonts import (CodepointsInFont,
@@ -41,13 +42,13 @@ def main():
   filename = sys.argv[1]
   diff = expected - CodepointsInFont(filename)
 
-  print filename,
+  print(filename),
   if bool(diff):
-    print 'missing',
+    print('missing'),
     for c in sorted(diff):
-      print '0x%04X' % (c),
+      print('0x%04X' % (c)),
   else:
-    print 'OK'
+    print('OK')
 
 
 if __name__ == '__main__':

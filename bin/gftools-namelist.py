@@ -41,7 +41,7 @@ from fontTools.ttLib import TTFont
 from fontTools.unicode import Unicode
 import codecs
 from gftools.util import google_fonts
-from gftools.util  import filter_lists
+from gftools.util import filter_lists
 
 
 def _get_basechar_unicode(name):

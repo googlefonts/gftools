@@ -16,7 +16,7 @@ if __name__ == '__main__':
   # the following imports wouldn't work otherwise
   sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import google_fonts as fonts
+import gftools.util.google_fonts as fonts
 from glyphdata import DATA as GlyphData
 
 # There's also the form u1014A for higher unicode codepoints next to uni1234

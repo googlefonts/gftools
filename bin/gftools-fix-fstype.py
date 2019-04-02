@@ -23,6 +23,7 @@ https://github.com/googlefonts/gf-docs/blob/master/ProjectChecklist.md#fstype
 Microsoft OpenType specification:
 https://www.microsoft.com/typography/otspec/os2.htm#fst
 """
+from __future__ import print_function
 from argparse import (ArgumentParser,
                       RawTextHelpFormatter)
 from fontTools.ttLib import TTFont

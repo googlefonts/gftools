@@ -67,9 +67,8 @@ import os
 import sys
 
 from fontTools.ttLib import sfnt
-import gflags as flags
+from absl import flags, app
 from gftools.util import google_fonts as fonts
-from google.apputils import app
 
 
 FLAGS = flags.FLAGS
@@ -224,4 +223,4 @@ def main(_):
 
 
 if __name__ == '__main__':
-  app.run()
+  app.run(main)
