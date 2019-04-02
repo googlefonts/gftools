@@ -39,6 +39,7 @@ $ fontbakery family-html-snippet "Exo" "Hello World"
   </body>
 </html>
 """
+from __future__ import print_function
 import json
 import requests
 import sys
@@ -218,7 +219,7 @@ def main():
     '\n      '.join(css_styles),
     '\n    '.join(body_text)
   )
-  print html
+  print(html)
 
 
 if __name__ == '__main__':

@@ -24,9 +24,9 @@ import os
 import sys
 import unicodedata
 
-import gflags as flags
+from absl import flags
 from gftools.util import google_fonts as fonts
-from google.apputils import app
+from absl import app
 
 
 FLAGS = flags.FLAGS
@@ -57,4 +57,4 @@ def main(argv):
     print (u'0x%04X%s%s' % (cp, show_char, show_subset)).strip().encode('UTF-8')
 
 if __name__ == '__main__':
-  app.run()
+  app.run(main)

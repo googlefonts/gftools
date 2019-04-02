@@ -20,6 +20,7 @@ Lists which variable font axes and named-instances are declared in the 'fvar'
 table of a given TTF file.
 
 """
+from __future__ import print_function
 import contextlib
 import sys
 from fontTools import ttLib
@@ -44,22 +45,22 @@ def main(argv):
               '       gftools varfont-info fontfile.ttf').format(__doc__))
   for filename in argv[1:]:
     with contextlib.closing(ttLib.TTFont(filename)) as ttf:
-      print filename
+      print(filename)
       if 'fvar' not in ttf:
-        print "This font file lacks an 'fvar' table."
+        print("This font file lacks an 'fvar' table.")
       else:
         fvar = ttf['fvar']
-        print ' axes'
+        print(' axes')
         axes = [(a.axisTag, a.minValue, a.defaultValue, a.maxValue)
                 for a in fvar.axes]
         for tag, minv, defv, maxv in axes:
-          print "  '%s' %d-%d, default %d" % (tag, minv, maxv, defv)
+          print("  '%s' %d-%d, default %d" % (tag, minv, maxv, defv))
 
         if fvar.instances:
-          print ' named-instances'
+          print(' named-instances')
           for inst in fvar.instances:
-            print '   %s %s' % (_ResolveName(ttf, inst.postscriptNameID),
-                                inst.coordinates)
+            print('   %s %s' % (_ResolveName(ttf, inst.postscriptNameID),
+                                inst.coordinates))
 
 if __name__ == '__main__':
   main(sys.argv)

@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 import itertools
 import os
 import sys
-from google.apputils import app
-import gflags as flags
+from absl import flags, app
 from gftools.util import google_fonts as fonts
 
 FLAGS = flags.FLAGS
@@ -41,13 +41,13 @@ def main(argv):
       continue
     (file1, file2, diff_size)  = _LeastSimilarCoverage(files, subset)
     if diff_size > FLAGS.max_diff_cps:
-      print '%s coverage for %s failed' % (dirpath, subset)
-      print 'Difference of codepoints between %s & %s is %d' % (
-          file1, file2, diff_size)
+      print('%s coverage for %s failed' % (dirpath, subset))
+      print('Difference of codepoints between %s & %s is %d' % (
+          file1, file2, diff_size))
       result = False
 
   if result:
-    print '%s passed subset coverage' % (dirpath)
+    print('%s passed subset coverage' % (dirpath))
 
 
 def _LeastSimilarCoverage(files, subset):
@@ -84,4 +84,4 @@ def _InconsistentSubsetSupport(file1, file2, subsetcps):
 
 
 if __name__ == '__main__':
-  app.run()
+  app.run(main)

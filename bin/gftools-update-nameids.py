@@ -26,6 +26,7 @@ $ gftools update-nameids -v="4.000" -ul="http://license.org" [fonts.ttf]
 if you need to change the name or style of a collection of font families,
 use gftools nametable-from-filename instead.
 """
+from __future__ import print_function
 from fontTools.ttLib import TTFont
 from argparse import (ArgumentParser,
                       RawTextHelpFormatter)
@@ -95,7 +96,7 @@ def main():
         update_field(NAME_IDS[field.nameID], args, fields, font['name'])
 
     font.save(font_path + '.fix')
-    print 'font saved %s.fix' % font_path
+    print('font saved %s.fix' % font_path)
 
 
 if __name__ == '__main__':

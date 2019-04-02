@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 import subprocess
 import sys
 import os
@@ -31,14 +32,14 @@ def main(gf_path):
                     result = '%s\t%s' % (f, e.output)
                     results.append(result)
 
-                print '%s\t%s' % (f, result)
+                print('%s\t%s' % (f, result))
     with open('ots_gf_results.txt', 'w') as doc:
         doc.write(''.join(results))
-    print 'done!'
+    print('done!')
 
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print 'ERROR: Include path to OFL dir'
+        print('ERROR: Include path to OFL dir')
     else:
         main(sys.argv[-1])

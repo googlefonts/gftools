@@ -21,12 +21,13 @@ Material Icons correctly doesn't include a space. If metadata awareness
 was added it could move into sanity_check.
 
 """
+from __future__ import print_function
 import contextlib
 import os
 
 from fontTools import ttLib
 from gftools.util import google_fonts as fonts
-from google.apputils import app
+from absl import app
 
 
 def _LoadGlyf(font, char, name, problems):
@@ -120,8 +121,8 @@ def main(argv):
       problems = _CheckFont(font)
     if not problems:
       problems.add('OK')
-    print '{:48} {}'.format(os.path.basename(filename),
-                            ','.join(sorted(problems)))
+    print('{:48} {}'.format(os.path.basename(filename),
+                            ','.join(sorted(problems))))
 
 if __name__ == '__main__':
-  app.run()
+  app.run(main)

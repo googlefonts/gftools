@@ -12,6 +12,7 @@ variable fonts.
 TODO (M Foley) this script is a quickie. The functionality of this script
 should be built into GF regression.
 """
+from __future__ import print_function
 import argparse
 import os
 
@@ -209,7 +210,7 @@ def main():
     )
     with open(args.out, 'w') as html_doc:
         html_doc.write(html)
-        print 'html written to {}'.format(args.out)
+        print('html written to {}'.format(args.out))
 
 
 if __name__ == '__main__':

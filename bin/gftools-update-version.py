@@ -24,6 +24,7 @@ Update a collection of fonts version number to a new version number.
 e.g:
 gftools update-version [fonts] 2.300 2.301
 """
+from __future__ import print_function
 from argparse import (ArgumentParser,
                       RawTextHelpFormatter)
 from fontTools.ttLib import TTFont
@@ -65,18 +66,18 @@ def main():
         v_updated = True
     if v_updated:
       font['head'].fontRevision = float(args.new_version)
-      print '%s version updated from %s to %s' % (
+      print('%s version updated from %s to %s' % (
         font_path,
         args.old_version,
         args.new_version
-      )
+      ))
       font.save(font_path + '.fix')
-      print 'font saved %s.fix' % font_path
+      print('font saved %s.fix' % font_path)
     else:
-      print '%s skipping. Could not find old version number %s' % (
+      print ('%s skipping. Could not find old version number %s' % (
         font_path,
         args.old_version
-      )
+      ))
 
 
 if __name__ == '__main__':

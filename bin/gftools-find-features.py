@@ -17,12 +17,13 @@
 """Tool to print GPOS and GSUB features supported by font file(s).
 
 """
+from __future__ import print_function
 import contextlib
 import os
 
 from fontTools import ttLib
 from gftools.util import google_fonts as fonts
-from google.apputils import app
+from absl import app
 
 
 def ListFeatures(font, table, name_fn):
@@ -67,13 +68,13 @@ def FindFonts(path):
     try:
       metadata = fonts.Metadata(font_dir)
     except ValueError:
-      print 'Bad METADATA.pb for %s' % font_dir
+      print('Bad METADATA.pb for %s' % font_dir)
       continue
 
     try:
       filename = fonts.RegularWeight(metadata)
     except OSError:
-      print 'No RegularWeight for %s' % font_dir
+      print('No RegularWeight for %s' % font_dir)
       filename = metadata.fonts[0].filename
 
     files.append(os.path.join(font_dir, filename))
@@ -94,11 +95,11 @@ def main(argv):
           features += ListFeatures(font, 'GSUB', fonts.GsubLookupTypeName)
           features += ListFeatures(font, 'GPOS', fonts.GposLookupTypeName)
       except IOError:
-        print '%s does not exist or is not a valid font' % font_file
+        print('%s does not exist or is not a valid font' % font_file)
       for (table, tag, lookup_name) in features:
-        print '{:32s} {:4s} {:8s} {:15s}'.format(
-            os.path.basename(font_file), table, str(tag), lookup_name)
+        print('{:32s} {:4s} {:8s} {:15s}'.format(
+            os.path.basename(font_file), table, str(tag), lookup_name))
 
 
 if __name__ == '__main__':
-  app.run()
+  app.run(main)

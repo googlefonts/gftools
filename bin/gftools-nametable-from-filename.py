@@ -22,6 +22,7 @@ the Google Fonts naming spec from just the filename.
 The fsSelection, fsType and macStyle also get updated
 to reflect the new names.
 """
+from __future__ import print_function
 import re
 import ntpath
 from argparse import (ArgumentParser,
@@ -283,7 +284,7 @@ def main():
     font['head'].macStyle = set_macStyle(win_style)
 
     font.save(font_path + '.fix')
-    print 'font saved %s.fix' % font_path
+    print('font saved %s.fix' % font_path)
 
 
 if __name__ == '__main__':
