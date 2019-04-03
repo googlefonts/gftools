@@ -73,7 +73,7 @@ def main():
         ('encodingID', field.platEncID),
         ('languageID', field.langID),
         ('nameID', field.nameID),
-        ('nameString', str(field).decode(enc)),
+        ('nameString', field.toUnicode()),
       ])
 
   if args.csv:
