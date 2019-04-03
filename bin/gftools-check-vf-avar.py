@@ -195,7 +195,7 @@ def populate_html_template(html_template, static_fonts, vf_fonts):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--variable_fonts', '-vf', nargs='+')
+    parser.add_argument('--variable-fonts', '-vf', nargs='+')
     parser.add_argument('--static-fonts', '-sf', nargs='+')
     parser.add_argument('--out', '-o', help='html output filepath', required=True)
     args = parser.parse_args()
