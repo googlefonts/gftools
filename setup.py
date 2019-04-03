@@ -74,6 +74,7 @@ setup(
         'protobuf',
         'requests',
         'tabulate',
+        'fs',
         'unidecode',
         'fontbakery',
         'fontdiffenator',
