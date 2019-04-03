@@ -121,8 +121,8 @@ def DiffTables(font_filename1, font_filename2):
   """
   result = ['    Table    Changes  Delta-Bytes(from=>to)  % Change']
   result.append('    -------------------------------------------------')
-  sfnt1 = sfnt.SFNTReader(open(font_filename1))
-  sfnt2 = sfnt.SFNTReader(open(font_filename2))
+  sfnt1 = sfnt.SFNTReader(open(font_filename1, 'rb'))
+  sfnt2 = sfnt.SFNTReader(open(font_filename2, 'rb'))
 
   font_sz1 = os.stat(font_filename1).st_size
 
