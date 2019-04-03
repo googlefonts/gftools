@@ -1,10 +1,18 @@
 language: python
+
+dist: xenial
+
 python:
-- '2.7'
+- '3.7'
+
 before_install:
   - pip install --upgrade pip
+
 install:
   - pip install pytest
-  - python setup.py install
+  - pip install .
+
 script:
-  - pytest Lib/gftools --verbose
+  - cd test
+  - sh run.sh
+
