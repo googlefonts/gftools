@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 from __future__ import print_function
-import subprocess
+import ots
 import sys
 import os
 
@@ -26,13 +26,15 @@ def main(gf_path):
         for f in files:
             if f.endswith('.ttf'):
                 try:
-                    result = subprocess.check_output(["ots-sanitize", os.path.join(p,f)])
-                    results.append('%s\t%s' % (f, result))
-                except subprocess.CalledProcessError as e:
-                    result = '%s\t%s' % (f, e.output)
-                    results.append(result)
+                    font = os.path.join(p, f)
+                    process = ots.sanitize(font, check=True, capture_output=True)
+                    result = '%s\t%s' % (font, process.stdout)
+                except ots.CalledProcessError as e:
+                    result = '%s\t%s' % (font, e.output)
 
+                results.append(result)
                 print('%s\t%s' % (f, result))
+
     with open('ots_gf_results.txt', 'w') as doc:
         doc.write(''.join(results))
     print('done!')
