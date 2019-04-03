@@ -106,7 +106,7 @@ def main(argv):
 
   with warnings.catch_warnings():
     warnings.simplefilter('ignore')
-    with open(argv[1]) as f1, open(argv[2]) as f2:
+    with open(argv[1], 'rb') as f1, open(argv[2], 'rb') as f2:
       lhs = ttLib.TTFont(f1)
       rhs = ttLib.TTFont(f2)
       font_diff = _DiffFont(lhs, rhs)
