@@ -49,8 +49,7 @@ def main():
 
     v_updated = False
     for field in font['name'].names:
-      enc = field.getEncoding()
-      field_text = str(field).decode(enc)
+      field_text = field.toUnicode()
       if args.old_version in field_text:
         updated_text = field_text.replace(
           args.old_version,
