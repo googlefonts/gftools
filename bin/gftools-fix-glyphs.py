@@ -16,7 +16,7 @@
 #
 from __future__ import unicode_literals
 import argparse
-import glyphsLib
+from glyphsLib import GSFont
 
 parser = argparse.ArgumentParser(description='Report issues'
                                              ' on .glyphs font files')
@@ -24,23 +24,22 @@ parser.add_argument('font', nargs="+")
 #parser.add_argument('--autofix', default=False,
 #                    action='store_true', help='Apply autofix')
 
-def customparam(data, name):
-  for param in data['customParameters']:
-    if param['name'] == name:
-      return param['value']
+def customparam(font, name):
+  for param in font.customParameters:
+      if param.name == name:
+          return param.value
 
 
 def main():
   args = parser.parse_args()
 
-  for font in args.font:
-    with open(font, 'rb') as glyphs_file:
-      data = glyphsLib.load(glyphs_file)
-      print('Copyright: "{}"'.format(data["copyright"]))
-      print('VendorID: "{}"'.format(customparam(data, "vendorID")))
-      print('fsType: {}'.format(customparam(data, "fsType")[0]))
-      print('license: "{}"'.format(customparam(data, "license")))
-      print('licenseURL: "{}"'.format(customparam(data, "licenseURL")))
+  for font_path in args.font:
+      font = GSFont(font_path)
+      print('Copyright: "{}"'.format(font.copyright))
+      print('VendorID: "{}"'.format(customparam(font, "vendorID")))
+      print('fsType: {}'.format(customparam(font, "fsType")))
+      print('license: "{}"'.format(customparam(font, "license")))
+      print('licenseURL: "{}"'.format(customparam(font, "licenseURL")))
   # TODO: handle these other fields:
   #
   # for master/instance in masters-or-instances:
