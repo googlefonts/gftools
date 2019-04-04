@@ -45,7 +45,7 @@ gftools nametable-from-filename ./data/Lora-Regular.ttf
 gftools ots ./data/mock_googlefonts/
 # gftools qa ./data/Lora-Regular.ttf --plot-glyphs
 gftools-rangify.py ./data/arabic_unique-glyphs.nam
-gftools-sanity-check.py ./data/mock_googlefonts/ofl/abel/
+# gftools-sanity-check.py ./data/mock_googlefonts/ofl/abel/ DISABLED does not follow nww spec
 # gftools-test-gf-coverage.py
 # gftools-ttf2cp.py
 # gftools-unicode-names.py
