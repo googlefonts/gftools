@@ -21,23 +21,26 @@ import sys
 import tokenize
 
 
-def handle_num(type, token, (srow, scol), (erow, ecol), line):
-  global cps
-  if type == tokenize.NUMBER:
-    cps.append(int(token, 16))
+def get_codepoints(cps):
+    results = []
+    for cp in cps:
+        if not cp.type == tokenize.NUMBER:
+            continue
+        results.append(int(cp.string, 16))
+    return results
 
 
 def main():
   if len(sys.argv) != 2:
     sys.exit("Usage: rangify <nam file>")
 
-  cps = []
-  tokenize.tokenize(open(sys.argv[1]).readline, handle_num)
-  cps.sort()
+  codepoints_data = list(tokenize.tokenize(open(sys.argv[1], 'rb').readline))
+  codepoints = get_codepoints(codepoints_data)
+  codepoints.sort()
 
   seqs = []
   seq = (None,)
-  for cp in cps:
+  for cp in codepoints:
     if seq[0] is None:
       seq = (cp,cp)
     elif seq[1] == cp - 1:
@@ -47,7 +50,7 @@ def main():
       seq = (None,)
 
   for seq in seqs:
-    print seq
+    print(seq)
 
 if __name__ == '__main__':
   main()
