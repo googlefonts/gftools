@@ -17,7 +17,7 @@ if __name__ == '__main__':
   sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import gftools.util.google_fonts as fonts
-from glyphdata import DATA as GlyphData
+from gftools.util.glyphdata import DATA as GlyphData
 
 # There's also the form u1014A for higher unicode codepoints next to uni1234
 PURE_UNI_CHR = re.compile('^u(?:ni)?([0-9A-F]{4,6})$', re.IGNORECASE)

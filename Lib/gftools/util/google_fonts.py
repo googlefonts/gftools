@@ -530,7 +530,7 @@ def VFFamilyStyleWeight(path):
 
 def ExtractNames(font, name_id):
   return [
-      n.string.decode(n.getEncoding()).encode('ascii', 'ignore')
+      n.toUnicode()
       for n in font['name'].names
       if n.nameID == name_id
   ]
@@ -582,7 +582,7 @@ def NamePartsForStyleWeight(astyle, aweight):
     correct_style = 'Italic'
 
   correct_name = None
-  for name, weight in _KNOWN_WEIGHTS.iteritems():
+  for name, weight in _KNOWN_WEIGHTS.items():
     if weight == aweight:
       correct_name = name
       break
