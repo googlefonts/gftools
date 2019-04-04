@@ -2,20 +2,20 @@
 
 set -e
 
-# gftools add-font ./data/mock_googlefonts/ofl/abel
+gftools add-font ./data/mock_googlefonts/ofl/abel
 gftools build-ofl ./data/mock_googlefonts/ofl/abel/
 gftools check-bbox ./data/Montserrat-Regular.ttf --glyphs
-# gftools check-category requires gf api_key
+gftools check-category $GF_API_KEY ./data/mock_googlefonts/ofl/
 gftools check-copyright-notices ./data/Montserrat-Regular.ttf
 gftools check-font-version "Lora"
-# gftools check-gf-github
+# gftools check-gf-github does not work for two factor auth accounts
 gftools check-name ./data/Montserrat-Regular.ttf
 gftools check-vf-avar --static-fonts ./data/Lora-Regular.ttf --variable-fonts ./data/Lora-Roman-VF.ttf -o out.html
 gftools check-vtt-compatibility ./data/Lora-Regular.ttf ./data/Lora-Regular.ttf
 gftools compare-font ./data/Lora-Regular.ttf ./data/Lora-Regular.ttf
 gftools dump-names ./data/Lora-Regular.ttf
-# gftools-family-html-snippet.py
-# gftools-find-features.py
+gftools-family-html-snippet.py $GF_API_KEY "Abel" "Hello world"
+# gftools-find-features.py Missing GsubLookupTypeName function
 gftools fix-ascii-fontmetadata ./data/Lora-Regular.ttf
 gftools fix-dsig ./data/Lora-Regular.ttf --autofix
 gftools fix-familymetadata ./data/Lora-Regular.ttf
@@ -39,13 +39,13 @@ gftools list-panose ./data/Lora-Regular.ttf
 gftools list-variable-source ./data/Lora-Roman-VF.ttf
 gftools list-weightclass ./data/Lora-Regular.ttf
 gftools list-widthclass ./data/Lora-Regular.ttf
-# gftools-metadata-vs-api.py
+gftools-metadata-vs-api.py $GF_API_KEY ./data/mock_googlefonts
 # gftools-namelist.py
 gftools nametable-from-filename ./data/Lora-Regular.ttf
 gftools ots ./data/mock_googlefonts/
 # gftools qa ./data/Lora-Regular.ttf --plot-glyphs
-# gftools-rangify.py
-# gftools-sanity-check.py
+gftools-rangify.py ./data/arabic_unique-glyphs.nam
+gftools-sanity-check.py ./data/mock_googlefonts/ofl/abel/
 # gftools-test-gf-coverage.py
 # gftools-ttf2cp.py
 # gftools-unicode-names.py
@@ -53,4 +53,4 @@ gftools ots ./data/mock_googlefonts/
 gftools update-version ./data/Lora-Regular.ttf 1.000 2.000
 gftools varfont-info ./data/Lora-Roman-VF.ttf
 gftools what-subsets ./data/Lora-Regular.ttf
-rm ./data/*.fix ./data/out.ttf ./data/*gasp.ttf
+rm -f ./data/*.fix ./data/out.ttf ./data/*gasp.ttf ots_gf_results.txt out.ttf out.html possible_variable_fonts/
