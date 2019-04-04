@@ -163,6 +163,7 @@ def main():
     params=request_params,
     headers=headers,
   )
+  print(request_issues.text)
 
   # Check if issues span more than one page
   if 'link' in request_issues.headers:
