@@ -37,9 +37,11 @@ Fix a non hinted font
 
 ## Installation
 
-Please install these tools using our [pip](https://pip.pypa.io/en/stable/installing/) package hosted on [PyPI](https://pypi.org/project/gftools/):
+Please install these tools using pip:
 
-    pip install --upgrade gftools
+    pip install git+https://github.com/googlefonts/gftools
+
+Note: We're in the middle of upgrading the scripts to support Python 3 so we don't have a Python 3 compatible pypi package yet.
 
 ### Requirements and Dependencies
 
