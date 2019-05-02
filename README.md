@@ -23,6 +23,18 @@ Sanity check a family directory:
     gftools sanity-check --repair_script=/tmp/fix.py ../ofl/josefinsans
     gftools sanity-check --repair_script=/tmp/fix.py --fix_type=fsSelection ../ufl
 
+Check a font family against the same family hosted on Google Fonts:
+
+    gftools qa [fonts.ttf] -a -o qa
+
+Add a DSIG table to a font
+
+    gftools fix-dsig font1.ttf
+
+Fix a non hinted font
+
+    gftools fix-nonhinting font_in.ttf font_out.ttf
+
 ## Installation
 
 Please install these tools using our [pip](https://pip.pypa.io/en/stable/installing/) package hosted on [PyPI](https://pypi.org/project/gftools/):
