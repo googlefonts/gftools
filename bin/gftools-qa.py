@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-"""QA script"""
+"""Check a font family.
+
+Generate test reports for FontBakery, Font Diffenator and Diffbrowsers.
+
+Examples:
+
+Check a family against the same family hosted on Google Fonts:
+`gftools qa [fonts.ttf] -a -o qa`
+
+Check a family against another local family and generate reports for
+Font Diffenator only:
+`gftools qa [fonts_a.ttf] -fb [fonts_b.ttf] --diffenator -o qa`
+
+Check a family against the same family hosted on Google Fonts and
+generate reports for Diffbrowserrs only:
+`gftools qa [fonts.ttf] -gf --diffbrowsers -o qa
+"""
 from fontTools.ttLib import TTFont
 from diffenator.diff import DiffFonts
 from diffenator.font import DFont
@@ -214,7 +230,9 @@ def run_diffenator(font_before, font_after, out, thresholds):
     diff.to_html(20, os.path.join(out, "report.html"), image_dir=".")
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+            description=__doc__,
+            formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("fonts", nargs="+")
     before_group = parser.add_argument_group(title="Fonts before input")
     before_input_group = before_group.add_mutually_exclusive_group(required=False)
@@ -222,9 +240,10 @@ def main():
                                   help="Fonts before paths")
     before_input_group.add_argument('-gf', '--from-googlefonts', action='store_true',
                                help="Diff against GoogleFonts instead of fonts_before")
-    parser.add_argument("-o", "--out", default="out")
+    parser.add_argument("-o", "--out", default="out",
+            help="Output path for check results")
     parser.add_argument("-a", "--auto-qa", action="store_true",
-            help="Determine which QA tools to run for fonts")
+            help="Check the fonts against against the same fonts hosted on Google Fonts")
     parser.add_argument("--diffenator", action="store_true",
             help="Run Fontdiffenator")
     parser.add_argument("--diffbrowsers", action="store_true",
@@ -234,11 +253,14 @@ def main():
     parser.add_argument("--plot-glyphs", action="store_true",
             help="Gen images of full charset, useful for new familes")
     parser.add_argument("--browser-previews", action="store_true",
-            help="Gen images on diff platforms, useful for new families")
+            help="Gen images on diff browsers, useful for new families")
     parser.add_argument("-dm", "--diff-mode", choices=("weak", "normal", "strict"),
                         default="normal")
-    parser.add_argument("-l", "--gfr-is-local", action="store_true", default=False)
-    parser.add_argument("-rd", "--render-diffs", action="store_true", default=False)
+    parser.add_argument("-l", "--gfr-is-local", action="store_true", default=False,
+            help="Use locally run GFRefgression")
+    parser.add_argument("-rd", "--render-diffs", action="store_true", default=False,
+            help=("Calculate glyph differences by rendering them then "
+                  "counting the pixel difference"))
     args = parser.parse_args()
 
     mkdir(args.out, overwrite=False)
