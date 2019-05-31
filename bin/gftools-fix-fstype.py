@@ -41,9 +41,9 @@ def main():
     if font['OS/2'].fsType != 0:
       font['OS/2'].fsType = 0
       font.save(font_path + '.fix')
-      print 'font saved %s.fix' % font_path
+      print('font saved %s.fix' % font_path)
     else:
-      print 'SKIPPING: %s fsType is already 0' % font_path
+      print('SKIPPING: %s fsType is already 0' % font_path)
 
 
 if __name__ == '__main__':
