@@ -21,11 +21,12 @@ repository between two specified dates.
 
 Example:
 Issues between 2017-01-01 to 2017-06-01:
-python fontbakery-check-gf-github.py <user> <pass> 2017-01-01 2017-06-01
+gftools check-gf-github <github_api_token> 2017-01-01 2017-06-01
 
 The title and url of each issues/pr can be displayed by using the 
 -v, --verbose option.
 """
+from __future__ import print_function
 import requests
 import re
 from datetime import datetime
@@ -41,26 +42,21 @@ def get_pagination_urls(request):
     )
     last_page_url = pages['last']
     last_page_no = re.search(r'(?<=&page=)[0-9]{1,20}', last_page_url).group(0)
-    base_url = last_page_url.replace(last_page_no, '')
-
-    urls = []
-    for n in range(1, int(last_page_no) + 1):
-        url = base_url + str(n)
-        urls.append(url)
-    return urls
+    base_url = last_page_url.replace('page={}'.format(last_page_no), 'page={}')
+    return [base_url.format(u) for u in range(1, int(last_page_no) + 1)]
 
 
-def get_issues_paginate(request_issues, start, end, auth):
+def get_issues_paginate(request_issues, start, end, headers):
   """
   If there are too many issues for one page, iterate through the pages
   to collect them all.
   """
   issues = {}
-  print 'Getting paginated results, be patient...'
+  print('Getting paginated results, be patient...')
   pages_url = get_pagination_urls(request_issues)
 
   for page_url in pages_url:
-    request = requests.get(page_url, auth=auth)
+    request = requests.get(page_url, headers=headers)
     page_issues = get_issues(request, start, end)
 
     for issue_type in page_issues:
@@ -110,11 +106,11 @@ def output_issues(issues, key):
   for issue in issues[key]:
     title = issue['title'][:50] + '...'
     url = issue['url'].replace('api.github.com/repos/', 'github.com/')
-    print '%s\t%s\t%s' % (
+    print('%s\t%s\t%s' % (
       key,
       title.ljust(50, ' ').encode('utf-8'),
       url.encode('utf-8'),
-    )
+    ))
 
 
 def iso8601_to_date(date_string):
@@ -126,10 +122,9 @@ def iso8601_to_date(date_string):
 def main():
   parser = ArgumentParser(description=__doc__,
                           formatter_class=RawTextHelpFormatter)
-  parser.add_argument('username',
-                      help="Your Github username")
-  parser.add_argument('password',
-                      help="Your Github password")
+  parser.add_argument('github_api_token',
+                      help=("User's Github API token. Generate one using the "
+                            "following link: https://github.com/settings/tokens"))
   parser.add_argument('start',
                       help="Start date in ISO 8601 format YYYY-MM-DD")
   parser.add_argument('end',
@@ -158,20 +153,20 @@ def main():
   request_params = {
     'state': 'all',
     'direction': 'asc',
-    'since': '2015-03-01', # Date repo was created
+    'since': args.start,
     'per_page': 100
   }
+  headers = {'Authorization': 'token %s' % args.github_api_token}
 
-  auth = (args.username, args.password)
   request_issues = requests.get(
     repo_url,
-    auth=auth,
     params=request_params,
+    headers=headers,
   )
 
   # Check if issues span more than one page
   if 'link' in request_issues.headers:
-    issues = get_issues_paginate(request_issues, start, end, auth)
+    issues = get_issues_paginate(request_issues, start, end, headers)
   else:
     issues = get_issues(request_issues, start, end)
 
@@ -190,11 +185,12 @@ def main():
     if args.opened_pulls:
       output_issues(issues, 'opened_prs')
 
-  print 'Issues closed\t%s' % len(issues['closed_issues'])
-  print 'Issues opened\t%s' % len(issues['opened_issues'])
-  print 'Pull requests closed/merged\t%s' % len(issues['closed_prs'])
-  print 'Pull requests opened\t%s' % len(issues['opened_prs'])
+  print('Issues closed\t%s' % len(issues['closed_issues']))
+  print('Issues opened\t%s' % len(issues['opened_issues']))
+  print('Pull requests closed/merged\t%s' % len(issues['closed_prs']))
+  print('Pull requests opened\t%s' % len(issues['opened_prs']))
 
 
 if __name__ == '__main__':
   main()
+
