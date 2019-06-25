@@ -1,4 +1,4 @@
-fonttools
+fonttools[ufo]
 #google-apputils
 git+https://github.com/joachimmetz/google-apputils.git@python3
 protobuf
