@@ -65,7 +65,7 @@ setup(
 #                      but there's no fontforge package on pypi
 #                      see: https://github.com/fontforge/fontforge/issues/2048
         'setuptools',
-        'FontTools',
+        'FontTools[ufo]',
         'Flask',
         'absl-py',
         'glyphsLib',
@@ -74,7 +74,6 @@ setup(
         'protobuf',
         'requests',
         'tabulate',
-        'fs',
         'unidecode',
         'fontbakery',
         'fontdiffenator',
