@@ -50,7 +50,7 @@ Structure and Hierarchy of Glyph Sets for Latin:
 
   - Western & Central European
   - Vietnamese
-  - Currencies (₡ ₣ ₤ ₦ ₧ ₩ ₫ ₭ ₱ ₲ ₵ ₹ ₺ ₼ ₽)
+  - Currencies (₡ ₦ ₱ ₩ ฿ ₫ ₭ ₲ ₵ ₹ ₨ ₺ ₼ ₸ ₽)
   - Alternate Numerals: Proportonal Lining
 
 Includes characters from the following unicode ranges:
