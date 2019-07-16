@@ -36,6 +36,7 @@ import json
 from zipfile import ZipFile
 from gftools.utils import (
     download_family_from_Google_Fonts,
+    download_file,
     Google_Fonts_has_family,
     load_Google_Fonts_api_key,
 )
@@ -229,17 +230,72 @@ def run_diffenator(font_before, font_after, out, thresholds):
     diff.to_md(20, os.path.join(out, "report.md"))
     diff.to_html(20, os.path.join(out, "report.html"), image_dir=".")
 
+
+def get_fonts_in_pr(repo_slug=None, pull_id=None):
+    # TODO Add context manager
+    api_url = "https://api.github.com/repos/{}/pulls/{}/files?page={}&per_page=30"
+
+    # Find last api page
+    r = requests.get(api_url.format(repo_slug, str(pull_id), "1"),
+        headers={'Authorization': 'token {}'.format(os.environ['GH_TOKEN'])})
+    if 'link' in r.headers:
+        pages = re.search(
+            r'(?<=page\=)[0-9]{1,5}(?<!\&per_page=50\>\; rel="last")',
+            r.headers['link']).group(0)
+    else:
+        pages = 1
+
+    dst_dir = tempfile.mkdtemp()
+    font_paths = []
+    for page in range(1, int(pages) + 1):
+        r = requests.get(api_url.format(repo_slug, str(pull_id), page),
+            headers={'Authorization': 'token {}'.format(os.environ['GH_TOKEN'])})
+        for item in r.json():
+            download_url = item['raw_url']
+            filename = item['filename']
+            if filename.endswith('.ttf') and item['status'] != 'removed':
+                if len(os.path.normpath(filename).split(os.path.sep)) > 3:
+                    continue
+                dst = os.path.join(dst_dir, os.path.basename(filename))
+                download_file(download_url, dst)
+                font_paths.append(dst)
+    return font_paths
+
+
+def get_fonts_in_github_dir(url):
+    url = url.replace('https://github.com/', 'https://api.github.com/repos/')
+    url = url.replace("tree/master", "contents")
+    font_paths = []
+    r = requests.get(url,
+        headers={'Authorization': 'token {}'.format(os.environ['GH_TOKEN'])})
+    dst_dir = tempfile.mkdtemp()
+    for item in r.json():
+        if item['name'].endswith(".ttf"):
+            f = item['download_url']
+            dst = os.path.join(dst_dir, os.path.basename(f))
+            download_file(f, dst)
+            font_paths.append(dst)
+    return font_paths
+
+
 def main():
     parser = argparse.ArgumentParser(
             description=__doc__,
             formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("fonts", nargs="+")
+
+    after_group = parser.add_argument_group(title="Fonts after input")
+    after_input_group = after_group.add_mutually_exclusive_group(required=True)
+    after_input_group.add_argument("-fa", "--fonts-after", nargs="+")
+    after_input_group.add_argument("-pr", "--pull-request")
+    after_input_group.add_argument("-gh", "--github-dir")
+
     before_group = parser.add_argument_group(title="Fonts before input")
     before_input_group = before_group.add_mutually_exclusive_group(required=False)
     before_input_group.add_argument('-fb', '--fonts-before', nargs="+",
                                   help="Fonts before paths")
     before_input_group.add_argument('-gf', '--from-googlefonts', action='store_true',
                                help="Diff against GoogleFonts instead of fonts_before")
+
     parser.add_argument("-o", "--out", default="out",
             help="Output path for check results")
     parser.add_argument("-a", "--auto-qa", action="store_true",
@@ -265,7 +321,22 @@ def main():
 
     mkdir(args.out, overwrite=False)
 
-    fonts_to_check = args.fonts
+    fonts_to_check = args.pull_request if args.pull_request else args.fonts_after
+    if args.pull_request:
+        if "pull" not in args.pull_request:
+            raise Exception("{} is not a valid github pull request url".format(
+                args.pull_request))
+        logging.warning("Downloading fonts from pr {}".format(args.pull_request))
+        url_split = args.pull_request.split("/")
+        repo_slug = "{}/{}".format(url_split[3], url_split[4])
+        repo_pull_id = url_split[-1]
+        fonts_to_check = get_fonts_in_pr(repo_slug, repo_pull_id)
+    elif args.github_dir:
+        if "github" not in args.github_dir:
+            raise Exception("{} is not a valid github dir".format(args.github_dir))
+        logger.warning("Downloading fonts from github dir {}".format(args.github_dir))
+        fonts_to_check = get_fonts_in_github_dir(args.github_dir)
+
     fonts_previous = any([args.fonts_before, args.from_googlefonts])
 
     if args.gfr_is_local:
