@@ -30,6 +30,7 @@ from glob import glob
 import subprocess
 import tempfile
 import logging
+from uuid import uuid4
 import requests
 from io import BytesIO
 import json
@@ -278,6 +279,33 @@ def get_fonts_in_github_dir(url):
     return font_paths
 
 
+def post_media_to_gfr(paths, uuid):
+    """Post images to GF Regression"""
+    GFR_URL = 'http://35.188.158.120'
+    url_endpoint = GFR_URL + '/api/upload-media'
+    payload = [('files', open(path, 'rb')) for path in paths]
+    r = requests.post(
+        url_endpoint,
+        data={'uuid': uuid},
+        files=payload,
+        headers={"Access-Token": os.environ["GFR_TOKEN"]}
+    )
+    return [os.path.join(GFR_URL, i) for i in r.json()['items']]
+
+
+def post_gh_msg(msg, repo_slug=None, pull_id=None):
+    if pull_id:
+        url = "https://api.github.com/repos/{}/issues/{}/comments".format(repo_slug, pull_id)
+        r = requests.post(url,
+            data=json.dumps({'body': msg}),
+            headers={'Authorization': 'token {}'.format(os.environ['GH_TOKEN'])})
+    else:
+        url = "https://api.github.com/repos/{}/issues".format(repo_slug)
+        r = requests.post(url,
+            data=json.dumps({'title': 'Google Fonts QA report', 'body': msg}),
+            headers={'Authorization': 'token {}'.format(os.environ['GH_TOKEN'])})
+
+
 def main():
     parser = argparse.ArgumentParser(
             description=__doc__,
@@ -296,8 +324,6 @@ def main():
     before_input_group.add_argument('-gf', '--from-googlefonts', action='store_true',
                                help="Diff against GoogleFonts instead of fonts_before")
 
-    parser.add_argument("-o", "--out", default="out",
-            help="Output path for check results")
     parser.add_argument("-a", "--auto-qa", action="store_true",
             help="Check the fonts against against the same fonts hosted on Google Fonts")
     parser.add_argument("--diffenator", action="store_true",
@@ -317,21 +343,29 @@ def main():
     parser.add_argument("-rd", "--render-diffs", action="store_true", default=False,
             help=("Calculate glyph differences by rendering them then "
                   "counting the pixel difference"))
+    parser.add_argument("-o", "--out", default="out",
+            help="Output path for check results")
+    parser.add_argument("-ogh", "--out-github", action="store_true",
+            help=("Post report data to either the pull request as a comment "
+                 "open a new issue"))
     args = parser.parse_args()
 
     mkdir(args.out, overwrite=False)
 
     fonts_to_check = args.pull_request if args.pull_request else args.fonts_after
     if args.pull_request:
+        url_split = args.pull_request.split("/")
+        repo_slug = "{}/{}".format(url_split[3], url_split[4])
+        repo_pull_id = url_split[-1]
         if "pull" not in args.pull_request:
             raise Exception("{} is not a valid github pull request url".format(
                 args.pull_request))
         logging.warning("Downloading fonts from pr {}".format(args.pull_request))
-        url_split = args.pull_request.split("/")
-        repo_slug = "{}/{}".format(url_split[3], url_split[4])
-        repo_pull_id = url_split[-1]
         fonts_to_check = get_fonts_in_pr(repo_slug, repo_pull_id)
     elif args.github_dir:
+        url_split = args.github_dir.split("/")
+        repo_slug = "{}/{}".format(url_split[3], url_split[4])
+        repo_pull_id = url_split[-1]
         if "github" not in args.github_dir:
             raise Exception("{} is not a valid github dir".format(args.github_dir))
         logger.warning("Downloading fonts from github dir {}".format(args.github_dir))
@@ -454,6 +488,20 @@ def main():
                         "found. See diffbrowsers readme"))
     else:
         logger.info("Skipping browser_previews")
+
+    # Post results to github
+    if args.out_github and (args.pull_request or args.github_dir):
+        logging.warning("Posting report and file to github")
+        report_zip = shutil.make_archive(args.out, "zip", args.out)
+        uuid = str(uuid4())
+        zip_url = post_media_to_gfr([report_zip], uuid)
+        with open(os.path.join(args.out, "Fontbakery", "report.md"), "r") as fb:
+            msg = "{}\n\n## Diff images: [{}]({})".format(
+                    fb.read(), os.path.basename(zip_url[0]), zip_url[0])
+            if args.pull_request:
+                post_gh_msg(msg, repo_slug, repo_pull_id)
+            elif args.github_dir:
+                post_gh_msg(msg, repo_slug)
 
 
 if __name__ == "__main__":
