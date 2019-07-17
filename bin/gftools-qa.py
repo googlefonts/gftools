@@ -99,13 +99,22 @@ def _instance_coords_to_filename(d):
 
 
 def family_name_from_fonts(fonts):
-    try:
-        family_name = mode([f['name'].getName(16, 3, 1, 1033).toUnicode() for f in
-                           fonts]) 
-    except AttributeError:        
-        family_name = mode([f['name'].getName(1, 3, 1, 1033).toUnicode() for f in
-            fonts]) 
-    return family_name
+    results = []
+    for font in fonts:
+        family_name = font['name'].getName(1, 3, 1, 1033)
+        typo_family_name = font['name'].getName(16, 3, 1, 1033)
+
+        if typo_family_name:
+            results.append(typo_family_name.toUnicode())
+        elif family_name:
+            results.append(family_name.toUnicode())
+        else:
+            raise Exception("Font: {} has no family name records".format(
+                os.path.basename(font.reader.file.name))
+            )
+    if len(set(results)) > 1:
+        raise Exception("Multiple family names found: [{}]".format(", ".join(results)))
+    return results[0]
 
 
 def mkdir(path, overwrite=True):
