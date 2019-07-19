@@ -3,7 +3,7 @@
 
 Generate test reports for FontBakery, Font Diffenator and Diffbrowsers.
 
-Examples:
+:
 
 Check a family against the same family hosted on Google Fonts:
 `gftools qa [fonts.ttf] -a -o qa`
@@ -22,7 +22,6 @@ from diffenator.font import DFont
 from diffbrowsers.diffbrowsers import DiffBrowsers
 from diffbrowsers.utils import load_browserstack_credentials
 from diffbrowsers.browsers import test_browsers
-from statistics import mode
 import argparse
 import shutil
 import os
@@ -41,6 +40,7 @@ from gftools.utils import (
     Google_Fonts_has_family,
     load_Google_Fonts_api_key,
 )
+import re
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -257,15 +257,15 @@ def get_fonts_in_pr(repo_slug=None, pull_id=None):
 
     dst_dir = tempfile.mkdtemp()
     font_paths = []
-    for page in range(1, int(pages) + 1):
+    for page in range(1, int(pages) + 2):
         r = requests.get(api_url.format(repo_slug, str(pull_id), page),
             headers={'Authorization': 'token {}'.format(os.environ['GH_TOKEN'])})
         for item in r.json():
             download_url = item['raw_url']
             filename = item['filename']
+            if "static" in filename:
+                continue
             if filename.endswith('.ttf') and item['status'] != 'removed':
-                if len(os.path.normpath(filename).split(os.path.sep)) > 3:
-                    continue
                 dst = os.path.join(dst_dir, os.path.basename(filename))
                 download_file(download_url, dst)
                 font_paths.append(dst)
