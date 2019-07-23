@@ -1,0 +1,383 @@
+#!/usr/bin/env python3
+"""Check a font family.
+
+Check a family against the same family hosted on Google Fonts:
+`gftools qa [fonts.ttf] -a -o qa`
+
+Check a family against another local family and generate reports for
+Font Diffenator only:
+`gftools qa [fonts_a.ttf] -fb [fonts_b.ttf] --diffenator -o qa`
+
+Check a family against the same family hosted on Google Fonts and
+generate reports for Diffbrowserrs only:
+`gftools qa [fonts.ttf] -gf --diffbrowsers -o qa
+"""
+from fontTools.ttLib import TTFont
+from diffenator.diff import DiffFonts
+from diffenator.font import DFont
+from diffbrowsers.diffbrowsers import DiffBrowsers
+from diffbrowsers.browsers import test_browsers
+import argparse
+import shutil
+import os
+from glob import glob
+import subprocess
+import tempfile
+import logging
+from uuid import uuid4
+import requests
+from io import BytesIO
+import json
+from zipfile import ZipFile
+from gftools.utils import (
+    download_family_from_Google_Fonts,
+    download_fonts_in_pr,
+    download_fonts_in_github_dir,
+    download_file,
+    Google_Fonts_has_family,
+    load_Google_Fonts_api_key,
+    load_browserstack_credentials,
+    mkdir,
+)
+
+
+__version__ = "2.0.0"
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+
+class FontQA:
+
+    GFR_URL = "http://35.188.158.120/"
+
+    def __init__(self, fonts, fonts_before=None, out="out"):
+        self._fonts = fonts
+        self._instances = self.font_instances(self._fonts)
+        self._fonts_before = fonts_before
+        self._instances_before = self.font_instances(self._fonts_before)
+        self._shared_instances = self._get_shared_instances()
+        self._bstack_auth = load_browserstack_credentials()
+        self._out = out
+        mkdir(self._out)
+
+    def _get_shared_instances(self):
+        if not self._fonts_before:
+            logger.info("No regression checks possible "
+                        "since there are fonts before == None")
+            return None
+        shared = set(self._instances_before.keys()) & set(self._instances.keys())
+        new = set(self._instances.keys()) - set(self._instances_before.keys())
+        missing = set(self._instances_before.keys()) - set(self._instances.keys())
+        if new:
+            logger.warning("New fonts: {}".format(", ".join(new)))
+        if missing:
+            logger.warning("Missing fonts: {}".format(", ".join(missing)))
+        if not shared:
+            raise Exception(
+                (
+                    "Cannot find matching fonts!\n"
+                    "fonts: [{}]\nfonts_before: [{}]".format(
+                        ", ".join(
+                            set(fonts_h.keys()), ", ".join(set(font_before_h.keys()))
+                        )
+                    )
+                )
+            )
+        return shared
+
+    def font_instances(self, ttfonts):
+        if not ttfonts:
+            return None
+        styles = {}
+        for ttfont in ttfonts:
+            ttfont_styles = self.instances_in_font(ttfont)
+            for style in ttfont_styles:
+                styles[style] = ttfont.reader.file.name
+        return styles
+
+    def instances_in_font(self, ttfont):
+        styles = []
+        if "fvar" in ttfont.keys():
+            for instance in ttfont["fvar"].instances:
+                nameid = instance.subfamilyNameID
+                name = ttfont["name"].getName(nameid, 3, 1, 1033).toUnicode()
+                name = name.replace(" ", "")
+                styles.append(name)
+        else:
+            styles.append(os.path.basename(ttfont.reader.file.name).split("-")[1][:-4])
+        return styles
+
+    def diffenator(self, **kwargs):
+        logger.info("Running Diffenator")
+        dst = os.path.join(self._out, "Diffenator")
+        mkdir(dst)
+        for style in self._shared_instances:
+            font_before = DFont(self._instances_before[style])
+            font_after = DFont(self._instances[style])
+            out = os.path.join(dst, style)
+            if font_after.is_variable and not font_before.is_variable:
+                font_after.set_variations_from_static(font_before)
+
+            elif not font_after.is_variable and font_before.is_variable:
+                font_before.set_variations_from_static(font_after)
+
+            elif font_after.is_variable and font_before.is_variable:
+                # TODO get wdth and slnt axis vals
+                variations = {"wght": font_before.ttfont["OS/2"].usWeightClass}
+                font_after.set_variations(variations)
+                font_before.set_variations(variations)
+
+            # TODO add settings
+            diff = DiffFonts(font_before, font_after)
+            diff.to_gifs(dst=out)
+            diff.to_txt(20, os.path.join(out, "report.txt"))
+            diff.to_md(20, os.path.join(out, "report.md"))
+            diff.to_html(20, os.path.join(out, "report.html"), image_dir=".")
+
+    @staticmethod
+    def chunkify(items, size):
+        return [items[i:i+size] for i in range(0, len(items), size)]
+
+    def diffbrowsers(self, **kwargs):
+        logger.info("Running Diffbrowsers")
+        dst = os.path.join(self._out, "Diffbrowsers")
+        mkdir(dst)
+        browsers_to_test = test_browsers["vf_browsers"]
+        fonts = sorted([v for k,v in self._instances.items()
+                     if k in self._shared_instances])
+        fonts_before = sorted([v for k,v in self._instances_before.items()
+                     if k in self._shared_instances])
+        fonts_before_groups = self.chunkify(fonts_before, 4)
+        fonts_groups = self.chunkify(fonts, 4)
+        for before, after in zip(fonts_before_groups, fonts_groups):
+            name = [os.path.basename(f)[:-4] for f in after]
+            name = "-".join(name)
+            out = os.path.join(dst, name)
+            diff_browsers = DiffBrowsers(
+                auth=self._bstack_auth,
+                gfr_instance_url=self.GFR_URL,
+                dst_dir=out,
+                browsers=browsers_to_test,
+            )
+            diff_browsers.new_session(set(before), set(after))
+            diff_browsers.diff_view("waterfall")
+            info = os.path.join(out, "info.json")
+            json.dump(diff_browsers.stats, open(info, "w"))
+            diff_browsers.diff_view("glyphs_all", pt=16)
+
+    def fontbakery(self):
+        logger.info("Running Fontbakery")
+        out = os.path.join(self._out, "Fontbakery")
+        mkdir(out)
+        cmd = (
+            ["fontbakery", "check-googlefonts", "-l", "WARN"]
+            + [f.reader.file.name for f in self._fonts]
+            + ["-C"]
+            + ["--ghmarkdown", os.path.join(out, "report.md")]
+        )
+        subprocess.call(cmd)
+
+    def plot_glyphs(self):
+        logger.info("Running plot glyphs")
+        out = os.path.join(self._out, "plot_glyphs")
+        mkdir(out)
+        fonts = [f.reader.file.name for f in self._fonts]
+        for font in fonts:
+            font_filename = os.path.basename(font)[:-4]
+            dfont = DFont(font)
+            if dfont.is_variable:
+                for coords in dfont.instances_coordinates:
+                    dfont.set_variations(coords)
+                    img_out = os.path.join(
+                        out,
+                        "%s_%s.png"
+                        % (font_filename, _instance_coords_to_filename(coords)),
+                    )
+                    dfont.glyphs.to_png(img_out, limit=100000)
+            else:
+                img_out = os.path.join(out, font_filename + ".png")
+                dfont.glyphs.to_png(dst=img_out)
+
+    def browser_previews(self, **kwargs):
+        logger.info("Running browser previews")
+        out = os.path.join(self._out, "browser_previews")
+        mkdir(out)
+        browsers_to_test = test_browsers["vf_browsers"]
+        font_groups = self.chunkify(list(self._instances.values()), 4)
+        for font_group in font_groups:
+            name = [os.path.basename(f)[:-4] for f in font_group]
+            name = "-".join(name)
+            diff_browsers = DiffBrowsers(
+                auth=self._bstack_auth,
+                gfr_instance_url=FontQA.GFR_URL,
+                dst_dir=os.path.join(out, name),
+                browsers=browsers_to_test,
+                gfr_is_local=False,
+            )
+            diff_browsers.new_session(font_group, font_group)
+            diff_browsers.diff_view("waterfall")
+            diff_browsers.diff_view("glyphs_all", pt=15)
+
+    def googlefonts_upgrade(self):
+        self.fontbakery()
+        self.diffenator()
+        self.diffbrowsers()
+
+    def googlefonts_new(self):
+        self.fontbakery()
+        self.plot_glyphs()
+        self.browser_previews()
+
+    def post_to_github(self, url):
+        self._upload_qa_data()
+        print("Posting to github")
+
+    def _upload_qa_data(self):
+        print("Uploading QA data")
+
+
+def family_name_from_fonts(fonts):
+    results = []
+    for font in fonts:
+        family_name = font["name"].getName(1, 3, 1, 1033)
+        typo_family_name = font["name"].getName(16, 3, 1, 1033)
+
+        if typo_family_name:
+            results.append(typo_family_name.toUnicode())
+        elif family_name:
+            results.append(family_name.toUnicode())
+        else:
+            raise Exception(
+                "Font: {} has no family name records".format(
+                    os.path.basename(font.reader.file.name)
+                )
+            )
+    if len(set(results)) > 1:
+        raise Exception("Multiple family names found: [{}]".format(", ".join(results)))
+    return results[0]
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    font_group = parser.add_argument_group(title="Fonts to qa")
+    font_input_group = font_group.add_mutually_exclusive_group(required=True)
+    font_input_group.add_argument("-f", "--fonts", nargs="+")
+    font_input_group.add_argument("-pr", "--pull-request")
+    font_input_group.add_argument("-gh", "--github-dir")
+    font_input_group.add_argument("-gf", "--googlefonts")
+
+    font_before_group = parser.add_argument_group(title="Fonts before input")
+    font_before_input_group = font_before_group.add_mutually_exclusive_group(
+        required=False
+    )
+    font_before_input_group.add_argument(
+        "-fb", "--fonts-before", nargs="+", help="Fonts before paths"
+    )
+    font_before_input_group.add_argument("-prb", "--pull-request-before")
+    font_before_input_group.add_argument("-ghb", "--github-dir-before")
+    font_before_input_group.add_argument(
+        "-gfb",
+        "--googlefonts-before",
+        action="store_true",
+        help="Diff against GoogleFonts instead of fonts_before",
+    )
+
+    check_group = parser.add_argument_group(title="QA checks")
+    check_input_group = check_group.add_mutually_exclusive_group(required=True)
+    check_input_group.add_argument(
+        "-a",
+        "--auto-qa",
+        action="store_true",
+        help="Check fonts against against the same fonts hosted on Google Fonts",
+    )
+    check_input_group.add_argument(
+        "--diffenator", action="store_true", help="Run Fontdiffenator"
+    )
+    check_input_group.add_argument(
+        "--diffbrowsers", action="store_true", help="Run Diffbrowsers"
+    )
+    check_input_group.add_argument(
+        "--fontbakery", action="store_true", help="Run FontBakery"
+    )
+    check_input_group.add_argument(
+        "--plot-glyphs",
+        action="store_true",
+        help="Gen images of full charset, useful for new familes",
+    )
+    check_input_group.add_argument(
+        "--browser-previews",
+        action="store_true",
+        help="Gen images on diff browsers, useful for new families",
+    )
+    check_input_group.add_argument(
+        "-dm", "--diff-mode", choices=("weak", "normal", "strict"), default="normal"
+    )
+    #    parser.add_argument("-l", "--gfr-is-local", action="store_true", default=False,
+    #            help="Use locally run GFRefgression")
+    #    parser.add_argument("-rd", "--render-diffs", action="store_true", default=False,
+    #            help=("Calculate glyph differences by rendering them then "
+    #                  "counting the pixel difference"))
+    parser.add_argument(
+        "-o", "--out", default="out", help="Output path for check results"
+    )
+    parser.add_argument(
+        "-ogh",
+        "--out-github",
+        action="store_true",
+        help=(
+            "Post report data to either the pull request as a comment "
+            "open a new issue"
+        ),
+    )
+    args = parser.parse_args()
+
+    if args.fonts:
+        fonts = args.fonts
+    elif args.pull_request:
+        fonts = download_fonts_in_pr(args.pull_request, tempfile.mkdtemp())
+    elif args.github_dir:
+        fonts = download_fonts_in_github_dir(args.github_dir, tempfile.mkdtemp())
+    elif args.googlefonts:
+        fonts = download_family_from_Google_Fonts(args.googlefonts, tempfile.mkdtemp())
+
+    ttfonts = [TTFont(f) for f in fonts if f.endswith(".ttf")]
+    family_name = family_name_from_fonts(ttfonts)
+    family_on_gf = Google_Fonts_has_family(family_name)
+
+    fonts_before = None
+    if args.fonts_before:
+        fonts_before = args.fonts_before
+    elif args.pull_request_before:
+        fonts_before = download_fonts_in_pr(args.pull_request_before, tempfile.mkdtemp())
+    elif args.github_dir_before:
+        fonts_before = download_fonts_in_github_dir(args.github_dir_before, tempfile.mkdtemp())
+    elif args.googlefonts_before and family_on_gf:
+        fonts_before = download_family_from_Google_Fonts(family_name, tempfile.mkdtemp())
+
+    if fonts_before:
+        ttfonts_before = [TTFont(f) for f in fonts_before if f.endswith(".ttf")]
+        qa = FontQA(ttfonts, ttfonts_before, args.out)
+    else:
+        qa = FontQA(ttfonts, out=args.out)
+
+    if args.auto_qa and family_on_gf:
+        qa.googlefonts_upgrade()
+    elif args.auto_qa and not family_on_gf:
+        qa.googlefonts_new()
+    if args.plot_glyphs:
+        qa.plot_glyphs()
+    if args.browser_previews:
+        qa.browser_previews()
+    if args.fontbakery:
+        qa.fontbakery()
+    if args.diffenator:
+        qa.diffenator()
+    if args.diffbrowsers:
+        qa.diffbrowsers()
+
+
+if __name__ == "__main__":
+    main()
