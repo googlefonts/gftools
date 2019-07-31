@@ -429,8 +429,14 @@ def main():
         fonts = args.fonts
     elif args.pull_request:
         fonts = download_fonts_in_pr(args.pull_request, tempfile.mkdtemp())
+        if not fonts:
+            logger.info("No fonts found in pull request. Skipping")
+            return
     elif args.github_dir:
         fonts = download_fonts_in_github_dir(args.github_dir, tempfile.mkdtemp())
+        if not fonts:
+            logger.info("No fonts found in github dir. Skipping")
+            return
     elif args.googlefonts:
         fonts = download_family_from_Google_Fonts(args.googlefonts, tempfile.mkdtemp())
 
