@@ -79,6 +79,7 @@ def load_browserstack_credentials():
 
 def download_fonts_in_pr(url, dst=None):
     """Download fonts in a Github pull request.""" 
+    # TODO (M Foley) see if urlparse can improve this
     url_split = url.split("/")
     repo_slug = "{}/{}".format(url_split[3], url_split[4])
     repo_pull_id = url_split[-1]
@@ -121,8 +122,12 @@ def download_fonts_in_pr(url, dst=None):
 def download_fonts_in_github_dir(url, dst=None):
     """Downlaod fonts in a github repo folder e.g
     https://github.com/google/fonts/tree/master/ofl/acme"""
+    # TODO (M Foley) see if urlparse can improve this
     url = url.replace("https://github.com/", "https://api.github.com/repos/")
-    url = url.replace("tree/master", "contents")
+    url = url.replace("tree/master", "")
+    url = url + "/contents"
+    if "//" in url[10:]:  # ignore http://www. | https://www
+        url = url[:10] + url[10:].replace("//", "/")
     font_paths = []
     r = requests.get(
         url, headers={"Authorization": "token {}".format(os.environ["GH_TOKEN"])}
