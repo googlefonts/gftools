@@ -83,8 +83,11 @@ def download_fonts_in_pr(url, dst=None):
     url_split = url.split("/")
     repo_slug = "{}/{}".format(url_split[3], url_split[4])
     repo_pull_id = url_split[-1]
+    if not repo_pull_id.isdigit():
+        raise Exception("Incorrect pr url: {}. Url must end with pull "
+                        "request number.\ne.g https://github.com/google"
+                        "/fonts/pull/2056".format(url))
     api_url = "https://api.github.com/repos/{}/pulls/{}/files?page={}&per_page=30"
-
     # Find last api page
     r = requests.get(
         api_url.format(repo_slug, str(repo_pull_id), "1"),
