@@ -127,8 +127,7 @@ def download_fonts_in_github_dir(url, dst=None):
     https://github.com/google/fonts/tree/master/ofl/acme"""
     # TODO (M Foley) see if urlparse can improve this
     url = url.replace("https://github.com/", "https://api.github.com/repos/")
-    url = url.replace("tree/master", "")
-    url = url + "/contents"
+    url = url.replace("tree/master", "contents")
     if "//" in url[10:]:  # ignore http://www. | https://www
         url = url[:10] + url[10:].replace("//", "/")
     font_paths = []
