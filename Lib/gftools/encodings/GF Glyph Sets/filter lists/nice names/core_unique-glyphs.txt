@@ -214,6 +214,3 @@ foursuperior
 euro
 minus
 divisionslash
-uniE0FF
-uniEFFD
-uniF000

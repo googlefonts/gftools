@@ -214,6 +214,3 @@ uni2074
 Euro
 minus
 uni2215
-uniE0FF
-uniEFFD
-uniF000
