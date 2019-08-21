@@ -2,15 +2,15 @@
 """Check a font family using Google Fonts QA tools.
 
 Examples:
-Check a family against the same family hosted on Google Fonts:
+Check a local family against the same family hosted on Google Fonts:
 `gftools qa -f [fonts.ttf] -gfb -a -o qa`
 
-Check a family against another local family and generate reports for
-Font Diffenator only:
+Check a local family against another local family and generate reports
+for Font Diffenator only:
 `gftools qa -f [fonts_a.ttf] -fb [fonts_b.ttf] --diffenator -o qa`
 
-Check a family against the same family hosted on Google Fonts and
-generate reports for Diffbrowserrs only:
+Check a local family against the same family hosted on Google Fonts and
+generate reports for Diffbrowsers only:
 `gftools qa -f [fonts.ttf] -gf --diffbrowsers -o qa
 
 Compare a pull request against the same family hosted on Google Fonts:
