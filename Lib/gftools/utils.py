@@ -127,7 +127,11 @@ def download_fonts_in_github_dir(url, dst=None):
     https://github.com/google/fonts/tree/master/ofl/acme"""
     # TODO (M Foley) see if urlparse can improve this
     url = url.replace("https://github.com/", "https://api.github.com/repos/")
-    url = url.replace("tree/master", "contents")
+    if "tree/master" in url:
+        url = url.replace("tree/master", "contents")
+    else:
+        # if font is in parent dir e.g https://github.com/bluemix/vibes-typeface
+        url = url + "/contents"
     if "//" in url[10:]:  # ignore http://www. | https://www
         url = url[:10] + url[10:].replace("//", "/")
     font_paths = []
