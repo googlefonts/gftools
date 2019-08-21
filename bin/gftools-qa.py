@@ -172,9 +172,9 @@ class FontQA:
         )
         fonts_before_groups = self.chunkify(fonts_before, 4)
         fonts_groups = self.chunkify(fonts, 4)
-        for before, after in zip(fonts_before_groups, fonts_groups):
-            name = [os.path.basename(f)[:-4] for f in after]
-            name = "-".join(name)
+        name_groups = self.chunkify(sorted([k for k in self._shared_instances]), 4)
+        for name_group, before, after in zip(name_groups, fonts_before_groups, fonts_groups):
+            name = "_".join(name_group)
             out = os.path.join(dst, name)
             diff_browsers = DiffBrowsers(
                 auth=self._bstack_auth,
