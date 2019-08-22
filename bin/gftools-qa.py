@@ -410,6 +410,7 @@ def main():
             "open a new issue"
         ),
     )
+    parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args()
     if args.out_github and not any([args.pull_request, args.github_dir]):
         raise Exception(
