@@ -20,6 +20,7 @@ from zipfile import ZipFile
 import sys
 import os
 import shutil
+from diffbrowsers.utils import load_browserstack_credentials as bstack_creds
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -64,6 +65,93 @@ def load_Google_Fonts_api_key():
     return None
 
 
+def load_browserstack_credentials():
+    """Return the user's Browserstack credentials"""
+    credentials = bstack_creds()
+    if not credentials:
+        username = os.environ.get("BSTACK_USERNAME")
+        access_key = os.environ.get("BSTACK_ACCESS_KEY")
+        if all([username, access_key]):
+            return (username, access_key)
+        return False
+    return credentials
+
+
+def download_fonts_in_pr(url, dst=None):
+    """Download fonts in a Github pull request.""" 
+    # TODO (M Foley) see if urlparse can improve this
+    url_split = url.split("/")
+    repo_slug = "{}/{}".format(url_split[3], url_split[4])
+    repo_pull_id = url_split[-1]
+    if not repo_pull_id.isdigit():
+        raise Exception("Incorrect pr url: {}. Url must end with pull "
+                        "request number.\ne.g https://github.com/google"
+                        "/fonts/pull/2056".format(url))
+    api_url = "https://api.github.com/repos/{}/pulls/{}/files?page={}&per_page=30"
+    # Find last api page
+    r = requests.get(
+        api_url.format(repo_slug, str(repo_pull_id), "1"),
+        headers={"Authorization": "token {}".format(os.environ["GH_TOKEN"])},
+    )
+    if "link" in r.headers:
+        pages = re.search(
+            r'(?<=page\=)[0-9]{1,5}(?<!\&per_page=50\>\; rel="last")', r.headers["link"]
+        ).group(0)
+    else:
+        pages = 1
+
+    font_paths = []
+    for page in range(1, int(pages) + 2):
+        r = requests.get(
+            api_url.format(repo_slug, str(repo_pull_id), page),
+            headers={"Authorization": "token {}".format(os.environ["GH_TOKEN"])},
+        )
+        for item in r.json():
+            download_url = item["raw_url"]
+            filename = item["filename"]
+            if "static" in filename:
+                continue
+            if filename.endswith(".ttf") and item["status"] != "removed":
+                if dst:
+                    font_dst = os.path.join(dst, os.path.basename(filename))
+                    download_file(download_url, font_dst)
+                    font_paths.append(font_dst)
+                else:
+                    dl = download_file(download_url)
+                    font_paths.append(dl)
+    return font_paths
+
+
+def download_fonts_in_github_dir(url, dst=None):
+    """Downlaod fonts in a github repo folder e.g
+    https://github.com/google/fonts/tree/master/ofl/acme"""
+    # TODO (M Foley) see if urlparse can improve this
+    url = url.replace("https://github.com/", "https://api.github.com/repos/")
+    if "tree/master" in url:
+        url = url.replace("tree/master", "contents")
+    else:
+        # if font is in parent dir e.g https://github.com/bluemix/vibes-typeface
+        url = url + "/contents"
+    if "//" in url[10:]:  # ignore http://www. | https://www
+        url = url[:10] + url[10:].replace("//", "/")
+    font_paths = []
+    r = requests.get(
+        url, headers={"Authorization": "token {}".format(os.environ["GH_TOKEN"])}
+    )
+    font_paths = []
+    for item in r.json():
+        if item["name"].endswith(".ttf"):
+            f = item["download_url"]
+            if dst:
+                font_dst = os.path.join(dst, os.path.basename(f))
+                download_file(f, font_dst)
+                font_paths.append(font_dst)
+            else:
+                dl = download_file(f)
+                font_paths.append(dl)
+    return font_paths
+
+
 def download_file(url, dst_path=None):
     """Download a file from a url. If no dst_path is specified, store the file
     as a BytesIO object"""
@@ -98,4 +186,11 @@ def cmp(x, y):
     """
 
     return (x > y) - (x < y)
+
+
+def mkdir(path, overwrite=True):
+    if os.path.isdir(path) and overwrite:
+        shutil.rmtree(path)
+    if not os.path.isdir(path):
+        os.mkdir(path)
 
