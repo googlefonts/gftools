@@ -19,6 +19,7 @@ from io import BytesIO
 from zipfile import ZipFile
 import sys
 import os
+import re
 import shutil
 from diffbrowsers.utils import load_browserstack_credentials as bstack_creds
 if sys.version_info[0] == 3:
