@@ -445,7 +445,7 @@ def main():
         re_filter = re.compile(args.filter_fonts)
         fonts = [f for f in fonts if re_filter.search(f)]
 
-    ttfonts = [TTFont(f) for f in fonts if f.endswith(".ttf")]
+    ttfonts = [TTFont(f) for f in fonts if f.endswith((".ttf", ".otf"))]
     family_name = family_name_from_fonts(ttfonts)
     family_on_gf = Google_Fonts_has_family(family_name)
 
@@ -466,7 +466,7 @@ def main():
         )
 
     if fonts_before:
-        ttfonts_before = [TTFont(f) for f in fonts_before if f.endswith(".ttf")]
+        ttfonts_before = [TTFont(f) for f in fonts_before if f.endswith((".ttf", ".otf"))]
         qa = FontQA(ttfonts, ttfonts_before, args.out)
     else:
         qa = FontQA(ttfonts, out=args.out)
