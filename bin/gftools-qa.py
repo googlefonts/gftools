@@ -50,7 +50,7 @@ from gftools.utils import (
 )
 
 
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -87,10 +87,9 @@ class FontQA:
                 (
                     "Cannot find matching fonts!\n"
                     "fonts: [{}]\nfonts_before: [{}]".format(
-                        ", ".join(
-                            set(fonts_h.keys()), ", ".join(set(font_before_h.keys()))
-                        )
-                    )
+                        ", ".join(set(self._instances.keys())),
+                        ", ".join(set(self._instances_before.keys()))
+                     )
                 )
             )
         return shared
@@ -114,7 +113,10 @@ class FontQA:
                 name = name.replace(" ", "")
                 styles.append(name)
         else:
-            styles.append(os.path.basename(ttfont.reader.file.name).split("-")[1][:-4])
+            filename = os.path.basename(ttfont.reader.file.name)
+            style = filename.split("-")[1]
+            style = re.sub(".ttf|.otf", "", style)
+            styles.append(style)
         return styles
 
     def diffenator(self, **kwargs):

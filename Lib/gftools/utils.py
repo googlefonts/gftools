@@ -114,7 +114,8 @@ def download_fonts_in_pr(url, dst=None):
                 continue
             if filename.endswith(".ttf") and item["status"] != "removed":
                 if dst:
-                    font_dst = os.path.join(dst, os.path.basename(filename))
+                    dl_filename = sanitize_github_filename(os.path.basename(filename))
+                    font_dst = os.path.join(dst, os.path.basename(dl_filename))
                     download_file(download_url, font_dst)
                     font_paths.append(font_dst)
                 else:
@@ -144,13 +145,20 @@ def download_fonts_in_github_dir(url, dst=None):
         if item["name"].endswith(".ttf"):
             f = item["download_url"]
             if dst:
-                font_dst = os.path.join(dst, os.path.basename(f))
+                dl_filename = sanitize_github_filename(os.path.basename(f))
+                font_dst = os.path.join(dst, dl_filename)
                 download_file(f, font_dst)
                 font_paths.append(font_dst)
             else:
                 dl = download_file(f)
                 font_paths.append(dl)
     return font_paths
+
+
+def sanitize_github_filename(f):
+    """stip token suffix from filenames downloaded from private repos.
+    Oswald-Regular.ttf?token=123545 --> Oswald-Regular.ttf"""
+    return re.sub(r"\?token=.*", "", os.path.basename(f))
 
 
 def download_file(url, dst_path=None):
