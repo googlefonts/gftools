@@ -243,19 +243,20 @@ class FontQA:
         mkdir(out)
         browsers_to_test = test_browsers["vf_browsers"]
         font_groups = self.chunkify(list(self._instances.values()), 4)
-        for font_group in font_groups:
+        name_groups = self.chunkify(list(self._instances.keys()), 4)
+        for name_group, font_group in zip(name_groups, font_groups):
             name = [os.path.basename(f)[:-4] for f in font_group]
-            name = "-".join(name)
+            name = "_".join(sorted(name_group))
             diff_browsers = DiffBrowsers(
                 auth=self._bstack_auth,
             gfr_instance_url=FontQA.GFR_URL,
             dst_dir=os.path.join(out, name),
             browsers=browsers_to_test,
             gfr_is_local=False,
-        )
-        diff_browsers.new_session(font_group, font_group)
-        diff_browsers.diff_view("waterfall")
-        diff_browsers.diff_view("glyphs_all", pt=15)
+            )
+            diff_browsers.new_session(font_group, font_group)
+            diff_browsers.diff_view("waterfall")
+            diff_browsers.diff_view("glyphs_all", pt=15)
 
     def googlefonts_upgrade(self):
         self.fontbakery()
