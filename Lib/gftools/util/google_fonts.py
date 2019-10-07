@@ -455,21 +455,21 @@ def FamilyStyleWeight(path):
     return FileFamilyStyleWeight(path)
 
 
-def FileFamilyStyleWeight(filename):
+def FileFamilyStyleWeight(path):
   """Extracts family, style, and weight from Google Fonts standard filename.
 
   Args:
-    filename: Font filename, eg Lobster-Regular.ttf.
+    path: Font path, eg ./fonts/ofl/lobster/Lobster-Regular.ttf.
   Returns:
     FileFamilyStyleWeightTuple for file.
   Raises:
     ParseError: if file can't be parsed.
   """
-  m = re.search(_FAMILY_WEIGHT_REGEX, filename)
+  m = re.search(_FAMILY_WEIGHT_REGEX, path)
   if not m:
-    raise ParseError('Could not parse %s' % filename)
+    raise ParseError('Could not parse %s' % path)
   sw = StyleWeight(m.group(2))
-  return FileFamilyStyleWeightTuple(filename, FamilyName(m.group(1)), sw[0],
+  return FileFamilyStyleWeightTuple(path, FamilyName(m.group(1)), sw[0],
                                     sw[1])
 
 
