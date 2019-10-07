@@ -53,4 +53,4 @@ gftools-rangify.py ./data/arabic_unique-glyphs.nam
 gftools update-version ./data/Lora-Regular.ttf 1.000 2.000
 gftools varfont-info ./data/Lora-Roman-VF.ttf
 gftools what-subsets ./data/Lora-Regular.ttf
-rm -f ./data/*.fix ./data/out.ttf ./data/*gasp.ttf ots_gf_results.txt out.ttf out.html possible_variable_fonts/
+rm -f ./data/*.fix ./data/out.ttf ./data/*gasp.ttf ots_gf_results.txt out.ttf out.html possible_variable_fonts
