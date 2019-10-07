@@ -88,7 +88,7 @@ def _FileFamilyStyleWeights(fontdir):
   if not files:
     raise OSError(errno.ENOENT, 'no font files found')
 
-  result = [fonts.FileFamilyStyleWeight(f) for f in files]
+  result = [fonts.FamilyStyleWeight(f) for f in files]
   def _Cmp(r1, r2):
     return cmp(r1.weight, r2.weight) or -cmp(r1.style, r2.style)
   result = sorted(result, key=cmp_to_key(_Cmp))

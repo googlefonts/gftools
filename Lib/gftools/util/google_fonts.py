@@ -448,6 +448,13 @@ def StyleWeight(styleweight):
   return ('normal', _KNOWN_WEIGHTS[styleweight])
 
 
+def FamilyStyleWeight(path):
+    filename = os.path.basename(path)
+    if "[" in filename and "]" in filename:
+        return VFFamilyStyleWeight(path)
+    return FileFamilyStyleWeight(path)
+
+
 def FileFamilyStyleWeight(filename):
   """Extracts family, style, and weight from Google Fonts standard filename.
 
@@ -464,6 +471,29 @@ def FileFamilyStyleWeight(filename):
   sw = StyleWeight(m.group(2))
   return FileFamilyStyleWeightTuple(filename, FamilyName(m.group(1)), sw[0],
                                     sw[1])
+
+
+def VFFamilyStyleWeight(path):
+  """Extract family, style and weight from a variable font's name table.
+
+  Args:
+      path: Font path, eg ./fonts/ofl/lobster/Lobster[wght].ttf.
+  Returns:
+    FileFamilyStyleWeightTuple for file.
+  """
+  with ttLib.TTFont(path) as font:
+    typoFamilyName = font['name'].getName(16, 3, 1, 1033)
+    familyName = font['name'].getName(2, 3, 1, 1033)
+    family = typoFamilyName.toUnicode() if typoFamilyName else \
+             familyName.toUnicode()
+
+    typoStyleName = font['name'].getName(17, 3, 1, 1033)
+    styleName = font['name'].getName(2, 3, 1, 1033)
+    style = typoStyleName.toUnicode() if typoStyleName else \
+            styleName.toUnicode()
+    style = style.replace(" ", "")
+    sw = StyleWeight(style)
+    return FileFamilyStyleWeightTuple(path, family, sw[0], sw[1])
 
 
 def ExtractNames(font, name_id):
