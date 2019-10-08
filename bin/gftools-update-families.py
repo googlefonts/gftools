@@ -51,20 +51,17 @@ def main():
     logger.setLevel(logging.ERROR)
 
   #------------------------------------------------------
-  import magic
   logging.debug("Checking each file is a ttf")
   fonts_to_check = []
   for arg_filepath in sorted(args.arg_filepaths):
     # use glob.glob to accept *.ttf
     for fullpath in glob.glob(arg_filepath):
       file_path, file_name = os.path.split(fullpath)
-      mime = magic.Magic(mime=True)
-      mimetype = mime.from_file(fullpath)
-      if mimetype == 'application/x-font-ttf':
-        logging.debug("'{}' has a ttf mimetype".format(file_name))
+      if file_name.endswith(".ttf"):
+        logging.debug("Adding '{}'".format(file_name))
         fonts_to_check.append(fullpath)
       else:
-        logging.warning("Skipping '{}' as mime was '{}', should be 'application/x-font-ttf')".format(file_name, mimetype))
+        logging.warning("Skipping '{}' as file is not a ttf".format(file_name))
   fonts_to_check.sort()
 
  #------------------------------------------------------
