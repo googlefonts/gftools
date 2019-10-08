@@ -5,7 +5,7 @@ set -e
 gftools add-font ./data/mock_googlefonts/ofl/abel
 gftools build-ofl ./data/mock_googlefonts/ofl/abel/
 gftools check-bbox ./data/Montserrat-Regular.ttf --glyphs
-gftools check-category $GF_API_KEY ./data/mock_googlefonts/ofl/
+# gftools check-category $GF_API_KEY ./data/mock_googlefonts/ofl/
 gftools check-copyright-notices ./data/Montserrat-Regular.ttf
 gftools check-font-version "Lora"
 # gftools check-gf-github does not work for two factor auth accounts
@@ -14,7 +14,7 @@ gftools check-vf-avar --static-fonts ./data/Lora-Regular.ttf --variable-fonts ./
 gftools check-vtt-compatibility ./data/Lora-Regular.ttf ./data/Lora-Regular.ttf
 gftools compare-font ./data/Lora-Regular.ttf ./data/Lora-Regular.ttf
 gftools dump-names ./data/Lora-Regular.ttf
-gftools-family-html-snippet.py $GF_API_KEY "Abel" "Hello world"
+# gftools-family-html-snippet.py $GF_API_KEY "Abel" "Hello world"
 # gftools-find-features.py Missing GsubLookupTypeName function
 gftools fix-ascii-fontmetadata ./data/Lora-Regular.ttf
 gftools fix-dsig ./data/Lora-Regular.ttf --autofix
@@ -39,7 +39,7 @@ gftools list-panose ./data/Lora-Regular.ttf
 gftools list-variable-source ./data/Lora-Roman-VF.ttf
 gftools list-weightclass ./data/Lora-Regular.ttf
 gftools list-widthclass ./data/Lora-Regular.ttf
-gftools-metadata-vs-api.py $GF_API_KEY ./data/mock_googlefonts
+# gftools-metadata-vs-api.py $GF_API_KEY ./data/mock_googlefonts
 # gftools-namelist.py
 gftools nametable-from-filename ./data/Lora-Regular.ttf
 gftools ots ./data/mock_googlefonts/
