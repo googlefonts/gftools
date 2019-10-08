@@ -49,7 +49,7 @@ gftools-rangify.py ./data/arabic_unique-glyphs.nam
 # gftools-test-gf-coverage.py
 # gftools-ttf2cp.py
 # gftools-unicode-names.py
-# gftools-update-families.py
+gftools-update-families.py ./data/Lora-Regular.ttf
 gftools update-version ./data/Lora-Regular.ttf 1.000 2.000
 gftools varfont-info ./data/Lora-Roman-VF.ttf
 gftools what-subsets ./data/Lora-Regular.ttf
