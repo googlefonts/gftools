@@ -22,7 +22,9 @@ Input file should have one codepoint per line in hex (0xXXXX).
 """
 from __future__ import print_function
 import unicodedata
-
+import sys
+if sys.version[0] == '3':
+    unichr = chr
 from absl import flags, app
 
 FLAGS = flags.FLAGS
