@@ -410,8 +410,16 @@ def main():
         action="store_true",
         help=(
             "Post report data to either the pull request as a comment "
-            "open a new issue"
+            "open a new issue. This can only be used if fonts have been "
+            "fetched from either a pull request or github dir."
         ),
+    )
+    parser.add_argument(
+        "--out-url",
+        help=(
+            "Post report data to a github pr. This can be used with any font "
+            "fetching method."
+        )
     )
     parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args()
@@ -489,7 +497,9 @@ def main():
     if args.diffbrowsers:
         qa.diffbrowsers()
 
-    if args.out_github and args.pull_request:
+    if args.out_url:
+        qa.post_to_github(args.out_url)
+    elif args.out_github and args.pull_request:
         qa.post_to_github(args.pull_request)
     elif args.out_github and args.github_dir:
         qa.post_to_github(args.github_dir)
