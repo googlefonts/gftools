@@ -47,7 +47,11 @@ setup(
     packages=['gftools',
               'gftools.util'],
     package_data={'gftools.util': ["GlyphsInfo/*.xml"],
-                  'gftools': ["encodings/*.nam"]},
+                  'gftools': [
+                      "encodings/*.nam",
+                      "encodings/GF Glyph Sets/*.nam"
+                  ]
+                 },
     scripts=gftools_scripts(),
     zip_safe=False,
     classifiers=[
