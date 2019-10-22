@@ -1,5 +1,4 @@
-#!/usr/bin/env python2
-#
+#!/usr/bin/env python
 # Copyright 2017 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +26,9 @@ import unicodedata
 from absl import flags
 from gftools.util import google_fonts as fonts
 from absl import app
-
+import sys
+if sys.version[0] == '3':
+    unichr = chr
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool('show_char', False, 'Print the actual character')
@@ -54,7 +55,7 @@ def main(argv):
     if FLAGS.show_subsets:
       show_subset = ' subset:%s' % ','.join(fonts.SubsetsForCodepoint(cp))
 
-    print (u'0x%04X%s%s' % (cp, show_char, show_subset)).strip().encode('UTF-8')
+    print(u'0x%04X%s%s' % (cp, show_char, show_subset))
 
 if __name__ == '__main__':
   app.run(main)

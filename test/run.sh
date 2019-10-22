@@ -47,7 +47,7 @@ gftools ots ./data/mock_googlefonts/
 gftools-rangify.py ./data/arabic_unique-glyphs.nam
 # gftools-sanity-check.py ./data/mock_googlefonts/ofl/abel/ DISABLED does not follow new spec
 gftools-test-gf-coverage.py ./data/Lora-Regular.ttf
-# gftools-ttf2cp.py
+gftools-ttf2cp.py ./data/Lora-Regular.ttf
 gftools-unicode-names.py --nam_file ./data/arabic_unique-glyphs.nam
 gftools-update-families.py ./data/Lora-Regular.ttf
 gftools update-version ./data/Lora-Regular.ttf 1.000 2.000
