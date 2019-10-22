@@ -40,12 +40,12 @@ gftools list-variable-source ./data/Lora-Roman-VF.ttf
 gftools list-weightclass ./data/Lora-Regular.ttf
 gftools list-widthclass ./data/Lora-Regular.ttf
 # gftools-metadata-vs-api.py $GF_API_KEY ./data/mock_googlefonts
-# gftools-namelist.py I can't even work out what this script does
+gftools-namelist.py ./data/Lora-Regular.ttf
 gftools nametable-from-filename ./data/Lora-Regular.ttf
 gftools ots ./data/mock_googlefonts/
 # gftools qa ./data/Lora-Regular.ttf --plot-glyphs
 gftools-rangify.py ./data/arabic_unique-glyphs.nam
-# gftools-sanity-check.py ./data/mock_googlefonts/ofl/abel/ DISABLED does not follow new spec
+# gftools-sanity-check.py ./data/mock_googlefonts/ofl/abel/ Should be deprecated. Very old, does not follow new spec
 gftools-test-gf-coverage.py ./data/Lora-Regular.ttf
 gftools-ttf2cp.py ./data/Lora-Regular.ttf
 gftools-unicode-names.py --nam_file ./data/arabic_unique-glyphs.nam
