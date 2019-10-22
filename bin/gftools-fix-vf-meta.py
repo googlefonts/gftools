@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 """
 Fontmake can only generate a single variable font. It cannot generate a
 family of variable fonts, that are related to one another.
