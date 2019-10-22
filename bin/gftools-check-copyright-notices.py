@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # Copyright 2017 The Fontbakery Authors
 # Copyright 2017 The Google Font Tools Authors
 #
