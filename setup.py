@@ -69,6 +69,7 @@ setup(
         'Flask',
         'absl-py',
         'glyphsLib',
+        'PyGithub',
         'pillow',
         'protobuf',
         'requests',

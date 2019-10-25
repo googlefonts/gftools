@@ -40,8 +40,8 @@ import json
 from zipfile import ZipFile
 from gftools.utils import (
     download_family_from_Google_Fonts,
-    download_fonts_in_pr,
-    download_fonts_in_github_dir,
+    download_files_in_github_pr,
+    download_files_in_github_dir,
     download_file,
     Google_Fonts_has_family,
     load_Google_Fonts_api_key,
@@ -440,12 +440,12 @@ def main():
     if args.fonts:
         fonts = args.fonts
     elif args.pull_request:
-        fonts = download_fonts_in_pr(args.pull_request, tempfile.mkdtemp())
+        fonts = download_files_in_github_pr(args.pull_request, tempfile.mkdtemp())
         if not fonts:
             logger.info("No fonts found in pull request. Skipping")
             return
     elif args.github_dir:
-        fonts = download_fonts_in_github_dir(args.github_dir, tempfile.mkdtemp())
+        fonts = download_files_in_github_dir(args.github_dir, tempfile.mkdtemp())
         if not fonts:
             logger.info("No fonts found in github dir. Skipping")
             return
@@ -464,11 +464,11 @@ def main():
     if args.fonts_before:
         fonts_before = args.fonts_before
     elif args.pull_request_before:
-        fonts_before = download_fonts_in_pr(
+        fonts_before = download_files_in_github_pr(
             args.pull_request_before, tempfile.mkdtemp()
         )
     elif args.github_dir_before:
-        fonts_before = download_fonts_in_github_dir(
+        fonts_before = download_files_in_github_dir(
             args.github_dir_before, tempfile.mkdtemp()
         )
     elif args.googlefonts_before and family_on_gf:

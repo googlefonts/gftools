@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # Copyright 2016 The Fontbakery Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,8 @@ import sys
 import os
 import re
 import shutil
+from collections import namedtuple
+from github import Github
 from diffbrowsers.utils import load_browserstack_credentials as bstack_creds
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
@@ -78,87 +80,131 @@ def load_browserstack_credentials():
     return credentials
 
 
-def download_fonts_in_pr(url, dst=None):
-    """Download fonts in a Github pull request.""" 
-    # TODO (M Foley) see if urlparse can improve this
-    url_split = url.split("/")
-    repo_slug = "{}/{}".format(url_split[3], url_split[4])
-    repo_pull_id = url_split[-1]
-    if not repo_pull_id.isdigit():
-        raise Exception("Incorrect pr url: {}. Url must end with pull "
-                        "request number.\ne.g https://github.com/google"
-                        "/fonts/pull/2056".format(url))
-    api_url = "https://api.github.com/repos/{}/pulls/{}/files?page={}&per_page=30"
-    # Find last api page
-    r = requests.get(
-        api_url.format(repo_slug, str(repo_pull_id), "1"),
-        headers={"Authorization": "token {}".format(os.environ["GH_TOKEN"])},
-    )
-    if "link" in r.headers:
-        pages = re.search(
-            r'(?<=page\=)[0-9]{1,5}(?<!\&per_page=50\>\; rel="last")', r.headers["link"]
-        ).group(0)
-    else:
-        pages = 1
+def parse_github_pr_url(url):
+    if not "github.com" in url and "pull" not in url:
+        raise ValueError("{} is not a github.com pr url".format(url))
+    if not url[-1].isdigit():
+        raise ValueError("{} should end with a pull request number".format(url))
+    segments = url.split("/")
+    GithubPR = namedtuple("GithubPR", "user repo pull")
+    return GithubPR(segments[3], segments[4], int(segments[-1]))
 
-    font_paths = []
-    for page in range(1, int(pages) + 2):
-        r = requests.get(
-            api_url.format(repo_slug, str(repo_pull_id), page),
-            headers={"Authorization": "token {}".format(os.environ["GH_TOKEN"])},
-        )
-        for item in r.json():
-            download_url = item["raw_url"]
-            filename = item["filename"]
-            if "static" in filename:
+
+def parse_github_dir_url(url):
+    if not "github.com" in url:
+        raise ValueError("{} is not a github.com dir url".format(url))
+    segments = url.split("/")
+    GithubDir = namedtuple("GithubDir", "user repo branch dir")
+    return GithubDir(segments[3], segments[4], segments[6], "/".join(segments[7:]))
+
+
+def download_files_in_github_pr(
+    url,
+    dst,
+    filter_files=[],
+    ignore_static_dir=True,
+    overwrite=True,
+):
+    """Download files in a github pr e.g
+    https://github.com/google/fonts/pull/2072
+
+    Arguments
+    ---------
+    url: str, github pr url
+    dst: str, path to output files
+    filter_files: list, collection of files to include. None will keep all.
+    ignore_static_dir: bool, If true, do not include files which reside in
+    a /static dir. These dirs are used in family dirs on google/fonts
+    e.g ofl/oswald.
+    overwrite: bool, set True to overwrite existing contents in dst
+
+    Returns
+    -------
+    list of paths to downloaded files
+    """
+    gh = Github(os.environ["GH_TOKEN"])
+    url = parse_github_pr_url(url)
+    repo_slug = "{}/{}".format(url.user, url.repo)
+    repo = gh.get_repo(repo_slug)
+    pull = repo.get_pull(url.pull)
+    files = [f for f in pull.get_files()]
+
+    mkdir(dst, overwrite=overwrite)
+    # if the pr is from google/fonts or a fork of it, download all the
+    # files inside the family dir as well. This way means we can qa
+    # the whole family together as a whole unit. It will also download
+    # the metadata, license and description files so all Fontbakery
+    # checks will be executed.
+    if pull.base.repo.name == "fonts":
+        dirs = set([os.path.dirname(p.filename) for p in files])
+        results = []
+        for d in dirs:
+            if ignore_static_dir and '/static' in d:
                 continue
-            if filename.endswith(".ttf") and item["status"] != "removed":
-                if dst:
-                    dl_filename = sanitize_github_filename(os.path.basename(filename))
-                    font_dst = os.path.join(dst, os.path.basename(dl_filename))
-                    download_file(download_url, font_dst)
-                    font_paths.append(font_dst)
-                else:
-                    dl = download_file(download_url)
-                    font_paths.append(dl)
-    return font_paths
+            url = os.path.join(
+                pull.head.repo.html_url,
+                "tree",
+                pull.head.ref, # head branch
+                d)
+            results += download_files_in_github_dir(url, dst, overwrite=False)
+        return results
+
+    results = []
+    for f in files:
+        filename = os.path.join(dst, f.filename)
+        if filter_files and not filename.endswith(tuple(filter_files)):
+            continue
+        if ignore_static_dir and "/static" in filename:
+            continue
+        if not overwrite and os.path.exists(filename):
+            continue
+        dst_ = os.path.dirname(filename)
+        mkdir(dst_, overwrite=False)
+        download_file(f.raw_url, filename)
+        results.append(filename)
+    return results
 
 
-def download_fonts_in_github_dir(url, dst=None):
-    """Downlaod fonts in a github repo folder e.g
-    https://github.com/google/fonts/tree/master/ofl/acme"""
-    # TODO (M Foley) see if urlparse can improve this
-    url = url.replace("https://github.com/", "https://api.github.com/repos/")
-    if "tree/master" in url:
-        url = url.replace("tree/master", "contents")
-    else:
-        # if font is in parent dir e.g https://github.com/bluemix/vibes-typeface
-        url = url + "/contents"
-    if "//" in url[10:]:  # ignore http://www. | https://www
-        url = url[:10] + url[10:].replace("//", "/")
-    font_paths = []
-    r = requests.get(
-        url, headers={"Authorization": "token {}".format(os.environ["GH_TOKEN"])}
-    )
-    font_paths = []
-    for item in r.json():
-        if item["name"].endswith(".ttf"):
-            f = item["download_url"]
-            if dst:
-                dl_filename = sanitize_github_filename(os.path.basename(f))
-                font_dst = os.path.join(dst, dl_filename)
-                download_file(f, font_dst)
-                font_paths.append(font_dst)
-            else:
-                dl = download_file(f)
-                font_paths.append(dl)
-    return font_paths
+def download_files_in_github_dir(
+    url,
+    dst,
+    filter_files=[],
+    overwrite=True
+):
+    """Download files in a github dir e.g
+    https://github.com/google/fonts/tree/master/ofl/abhayalibre
 
+    Arguments
+    ---------
+    url: str, github dir url
+    dst: str, path to output files
+    filter_files: list, collection of files to include. None will keep all.
+    overwrite: bool, set True to overwrite existing contents in dst
 
-def sanitize_github_filename(f):
-    """stip token suffix from filenames downloaded from private repos.
-    Oswald-Regular.ttf?token=123545 --> Oswald-Regular.ttf"""
-    return re.sub(r"\?token=.*", "", os.path.basename(f))
+    Returns
+    -------
+    list of paths to downloaded files
+    """
+    gh = Github(os.environ["GH_TOKEN"])
+    url = parse_github_dir_url(url)
+    repo_slug = "{}/{}".format(url.user, url.repo)
+    repo = gh.get_repo(repo_slug)
+    files = [f for f in repo.get_contents(url.dir, ref=url.branch)
+             if f.type == 'file']
+
+    mkdir(dst, overwrite=overwrite)
+    results = []
+    for f in files:
+        filename = os.path.join(dst, f.path)
+        if filter_files and not filename.endswith(tuple(filter_files)):
+            continue
+        if not overwrite and os.path.exists(filename):
+            continue
+        dst_ = os.path.dirname(filename)
+        mkdir(dst_, overwrite=False)
+        download_file(f.download_url, filename)
+        results.append(filename)
+    return results
 
 
 def download_file(url, dst_path=None):
@@ -168,7 +214,7 @@ def download_file(url, dst_path=None):
     if not dst_path:
         return BytesIO(request.content)
     with open(dst_path, 'wb') as downloaded_file:
-        shutil.copyfileobj(request.raw, downloaded_file)
+        downloaded_file.write(request.content)
 
 
 def fonts_from_zip(zipfile, dst=None):
@@ -201,5 +247,6 @@ def mkdir(path, overwrite=True):
     if os.path.isdir(path) and overwrite:
         shutil.rmtree(path)
     if not os.path.isdir(path):
-        os.mkdir(path)
+        os.makedirs(path)
+    return path
 
