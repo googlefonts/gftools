@@ -259,7 +259,10 @@ def main(argv):
   if os.path.isfile(desc):
     print('DESCRIPTION.en_us.html exists')
   else:
-    _WriteTextFile(desc, 'N/A')
+    _WriteTextFile(desc, '''<p>$DESCRIPTION</p>
+
+<p>To contribute, see <a href="$UPSTREAMREPO">$UPSTREAMREPO_WITHOUT_HTTP</a></p>.
+''')
 
   _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
 
