@@ -274,11 +274,11 @@ def main(argv):
         html = html.replace('$UPSTREAMREPO', repo)
     _WriteTextFile(desc, html)
 
-    if metadata.license == 'OFL':
-      ofl_text = templates.ofl_text.replace('{{ copyright_string }}', metadata.fonts[0].copyright)
-      _WriteTextFile(os.path.join(fontdir, 'OFL.txt'), ofl_text)
-
   _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
+
+  if metadata.fonts and metadata.fonts[0].copyright and metadata.license == 'OFL':
+    ofl_text = templates.ofl_text.replace('{{ copyright_string }}', metadata.fonts[0].copyright)
+    _WriteTextFile(os.path.join(fontdir, 'OFL.txt'), ofl_text)
 
 
 if __name__ == '__main__':
