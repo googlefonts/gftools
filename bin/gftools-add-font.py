@@ -47,6 +47,7 @@ import glob
 import os
 import sys
 import time
+import re
 from fontTools import ttLib
 
 
@@ -263,10 +264,18 @@ def main(argv):
   if os.path.isfile(desc):
     print('DESCRIPTION.en_us.html exists')
   else:
-    _WriteTextFile(desc, '''<p>$DESCRIPTION</p>
+    html = '''<p>$DESCRIPTION</p>
 
 <p>To contribute, see <a href="$UPSTREAMREPO">$UPSTREAMREPO_WITHOUT_HTTP</a></p>.
-''')
+'''
+    if metadata.fonts and metadata.fonts[0].copyright:
+      p = re.compile(r'.+\((.+?)\).*')
+      s = p.search(copyright)
+      if s:
+        repo = s.groups(0)[0]
+        html = html.replace('$$UPSTREAMREPO_WITHOUT_HTTP', repo.replace('https://', '').replace('http://', ''))
+        html = html.replace('$UPSTREAMREPO', repo)
+    _WriteTextFile(desc, html)
 
   _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
 
