@@ -54,6 +54,7 @@ from fontTools import ttLib
 from absl import flags
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
+from gftools.util import templates
 from gftools.utils import cmp
 from absl import app
 from google.protobuf import text_format
@@ -273,8 +274,11 @@ def main(argv):
         html = html.replace('$UPSTREAMREPO', repo)
     _WriteTextFile(desc, html)
 
-  _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
+    if metadata.license == 'OFL':
+      ofl_text = templates.ofl_text.replace('{{ copyright_string }}', metadata.fonts[0].copyright)
+      _WriteTextFile(os.path.join(fontdir, 'OFL.txt'), ofl_text)
 
+  _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
 
 
 if __name__ == '__main__':
