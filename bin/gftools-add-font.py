@@ -269,7 +269,7 @@ def main(argv):
       s = p.search(metadata.fonts[0].copyright)
       if s:
         repo = s.groups(0)[0]
-        html = html.replace('$$UPSTREAMREPO_WITHOUT_HTTP', repo.replace('https://', '').replace('http://', ''))
+        html = html.replace('$UPSTREAMREPO_WITHOUT_HTTP', repo.replace('https://', '').replace('http://', ''))
         html = html.replace('$UPSTREAMREPO', repo)
     _WriteTextFile(desc, html)
 
