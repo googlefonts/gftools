@@ -263,7 +263,7 @@ def main(argv):
   else:
     html = '''<p>$DESCRIPTION</p>
 
-<p>To contribute, see <a href="$UPSTREAMREPO">$UPSTREAMREPO_WITHOUT_HTTP</a></p>.
+<p>To contribute, see <a href="$UPSTREAMREPO">$UPSTREAMREPO_WITHOUT_HTTP</a>.</p>
 '''
     if metadata.fonts and metadata.fonts[0].copyright:
       p = re.compile(r'.+\((.+?)\).*')
