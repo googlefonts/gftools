@@ -277,8 +277,12 @@ def main(argv):
   _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
 
   if metadata.fonts and metadata.fonts[0].copyright and metadata.license == 'OFL':
-    ofl_text = templates.ofl_text.replace('{{ copyright_string }}', metadata.fonts[0].copyright)
-    _WriteTextFile(os.path.join(fontdir, 'OFL.txt'), ofl_text)
+    ofl = os.path.join(fontdir, 'OFL.txt')
+    if os.path.isfile(ofl):
+      print('OFL.txt exists')
+    else:
+      ofl_text = templates.ofl_text.replace('{{ copyright_string }}', metadata.fonts[0].copyright)
+      _WriteTextFile(os.path.join(ofl, ofl_text)
 
 
 if __name__ == '__main__':
