@@ -254,10 +254,6 @@ def main(argv):
     is_new = False
 
   metadata = _MakeMetadata(fontdir, is_new)
-  print(metadata)
-  print(metadata.fonts)
-  print(metadata.fonts[0])
-  print(metadata.fonts[0].copyright)
   text_proto = text_format.MessageToString(metadata)
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
@@ -270,7 +266,7 @@ def main(argv):
 '''
     if metadata.fonts and metadata.fonts[0].copyright:
       p = re.compile(r'.+\((.+?)\).*')
-      s = p.search(copyright)
+      s = p.search(metadata.fonts[0].copyright)
       if s:
         repo = s.groups(0)[0]
         html = html.replace('$$UPSTREAMREPO_WITHOUT_HTTP', repo.replace('https://', '').replace('http://', ''))
