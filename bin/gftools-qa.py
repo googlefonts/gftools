@@ -57,7 +57,7 @@ logger.setLevel(logging.INFO)
 
 class FontQA:
 
-    GFR_URL = "http://35.188.158.120/"
+    GFR_URL = "http://35.238.63.0/"
 
     def __init__(self, fonts, fonts_before=None, out="out"):
         self._fonts = fonts
