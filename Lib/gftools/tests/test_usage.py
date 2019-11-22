@@ -35,7 +35,7 @@ class TestSubcommands(unittest.TestCase):
                    os.listdir(self.bin_path) if f.startswith('gftools-')]
         subcommands = subprocess.check_output(['python',
                                                os.path.join('bin', 'gftools'),
-                                               '--list-subcommands']).split()
+                                               '--list-subcommands'], encoding="utf-8").split()
         self.assertEqual(sorted(scripts), sorted(subcommands))
 
 
@@ -45,13 +45,20 @@ class TestGFToolsScripts(unittest.TestCase):
         self.get_path = lambda name: os.path.join('bin', 'gftools-' + name + '.py')
         self.example_dir = os.path.join('data', 'test', 'cabin')
         self.example_font = os.path.join(self.example_dir, 'Cabin-Regular.ttf')
+        self.example_vf_font = os.path.join("data", "test", 'Lora-Roman-VF.ttf')
+        self.gf_family_dir = os.path.join('data', 'test', 'mock_googlefonts', 'ofl', 'abel')
+        self.nam_file = os.path.join('data', 'test', 'arabic_unique-glyphs.nam')
         self.blacklisted_scripts = [
           ['python', self.get_path('build-contributors')],  # requires source folder of git commits
+          ['python', self.get_path('check-category')],  # Requires GF key
           ['python', self.get_path('check-gf-github')],  # Requires github credentials
           ['python', self.get_path('build-font2ttf')],  # Requires fontforge
           ['python', self.get_path('generate-glyphdata')],  # Generates desired_glyph_data.json
           ['python', self.get_path('metadata-vs-api')],  # Requires an API key
           ['python', self.get_path('update-version')],  # Needs to know the current font version and the next version to set
+          ['python', self.get_path('family-html-snippet')], # Requires GF api token
+          ['python', self.get_path('qa')], # Has seperate checks
+          ['python', self.get_path('sanity-check')], # Very old doesn't follow new spec. Should be deprecated.
         ]
         self.dir_before_tests = os.listdir(self.example_dir)
 
@@ -63,15 +70,21 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def check_script(self, command):
         """Template for unit testing the python scripts"""
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
         stdout, stderr = process.communicate()
         self.assertNotIn('Err', stderr, ' '.join(command) + ':\n\n' + stderr)
+
+    def test_build_ofl(self):
+        self.check_script(['python', self.get_path('add-font'), self.gf_family_dir])
 
     def test_build_ofl(self):
         self.check_script(['python', self.get_path('build-ofl'), self.example_dir])
 
     def test_check_bbox(self):
         self.check_script(['python', self.get_path('check-bbox'), self.example_font, '--glyphs', '--extremes'])
+
+    def test_check_copyright_notices(self):
+        self.check_script(['python', self.get_path('check-copyright-notices')])
 
     def test_check_font_version(self):
         self.check_script(['python', self.get_path('check-font-version'), self.example_font])
@@ -82,8 +95,14 @@ class TestGFToolsScripts(unittest.TestCase):
     def test_check_vtt_compatibility(self):
         self.check_script(['python', self.get_path('check-vtt-compatibility'), self.example_font, self.example_font])
 
-    def test_famil_html_snippet(self):
-        self.check_script(['python', self.get_path('family-html-snippet'), 'Roboto', 'test', '--subsets', 'greek'])
+    def test_compare_font(self):
+        self.check_script(['python', self.get_path('compare-font'), self.example_font, self.example_font])
+
+    def test_dump_names(self):
+        self.check_script(['python', self.get_path('dump-names'), self.example_font])
+
+    def test_find_features(self):
+        self.check_script(['python', self.get_path('find-features'), self.example_font])
 
     def test_fix_ascii_fontmetadata(self):
         self.check_script(['python', self.get_path('fix-ascii-fontmetadata'), self.example_font])
@@ -112,6 +131,12 @@ class TestGFToolsScripts(unittest.TestCase):
     def test_fix_glyphs(self):
         self.check_script(['python', self.get_path('fix-glyphs')])
 
+    def test_fix_hinting(self):
+        self.check_script(['python', self.get_path('fix-hinting'), self.example_font])
+
+    def test_fix_isfixedpitch(self):
+        self.check_script(['python', self.get_path('fix-isfixedpitch'), "--fonts", self.example_font])
+
     def test_fix_nameids(self):
         self.check_script(['python', self.get_path('fix-nameids'), self.example_font])
 
@@ -126,6 +151,15 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def test_fix_vertical_metrics(self):
         self.check_script(['python', self.get_path('fix-vertical-metrics'), self.example_font])
+
+    def test_font_diff(self):
+        self.check_script(['python', self.get_path('font-diff'), self.example_font, self.example_font])
+
+    def test_font_weights_coveraget(self):
+        self.check_script(['python', self.get_path('font-weights-coverage'), self.example_font])
+
+    def test_list_italicangle(self):
+        self.check_script(['python', self.get_path('list-italicangle'), self.example_font])
 
     def test_list_panose(self):
         self.check_script(['python', self.get_path('list-panose'), self.example_font])
@@ -142,6 +176,35 @@ class TestGFToolsScripts(unittest.TestCase):
     def test_nametable_from_filename(self):
         self.check_script(['python', self.get_path('nametable-from-filename'), self.example_font])
 
+    def test_namelist(self):
+        self.check_script(['python', self.get_path('namelist'), self.example_font])
+
+    def test_ots(self):
+        self.check_script(['python', self.get_path('ots'), self.example_font])
+
+    def test_rangify(self):
+        self.check_script(['python', self.get_path('rangify'), self.nam_file])
+
+    def test_test_gf_coverage(self):
+        self.check_script(['python', self.get_path('test-gf-coverage'), self.example_font])
+
+    def test_ttf2cp(self):
+        self.check_script(['python', self.get_path('ttf2cp'), self.example_font])
+
+    def test_unicode_names(self):
+        self.check_script(['python', self.get_path('unicode-names'), "--nam_file", self.nam_file])
+
+    def test_update_families(self):
+        self.check_script(['python', self.get_path('update-families'), self.example_font])
+
+    def test_update_version(self):
+        self.check_script(['python', self.get_path('update-version'), self.example_font])
+
+    def test_varfont_info(self):
+        self.check_script(['python', self.get_path('varfont-info'), self.example_vf_font])
+
+    def test_what_subsets(self):
+        self.check_script(['python', self.get_path('what-subsets'), self.example_font])
 # Temporarily disabling this until we close issue #13
 # (https://github.com/googlefonts/tools/issues/13)
 # See also https://github.com/googlefonts/fontbakery/issues/1535
