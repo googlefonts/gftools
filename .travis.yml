@@ -13,6 +13,5 @@ install:
   - pip install .
 
 script:
-  - cd test
-  - sh run.sh
+  - python ./Lib/gftools/tests/test_usage.py
 
