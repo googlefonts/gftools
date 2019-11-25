@@ -2,4 +2,4 @@ fonttools[ufo]
 #google-apputils
 absl-py
 protobuf
-fs
+PyGithub
