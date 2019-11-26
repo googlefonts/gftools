@@ -23,6 +23,9 @@
 #
 # 2. The PREP table. Raph Levien <firstname.lastname@gmail.com>
 #    suggests using his code to turn on 'drop out control'
+#    Learn more:
+#    https://developer.apple.com/fonts/TrueType-Reference-Manual/RM05/Chap5.html#SCANCTRL
+#    https://developer.apple.com/fonts/TrueType-Reference-Manual/RM05/Chap5.html#SCANTYPE
 #
 # PUSHW_1
 #  511
