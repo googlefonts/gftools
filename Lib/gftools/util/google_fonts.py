@@ -483,7 +483,7 @@ def VFFamilyStyleWeight(path):
   """
   with ttLib.TTFont(path) as font:
     typoFamilyName = font['name'].getName(16, 3, 1, 1033)
-    familyName = font['name'].getName(2, 3, 1, 1033)
+    familyName = font['name'].getName(1, 3, 1, 1033)
     family = typoFamilyName.toUnicode() if typoFamilyName else \
              familyName.toUnicode()
 
