@@ -171,8 +171,7 @@ def _MakeMetadata(fontdir, is_new):
         var_axes = metadata.axes.add()
         var_axes.tag = axes[0]
         var_axes.min_value = axes[1]
-        var_axes.default_value = axes[2]
-        var_axes.max_value = axes[3]
+        var_axes.max_value = axes[2]
 
   return metadata
 
@@ -192,7 +191,7 @@ def _AxisInfo(fontfile):
     else:
       fvar = font['fvar']
       axis_info = [
-          (a.axisTag, a.minValue, a.defaultValue, a.maxValue) for a in fvar.axes
+          (a.axisTag, a.minValue, a.maxValue) for a in fvar.axes
       ]
       return tuple(sorted(axis_info))
 
