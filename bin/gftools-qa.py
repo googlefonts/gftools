@@ -162,29 +162,21 @@ class FontQA:
         dst = os.path.join(self._out, "Diffbrowsers")
         mkdir(dst)
         browsers_to_test = test_browsers["vf_browsers"]
-        fonts = sorted(
-            [v for k, v in self._instances.items() if k in self._shared_instances]
-        )
-        fonts_before = sorted(
-            [
-                v
-                for k, v in self._instances_before.items()
-                if k in self._shared_instances
-            ]
-        )
-        fonts_before_groups = self.chunkify(fonts_before, 4)
-        fonts_groups = self.chunkify(fonts, 4)
-        name_groups = self.chunkify(sorted([k for k in self._shared_instances]), 4)
-        for name_group, before, after in zip(name_groups, fonts_before_groups, fonts_groups):
-            name = "_".join(name_group)
-            out = os.path.join(dst, name)
+        fonts = [(k, self._instances_before[k], self._instances[k])
+                 for k in self._shared_instances]
+        font_groups = self.chunkify(sorted(fonts), 4)
+        for group in font_groups:
+            dir_name = "_".join([i[0] for i in group])
+            fonts_before = [i[1] for i in group]
+            fonts_after = [i[2] for i in group]
+            out = os.path.join(dst, dir_name)
             diff_browsers = DiffBrowsers(
                 auth=self._bstack_auth,
                 gfr_instance_url=self.GFR_URL,
                 dst_dir=out,
                 browsers=browsers_to_test,
             )
-            diff_browsers.new_session(set(before), set(after))
+            diff_browsers.new_session(set(fonts_before), set(fonts_after))
             diff_browsers.diff_view("waterfall")
             info = os.path.join(out, "info.json")
             json.dump(diff_browsers.stats, open(info, "w"))
