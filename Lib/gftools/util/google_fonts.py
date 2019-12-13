@@ -434,36 +434,98 @@ def FamilyName(fontname):
   return re.sub('([a-z0-9])([A-Z])', r'\1 \2', fontname)
 
 
-def StyleWeight(styleweight):
-  """Breaks apart a style/weight specifier into a 2-tuple of (style, weight).
+def Weight(stylename):
+  """Derive weight from a stylename.
 
   Args:
-    styleweight: style/weight string, e.g. Bold, Regular, or ExtraLightItalic.
+    stylename: string, e.g. Bold, Regular, or ExtraLightItalic.
   Returns:
-    2-tuple of style (normal or italic) and weight.
+    weight: integer
   """
-  if styleweight.endswith('Italic'):
-    return ('italic', _KNOWN_WEIGHTS[styleweight[:-6]])
+  if stylename.endswith('Italic'):
+    return _KNOWN_WEIGHTS[stylename[:-6]]
+  return _KNOWN_WEIGHTS[stylename]
 
-  return ('normal', _KNOWN_WEIGHTS[styleweight])
+
+def VFWeight(font):
+  """Return a variable fonts weight. Return 400 if 400 is within the wght
+  axis range else return the value closest to 400
+
+  Args:
+    font: TTFont
+  Returns:
+    weight: integer
+  """
+  wght_axis = None
+  for axis in font['fvar'].axes:
+    if axis.axisTag == "wght":
+      wght_axis = axis
+      break
+  value = 400
+  if wght_axis:
+    if wght_axis.minValue >= 400:
+      value = wght_axis.minValue
+    if wght_axis.maxValue <= 400:
+      value = wght_axis.maxValue
+  # TODO (MF) check with GF Eng if we should just assume it's safe to return
+  # 400 if a wght axis doesn't exist.
+  return value
 
 
-def FileFamilyStyleWeight(filename):
+def Style(stylename):
+  return 'italic' if "Italic" in stylename else "normal"
+
+
+def FamilyStyleWeight(path):
+    filename = os.path.basename(path)
+    if "[" in filename and "]" in filename:
+        return VFFamilyStyleWeight(path)
+    return FileFamilyStyleWeight(path)
+
+
+def FileFamilyStyleWeight(path):
   """Extracts family, style, and weight from Google Fonts standard filename.
 
   Args:
-    filename: Font filename, eg Lobster-Regular.ttf.
+    path: Font path, eg ./fonts/ofl/lobster/Lobster-Regular.ttf.
   Returns:
     FileFamilyStyleWeightTuple for file.
   Raises:
     ParseError: if file can't be parsed.
   """
-  m = re.search(_FAMILY_WEIGHT_REGEX, filename)
+  m = re.search(_FAMILY_WEIGHT_REGEX, path)
   if not m:
-    raise ParseError('Could not parse %s' % filename)
-  sw = StyleWeight(m.group(2))
-  return FileFamilyStyleWeightTuple(filename, FamilyName(m.group(1)), sw[0],
-                                    sw[1])
+    raise ParseError('Could not parse %s' % path)
+  style = Style(m.group(2))
+  weight = Weight(m.group(2))
+  return FileFamilyStyleWeightTuple(path, FamilyName(m.group(1)), style,
+                                    weight)
+
+def VFFamilyStyleWeight(path):
+  """Extract family, style and weight from a variable font's name table.
+
+  Args:
+      path: Font path, eg ./fonts/ofl/lobster/Lobster[wght].ttf.
+  Returns:
+    FileFamilyStyleWeightTuple for file.
+  """
+  with ttLib.TTFont(path) as font:
+    typoFamilyName = font['name'].getName(16, 3, 1, 1033)
+    familyName = font['name'].getName(1, 3, 1, 1033)
+    family = typoFamilyName.toUnicode() if typoFamilyName else \
+             familyName.toUnicode()
+
+    typoStyleName = font['name'].getName(17, 3, 1, 1033)
+    styleName = font['name'].getName(2, 3, 1, 1033)
+    style = typoStyleName.toUnicode() if typoStyleName else \
+            styleName.toUnicode()
+    style = "italic" if "Italic" in style.replace(" ", "") else "normal"
+    # For each font in a variable font family, we do not want to return
+    # the style's weight. We want to return 400 if 400 is within the
+    # the wght axis range. If it isn't, we want the value closest to 400.
+    weight = VFWeight(font)
+    return FileFamilyStyleWeightTuple(path, family, style, weight)
+
 
 
 def ExtractNames(font, name_id):
