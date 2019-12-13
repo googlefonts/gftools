@@ -469,7 +469,7 @@ def VFWeight(font):
       value = wght_axis.maxValue
   # TODO (MF) check with GF Eng if we should just assume it's safe to return
   # 400 if a wght axis doesn't exist.
-  return value
+  return int(value)
 
 
 def Style(stylename):
