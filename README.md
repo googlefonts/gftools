@@ -25,7 +25,7 @@ Sanity check a family directory:
 
 Check a font family against the same family hosted on Google Fonts:
 
-    gftools qa [fonts.ttf] -a -o qa
+    gftools qa [fonts.ttf] -gfb -a -o qa
 
 Add a DSIG table to a font
 
@@ -39,13 +39,10 @@ Fix a non hinted font
 
 Please install these tools using pip:
 
-    pip install git+https://github.com/googlefonts/gftools
+    pip install gftools
 
-Note: We're in the middle of upgrading the scripts to support Python 3 so we don't have a Python 3 compatible pypi package yet.
 
 ### Requirements and Dependencies
-
-These tools are intended to work with both Python 2.7 and Python 3, If a tool isn't working with Python 3 please make an issue. Python 2 support is being phased out and `gftools` will be Python 3 only soon. Pull Requests welcome! :)
 
 These tools depend on the submodule `GlyphsInfo`.
 Make sure the submodule is up to date by running:
