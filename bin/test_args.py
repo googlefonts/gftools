@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 target_modules = [
   "gftools-build-font2ttf",
