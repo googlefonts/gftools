@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Make a diff/gif image of a site by swapping the GF production families
 with the same families hosted on the sandbox server.

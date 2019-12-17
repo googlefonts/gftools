@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Generate a html overlay doc which compares a family of static fonts against
 a family of vf font instances.

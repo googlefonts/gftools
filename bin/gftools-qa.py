@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Check a font family using Google Fonts QA tools.
 
 Examples:

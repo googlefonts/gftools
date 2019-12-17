@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 # Copyright 2013,2016 The Font Bakery Authors.
 # Copyright 2017 The Google Font Tools Authors
