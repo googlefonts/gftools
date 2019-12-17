@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# coding: utf-8
 # Copyright 2018 The Google Font Tools Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
