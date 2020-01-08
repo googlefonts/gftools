@@ -23,7 +23,6 @@ import re
 import shutil
 from collections import namedtuple
 from github import Github
-from diffbrowsers.utils import load_browserstack_credentials as bstack_creds
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -66,18 +65,6 @@ def load_Google_Fonts_api_key():
         credentials = config.items("Credentials")
         return credentials[0][1]
     return None
-
-
-def load_browserstack_credentials():
-    """Return the user's Browserstack credentials"""
-    credentials = bstack_creds()
-    if not credentials:
-        username = os.environ.get("BSTACK_USERNAME")
-        access_key = os.environ.get("BSTACK_ACCESS_KEY")
-        if all([username, access_key]):
-            return (username, access_key)
-        return False
-    return credentials
 
 
 def parse_github_pr_url(url):

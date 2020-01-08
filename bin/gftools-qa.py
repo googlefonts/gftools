@@ -21,10 +21,6 @@ Fonts:
 `gftools qa -gh www.github.com/user/repo/tree/fonts/ttf -gfb -a -o qa`
 """
 from fontTools.ttLib import TTFont
-from diffenator.diff import DiffFonts
-from diffenator.font import DFont
-from diffbrowsers.diffbrowsers import DiffBrowsers
-from diffbrowsers.browsers import test_browsers
 import argparse
 import shutil
 import os
@@ -45,14 +41,34 @@ from gftools.utils import (
     download_file,
     Google_Fonts_has_family,
     load_Google_Fonts_api_key,
-    load_browserstack_credentials,
     mkdir,
 )
-
+try:
+    from diffenator.diff import DiffFonts
+    from diffenator.font import DFont
+    from diffbrowsers.diffbrowsers import DiffBrowsers
+    from diffbrowsers.browsers import test_browsers
+    from diffbrowsers.utils import load_browserstack_credentials as bstack_creds
+except ModuleNotFoundError:
+    raise ModuleNotFoundError(("gftools was installed without the QA "
+        "dependencies. To install the dependencies, see the ReadMe, "
+        "https://github.com/googlefonts/gftools#installation"))
 
 __version__ = "2.0.2"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def load_browserstack_credentials():
+    """Return the user's Browserstack credentials"""
+    credentials = bstack_creds()
+    if not credentials:
+        username = os.environ.get("BSTACK_USERNAME")
+        access_key = os.environ.get("BSTACK_ACCESS_KEY")
+        if all([username, access_key]):
+            return (username, access_key)
+        return False
+    return credentials
 
 
 class FontQA:

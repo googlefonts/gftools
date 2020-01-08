@@ -41,6 +41,14 @@ Please install these tools using pip:
 
     pip install gftools
 
+If you need to use `gftools qa`, you will need to install Harfbuzz, Cairo, FreeType and pkg-config. These can be installed on OS X using homebrew:
+
+    brew install cairo freetype harfbuzz pkg-config
+
+Once You have installed these system packages, install gftools using the following command:
+
+    pip install gftools[qa]
+
 
 ### Requirements and Dependencies
 
@@ -49,10 +57,6 @@ Make sure the submodule is up to date by running:
 
     git submodule update --init --recursive
 
-
-Running gftools-qa also requires Harfbuzz, Cairo, FreeType and pkg-config. These can be installed on OS X using homebrew:
-
-`brew install cairo freetype harfbuzz pkg-config`
 
 ### Google Fonts API Key
 
