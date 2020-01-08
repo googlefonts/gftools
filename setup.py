@@ -29,7 +29,7 @@ with open('README.md') as f:
 
 setup(
     name="gftools",
-    version='0.3.0',
+    version='0.3.1',
     url='https://github.com/googlefonts/tools/',
     description='Google Fonts Tools is a set of command-line tools'
                 ' for testing font projects',
@@ -64,6 +64,8 @@ setup(
         'Programming Language :: Python :: 3'
     ],
     setup_requires=['setuptools_scm'],
+    # Dependencies needed for gftools qa.
+    extras_require={"qa": ['fontbakery', 'fontdiffenator', 'gfdiffbrowsers']},
     install_requires=[
 #       'fontforge', # needed by build-font2ttf script
 #                      but there's no fontforge package on pypi
@@ -79,8 +81,6 @@ setup(
         'requests',
         'tabulate',
         'unidecode',
-        'fontbakery',
-        'fontdiffenator',
-        'gfdiffbrowsers',
+        'opentype-sanitizer',
     ]
     )
