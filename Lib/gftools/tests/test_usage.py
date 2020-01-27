@@ -205,6 +205,9 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def test_what_subsets(self):
         self.check_script(['python', self.get_path('what-subsets'), self.example_font])
+
+    def test_rename_font(self):
+        self.check_script(['python', self.get_path('rename-font'), self.example_font, "Foobar"])
 # Temporarily disabling this until we close issue #13
 # (https://github.com/googlefonts/tools/issues/13)
 # See also https://github.com/googlefonts/fontbakery/issues/1535
