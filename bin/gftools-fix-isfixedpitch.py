@@ -35,6 +35,7 @@ gftools-fix-isfixedpitch --fonts [font1.ttf font2.ttf ...]
 """
 
 from fontTools.ttLib import TTFont
+from fontTools.misc.fixedTools import otRound
 import argparse
 
 
@@ -51,8 +52,32 @@ def fix_isFixedPitch(ttfont):
         else:
             print("Font is monospace. Updating isFixedPitch to 0")
             ttfont['post'].isFixedPitch = 1
+
+        if ttfont['OS/2'].panose.bProportion == 1:
+            print("Skipping OS/2.panose.bProportion is set correctly")
+        else:
+            print("Font is monospace. Updating OS/2.panose.bProportion to 1")
+            ttfont['OS/2'].panose.bProportion = 1
+
+        widths = [m[0] for m in ttfont['hmtx'].metrics.values() if m[0] > 0]
+        width_max = max(widths)
+        if ttfont['hhea'].advanceWidthMax == width_max:
+            print("Skipping hhea.advanceWidthMax is set correctly")
+        else:
+            print("Font is monospace. Updating hhea.advanceWidthMax to %i" %
+                  width_max)
+            ttfont['hhea'].advanceWidthMax = width_max
+
+        avg_width = otRound(sum(widths) / len(widths))
+        if avg_width == ttfont['OS/2'].xAvgCharWidth:
+            print("Skipping OS/2.xAvgCharWidth is set correctly")
+        else:
+            print("Font is monospace. Updating OS/2.xAvgCharWidth to %i" %
+                  avg_width)
+            ttfont['OS/2'].xAvgCharWidth = avg_width
     else:
         ttfont['post'].isFixedPitch = 0
+        ttfont['OS/2'].panose.bProportion = 0
 
 
 def main():
