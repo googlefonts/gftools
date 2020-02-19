@@ -53,10 +53,10 @@ def fix_isFixedPitch(ttfont):
             print("Font is monospace. Updating isFixedPitch to 0")
             ttfont['post'].isFixedPitch = 1
 
-        if ttfont['OS/2'].panose.bProportion == 1:
+        if ttfont['OS/2'].panose.bProportion == 9:
             print("Skipping OS/2.panose.bProportion is set correctly")
         else:
-            print("Font is monospace. Updating OS/2.panose.bProportion to 1")
+            print("Font is monospace. Updating OS/2.panose.bProportion to 9")
             ttfont['OS/2'].panose.bProportion = 1
 
         widths = [m[0] for m in ttfont['hmtx'].metrics.values() if m[0] > 0]
