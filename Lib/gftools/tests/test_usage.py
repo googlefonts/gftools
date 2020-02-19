@@ -46,6 +46,7 @@ class TestGFToolsScripts(unittest.TestCase):
         self.example_dir = os.path.join('data', 'test', 'cabin')
         self.example_font = os.path.join(self.example_dir, 'Cabin-Regular.ttf')
         self.example_vf_font = os.path.join("data", "test", 'Lora-Roman-VF.ttf')
+        self.src_vtt_font = os.path.join("data", "test", "Inconsolata[wdth,wght].ttf")
         self.gf_family_dir = os.path.join('data', 'test', 'mock_googlefonts', 'ofl', 'abel')
         self.nam_file = os.path.join('data', 'test', 'arabic_unique-glyphs.nam')
         self.blacklisted_scripts = [
@@ -216,6 +217,9 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def test_update_nameids(self):
         self.check_script(['python', self.get_path('update-nameids'), self.example_font])
+
+    def test_check_vtt_compile(self):
+        self.check_script(['python', self.get_path('check-vtt-compile'), self.src_vtt_font])
 
 
 if __name__ == '__main__':
