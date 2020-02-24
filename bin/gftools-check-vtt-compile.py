@@ -7,6 +7,7 @@ import argparse
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("font_path")
+    parser.add_argument("-f", "--remove-incompatible-hinting", action="store_true")
     args = parser.parse_args()
 
     font = TTFont(args.font_path)
@@ -17,7 +18,10 @@ def main():
 
     incompatible_glyphs = []
     for gid, glyph_name in enumerate(glyph_names):
-        data = get_glyph_assembly(font, glyph_name)
+        try:
+            data = get_glyph_assembly(font, glyph_name)
+        except KeyError:
+            pass
         try:
             program, components = make_glyph_program(data, glyph_name)
         except:
@@ -30,6 +34,15 @@ def main():
     print("GlyphID GlyphName")
     for gid, glyph_name in incompatible_glyphs:
         print(gid, glyph_name)
+
+    if not args.remove_incompatible_hinting:
+        return
+    if args.remove_incompatible_hinting:
+        for _, glyph_name in incompatible_glyphs:
+            font['TSI1'].glyphPrograms[glyph_name] = ""
+            font['TSI3'].glyphPrograms[glyph_name] = ""
+    font.save(args.font_path + ".fix")
+    print("Incompatible glyph hints have been removed")
 
     
 if __name__ == "__main__":
