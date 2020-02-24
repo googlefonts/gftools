@@ -82,5 +82,6 @@ setup(
         'tabulate',
         'unidecode',
         'opentype-sanitizer',
+        'vttlib',
     ]
     )

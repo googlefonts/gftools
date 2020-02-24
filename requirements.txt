@@ -3,3 +3,4 @@ fonttools[ufo]
 absl-py
 protobuf
 PyGithub
+vttLib
