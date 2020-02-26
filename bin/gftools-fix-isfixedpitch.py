@@ -57,7 +57,7 @@ def fix_isFixedPitch(ttfont):
             print("Skipping OS/2.panose.bProportion is set correctly")
         else:
             print("Font is monospace. Updating OS/2.panose.bProportion to 9")
-            ttfont['OS/2'].panose.bProportion = 1
+            ttfont['OS/2'].panose.bProportion = 9
 
         widths = [m[0] for m in ttfont['hmtx'].metrics.values() if m[0] > 0]
         width_max = max(widths)
