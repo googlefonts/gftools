@@ -26,7 +26,6 @@ import shutil
 import os
 from glob import glob
 import subprocess
-import tempfile
 import logging
 from uuid import uuid4
 import re
@@ -87,7 +86,7 @@ class FontQA:
     def _get_shared_instances(self):
         if not self._fonts_before:
             logger.info(
-                "No regression checks possible " "since there are fonts before == None"
+                "No regression checks possible since there are no previous fonts."
             )
             return None
         shared = set(self._instances_before.keys()) & set(self._instances.keys())
@@ -357,25 +356,32 @@ def main():
 
     font_group = parser.add_argument_group(title="Fonts to qa")
     font_input_group = font_group.add_mutually_exclusive_group(required=True)
-    font_input_group.add_argument("-f", "--fonts", nargs="+")
-    font_input_group.add_argument("-pr", "--pull-request")
-    font_input_group.add_argument("-gh", "--github-dir")
-    font_input_group.add_argument("-gf", "--googlefonts")
+    font_input_group.add_argument("-f", "--fonts", nargs="+",
+        help="Paths to fonts")
+    font_input_group.add_argument("-pr", "--pull-request",
+        help="Get fonts from a Github pull request")
+    font_input_group.add_argument("-gh", "--github-dir",
+        help="Get fonts from a Github directory")
+    font_input_group.add_argument("-gf", "--googlefonts",
+        help="Get fonts from Google Fonts")
 
     font_before_group = parser.add_argument_group(title="Fonts before input")
     font_before_input_group = font_before_group.add_mutually_exclusive_group(
         required=False
     )
     font_before_input_group.add_argument(
-        "-fb", "--fonts-before", nargs="+", help="Fonts before paths"
+        "-fb", "--fonts-before", nargs="+",
+        help="Paths to previous fonts"
     )
-    font_before_input_group.add_argument("-prb", "--pull-request-before")
-    font_before_input_group.add_argument("-ghb", "--github-dir-before")
+    font_before_input_group.add_argument("-prb", "--pull-request-before",
+        help="Get previous fonts from a Github pull request")
+    font_before_input_group.add_argument("-ghb", "--github-dir-before",
+        help="Get previous fonts from a Github dir")
     font_before_input_group.add_argument(
         "-gfb",
         "--googlefonts-before",
         action="store_true",
-        help="Diff against GoogleFonts instead of fonts_before",
+        help="Get previous fonts from Google Fonts",
     )
 
     check_group = parser.add_argument_group(title="QA checks")
