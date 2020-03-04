@@ -26,7 +26,6 @@ import shutil
 import os
 from glob import glob
 import subprocess
-import tempfile
 import logging
 from uuid import uuid4
 import re
@@ -54,7 +53,7 @@ except ModuleNotFoundError:
         "dependencies. To install the dependencies, see the ReadMe, "
         "https://github.com/googlefonts/gftools#installation"))
 
-__version__ = "2.0.2"
+__version__ = "2.0.3"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -83,12 +82,11 @@ class FontQA:
         self._shared_instances = self._get_shared_instances()
         self._bstack_auth = load_browserstack_credentials()
         self._out = out
-        mkdir(self._out)
 
     def _get_shared_instances(self):
         if not self._fonts_before:
             logger.info(
-                "No regression checks possible " "since there are fonts before == None"
+                "No regression checks possible since there are no previous fonts."
             )
             return None
         shared = set(self._instances_before.keys()) & set(self._instances.keys())
@@ -358,25 +356,32 @@ def main():
 
     font_group = parser.add_argument_group(title="Fonts to qa")
     font_input_group = font_group.add_mutually_exclusive_group(required=True)
-    font_input_group.add_argument("-f", "--fonts", nargs="+")
-    font_input_group.add_argument("-pr", "--pull-request")
-    font_input_group.add_argument("-gh", "--github-dir")
-    font_input_group.add_argument("-gf", "--googlefonts")
+    font_input_group.add_argument("-f", "--fonts", nargs="+",
+        help="Paths to fonts")
+    font_input_group.add_argument("-pr", "--pull-request",
+        help="Get fonts from a Github pull request")
+    font_input_group.add_argument("-gh", "--github-dir",
+        help="Get fonts from a Github directory")
+    font_input_group.add_argument("-gf", "--googlefonts",
+        help="Get fonts from Google Fonts")
 
     font_before_group = parser.add_argument_group(title="Fonts before input")
     font_before_input_group = font_before_group.add_mutually_exclusive_group(
         required=False
     )
     font_before_input_group.add_argument(
-        "-fb", "--fonts-before", nargs="+", help="Fonts before paths"
+        "-fb", "--fonts-before", nargs="+",
+        help="Paths to previous fonts"
     )
-    font_before_input_group.add_argument("-prb", "--pull-request-before")
-    font_before_input_group.add_argument("-ghb", "--github-dir-before")
+    font_before_input_group.add_argument("-prb", "--pull-request-before",
+        help="Get previous fonts from a Github pull request")
+    font_before_input_group.add_argument("-ghb", "--github-dir-before",
+        help="Get previous fonts from a Github dir")
     font_before_input_group.add_argument(
         "-gfb",
         "--googlefonts-before",
         action="store_true",
-        help="Diff against GoogleFonts instead of fonts_before",
+        help="Get previous fonts from Google Fonts",
     )
 
     check_group = parser.add_argument_group(title="QA checks")
@@ -445,20 +450,26 @@ def main():
         raise Exception("Terminating. No checks selected. Run gftools qa "
                         "--help to see all possible commands.")
 
+
+    # Retrieve fonts and store in out dir
+    mkdir(args.out)
+    fonts_dir = os.path.join(args.out, "fonts")
+    mkdir(fonts_dir)
     if args.fonts:
+        [shutil.copy(f, fonts_dir) for f in args.fonts]
         fonts = args.fonts
     elif args.pull_request:
-        fonts = download_files_in_github_pr(args.pull_request, tempfile.mkdtemp())
+        fonts = download_files_in_github_pr(args.pull_request, fonts_dir)
         if not fonts:
             logger.info("No fonts found in pull request. Skipping")
             return
     elif args.github_dir:
-        fonts = download_files_in_github_dir(args.github_dir, tempfile.mkdtemp())
+        fonts = download_files_in_github_dir(args.github_dir, fonts_dir)
         if not fonts:
             logger.info("No fonts found in github dir. Skipping")
             return
     elif args.googlefonts:
-        fonts = download_family_from_Google_Fonts(args.googlefonts, tempfile.mkdtemp())
+        fonts = download_family_from_Google_Fonts(args.googlefonts, fonts_dir)
 
     if args.filter_fonts:
         re_filter = re.compile(args.filter_fonts)
@@ -468,20 +479,26 @@ def main():
     family_name = family_name_from_fonts(ttfonts)
     family_on_gf = Google_Fonts_has_family(family_name)
 
+    # Retrieve fonts_before and store in out dir
     fonts_before = None
+    if any([args.fonts_before, args.pull_request_before, args.github_dir_before]) or \
+           (args.googlefonts_before and family_on_gf):
+        fonts_before_dir = os.path.join(args.out, "fonts_before")
+        mkdir(fonts_before_dir, overwrite=False)
     if args.fonts_before:
+        [shutil.copy(f, fonts_before_dir) for f in args.fonts_before]
         fonts_before = args.fonts_before
     elif args.pull_request_before:
         fonts_before = download_files_in_github_pr(
-            args.pull_request_before, tempfile.mkdtemp()
+            args.pull_request_before, fonts_before_dir
         )
     elif args.github_dir_before:
         fonts_before = download_files_in_github_dir(
-            args.github_dir_before, tempfile.mkdtemp()
+            args.github_dir_before, font_before_dir
         )
     elif args.googlefonts_before and family_on_gf:
         fonts_before = download_family_from_Google_Fonts(
-            family_name, tempfile.mkdtemp()
+            family_name, fonts_before_dir
         )
 
     if fonts_before:
