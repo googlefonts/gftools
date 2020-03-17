@@ -38,7 +38,9 @@ def download_family_from_Google_Fonts(family, dst=None):
     )
     fonts_zip = ZipFile(download_file(url))
     if dst:
-        return fonts_from_zip(fonts_zip, dst)
+        fonts = fonts_from_zip(fonts_zip, dst)
+        # Remove static fonts if the family is a variable font
+        return [f for f in fonts if "static" not in f]
     return fonts_from_zip(fonts_zip)
 
 
