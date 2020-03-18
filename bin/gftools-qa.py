@@ -187,7 +187,8 @@ class FontQA:
                      self.instances[k]['filename']) for k in self.matching_instances]
         font_groups = self.chunkify(sorted(fonts), 4)
         for group in font_groups:
-            dir_name = "_".join([i[0] for i in group])
+            styles = [i[0] for i in group]
+            dir_name = "_".join(styles)
             fonts_before = [i[1] for i in group]
             fonts_after = [i[2] for i in group]
             out = os.path.join(dst, dir_name)
@@ -198,10 +199,10 @@ class FontQA:
                 browsers=browsers_to_test,
             )
             diff_browsers.new_session(set(fonts_before), set(fonts_after))
-            diff_browsers.diff_view("waterfall")
+            diff_browsers.diff_view("waterfall", styles=styles)
             info = os.path.join(out, "info.json")
             json.dump(diff_browsers.stats, open(info, "w"))
-            diff_browsers.diff_view("glyphs_all", pt=16)
+            diff_browsers.diff_view("glyphs_all", pt=16, styles=styles)
 
     def fontbakery(self):
         logger.info("Running Fontbakery")
@@ -267,8 +268,8 @@ class FontQA:
                 gfr_is_local=False,
             )
             diff_browsers.new_session(font_group, font_group)
-            diff_browsers.diff_view("waterfall")
-            diff_browsers.diff_view("glyphs_all", pt=15)
+            diff_browsers.diff_view("waterfall", styles=name_group)
+            diff_browsers.diff_view("glyphs_all", styles=name_group, pt=15)
 
     def googlefonts_upgrade(self):
         self.fontbakery()
