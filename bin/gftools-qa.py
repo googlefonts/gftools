@@ -53,7 +53,7 @@ except ModuleNotFoundError:
         "dependencies. To install the dependencies, see the ReadMe, "
         "https://github.com/googlefonts/gftools#installation"))
 
-__version__ = "2.0.3"
+__version__ = "2.1.3"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
