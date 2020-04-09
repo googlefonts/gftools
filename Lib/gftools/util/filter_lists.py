@@ -153,7 +153,7 @@ def check_filterlist_in_namelist(filterListFileName, namelistCache=None):
         noncodes = [translate_name(name) for name in noncodes]
         noncodes2prodcodes = dict(zip(noncodes, prod_noncodes))
 
-    namelist = fonts.readNamelist(namelistFilename, cache=namelistCache)
+    namelist = fonts.ReadNameList(namelistFilename, cache=namelistCache)
 
     message = []
 
@@ -203,7 +203,7 @@ def build_filterlists_in_namelists(files):
 
 def check_filterlist_equals_namelist(filterlist, namelistFilename, namelistCache=None):
     codepoints, noncodes = read_filterlist(filterlist)
-    namelist = fonts.readNamelist(namelistFilename, cache=namelistCache)
+    namelist = fonts.ReadNameList(namelistFilename, cache=namelistCache)
     message = []
     codepoints_set = set(c for c, _ in codepoints)
     if codepoints_set != namelist['ownCharset']:
@@ -276,7 +276,7 @@ def _build_friendly_names_production_names_equal(pathparts, prod_names_file, nic
     test_name = 'test_nice_names_uni_names_equal {0}'.format('{marker dir}'.join(pathparts))
     def test_friendly_names_production_names_equal(self):
         message = []
-        log_message = lambda *args: message.append(' '.join(args))
+        log_message = lambda *args: message.append(' '.join(str(a) for a in args))
 
         log_message('uni names filter list:', prod_names_file)
         log_message('nice names filter list:', nice_names_file)
