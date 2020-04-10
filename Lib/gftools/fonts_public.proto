@@ -38,3 +38,7 @@ message AxisProto {
   optional float max_value = 4;
 };
 
+message SourceProto {
+  optional string repository = 1;
+  optional string commit = 2;
+}
