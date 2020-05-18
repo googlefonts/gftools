@@ -42,5 +42,4 @@ message AxisProto {
 message SourceProto {
   optional string repository_url = 1;
   optional string commit = 2;
-  optional string filepath_regex = 3;
 }
