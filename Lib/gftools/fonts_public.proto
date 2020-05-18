@@ -42,4 +42,5 @@ message AxisProto {
 message SourceProto {
   optional string repository_url = 1;
   optional string commit = 2;
+  optional string ttf_path_regex = 3;
 }
