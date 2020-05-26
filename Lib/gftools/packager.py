@@ -4,7 +4,7 @@
 
 import sys
 import os
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkstemp
 import subprocess
 import requests
 import pprint
@@ -12,11 +12,7 @@ import pprint
 GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
 GITHUB_REPO_SSH_URL = 'git@github.com:{gh_repo_name_with_owner}.git'.format
 
-
-
-
-
-#how to build a package:
+# how to build a package:
 #
 # Usually I would get the current files from google/fonts, not the ttfs
 # Then override with the files from upstream and add the ttfs.
@@ -186,7 +182,6 @@ GITHUB_REPO_SSH_URL = 'git@github.com:{gh_repo_name_with_owner}.git'.format
 # it would be interesting to see if pygit2 can handle bare + shallow repositories ...
 # it can for our case, which is reading the cloned shallow tree
 
-import random
 # The idea is er search only in "prefixes" and on the way back to root.
 # to find files like LICENSE.txt or DESCRIPTION.en.us closest to the
 # font files.
@@ -576,24 +571,72 @@ def _shallow_clone_github(target_dir, gh_repo_name_with_owner, branch_or_tag='ma
 #
 #
 #
-from strictyaml import Map, Int, MapPattern, Seq, Str, Any, dirty_load
+from strictyaml import (
+                        Map,
+                        MapPattern,
+                        Enum,
+                        Seq,
+                        Str,
+                        Any,
+                        dirty_load,
+                        as_document,
+                        YAMLValidationError,
+                      )
+# FIXME: why don't I have the license in here? It's not in the upstream
+# repo list. Probably usually discovered by the presence and name of the
+# license file.
+CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'SANS_SERIF',
+                  'HANDWRITING', 'MONOSPACE']
+
 upstream_yaml_schema = Map({
-    'family': Str(),
-    'repo': Str(),
+    'name': Str(),
+    'repository_url': Str(), # TODO: custom validation please
     'branch': Str(),
-    'genre': Str(),
+    'category': Enum(CATEGORIES),
     'designer': Str(),
-    'files': MapPattern(Str(), Str())
+    'files': MapPattern(Str(), Str()) # Mappings with arbitrary key names
 })
+
+upstream_yaml_template  = f'''
+# Please edit this upstream configuration for the family accordingly.
+# This is a yaml formatted file.
+# An "#" (number sign) denotes a comment.
+# For more help see the docs at:
+# https://github.com/googlefonts/gf-docs/tree/master/METADATA
+
+# Full family name, with initial upper cases and spaces
+name: Enter Family Name
+
+repository_url: https://github.com/{{owner}}/{{repo}}.git
+
+# The branch name used to update google fonts. e.g.: "master"
+branch: master
+
+# Choose one of: {', '.join(CATEGORIES)}
+category: {CATEGORIES[0]}
+
+# Full name of the type designer(s) or foundry who designed the fonts.
+designer: Enter Designer Name
+
+# Dictionary mapping of SOURCE file names to TARGET file names. Where
+# SOURCE is the file path in the upstream repo and TARGET is the file
+# path in the google fonts family directory.
+files:
+  # These are examples, please modify, add, delete as necessary:
+  OFL.txt: OFL.txt
+  DESCRIPTION.en_us.html: DESCRIPTION.en_us.html
+  fonts/variable/Gelasio-Italic-VF.ttf: Gelasio-Italic[wght].ttf
+'''
+
 
 gelasio_upstream_yaml  = '''
 # ofl/gelasio/upstream.yaml
 # ---
 
-family: Gelasio # (full family name, with initial upper cases and spaces)
-repo: SorkinType/Gelasio # (used to be "upstream" using "repoWithOwnerStyle")
+name: Gelasio # (full family name, with initial upper cases and spaces)
+repository_url: https://github.com/SorkinType/Gelasio.git' # (used to be "upstream" using "repoWithOwnerStyle")
 branch: master
-genre: Sans Serif
+category: SANS_SERIF
 designer: Eben Sorkin
 # NOTE: this is an example how mapping font file names could work!
 #  this replaces "fontfiles prefix"
@@ -685,7 +728,6 @@ import functools
 from google.protobuf import text_format
 import gftools.fonts_public_pb2 as fonts_pb2
 
-
 def _write_file_to_package(basedir, filename, data):
   full_name = os.path.join(basedir, filename)
   os.makedirs(os.path.dirname(full_name), exist_ok=True)
@@ -739,7 +781,7 @@ def _genre_2_category(genre):
 # So: existing repo, no upstream conf:
 # from METADATA.pb we use:
 #       designer, category, name
-# we won't get:
+# we won't get yet:
 #       repository_url
 # we still need the new stuff:
 #       branch, files
@@ -833,9 +875,227 @@ def _genre_2_category(genre):
 # > hint: Waiting for your editor to close the file...
 # AND when closed that line is removed!
 #
-#
-#
 
+def _get_gf_dir_content(family_name):
+  gfentry = get_gh_gf_family_entry(family_name)
+  entries = None
+  for license_dir in ['apache', 'ufl', 'ofl']:
+    if gfentry['data']['repository'][license_dir] is not None:
+      entries = gfentry['data']['repository'][license_dir]['entries']
+  if entries is None:
+    return None, None
+  gf_dir_content = {f['name']: f for f in entries}
+  return license_dir, gf_dir_content
+
+
+def _get_editor_command():
+  # # there's some advice to chose an editor to open and how to set a default
+  # https://stackoverflow.com/questions/10725238/opening-default-text-editor-in-bash
+  # I like chosing VISUAL over EDITOR falling back to vi, where on my
+  # system actually vi equals vim:
+  # ${VISUAL:-${EDITOR:-vi}}
+  return os.environ.get('VISUAL' , os.environ.get('EDITOR', 'vi'))
+
+# ANSI controls
+TOLEFT = '\u001b[1000D' # Move all the way left (max 1000 steps
+CLEARLINE = '\u001b[2K'    # Clear the line
+UP =  '\u001b[1A' # moves cursor 1 up
+# reset = (CLEARLINE + UP) * num_linebeaks + TOLEFT
+
+import typing
+from collections import OrderedDict
+
+def user_input(question: str,
+               options: typing.OrderedDict,
+               default: typing.Union[str, None] = None,
+               all_yes: typing.Union[bool, None] = None,
+               quiet: bool = False
+            ):
+  """
+    Returns one of the keys of the *options* dict.
+
+    In interactive mode (if *all_yes* is not True, see below) use the
+    *input()* function to ask the user a *question* and present the user
+    with the possible answers in *options*. Where the keys in *options*
+    are the actual options to enter and the values are the descriptions
+    or labels.
+
+    default: if *all_yes* is a bool this should be an option that does
+    not require user interaction. That way we can have an all --yes flag
+    will always choose the default.
+
+    all_yes: don't ask the user and use the default. If the value is a boolean
+    *default* must be set, because we expect the boolean comes from the
+    --yes flag and the programmers intent is to make this dialogue usable
+    with that flag. If the value is None, we don't check if default is set.
+    The boolean False versus None differentiation is intended as a self
+    check to raise awareness of how to use this function.
+
+    quiet: if *all_yes* is true don't print the question to stdout.
+  """
+  if default is not None and default not in options:
+    # UX: all possible choices must be explicit.
+    raise Exception(f'default is f{default} but must be one of: '
+                    f'{", ".join(options.keys())}.')
+  if all_yes is not None and default is None:
+    # This is a programming error see the __doc__ string above.
+    raise Exception('IF all_yes is is a boolean, default can\'t be None.')
+
+  options_items = [f'{"["+k+"]" if default==k else k}={v}'
+                                        for k, v in options.items()]
+  question = f'{question}\nYour options {",".join(options_items)}:'
+
+  if all_yes:
+    if not quiet:
+      # Don't ask, but print to document the default decision.
+      print (question, default)
+    return default
+
+  while True:
+    answer = input(question).strip()
+    if answer == '' and default is not None:
+      return default
+    if answer in options:
+      return answer
+    # else will ask again
+
+def _repl_upstream_conf(initial_upstream_conf):
+  # repl means "read-eval-print loop"
+  editor = _get_editor_command()
+
+  # it would be nice to have a location where the file can be inspected
+  # after this program ends, similar to swp files of vim or how git stores
+  # such files. However, that should maybe be in the upstream repository
+  # rather than in the current working directory. Since I'm undecided
+  # I simply go with a temp file
+  _tempfilefd, upstream_yaml_file_name = mkstemp(suffix='.yaml'
+                                                     , prefix='upstream')
+  try:
+    # Unlike TemporaryFile(), the user of mkstemp() is responsible for
+    # deleting the temporary file when done with it.
+    os.close(_tempfilefd)
+    print(f'temp file name is {upstream_yaml_file_name}')
+
+    last_good_conf = initial_upstream_conf
+    edit_challenge = initial_upstream_conf.as_yaml()
+
+    while True:
+      # truncates the file on open
+      with open(upstream_yaml_file_name, 'w') as upstream_yaml_file:
+        upstream_yaml_file.write(edit_challenge)
+
+      # open it in an editor
+      # NOTE the carriage return, this line will be removed again.
+      # not sure if this should go to stdout or stderr
+      print ('hint: Waiting for your editor to close the file ...'
+                                    , end='', flush=True, file=sys.stderr)
+      subprocess.run([editor, upstream_yaml_file_name])
+      print (CLEARLINE + TOLEFT, end='', flush=True, file=sys.stderr)
+
+      # read the file
+      with open(upstream_yaml_file_name, 'r') as upstream_yaml_file:
+        upstream_conf_text = upstream_yaml_file.read()
+
+      # parse the file
+      try:
+        last_good_conf = dirty_load(upstream_conf_text, upstream_yaml_schema
+                                           , allow_flow_style=True)
+      except YAMLValidationError as err:
+        answer = user_input('The configuration has schema errors:\n\n'
+                       f'{err}',
+                       OrderedDict(f='fix last edit',
+                                   r='retry last edit',
+                                   s='start all over',
+                                   q='quit program'),
+                       # the default should always be an option that does
+                       # not require user interaction. That way we can
+                       # have an all --yes flag that always choses the
+                       # default.
+                       default='q')
+        if answer == 'f':
+          edit_challenge = upstream_conf_text
+        elif answer == 'r':
+          edit_challenge = last_good_conf.as_yaml()
+        elif answer == 's':
+          edit_challenge = initial_upstream_conf.as_yaml()
+        else: # anser == 'q':
+          # This could raise something like an AbortingError
+          print('Aborting')
+          return None
+        continue
+
+      # Ask the user if this looks good.
+      answer = user_input('Use this upstream configuration?\n'
+            '(comments are removed to make it more compact to read)\n'
+            '---\n'
+            f'{as_document(last_good_conf.data, upstream_yaml_schema).as_yaml()}'
+            '---',
+            OrderedDict(y='yes',
+                        e='edit again',
+                        s='start all over',
+                        q='quit program'),
+            default='y')
+      if answer == 'y':
+        return last_good_conf
+      elif answer == 'e':
+        edit_challenge = last_good_conf.as_yaml()
+      elif answer == 's':
+        edit_challenge = initial_upstream_conf.as_yaml()
+      else: # answer == 'q':
+        # This could raise something like an AbortingError
+        print('Aborting')
+        return None
+  finally:
+    os.unlink(upstream_yaml_file_name)
+
+
+def make_init_package_from_family(family_name):
+  """As described above, use the data that is already in METADATA
+  to fill the upstream conf
+  """
+  license_dir, gf_dir_content = _get_gf_dir_content(family_name)
+  if license_dir is None:
+    # This is probably not a case for exiting, it's rather a case of
+    # having to aquire the whole upstream conf differently, initially.
+    # Could also be a case of a misspelled family name.
+    print(f'Family name {family_name} not found in the GitHub google/fonts repository.')
+    sys.exit(1)
+  print('license_dir', license_dir, gf_dir_content)
+
+  if 'upstream.yaml' in gf_dir_content:
+    print('FOUND a upstream.yaml, temporarily refer to the make_update_package function instead!')
+  elif 'METADATA.pb' in gf_dir_content:
+      file_sha = gf_dir_content['METADATA.pb']['oid']
+      response = get_github_gf_blob(file_sha)
+      metadata = fonts_pb2.FamilyProto()
+      text_format.Parse(response.text, metadata)
+      # existing repo, no upstream conf:
+      # from METADATA.pb we use:
+      #       designer, category, name
+      # we won't get **yet**:
+      #       source.repository_url
+      # we still need the new stuff:
+      #       branch, files
+      upstream_conf = {
+        'designer': metadata.designer or None,
+        'category': metadata.category or None,
+        'name': metadata.name  or None,
+        # we won't get this just now in most cases!
+        'repository_url': metadata.source.repository_url or None,
+      }
+
+      upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_schema
+                                           , allow_flow_style=True)
+      for k,v in upstream_conf.items():
+        if v is None: continue
+        upstream_conf_yaml[k] = v
+      upstream_conf_yaml = _repl_upstream_conf(upstream_conf_yaml)
+      # upstream_conf = upstream_conf_yaml.data
+  else:
+    raise Exception('No METADATA at all! We don\'t expect to be able to reach this '
+          'point at all because of the structure of the google fonts repo '
+          'we exit earlier, when not finding a family entry.')
+    sys.exit(1)
 
 def make_update_package(family_name, force=False):
   """ This is used to make a package if the upstream.yaml file in the
@@ -844,44 +1104,43 @@ def make_update_package(family_name, force=False):
   """
   has_warnings = False
 
-  # second case: upstream.yaml needs to change
-  # third case: add a new family
-  gfentry = get_gh_gf_family_entry(family_name)
-  entries = None
-  for license_dir in ['apache', 'ufl', 'ofl']:
-    if gfentry['data']['repository'][license_dir] is not None:
-      entries = gfentry['data']['repository'][license_dir]['entries']
-      print('license_dir', license_dir, entries)
-  if entries is None:
+  license_dir, gf_dir_content = _get_gf_dir_content(family_name)
+  if license_dir is None:
     print(f'Family name {family_name} not found in the GitHub google/fonts repository.')
     sys.exit(1)
-  gf_dir_content = {f['name']: f for f in entries}
+  print('license_dir', license_dir, gf_dir_content)
 
-  # try to get upstream.yaml
+  # second case: upstream.yaml needs to change
+  # third case: add a new family
+
+  # try to get upstream_conf via upstream.yaml
   if 'upstream.yaml' in gf_dir_content:
     # 'content-type': 'text/plain; charset=iso-8859-1'
     # file_sha = gf_dir_content['DESCRIPTION.en_us.html']['oid']
 
     # 'content-type': 'text/plain',
     # file_sha = gf_dir_content['Gelasio-Regular.ttf']['oid']
-
     file_sha = gf_dir_content['upstream.yaml']['oid']
     response = get_github_gf_blob(file_sha)
-    upstream_yaml = response.text
-
+    # NOTE: maybe we could ask the user to hand edit, if this raises
+    # schema errors, same as when creating a new upstream_conf
+    upstream_conf_yaml = dirty_load(response.text, upstream_yaml_schema
+                                          , allow_flow_style=True)
+    upstream_conf = upstream_conf_yaml.data
   # CAUTION: SHIM IN PLACE!
   elif True:
     # FIXME temp
     warn('TEMP! Using upstream_yaml shim!')
     upstream_yaml = gelasio_upstream_yaml
+    upstream_conf_yaml = dirty_load(upstream_yaml, upstream_yaml_schema
+                                          , allow_flow_style=True)
+    upstream_conf = upstream_conf_yaml.data
   else:
     # what to do here? we should probably go with the init new family/upgrade paths
-    print(f'upstream.yaml not fond for family {family_name}. '
+    print(f'upstream.yaml not found for family {family_name}. '
           'You need to run an initial workflow. FIXME: how to?')
     return;
-  upstream_conf_yaml = dirty_load(upstream_yaml, upstream_yaml_schema
-                                          , allow_flow_style=True)
-  upstream_conf = upstream_conf_yaml.data
+
   print('upstream_conf', pprint.pformat(upstream_conf))
 
   # OK, now that we know the upstream, let's clone the repo ...
@@ -892,7 +1151,7 @@ def make_update_package(family_name, force=False):
   # if it has on single slash (/) and content before and after it
   # that will at least make it hard to put a url into it
   # for urls (not github support), we'll add support when we need it.
-  print(f"upstream['repo'] {upstream_conf['repo']}")
+  print(f"upstream['repository_url'] {upstream_conf['repository_url']}")
   print(f"upstream['branch'] {upstream_conf['branch']}")
   # git clone [remote-url] --depth 1 --bare --branch [name] [folder]
   # need this on disc
@@ -904,7 +1163,7 @@ def make_update_package(family_name, force=False):
     file_in_package = functools.partial(_file_in_package, package_family_dir)
     # Get and add upstream files!
     with TemporaryDirectory() as upstream_dir:
-      _shallow_clone_github(upstream_dir, upstream_conf['repo']
+      _shallow_clone_git(upstream_dir, upstream_conf['repository_url']
                                         , upstream_conf['branch'])
       repo = pygit2.Repository(upstream_dir)
       upstream_commit = repo.revparse_single(upstream_conf['branch'])
@@ -973,15 +1232,14 @@ def make_update_package(family_name, force=False):
     # live with that, but Font Bakery checks could become circular referential,
     # when comparing data that comes from the font with the value that
     # is set on font.
-    metadata.name = upstream_conf['family']
+    metadata.name = upstream_conf['name']
     for font in metadata.fonts:
-      font.name = upstream_conf['family']
+      font.name = upstream_conf['name']
     metadata.designer = upstream_conf['designer']
-    metadata.category = _genre_2_category(upstream_conf['genre'])
+    metadata.category = _genre_2_category(upstream_conf['category'])
     # metadata.date_added # is handled well
 
-    metadata.source.repository_url = GITHUB_REPO_HTTPS_URL(
-                          gh_repo_name_with_owner=upstream_conf['repo'])
+    metadata.source.repository_url = upstream_conf['repository_url']
     metadata.source.commit = upstream_commit_sha
 
     text_proto = text_format.MessageToString(metadata)

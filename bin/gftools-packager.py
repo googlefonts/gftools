@@ -15,5 +15,15 @@ if __name__ == '__main__':
     # elif sys.argv[1] == 'fs':
     #     packager.fs_directory_listing(sys.argv[2], prefixes=prefixes, excludes=['.git'], topdown=topdown)
     # packager.is_google_fonts(sys.argv[1])
-    packager.make_update_package(sys.argv[1])
-
+    if sys.argv[1] == 'update':
+        packager.make_update_package(sys.argv[2])
+    elif sys.argv[1] == 'init':
+        if len(sys.argv) >= 3:
+            # the case when the family is already on google/fonts
+            # but there's no upstream_conf
+            packager.make_init_package_from_family(sys.argv[2])
+        else:
+            packager.make_init_package_from_scratch(sys.argv[2])
+    else:
+        print(f'packager command f{sys.argv[1]} not found')
+        sys.exit(1)
