@@ -65,7 +65,7 @@ GITHUB_REPO_SSH_URL = 'git@github.com:{gh_repo_name_with_owner}.git'.format
 #       cause a problem when getting data from upstream than from google/fonts,
 #       because the lateer, esp. when getting data for one family, doesn't
 #       change often.
-#       using the tree api removes the race condition;
+#       using the tree api removes the race condition
 #         https://api.github.com/repos/google/fonts/git/trees/630a60fec397257625b0d4049577ddca4eeffaec
 #       vs content api:
 #         https://api.github.com/repos/google/fonts/contents/ofl/abhayalibre?ref=master
@@ -313,7 +313,7 @@ def _run_gh_graphql_query(query, variables):
   if 'errors' in json:
     errors = pprint.pformat(json['errors'], indent=2)
     raise Exception(f'GrapQL query failed:\n {errors}')
-  return json;
+  return json
 
 def get_gh_gf_family_entry(family_name):
   # needs input sanitation
@@ -578,9 +578,12 @@ from strictyaml import (
                         Seq,
                         Str,
                         Any,
+                        EmptyNone,
+                        EmptyDict,
                         dirty_load,
                         as_document,
                         YAMLValidationError,
+                        YAML
                       )
 # FIXME: why don't I have the license in here? It's not in the upstream
 # repo list. Probably usually discovered by the presence and name of the
@@ -594,7 +597,24 @@ upstream_yaml_schema = Map({
     'branch': Str(),
     'category': Enum(CATEGORIES),
     'designer': Str(),
-    'files': MapPattern(Str(), Str()) # Mappings with arbitrary key names
+    # allowing EmptyDict here, even though we need files in here,
+    # but we will catch missing files later in the process.
+    # When we have repository_url and branch we can add a editor based
+    # dialog that suggests all files present in the repo (delete lines of
+    # files you don't want to include).
+    'files': EmptyDict() | MapPattern(Str(), Str()) # Mappings with arbitrary key names
+})
+
+# since upstream_yaml_template is incomplete, it can't be parsed with
+# the complete upstream_yaml_schema. Here's a more forgiving schema for
+# the template.
+upstream_yaml_template_schema = Map({
+    'name': EmptyNone() | Str(),
+    'repository_url': EmptyNone() | Str(), # TODO: custom validation please
+    'branch': EmptyNone() | Str(),
+    'category':  EmptyNone() | Enum(CATEGORIES),
+    'designer': EmptyNone() |Str(),
+    'files': EmptyDict() | MapPattern(Str(), Str())
 })
 
 upstream_yaml_template  = f'''
@@ -605,27 +625,35 @@ upstream_yaml_template  = f'''
 # https://github.com/googlefonts/gf-docs/tree/master/METADATA
 
 # Full family name, with initial upper cases and spaces
-name: Enter Family Name
+name:
 
-repository_url: https://github.com/{{owner}}/{{repo}}.git
+# In most cases this should be based on the GitHub https repo url:
+# this https://github.com/{{owner}}/{{repo}}.git
+repository_url:
 
-# The branch name used to update google fonts. e.g.: "master"
-branch: master
+# The branch name used to update google fonts. e.g.: master
+branch:
 
 # Choose one of: {', '.join(CATEGORIES)}
-category: {CATEGORIES[0]}
+category:
 
 # Full name of the type designer(s) or foundry who designed the fonts.
-designer: Enter Designer Name
+designer:
 
 # Dictionary mapping of SOURCE file names to TARGET file names. Where
 # SOURCE is the file path in the upstream repo and TARGET is the file
 # path in the google fonts family directory.
+# Accepted and expected files:
+#     - The font files, ending with ".ttf"
+#     - In case of a variable font, static instances in: static/Family-instance.ttf
+#     - DESCRIPTION.en_us.html
+#     - OFL.txt, the license.  Less likely UFL.txt and LICENSE.txt.
+#     - (optional) FONTLOG.txt
 files:
-  # These are examples, please modify, add, delete as necessary:
-  OFL.txt: OFL.txt
-  DESCRIPTION.en_us.html: DESCRIPTION.en_us.html
-  fonts/variable/Gelasio-Italic-VF.ttf: Gelasio-Italic[wght].ttf
+  # These are some examples as comments, please modify, add, delete as necessary:
+  # OFL.txt: OFL.txt
+  # DESCRIPTION.en_us.html: DESCRIPTION.en_us.html
+  # fonts/variable/Gelasio-Italic-VF.ttf: Gelasio-Italic[wght].ttf
 '''
 
 
@@ -634,7 +662,7 @@ gelasio_upstream_yaml  = '''
 # ---
 
 name: Gelasio # (full family name, with initial upper cases and spaces)
-repository_url: https://github.com/SorkinType/Gelasio.git' # (used to be "upstream" using "repoWithOwnerStyle")
+repository_url: https://github.com/SorkinType/Gelasio.git # (used to be "upstream" using "repoWithOwnerStyle")
 branch: master
 category: SANS_SERIF
 designer: Eben Sorkin
@@ -673,7 +701,7 @@ LICENSE_FILES_2_DIRS = (
         ('UFL.txt', 'ufl')
       , ('OFL.txt', 'ofl')
       , ('LICENSE.txt', 'apache')
-);
+)
 
 # /path/to/google/Fonts$ find */*/*  | grep -E "(ofl|apache|ufl)/*/*" \
 #                                    | grep -Ev "*/*/*.ttf" \
@@ -876,6 +904,12 @@ def _genre_2_category(genre):
 # AND when closed that line is removed!
 #
 
+class UserAbortError(Exception):
+  pass
+
+class ProgramAbortError(Exception):
+  pass
+
 def _get_gf_dir_content(family_name):
   gfentry = get_gh_gf_family_entry(family_name)
   entries = None
@@ -959,7 +993,7 @@ def user_input(question: str,
       return answer
     # else will ask again
 
-def _repl_upstream_conf(initial_upstream_conf):
+def _repl_upstream_conf(initial_upstream_conf: str):
   # repl means "read-eval-print loop"
   editor = _get_editor_command()
 
@@ -976,8 +1010,8 @@ def _repl_upstream_conf(initial_upstream_conf):
     os.close(_tempfilefd)
     print(f'temp file name is {upstream_yaml_file_name}')
 
-    last_good_conf = initial_upstream_conf
-    edit_challenge = initial_upstream_conf.as_yaml()
+    last_good_conf = None
+    edit_challenge = initial_upstream_conf
 
     while True:
       # truncates the file on open
@@ -994,11 +1028,11 @@ def _repl_upstream_conf(initial_upstream_conf):
 
       # read the file
       with open(upstream_yaml_file_name, 'r') as upstream_yaml_file:
-        upstream_conf_text = upstream_yaml_file.read()
+        updated_upstream_conf = upstream_yaml_file.read()
 
       # parse the file
       try:
-        last_good_conf = dirty_load(upstream_conf_text, upstream_yaml_schema
+        last_good_conf = dirty_load(updated_upstream_conf, upstream_yaml_schema
                                            , allow_flow_style=True)
       except YAMLValidationError as err:
         answer = user_input('The configuration has schema errors:\n\n'
@@ -1013,20 +1047,19 @@ def _repl_upstream_conf(initial_upstream_conf):
                        # default.
                        default='q')
         if answer == 'f':
-          edit_challenge = upstream_conf_text
+          edit_challenge = updated_upstream_conf
         elif answer == 'r':
-          edit_challenge = last_good_conf.as_yaml()
+          # edit_challenge = edit_challenge
+          pass
         elif answer == 's':
-          edit_challenge = initial_upstream_conf.as_yaml()
+          edit_challenge = initial_upstream_conf
         else: # anser == 'q':
-          # This could raise something like an AbortingError
-          print('Aborting')
-          return None
+          raise UserAbortError()
         continue
 
       # Ask the user if this looks good.
       answer = user_input('Use this upstream configuration?\n'
-            '(comments are removed to make it more compact to read)\n'
+            '(Summarized: comments are removed to make it more compact to read.)\n'
             '---\n'
             f'{as_document(last_good_conf.data, upstream_yaml_schema).as_yaml()}'
             '---',
@@ -1040,14 +1073,42 @@ def _repl_upstream_conf(initial_upstream_conf):
       elif answer == 'e':
         edit_challenge = last_good_conf.as_yaml()
       elif answer == 's':
-        edit_challenge = initial_upstream_conf.as_yaml()
+        edit_challenge = initial_upstream_conf
       else: # answer == 'q':
-        # This could raise something like an AbortingError
-        print('Aborting')
-        return None
+        raise UserAbortError()
   finally:
     os.unlink(upstream_yaml_file_name)
 
+# add path to make completely fresh package (similar to from_family)
+# unite with update path
+# flags ... use a local update.yaml
+#         --yes
+#         --quiet
+# make proper CLI!
+# different use cases: local workflow
+#   Where to put the package
+#
+
+# FIXME: when we know the full name of the family perhaps we can look up
+# some data from the upstream spreadsheet, as it is used by FBD
+#  - could also help to pre-fill the files map using the files prefix
+# FIXME 2: an assistent to pre-fill the files map would be nice.
+#          could be just all files from the repository
+# FIXME 3: files map add flag to override "allowed files" i.e. to allow
+#          otherwise blacklisted (=not whitelisted) files: but that should
+#          be a temporary measure. Eventually these files should be in
+#          the whitelist.
+
+
+#
+def make_init_package_from_scratch():
+  #
+  # upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
+  #                                          , allow_flow_style=True)
+  upstream_conf_yaml = _repl_upstream_conf(upstream_yaml_template)
+  license_dir = 'ofl'
+  gf_dir_content = {}
+  return _make_package(upstream_conf_yaml, license_dir, gf_dir_content)
 
 def make_init_package_from_family(family_name):
   """As described above, use the data that is already in METADATA
@@ -1058,12 +1119,16 @@ def make_init_package_from_family(family_name):
     # This is probably not a case for exiting, it's rather a case of
     # having to aquire the whole upstream conf differently, initially.
     # Could also be a case of a misspelled family name.
-    print(f'Family name {family_name} not found in the GitHub google/fonts repository.')
-    sys.exit(1)
+    raise ProgramAbortError(f'Family name {family_name} not found in the GitHub '
+                      'google/fonts repository.')
   print('license_dir', license_dir, gf_dir_content)
 
   if 'upstream.yaml' in gf_dir_content:
-    print('FOUND a upstream.yaml, temporarily refer to the make_update_package function instead!')
+    # so this is also the case for the normal update path
+    upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_schema
+                                           , allow_flow_style=True)
+    raise ProgramAbortError('FOUND a upstream.yaml, temporarily refer to '
+                            'the make_update_package function instead!')
   elif 'METADATA.pb' in gf_dir_content:
       file_sha = gf_dir_content['METADATA.pb']['oid']
       response = get_github_gf_blob(file_sha)
@@ -1084,37 +1149,42 @@ def make_init_package_from_family(family_name):
         'repository_url': metadata.source.repository_url or None,
       }
 
-      upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_schema
+      upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
                                            , allow_flow_style=True)
       for k,v in upstream_conf.items():
         if v is None: continue
         upstream_conf_yaml[k] = v
-      upstream_conf_yaml = _repl_upstream_conf(upstream_conf_yaml)
-      # upstream_conf = upstream_conf_yaml.data
+      upstream_conf_yaml = _repl_upstream_conf(upstream_conf_yaml.as_yaml())
   else:
-    raise Exception('No METADATA at all! We don\'t expect to be able to reach this '
+    raise ProgramAbortError('No METADATA at all! We don\'t expect to be able to reach this '
           'point at all because of the structure of the google fonts repo '
           'we exit earlier, when not finding a family entry.')
-    sys.exit(1)
+  return _make_package(upstream_conf_yaml, license_dir, gf_dir_content)
 
 def make_update_package(family_name, force=False):
   """ This is used to make a package if the upstream.yaml file in the
       google/fonts repo is up to date/doesn't need to change.
       This is expected to be the most common case.
   """
-  has_warnings = False
 
   license_dir, gf_dir_content = _get_gf_dir_content(family_name)
   if license_dir is None:
-    print(f'Family name {family_name} not found in the GitHub google/fonts repository.')
-    sys.exit(1)
+    raise ProgramAbortError(f'Family name {family_name} not found in the '
+                            'GitHub google/fonts repository.')
   print('license_dir', license_dir, gf_dir_content)
 
   # second case: upstream.yaml needs to change
   # third case: add a new family
-
+  if family_name == 'Gelasio':
+    # CAUTION: SHIM IN PLACE!
+    # FIXME temp
+    warn('TEMP! Using upstream_yaml shim!')
+    upstream_yaml = gelasio_upstream_yaml
+    upstream_conf_yaml = dirty_load(upstream_yaml, upstream_yaml_schema
+                                          , allow_flow_style=True)
+    # upstream_conf = upstream_conf_yaml.data
   # try to get upstream_conf via upstream.yaml
-  if 'upstream.yaml' in gf_dir_content:
+  elif 'upstream.yaml' in gf_dir_content:
     # 'content-type': 'text/plain; charset=iso-8859-1'
     # file_sha = gf_dir_content['DESCRIPTION.en_us.html']['oid']
 
@@ -1126,21 +1196,16 @@ def make_update_package(family_name, force=False):
     # schema errors, same as when creating a new upstream_conf
     upstream_conf_yaml = dirty_load(response.text, upstream_yaml_schema
                                           , allow_flow_style=True)
-    upstream_conf = upstream_conf_yaml.data
-  # CAUTION: SHIM IN PLACE!
-  elif True:
-    # FIXME temp
-    warn('TEMP! Using upstream_yaml shim!')
-    upstream_yaml = gelasio_upstream_yaml
-    upstream_conf_yaml = dirty_load(upstream_yaml, upstream_yaml_schema
-                                          , allow_flow_style=True)
-    upstream_conf = upstream_conf_yaml.data
   else:
     # what to do here? we should probably go with the init new family/upgrade paths
-    print(f'upstream.yaml not found for family {family_name}. '
-          'You need to run an initial workflow. FIXME: how to?')
-    return;
+    raise ProgramAbortError(f'upstream.yaml not found for family {family_name}. '
+                            'You need to run an initial workflow. FIXME: how to?')
+  return _make_package(upstream_conf_yaml, license_dir, gf_dir_content)
 
+
+def _make_package(upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict):
+  has_warnings = False
+  upstream_conf = upstream_conf_yaml.data
   print('upstream_conf', pprint.pformat(upstream_conf))
 
   # OK, now that we know the upstream, let's clone the repo ...
@@ -1157,7 +1222,7 @@ def make_update_package(family_name, force=False):
   # need this on disc
   upstream_commit_sha = None
   with TemporaryDirectory() as package_dir:
-    family_name_normal = family_name.replace(' ', '').lower()
+    family_name_normal = upstream_conf['name'].replace(' ', '').lower()
     package_family_dir = os.path.join(package_dir, license_dir, family_name_normal)
     write_file_to_package = functools.partial(_write_file_to_package, package_family_dir)
     file_in_package = functools.partial(_file_in_package, package_family_dir)
@@ -1263,10 +1328,9 @@ def make_update_package(family_name, force=False):
         print(f'    {os.path.relpath(full_path, package_dir)} {int(filesize / (1<<10))}KB (len: {filesize})')
 
     if has_warnings and not force:
-      print('Aborting: make_package had warnings. '
+      raise ProgramAbortError('make_package had warnings. '
             'Fixing upstream.yaml is the preferred action. '
             'Use --force to proceed anyways.')
-      sys.exit(1)
     print('Package is DONE. TODO: What next?')
 
 #
@@ -1406,8 +1470,7 @@ def is_google_fonts(repo_path):
   # This way it can't be 'a' (that's abort!), should be no issue.
   remote_name = input(f'Creating a git remote.\nEnter remote name (default={default_remote_name}),a=abort:')
   if remote_name == 'a':
-    print('aborting!')
-    sys.exit(1)
+    raise UserAbortError()
   remote_name = remote_name or default_remote_name
 
   # FIXME: SSH fails
@@ -1433,8 +1496,7 @@ def is_google_fonts(repo_path):
   print(f'2: {refspecs_candidates["2"]} (minimal)')
   refspec = input(f'1(default),2,a=abort:')
   if remote_name == 'a':
-    print('aborting!')
-    sys.exit(1)
+    raise UserAbortError()
   fetch_refspec = refspecs_candidates[refspec.strip()]
   repo.remotes.create(remote_name, url, fetch=fetch_refspec)
 
