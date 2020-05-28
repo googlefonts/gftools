@@ -942,44 +942,44 @@ from collections import OrderedDict
 def user_input(question: str,
                options: typing.OrderedDict,
                default: typing.Union[str, None] = None,
-               all_yes: typing.Union[bool, None] = None,
+               yes: typing.Union[bool, None] = None,
                quiet: bool = False
             ):
   """
     Returns one of the keys of the *options* dict.
 
-    In interactive mode (if *all_yes* is not True, see below) use the
+    In interactive mode (if *yes* is not True, see below) use the
     *input()* function to ask the user a *question* and present the user
     with the possible answers in *options*. Where the keys in *options*
     are the actual options to enter and the values are the descriptions
     or labels.
 
-    default: if *all_yes* is a bool this should be an option that does
+    default: if *yes* is a bool this should be an option that does
     not require user interaction. That way we can have an all --yes flag
     will always choose the default.
 
-    all_yes: don't ask the user and use the default. If the value is a boolean
+    yes: don't ask the user and use the default. If the value is a boolean
     *default* must be set, because we expect the boolean comes from the
     --yes flag and the programmers intent is to make this dialogue usable
     with that flag. If the value is None, we don't check if default is set.
     The boolean False versus None differentiation is intended as a self
     check to raise awareness of how to use this function.
 
-    quiet: if *all_yes* is true don't print the question to stdout.
+    quiet: if *yes* is true don't print the question to stdout.
   """
   if default is not None and default not in options:
     # UX: all possible choices must be explicit.
     raise Exception(f'default is f{default} but must be one of: '
                     f'{", ".join(options.keys())}.')
-  if all_yes is not None and default is None:
+  if yes is not None and default is None:
     # This is a programming error see the __doc__ string above.
-    raise Exception('IF all_yes is is a boolean, default can\'t be None.')
+    raise Exception('IF yes is is a boolean, default can\'t be None.')
 
   options_items = [f'{"["+k+"]" if default==k else k}={v}'
                                         for k, v in options.items()]
   question = f'{question}\nYour options {",".join(options_items)}:'
 
-  if all_yes:
+  if yes:
     if not quiet:
       # Don't ask, but print to document the default decision.
       print (question, default)
@@ -993,7 +993,27 @@ def user_input(question: str,
       return answer
     # else will ask again
 
-def _repl_upstream_conf(initial_upstream_conf: str):
+
+def _format_upstream_yaml (upstream_yaml: YAML, compact: bool = True):
+  # removes comments to make it more compact to read
+  if compact:
+    description = 'upstream configuration (no comments, normalized)'
+    content = as_document(upstream_yaml.data, upstream_yaml_schema).as_yaml()
+  else:
+    description = 'upstream configuration'
+    content = upstream_yaml.as_yaml()
+  len_top_bars = (58 - len(description)) // 2
+  top = f'{"-"*len_top_bars} {description} {"-"*len_top_bars}'
+  return (
+    f'{top}\n'
+    f'{content}'
+    f'{"-"*len(top)}'
+  )
+
+def _repl_upstream_conf(initial_upstream_conf: str, yes: bool=False
+                      , quiet: bool=False):
+  if yes:
+    raise UserAbortError()
   # repl means "read-eval-print loop"
   editor = _get_editor_command()
 
@@ -1017,7 +1037,6 @@ def _repl_upstream_conf(initial_upstream_conf: str):
       # truncates the file on open
       with open(upstream_yaml_file_name, 'w') as upstream_yaml_file:
         upstream_yaml_file.write(edit_challenge)
-
       # open it in an editor
       # NOTE the carriage return, this line will be removed again.
       # not sure if this should go to stdout or stderr
@@ -1045,7 +1064,7 @@ def _repl_upstream_conf(initial_upstream_conf: str):
                        # not require user interaction. That way we can
                        # have an all --yes flag that always choses the
                        # default.
-                       default='q')
+                       default='q', yes=yes, quiet=quiet)
         if answer == 'f':
           edit_challenge = updated_upstream_conf
         elif answer == 'r':
@@ -1057,25 +1076,26 @@ def _repl_upstream_conf(initial_upstream_conf: str):
           raise UserAbortError()
         continue
 
-      # Ask the user if this looks good.
-      answer = user_input('Use this upstream configuration?\n'
-            '(Summarized: comments are removed to make it more compact to read.)\n'
-            '---\n'
-            f'{as_document(last_good_conf.data, upstream_yaml_schema).as_yaml()}'
-            '---',
-            OrderedDict(y='yes',
-                        e='edit again',
-                        s='start all over',
-                        q='quit program'),
-            default='y')
-      if answer == 'y':
-        return last_good_conf
-      elif answer == 'e':
-        edit_challenge = last_good_conf.as_yaml()
-      elif answer == 's':
-        edit_challenge = initial_upstream_conf
-      else: # answer == 'q':
-        raise UserAbortError()
+      return last_good_conf
+      # This was thought as an extra check for the user, but I think it's
+      # rather anoying than helpful. Note, the user just edited and
+      # it parsed successfully.
+      # # Ask the user if this looks good.
+      # answer = user_input('Use this upstream configuration?\n'
+      #       f'{_format_upstream_yaml(last_good_conf)}',
+      #       OrderedDict(y='yes',
+      #                   e='edit again',
+      #                   s='start all over',
+      #                   q='quit program'),
+      #       default='y', yes=yes, quiet=quiet)
+      # if answer == 'y':
+      #   return last_good_conf
+      # elif answer == 'e':
+      #   edit_challenge = last_good_conf.as_yaml()
+      # elif answer == 's':
+      #   edit_challenge = initial_upstream_conf
+      # else: # answer == 'q':
+      #   raise UserAbortError()
   finally:
     os.unlink(upstream_yaml_file_name)
 
@@ -1099,118 +1119,191 @@ def _repl_upstream_conf(initial_upstream_conf: str):
 #          be a temporary measure. Eventually these files should be in
 #          the whitelist.
 
+def _load_or_repl_upstream(upstream_yaml_text: str, yes: bool=False
+                        , quiet: bool=False) -> typing.Tuple[bool, YAML]:
+  try:
+    return False, dirty_load(upstream_yaml_text, upstream_yaml_schema
+                                        , allow_flow_style=True)
+  except YAMLValidationError as err:
+    answer = user_input('The configuration has schema errors:\n\n'
+                     f'{err}',
+                     OrderedDict(e='edit',
+                                 q='quit program'),
+                     default='q', yes=yes, quiet=quiet)
+    if answer == 'q':
+      raise UserAbortError()
+    return True, _repl_upstream_conf(upstream_yaml_text, yes=yes, quiet=quiet)
 
-#
-def make_init_package_from_scratch():
-  #
-  # upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
-  #                                          , allow_flow_style=True)
-  upstream_conf_yaml = _repl_upstream_conf(upstream_yaml_template)
-  license_dir = 'ofl'
-  gf_dir_content = {}
-  return _make_package(upstream_conf_yaml, license_dir, gf_dir_content)
-
-def make_init_package_from_family(family_name):
-  """As described above, use the data that is already in METADATA
-  to fill the upstream conf
+def _upstream_conf_from_file(filename: str, yes: bool=False
+                                          , quiet: bool=False) -> YAML:
+  """ If this parses there will be no repl, the user can edit
+  the file directly on disk.
+  If it doesn't parse, there's a chance to edit until the yaml parses
+  and to change the result back to disk.
   """
-  license_dir, gf_dir_content = _get_gf_dir_content(family_name)
-  if license_dir is None:
-    # This is probably not a case for exiting, it's rather a case of
-    # having to aquire the whole upstream conf differently, initially.
-    # Could also be a case of a misspelled family name.
-    raise ProgramAbortError(f'Family name {family_name} not found in the GitHub '
-                      'google/fonts repository.')
-  print('license_dir', license_dir, gf_dir_content)
+  with open(filename, 'r+') as upstream_yaml_file:
+    upstream_yaml_text = upstream_yaml_file.read()
+    edited, upstream_conf_yaml = _load_or_repl_upstream(upstream_yaml_text
+                                                  , yes=yes, quiet=quiet)
+    # "edited" is only true when upstream_yaml_text did not parse and
+    # was then edited successfully.
+    if edited:
+      answer = user_input(f'Save changed file {filename}?\n'
+            f'{_format_upstream_yaml(upstream_conf_yaml, compact=False)}',
+            OrderedDict(y='yes',
+                        n='no'),
+            default='y', yes=yes, quiet=quiet)
+      if answer == 'y':
+        upstream_yaml_file.seek(0)
+        upstream_yaml_file.truncate()
+        upstream_yaml_file.write(upstream_conf_yaml.as_yaml())
+  return upstream_conf_yaml
 
-  if 'upstream.yaml' in gf_dir_content:
-    # so this is also the case for the normal update path
-    upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_schema
-                                           , allow_flow_style=True)
-    raise ProgramAbortError('FOUND a upstream.yaml, temporarily refer to '
-                            'the make_update_package function instead!')
-  elif 'METADATA.pb' in gf_dir_content:
-      file_sha = gf_dir_content['METADATA.pb']['oid']
-      response = get_github_gf_blob(file_sha)
-      metadata = fonts_pb2.FamilyProto()
-      text_format.Parse(response.text, metadata)
-      # existing repo, no upstream conf:
-      # from METADATA.pb we use:
-      #       designer, category, name
-      # we won't get **yet**:
-      #       source.repository_url
-      # we still need the new stuff:
-      #       branch, files
-      upstream_conf = {
-        'designer': metadata.designer or None,
-        'category': metadata.category or None,
-        'name': metadata.name  or None,
-        # we won't get this just now in most cases!
-        'repository_url': metadata.source.repository_url or None,
-      }
 
-      upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
-                                           , allow_flow_style=True)
-      for k,v in upstream_conf.items():
-        if v is None: continue
-        upstream_conf_yaml[k] = v
-      upstream_conf_yaml = _repl_upstream_conf(upstream_conf_yaml.as_yaml())
+def _upstream_conf_from_scratch(family_name: typing.Union[str, None]=None,
+                                yes: bool=False, quiet: bool=False) \
+                                                  -> YAML:
+  if family_name is not None:
+    upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
+                                            , allow_flow_style=True)
+    upstream_conf_yaml['name'] = family_name
+    template = upstream_conf_yaml.as_yaml()
   else:
-    raise ProgramAbortError('No METADATA at all! We don\'t expect to be able to reach this '
-          'point at all because of the structure of the google fonts repo '
-          'we exit earlier, when not finding a family entry.')
-  return _make_package(upstream_conf_yaml, license_dir, gf_dir_content)
+    template = upstream_yaml_template
+  upstream_conf_yaml = _repl_upstream_conf(upstream_yaml_template,
+                                           yes=yes, quiet=quiet)
 
-def make_update_package(family_name, force=False):
-  """ This is used to make a package if the upstream.yaml file in the
-      google/fonts repo is up to date/doesn't need to change.
-      This is expected to be the most common case.
+  return upstream_conf_yaml
+
+def _user_input_license(yes: bool=False, quiet: bool=False):
+  answer = user_input('To add a new typeface family to Google Fonts we '
+              'must know the license of the family.\n'
+              'It\'s very likely that OFL is the license that is expected here.',
+              OrderedDict(o='OFL: SIL Open Font License',
+                          a='Apache License',
+                          u='Ubuntu Font License',
+                          q='quit program'),
+              # the default should always be an option that does
+              # not require user interaction. That way we can
+              # have an all --yes flag that always choses the
+              # default.
+              default='o', yes=yes, quiet=quiet)
+  if answer == 'q':
+    raise UserAbortError()
+  license_dir = dict(o='ofl', a='apache', u='ufl')[answer]
+  return license_dir
+
+def _upstream_conf_from_metadata(metadata_str: str, yes: bool=False
+                                                  , quiet: bool=False):
+  """Use the data that is already in METADATA,pb to bootstrap filling
+     the upstream conf.
   """
+  metadata = fonts_pb2.FamilyProto()
+  text_format.Parse(metadata_str, metadata)
+  # existing repo, no upstream conf:
+  # from METADATA.pb we use:
+  #       designer, category, name
+  # we won't get **yet**:
+  #       source.repository_url
+  # we still need the new stuff:
+  #       branch, files
+  upstream_conf = {
+    'designer': metadata.designer or None,
+    'category': metadata.category or None,
+    'name': metadata.name  or None,
+    # we won't get this just now in most cases!
+    'repository_url': metadata.source.repository_url or None,
+  }
 
+  upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
+                                       , allow_flow_style=True)
+  for k,v in upstream_conf.items():
+    if v is None: continue
+    upstream_conf_yaml[k] = v
+  return _repl_upstream_conf(upstream_conf_yaml.as_yaml(), yes=yes, quiet=quiet)
+
+def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool=False
+                            , quiet: bool=False) -> YAML:
+  """ Make a package when the upstream.yaml file is already in the
+  google/fonts repo.
+
+  Eventually the common update path.
+  """
+  # two cases:
+  # - upstream.yaml may need an update by the user
+  # - upstream.yaml may be invalid (updated schema, syntax)
+  answer = user_input('Do you want to edit upstream.yaml?',
+                 OrderedDict(y='yes',
+                             n='no'),
+                 default='n', yes=yes, quiet=quiet)
+  if answer == 'y':
+    return _repl_upstream_conf(upstream_yaml_text, yes=yes, quiet=quiet)
+  _, upstream_conf_yaml =  _load_or_repl_upstream(upstream_yaml_text, yes=yes, quiet=quiet)
+  return upstream_conf_yaml
+
+
+def make_package(file_or_family: str, is_file: bool, yes: bool, quiet: bool):
+  # the first task is to acquire an upstream_conf, the license dir and
+  # if present the available files for the family in the google/fonts repo.
+  license_dir = None
+  upstream_conf_yaml = None
+  gf_dir_content = None
+
+  if not is_file:
+    family_name = file_or_family
+  else:
+    # load a upstream.yaml from disk
+    upstream_conf_yaml = _upstream_conf_from_file(file_or_family
+                                                  , yes=yes, quiet=quiet)
+    family_name = upstream_conf_yaml['name'].data
+
+  # license_dir, gf_dir_content are None if family_name can't be found
   license_dir, gf_dir_content = _get_gf_dir_content(family_name)
-  if license_dir is None:
-    raise ProgramAbortError(f'Family name {family_name} not found in the '
-                            'GitHub google/fonts repository.')
-  print('license_dir', license_dir, gf_dir_content)
 
-  # second case: upstream.yaml needs to change
-  # third case: add a new family
-  if family_name == 'Gelasio':
+  if license_dir is None:
+    # The family is not specified or not found on google/fonts.
+    # Can also be an user input error, but we don't handle this yet/here.
+    license_dir = _user_input_license(yes=yes, quiet=quiet)
+    if upstream_conf_yaml is None:
+      # if there was no local upstream yaml 'file://'
+      upstream_conf_yaml = _upstream_conf_from_scratch(family_name
+                                                  , yes=yes, quiet=quiet)
+
+  if upstream_conf_yaml is not None:
+    # loaded via file:// or from_scratch
+    pass
+  # found on google/fonts and use gf_dir_content
+  elif family_name == 'Gelasio':
     # CAUTION: SHIM IN PLACE!
     # FIXME temp
-    warn('TEMP! Using upstream_yaml shim!')
-    upstream_yaml = gelasio_upstream_yaml
-    upstream_conf_yaml = dirty_load(upstream_yaml, upstream_yaml_schema
-                                          , allow_flow_style=True)
-    # upstream_conf = upstream_conf_yaml.data
-  # try to get upstream_conf via upstream.yaml
+    warn(f'TEMP! Using upstream_yaml shim for {family_name}!')
+    upstream_conf_yaml = _upstream_conf_from_yaml(gelasio_upstream_yaml
+                                                  , yes=yes, quiet=quiet)
   elif 'upstream.yaml' in gf_dir_content:
-    # 'content-type': 'text/plain; charset=iso-8859-1'
-    # file_sha = gf_dir_content['DESCRIPTION.en_us.html']['oid']
-
-    # 'content-type': 'text/plain',
-    # file_sha = gf_dir_content['Gelasio-Regular.ttf']['oid']
+    # normal case
+    print(f'Using upstream.yaml from google/fonts for {family_name}.')
     file_sha = gf_dir_content['upstream.yaml']['oid']
     response = get_github_gf_blob(file_sha)
-    # NOTE: maybe we could ask the user to hand edit, if this raises
-    # schema errors, same as when creating a new upstream_conf
-    upstream_conf_yaml = dirty_load(response.text, upstream_yaml_schema
-                                          , allow_flow_style=True)
-  else:
-    # what to do here? we should probably go with the init new family/upgrade paths
-    raise ProgramAbortError(f'upstream.yaml not found for family {family_name}. '
-                            'You need to run an initial workflow. FIXME: how to?')
-  return _make_package(upstream_conf_yaml, license_dir, gf_dir_content)
+    upstream_conf_yaml = _upstream_conf_from_yaml(response.text
+                                                  , yes=yes, quiet=quiet)
+  elif 'METADATA.pb' in gf_dir_content:
+    # until there's upstream_conf in each family dir
+    print(f'Using METADATA.pb.yaml from google/fonts for {family_name}.')
+    file_sha = gf_dir_content['METADATA.pb']['oid']
+    response = get_github_gf_blob(file_sha)
+    upstream_conf_yaml = _upstream_conf_from_metadata(response.text
+                                                , yes=yes, quiet=quiet)
 
+  _make_package(upstream_conf_yaml, license_dir, gf_dir_content or {})
 
-def _make_package(upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict):
+def _make_package(upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
+                  force: bool = False):
   has_warnings = False
   upstream_conf = upstream_conf_yaml.data
-  print('upstream_conf', pprint.pformat(upstream_conf))
-
+  print(_format_upstream_yaml(upstream_conf_yaml))
+  warn('END _make_package')
+  return
   # OK, now that we know the upstream, let's clone the repo ...
-  # SorkinType/Gelasio # (used to be "upstream" using "repoWithOwnerStyle")
-  #branch: master
 
   # FIXME: we'll expect this to be a GitHub repoNameWithOwner
   # if it has on single slash (/) and content before and after it
