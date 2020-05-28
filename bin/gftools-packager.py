@@ -20,17 +20,18 @@ parser.add_argument(
             help='load upstream.yaml from a file, use the [name] argument as path')
 parser.add_argument(
             '-y',
-            '--yes',
+            '--no-confirm',
+            dest='yes',
             action='store_true',
-            help='Answer all user interaction with yes (removes all interactivity).')
-
+            help='Don\'t require user interaction, by answering with the '
+                 'default always. Removes all interactivity.')
 # for documenting of non interactive tasks
 # FIXME: maybe make this the default and quiet the choice?
 parser.add_argument(
             '-q',
             '--quiet',
             action='store_true',
-            help='Don\'t print user interaction dialogues when --yes is used.')
+            help='Don\'t print user interaction dialogues when --no-confirm is used.')
 
 if __name__ == '__main__':
     args = parser.parse_args()
