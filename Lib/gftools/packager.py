@@ -1,6 +1,9 @@
 
 # FIXME: document dependencies, expect command line `git` with support
-# for shallow clones
+# for shallow clones (not in old git versions)
+
+# FIXME: I added some type annotations, but I did not use a static
+# type checker. Hence, there are errors and missing definitions!
 
 import sys
 import os
@@ -8,6 +11,8 @@ from tempfile import TemporaryDirectory, mkstemp
 import subprocess
 import requests
 import pprint
+import typing
+from collections import OrderedDict
 
 GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
 GITHUB_REPO_SSH_URL = 'git@github.com:{gh_repo_name_with_owner}.git'.format
@@ -318,13 +323,9 @@ def _run_gh_graphql_query(query, variables):
 def get_gh_gf_family_entry(family_name):
   # needs input sanitation
   family_name_normal = family_name.replace(' ', '').lower()
-  print('query family', family_name_normal, f'(raw {family_name})')
-
   variables = _get_query_variables('google','fonts', family_name_normal)
 
-  print('variables', variables)
   result = _run_gh_graphql_query(GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables)
-  print('result:', pprint.pformat(result, indent=2))
   return result
 
 
@@ -756,8 +757,14 @@ import functools
 from google.protobuf import text_format
 import gftools.fonts_public_pb2 as fonts_pb2
 
-def _write_file_to_package(basedir, filename, data):
-  full_name = os.path.join(basedir, filename)
+def _write_file_to_package(basedir:str, filename:str, data:bytes) -> None:
+  full_name = os.path.realpath(os.path.join(basedir, filename))
+
+  # Can't just let write the file anywhere!
+  full_directory = os.path.join(os.path.realpath(basedir), '')
+  if os.path.commonprefix([full_name, full_directory]) != full_directory:
+    raise Exception(f'Target is not in package directory: "{filename}".')
+
   os.makedirs(os.path.dirname(full_name), exist_ok=True)
   with open(full_name, 'wb') as f:
     f.write(data)
@@ -910,14 +917,15 @@ class UserAbortError(Exception):
 class ProgramAbortError(Exception):
   pass
 
-def _get_gf_dir_content(family_name):
+def _get_gf_dir_content(family_name: str) \
+        -> typing.Tuple[typing.Union[str, None], dict]:
   gfentry = get_gh_gf_family_entry(family_name)
   entries = None
   for license_dir in ['apache', 'ufl', 'ofl']:
     if gfentry['data']['repository'][license_dir] is not None:
       entries = gfentry['data']['repository'][license_dir]['entries']
   if entries is None:
-    return None, None
+    return None, {}
   gf_dir_content = {f['name']: f for f in entries}
   return license_dir, gf_dir_content
 
@@ -935,9 +943,6 @@ TOLEFT = '\u001b[1000D' # Move all the way left (max 1000 steps
 CLEARLINE = '\u001b[2K'    # Clear the line
 UP =  '\u001b[1A' # moves cursor 1 up
 # reset = (CLEARLINE + UP) * num_linebeaks + TOLEFT
-
-import typing
-from collections import OrderedDict
 
 def user_input(question: str,
                options: typing.OrderedDict,
@@ -1242,12 +1247,13 @@ def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool=False
   return upstream_conf_yaml
 
 
-def make_package(file_or_family: str, is_file: bool, yes: bool, quiet: bool):
+def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool, quiet: bool) \
+                                    -> typing.Tuple[YAML, str, dict]:
   # the first task is to acquire an upstream_conf, the license dir and
   # if present the available files for the family in the google/fonts repo.
   license_dir = None
   upstream_conf_yaml = None
-  gf_dir_content = None
+  gf_dir_content = {}
 
   if not is_file:
     family_name = file_or_family
@@ -1257,17 +1263,25 @@ def make_package(file_or_family: str, is_file: bool, yes: bool, quiet: bool):
                                                   , yes=yes, quiet=quiet)
     family_name = upstream_conf_yaml['name'].data
 
-  # license_dir, gf_dir_content are None if family_name can't be found
+  # TODO:_get_gf_dir_content: is implemented as github graphql query,
+  # but, as an alternative, could also be answered with a local
+  # clone of the git repository. then _get_gf_dir_content needs a
+  # unified api.
+  # if family_name can't be found:
+  #    license_dir is None, gf_dir_content is an empty dict
   license_dir, gf_dir_content = _get_gf_dir_content(family_name)
 
   if license_dir is None:
     # The family is not specified or not found on google/fonts.
     # Can also be an user input error, but we don't handle this yet/here.
+    print(f'Font Family "{family_name}" not found on Google Fonts.')
     license_dir = _user_input_license(yes=yes, quiet=quiet)
     if upstream_conf_yaml is None:
       # if there was no local upstream yaml 'file://'
       upstream_conf_yaml = _upstream_conf_from_scratch(family_name
                                                   , yes=yes, quiet=quiet)
+  else:
+    print(f'Font Family "{family_name}" is on Google Fonts under "{license_dir}".')
 
   if upstream_conf_yaml is not None:
     # loaded via file:// or from_scratch
@@ -1293,138 +1307,184 @@ def make_package(file_or_family: str, is_file: bool, yes: bool, quiet: bool):
     response = get_github_gf_blob(file_sha)
     upstream_conf_yaml = _upstream_conf_from_metadata(response.text
                                                 , yes=yes, quiet=quiet)
+  else:
+    raise Exception('Unexpected: can\'t use google fonts family data '
+                    f'for {family_name}.')
+  return upstream_conf_yaml, license_dir, gf_dir_content or {}
 
-  _make_package(upstream_conf_yaml, license_dir, gf_dir_content or {})
+def _copy_upstream_files(branch: str, files: dict, repo: pygit2.Repository
+            , write_file_to_package: typing.Callable[[str, bytes], None]
+            , no_whitelist: bool=False) \
+              -> OrderedDict:
 
-def _make_package(upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
-                  force: bool = False):
-  has_warnings = False
+  SKIP_NOT_PERMITTED = 'Target is not a permitted filename (see --no_whitelist):'
+  SKIP_SOURCE_NOT_FOUND = 'Source not found in upstream:'
+  SKIP_SOURCE_NOT_BLOB = 'Source is not a blob (blob=file):'
+  SKIP_COPY_EXCEPTION = 'Can\'t copy:'
+  skipped = OrderedDict([
+      (SKIP_NOT_PERMITTED, []),
+      (SKIP_SOURCE_NOT_FOUND, []),
+      (SKIP_SOURCE_NOT_BLOB, []),
+      (SKIP_COPY_EXCEPTION, [])
+  ])
+  for source, target in files.items():
+    # there are two places where .ttf files are allowed to go
+    # we don't do filename/basename validation here, that's
+    # a job for font bakery
+    if target.endswith('.ttf') \
+        and os.path.dirname(target) in ['', 'static']:
+      pass # using this!
+    elif target not in ALLOWED_FILES \
+                          and not no_whitelist: # this is the default
+      skipped[SKIP_NOT_PERMITTED].append(target)
+      continue
+    # else: allow, write_file_to_package will raise errors if target is bad
+
+    try:
+      source_object = repo.revparse_single(f"{branch}:{source}")
+    except KeyError as e:
+      skipped[SKIP_SOURCE_NOT_FOUND].append(source)
+      continue
+    _print_git_object(source_object)
+
+    if(source_object.type != pygit2.GIT_OBJ_BLOB):
+      skipped[SKIP_SOURCE_NOT_BLOB].append(f'{source} (type is {source_object.type_str})')
+      continue
+
+    try:
+      write_file_to_package(target, source_object.data)
+    except Exception as e:
+      # i.e. file exists
+      skipped[SKIP_COPY_EXCEPTION].append(f'{target} ERROR: {e}')
+  # Clean up empty entries in skipped.
+  # using list() because we can't delete from a dict during iterated
+  for key in list(skipped):
+    if not skipped[key]: del skipped[key]
+  # If skipped is empty all went smooth.
+  return skipped
+
+def _create_or_update_metadata_pb(upstream_conf: YAML,
+                                  tmp_package_family_dir:str,
+                                  upstream_commit_sha:str) -> None:
+  metadata_file_name = os.path.join(tmp_package_family_dir, 'METADATA.pb')
+  subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
+                                , check=True, stdout=subprocess.PIPE)
+  metadata = fonts_pb2.FamilyProto()
+  with open(metadata_file_name, 'rb') as f:
+    text_format.Parse(f.read(), metadata)
+
+  # make upstream_conf the source of truth for some entries
+  metadata.name = upstream_conf['name']
+  for font in metadata.fonts:
+    font.name = upstream_conf['name']
+  metadata.designer = upstream_conf['designer']
+  metadata.category = upstream_conf['category']
+  # metadata.date_added # is handled well
+
+  metadata.source.repository_url = upstream_conf['repository_url']
+  metadata.source.commit = upstream_commit_sha
+
+  text_proto = text_format.MessageToString(metadata)
+  with open(metadata_file_name, 'w') as f:
+    f.write(text_proto)
+
+def _create_package(upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
+                  no_whitelist: bool = False):
   upstream_conf = upstream_conf_yaml.data
-  print(_format_upstream_yaml(upstream_conf_yaml))
-  warn('END _make_package')
-  return
-  # OK, now that we know the upstream, let's clone the repo ...
 
-  # FIXME: we'll expect this to be a GitHub repoNameWithOwner
-  # if it has on single slash (/) and content before and after it
-  # that will at least make it hard to put a url into it
-  # for urls (not github support), we'll add support when we need it.
-  print(f"upstream['repository_url'] {upstream_conf['repository_url']}")
-  print(f"upstream['branch'] {upstream_conf['branch']}")
-  # git clone [remote-url] --depth 1 --bare --branch [name] [folder]
-  # need this on disc
+  print(f'Creating package with \n{_format_upstream_yaml(upstream_conf_yaml)}')
+
   upstream_commit_sha = None
-  with TemporaryDirectory() as package_dir:
+
+  # NOTE: this tmp_package_dir could be a TreeObject of a google/fonts git
+  # repository!
+  with TemporaryDirectory() as tmp_package_dir:
     family_name_normal = upstream_conf['name'].replace(' ', '').lower()
-    package_family_dir = os.path.join(package_dir, license_dir, family_name_normal)
-    write_file_to_package = functools.partial(_write_file_to_package, package_family_dir)
-    file_in_package = functools.partial(_file_in_package, package_family_dir)
+    tmp_package_family_dir = os.path.join(tmp_package_dir, license_dir, family_name_normal)
+    # putting state into functions, could be done with classes/methods as well
+    write_file_to_package = functools.partial(_write_file_to_package,
+                                              tmp_package_family_dir)
+    file_in_package = functools.partial(_file_in_package,
+                                        tmp_package_family_dir)
     # Get and add upstream files!
     with TemporaryDirectory() as upstream_dir:
+      # TODO: we could also use a path to an existing local clone of the
+      # repo here or even enable to use a path to a directory. This is
+      # rather  for the user story of work in progress "sandbox" checking.
+      # However, for the FBD sandbox workflow a repo/branch is also
+      # needed, so using the --file flag for a local upstream.yaml file
+      # is an OK path for the moment to support in progress work, although
+      # not so straight forward if all files are on disk already.
+      # Perhaps, we could just use the "file://" uri scheme in
+      # repository_url to address a local git repository and then
+      # skip the cloning:
+      # upstream_dir = upstream_conf['repository_url'][len('file://'):]
+      # the context manager in here: TemporaryDirectory could be skipped
+      # as well, or we use a "fake" context manager easily with
+      # @contextlib.contextmanager
       _shallow_clone_git(upstream_dir, upstream_conf['repository_url']
                                         , upstream_conf['branch'])
       repo = pygit2.Repository(upstream_dir)
       upstream_commit = repo.revparse_single(upstream_conf['branch'])
       upstream_commit_sha = upstream_commit.hex
 
-      # Copy all files from upstream_conf['files'] to package_family_dir
-      # TODO: we should be strict about what to allow, unexpected files
-      # shouldn't be copied. Instead print a warning an suggest filing an
-      # issue if the file is legitimate.
-      for source, target in upstream_conf['files'].items():
-        # there are two places where .ttf files are allowed to go
-        # we don't do filename/basename validation here, that's
-        # a job for font bakery
+      # Copy all files from upstream_conf['files'] to tmp_package_family_dir
+      # We are strict about what to allow, unexpected files
+      # are not copied. Instead print a warning an suggest filing an
+      # issue if the file is legitimate. A flag to explicitly
+      # skip the whitelist check (--no_whitelist)
+      # enables making packages even when new yet unknown files are required).
+      # Do we have a Font Bakery check for expected/allowed files? Would
+      # be a good complement.
+      skipped = _copy_upstream_files(upstream_conf['branch'],
+                        upstream_conf['files'], repo, write_file_to_package,
+                        no_whitelist=no_whitelist)
+      if skipped:
+        message = ['Some files from upstream_conf could not be copied.']
+        for reason, items in skipped.items():
+          message.append(reason)
+          for item in items:
+            message.append(f' - {item}')
+        # The whitelist could be ignored using a flag, but the rest should
+        # be fixed in the files map, because it's obviously wrong (not working)
+        raise ProgramAbortError('\n'.join(message))
 
-        if target.endswith('.ttf') \
-            and os.path.dirname(target) in ['', 'static']:
-          pass # using this!
-        elif target not in ALLOWED_FILES:
-          has_warnings = True
-          warn(f'Skipping target {target}: not a permitted filename from upstream.')
-          continue
-
-        try:
-          source_object = repo.revparse_single(f"{upstream_conf['branch']}:{source}")
-        except KeyError as e:
-          has_warnings = True
-          warn(f'Skipping source {source}: not found in upstream.')
-          continue
-        _print_git_object(source_object)
-
-        if(source_object.type != pygit2.GIT_OBJ_BLOB):
-          has_warnings = True
-          warn(f'Skipping source {source}: not a blob (blob=file) '
-               f'type is {source_object.type_str}.')
-          continue
-
-        # opening for [r]eading as [b]inary
-        print(f'Using upstream entry {target}')
-        write_file_to_package(target, source_object.data)
-
-    # Get and add files from google/fonts
+    # Get and add all files from google/fonts
     for name, entry in gf_dir_content.items():
+      # not copying old TTFs, directories and files that are already there
       if name.endswith('.ttf') \
             or entry['type'] != 'blob'\
             or file_in_package(name):
-        print(f'Skipping google/fonts entry {name} {entry["type"]}.')
         continue
-      print(f'fetching {name} from github.com/google/fonts')
       file_sha = gf_dir_content[name]['oid']
       response = get_github_gf_blob(file_sha)
       write_file_to_package(name, response.content)
 
     # create/update METADATA.pb
-    metadata_file_name = os.path.join(package_family_dir, 'METADATA.pb')
-    subprocess.run(['gftools', 'add-font', package_family_dir]
-                                  , check=True, stdout=subprocess.PIPE)
-    metadata = fonts_pb2.FamilyProto()
-    with open(metadata_file_name, 'rb') as f:
-      text_format.Parse(f.read(), metadata)
+    _create_or_update_metadata_pb(upstream_conf, tmp_package_family_dir,
+                                                    upstream_commit_sha)
 
-    # FIXME: this name, and the argument family_name should be the same
-    # HOWEVER: to get to here family_name_normal is sufficient and
-    # changing the family name that is used in google/fonts
-    # and shouldn't be done lightly.
-    # Also, add-font uses the font file data directly, we could probably
-    # live with that, but Font Bakery checks could become circular referential,
-    # when comparing data that comes from the font with the value that
-    # is set on font.
-    metadata.name = upstream_conf['name']
-    for font in metadata.fonts:
-      font.name = upstream_conf['name']
-    metadata.designer = upstream_conf['designer']
-    metadata.category = _genre_2_category(upstream_conf['category'])
-    # metadata.date_added # is handled well
-
-    metadata.source.repository_url = upstream_conf['repository_url']
-    metadata.source.commit = upstream_commit_sha
-
-    text_proto = text_format.MessageToString(metadata)
-    with open(metadata_file_name, 'w') as f:
-      f.write(text_proto)
-
-    with open(metadata_file_name, 'r') as f:
-      print('METADATA.pb', f.read())
-
-    with open(os.path.join(package_family_dir, 'upstream.yaml'), 'w') as f:
+    # create/update upstream.yaml
+    with open(os.path.join(tmp_package_family_dir, 'upstream.yaml'), 'w') as f:
       f.write(upstream_conf_yaml.as_yaml())
 
-    with open(os.path.join(package_family_dir, 'upstream.yaml'), 'r') as f:
-      print('upstream.yaml', f.read())
-
+    # FIXME: REMOVE, also, how to go on now?
     print('Package content:')
-    for root, dirs, files in os.walk(package_dir):
+    for root, dirs, files in os.walk(tmp_package_dir):
       for filename in files:
         full_path = os.path.join(root, filename)
         filesize = os.path.getsize(full_path)
-        print(f'    {os.path.relpath(full_path, package_dir)} {int(filesize / (1<<10))}KB (len: {filesize})')
+        print(f'    {os.path.relpath(full_path, tmp_package_dir)} '
+              f'{int(filesize / (1<<10))}KB (len: {filesize})')
 
-    if has_warnings and not force:
-      raise ProgramAbortError('make_package had warnings. '
-            'Fixing upstream.yaml is the preferred action. '
-            'Use --force to proceed anyways.')
     print('Package is DONE. TODO: What next?')
+
+
+def make_package(file_or_family: str, is_file: bool, yes: bool, quiet: bool,
+                no_whitelist: bool):
+  ( upstream_conf_yaml, license_dir,
+    gf_dir_content ) = _get_upstream_info(file_or_family, is_file, yes, quiet)
+  _create_package(upstream_conf_yaml, license_dir, gf_dir_content, no_whitelist)
 
 #
 # CLI Sketches:

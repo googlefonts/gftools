@@ -32,6 +32,16 @@ parser.add_argument(
             '--quiet',
             action='store_true',
             help='Don\'t print user interaction dialogues when --no-confirm is used.')
+parser.add_argument(
+            '--no_whitelist',
+            action='store_true',
+            help='Don\'t use the whitelist of allowed files to copy from '
+                 'TARGET in upstream_conf.files. This is meant to enable '
+                 'forward compatibility with new files and should not '
+                 'be used regularly. Instead file an issue to add new '
+                 'files to the whitelist.')
+
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
