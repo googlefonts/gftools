@@ -12,12 +12,13 @@ parser.add_argument(
             'file_or_family',
             metavar='name',
             type=str,
-            help='The family name or a file name of an upstream.yaml file')
+            help='The family name or a file name of an upstream.yaml file. '
+                  'Use --file to mark it as a file otherwise it\'s used as family name.')
 parser.add_argument(
             '--file',
             dest='is_file',
             action='store_true',
-            help='load upstream.yaml from a file, use the [name] argument as path')
+            help='Load upstream.yaml from a file, use the [name] argument as path.')
 parser.add_argument(
             '-y',
             '--no-confirm',
