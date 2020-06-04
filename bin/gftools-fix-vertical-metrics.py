@@ -258,6 +258,7 @@ parser.add_argument('--autofix', action="store_true",
                      help="Autofix font metrics")
 parser.add_argument('ttf_font', nargs='+', metavar='ttf_font',
                     help="Font file in OpenType (TTF/OTF) format")
+parser.add_argument("-o", "--out", help="Output fontfile path")
 
 
 def vmetrics(ttFonts):
@@ -327,7 +328,10 @@ def main():
       if options.linegaps_typo or options.linegaps_typo == 0:
         ttfont['OS/2'].sTypoLineGap = options.linegaps_typo
 
-      ttfont.save(f[:-4] + '.fix.ttf')
+      if options.out:
+        ttfont.save(options.out)
+      else:
+        ttfont.save(f[:-4] + '.fix.ttf')
 
   elif options.autofix:
     ttFonts = []
