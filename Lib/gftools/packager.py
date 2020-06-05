@@ -7,6 +7,7 @@
 
 import sys
 import os
+import shutil
 from tempfile import TemporaryDirectory, mkstemp
 import subprocess
 import requests
@@ -1058,8 +1059,8 @@ def _repl_upstream_conf(initial_upstream_conf: str, yes: bool=False
       try:
         last_good_conf = dirty_load(updated_upstream_conf, upstream_yaml_schema
                                            , allow_flow_style=True)
-      except YAMLValidationError as err:
-        answer = user_input('The configuration has schema errors:\n\n'
+      except Exception as e:
+        answer = user_input(f'The configuration did not parse ({type(e).__name__}):\n\n'
                        f'{err}',
                        OrderedDict(f='fix last edit',
                                    r='retry last edit',
@@ -1388,103 +1389,229 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
   with open(metadata_file_name, 'w') as f:
     f.write(text_proto)
 
-def _create_package(upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
-                  no_whitelist: bool = False):
-  upstream_conf = upstream_conf_yaml.data
-
+def _create_package_content(package_target_dir: str, upstream_conf_yaml: YAML,
+        license_dir: str, gf_dir_content:dict, no_whitelist: bool = False):
   print(f'Creating package with \n{_format_upstream_yaml(upstream_conf_yaml)}')
-
+  upstream_conf = upstream_conf_yaml.data
   upstream_commit_sha = None
 
-  # NOTE: this tmp_package_dir could be a TreeObject of a google/fonts git
-  # repository!
-  with TemporaryDirectory() as tmp_package_dir:
-    family_name_normal = upstream_conf['name'].replace(' ', '').lower()
-    tmp_package_family_dir = os.path.join(tmp_package_dir, license_dir, family_name_normal)
-    # putting state into functions, could be done with classes/methods as well
-    write_file_to_package = functools.partial(_write_file_to_package,
-                                              tmp_package_family_dir)
-    file_in_package = functools.partial(_file_in_package,
-                                        tmp_package_family_dir)
-    # Get and add upstream files!
-    with TemporaryDirectory() as upstream_dir:
-      # TODO: we could also use a path to an existing local clone of the
-      # repo here or even enable to use a path to a directory. This is
-      # rather  for the user story of work in progress "sandbox" checking.
-      # However, for the FBD sandbox workflow a repo/branch is also
-      # needed, so using the --file flag for a local upstream.yaml file
-      # is an OK path for the moment to support in progress work, although
-      # not so straight forward if all files are on disk already.
-      # Perhaps, we could just use the "file://" uri scheme in
-      # repository_url to address a local git repository and then
-      # skip the cloning:
-      # upstream_dir = upstream_conf['repository_url'][len('file://'):]
-      # the context manager in here: TemporaryDirectory could be skipped
-      # as well, or we use a "fake" context manager easily with
-      # @contextlib.contextmanager
-      _shallow_clone_git(upstream_dir, upstream_conf['repository_url']
-                                        , upstream_conf['branch'])
-      repo = pygit2.Repository(upstream_dir)
-      upstream_commit = repo.revparse_single(upstream_conf['branch'])
-      upstream_commit_sha = upstream_commit.hex
+  family_name_normal = upstream_conf['name'].replace(' ', '').lower()
+  family_dir = os.path.join(license_dir, family_name_normal)
+  package_family_dir = os.path.join(package_target_dir, family_dir)
+  # putting state into functions, could be done with classes/methods as well
+  write_file_to_package = functools.partial(_write_file_to_package,
+                                            package_family_dir)
+  file_in_package = functools.partial(_file_in_package,
+                                      package_family_dir)
+  # Get and add upstream files!
+  # Because of the add-font script (METADATA.pb) we need a directory
+  # here anyways.
+  with TemporaryDirectory() as upstream_dir:
+    _shallow_clone_git(upstream_dir, upstream_conf['repository_url']
+                                      , upstream_conf['branch'])
+    repo = pygit2.Repository(upstream_dir)
 
-      # Copy all files from upstream_conf['files'] to tmp_package_family_dir
-      # We are strict about what to allow, unexpected files
-      # are not copied. Instead print a warning an suggest filing an
-      # issue if the file is legitimate. A flag to explicitly
-      # skip the whitelist check (--no_whitelist)
-      # enables making packages even when new yet unknown files are required).
-      # Do we have a Font Bakery check for expected/allowed files? Would
-      # be a good complement.
-      skipped = _copy_upstream_files(upstream_conf['branch'],
-                        upstream_conf['files'], repo, write_file_to_package,
-                        no_whitelist=no_whitelist)
-      if skipped:
-        message = ['Some files from upstream_conf could not be copied.']
-        for reason, items in skipped.items():
-          message.append(reason)
-          for item in items:
-            message.append(f' - {item}')
-        # The whitelist could be ignored using a flag, but the rest should
-        # be fixed in the files map, because it's obviously wrong (not working)
-        raise ProgramAbortError('\n'.join(message))
+    upstream_commit = repo.revparse_single(upstream_conf['branch'])
+    upstream_commit_sha = upstream_commit.hex
 
-    # Get and add all files from google/fonts
-    for name, entry in gf_dir_content.items():
-      # not copying old TTFs, directories and files that are already there
-      if name.endswith('.ttf') \
-            or entry['type'] != 'blob'\
-            or file_in_package(name):
-        continue
-      file_sha = gf_dir_content[name]['oid']
-      response = get_github_gf_blob(file_sha)
-      write_file_to_package(name, response.content)
+    # Copy all files from upstream_conf['files'] to package_family_dir
+    # We are strict about what to allow, unexpected files
+    # are not copied. Instead print a warning an suggest filing an
+    # issue if the file is legitimate. A flag to explicitly
+    # skip the whitelist check (--no_whitelist)
+    # enables making packages even when new, yet unknown files are required).
+    # Do we have a Font Bakery check for expected/allowed files? Would
+    # be a good complement.
+    skipped = _copy_upstream_files(upstream_conf['branch'],
+                      upstream_conf['files'], repo, write_file_to_package,
+                      no_whitelist=no_whitelist)
+    if skipped:
+      message = ['Some files from upstream_conf could not be copied.']
+      for reason, items in skipped.items():
+        message.append(reason)
+        for item in items:
+          message.append(f' - {item}')
+      # The whitelist can be ignored using the flag no_whitelist flag,
+      # but the rest should be fixed in the files map, because it's
+      # obviously wrong, not working, configuration.
+      # TODO: This case could (but should it?) be a repl-case to ask
+      # interactively, if the no_whitelist flag should be used then,
+      # if yes, _copy_upstream_files could be tried again. But given
+      # that the use case for the flag is a narrow one, I doubt the
+      # effort needed and the added complexity is worth it.
+      raise ProgramAbortError('\n'.join(message))
 
-    # create/update METADATA.pb
-    _create_or_update_metadata_pb(upstream_conf, tmp_package_family_dir,
-                                                    upstream_commit_sha)
+  # Get and add all files from google/fonts
+  for name, entry in gf_dir_content.items():
+    # not copying old TTFs, directories and files that are already there
+    if name.endswith('.ttf') \
+          or entry['type'] != 'blob'\
+          or file_in_package(name):
+      continue
+    file_sha = gf_dir_content[name]['oid']
+    response = get_github_gf_blob(file_sha)
+    write_file_to_package(name, response.content)
 
-    # create/update upstream.yaml
-    with open(os.path.join(tmp_package_family_dir, 'upstream.yaml'), 'w') as f:
-      f.write(upstream_conf_yaml.as_yaml())
+  # create/update METADATA.pb
+  _create_or_update_metadata_pb(upstream_conf, package_family_dir,
+                                                  upstream_commit_sha)
 
-    # FIXME: REMOVE, also, how to go on now?
-    print('Package content:')
-    for root, dirs, files in os.walk(tmp_package_dir):
-      for filename in files:
-        full_path = os.path.join(root, filename)
-        filesize = os.path.getsize(full_path)
-        print(f'    {os.path.relpath(full_path, tmp_package_dir)} '
-              f'{int(filesize / (1<<10))}KB (len: {filesize})')
+  # create/update upstream.yaml
+  with open(os.path.join(package_family_dir, 'upstream.yaml'), 'w') as f:
+    f.write(upstream_conf_yaml.as_yaml())
+  return family_dir
 
-    print('Package is DONE. TODO: What next?')
+    # from packager to QA
+    #    * I'd prefer to create the minimal required environment instead of
+    #      having to download the full google/fonts repo, but I also see
+    #      it's more complex and probably a moving target, as QA tools may
+    #      change their expectations, as they did with e.g. FB with some
+    #      recent "super family" checks, which expect to search the
+    #      license folder for name matches.
+    #    * We should actually rather update whole super-families than
+    #      just one member and get the rest from the current google/fonts
+    #      so updating a super family would mean we run this tool for each
+    #      member of the super family and build a big package of potential
+    #      updates. I'd prefer this so far!
+    #    * We could allow to write directly into a google/fonts none-bare
+    #      (checked out) git clone, but that clearly changes directories
+    #      on disk, so we either expect completely empty directories OR
+    #      a --force flag
+    #      to require explicit consent.
+    # from packager to PR
+    #    * I won't clone the github google/fonts repo, but the is_google_fonts
+    #      function is a good enough way to figure our if the provided
+    #      repo_path is sufficient. git branch will be a default string
+    #      plus (super-)family name (or default name + "multiple-families"
+    #      similar to the way FBD does it. This branch name can also be set
+    #      freely by the user and also be --force overridden if exstent.
+    #      When pushing for a PR --force will have to be used regardless.
+    #      The tool should not force push to master!!!! and maybe other
+    #      branches though. However the user could do this actually manually
+    #      if interested.
+    #      At this point we still don't have a PR.
+    #
+    #      with a branch name
+    # Maybe better “local sandbox workflow” support
+    #    * That's probably done with the copy to dir + --force flag
+    #    * we have also the --file flag
+    #    * must try and see how it goes
+
+def _check_git_target(target: str) -> None:
+  try:
+    repo = repo = pygit2.Repository(target)
+  except Exception as e:
+    raise ProgramAbortError(f'Can\'t open "{target}" as git repository. '
+                            f'{e} ({type(e).__name__}).')
+
+  remote_name_or_none = _find_github_remote(repo, 'google', 'fonts', 'master')
+  if remote_name_or_none is None:
+    # NOTE: we could ask the user if we should add the missing remote.
+    # This makes especially sense if the repository is a fork of
+    # google/fonts and essentially has the same history/object database.
+    # It would be very uncommon if the repo is not related to the
+    # google/fonts repo and fetching from that remote would have to
+    # download a lot of new data, as well as probably create confusing
+    # situations for the user when dealing with GitHub PRs etc.
+    print (f'The git repository at target "{target}" has no remote for '
+      'GitHub google/fonts.\n'
+      'You can add it by running:\n'
+      f'$ cd {target}\n'
+      '$ git remote add googlefonts git@github.com:google/fonts.git\n'
+      'For more context, run:\n'
+      '$ git remote help')
+
+    raise ProgramAbortError(f'The target git repository has no remote for '
+              f'GitHub google/fonts.')
+
+def _check_directory_target(target: str) -> None:
+  if not os.path.isdir(target):
+    raise ProgramAbortError(f'Target "{target}" is not a directory.')
 
 
-def make_package(file_or_family: str, is_file: bool, yes: bool, quiet: bool,
-                no_whitelist: bool):
+def _check_target(is_gf_git: bool, target: str) -> None:
+  if is_gf_git:
+    return _check_git_target(target)
+  else:
+    return _check_directory_target(target)
+
+def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
+                 quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
+                 branch: typing.Union[str, None]=None):
+
+  # FIXME: if "_create_package" raises we could go back into the interactive
+  # _get_upstream_info loop to let the user fix the problem. A Good example
+  # is a bad repository_url, that will raise in _create_package.
+  # _create_package should better not do so much interactivity, as it
+  # is just interpreting upstream_conf and failing if it can't run to
+  # the end, which seems like a good, simple model.
   ( upstream_conf_yaml, license_dir,
     gf_dir_content ) = _get_upstream_info(file_or_family, is_file, yes, quiet)
-  _create_package(upstream_conf_yaml, license_dir, gf_dir_content, no_whitelist)
+
+  # Not sure when to run _check_target, before _get_upstream_info we don't
+  # know the actual package target, but we could do some basic early checks
+  # FIXME: should maybe be "_prepare_target" and whatever the type,
+  # it would return a common interface for _create_package to write into.
+  _check_target(is_gf_git, target)
+  with TemporaryDirectory() as package_target_dir:
+    family_dir = _create_package_content(package_target_dir, upstream_conf_yaml,
+                                license_dir, gf_dir_content, no_whitelist)
+
+    # NOTE: if there are any files outside of family_dir that need moving
+    # that is not yet supported! The reason is, there's no case for this
+    # yet. So, if _create_package_content is changed to put files outside
+    # of family_dir, these targets will have to follow and implement it.
+    if is_gf_git:
+      #fetch! make sure we're on the actual gf master HEAD
+      remote.fetch(['refs/heads/master'], callbacks=MyRemoteCallbacks())
+      # remote_branch = repo.branches.remote[f'{remote.name}/master']
+
+
+
+      base_commit = repo.revparse_single(f'refs/remotes/{remote_name}/master')
+      # Maybe I can start with the commit tree here ...
+      treeBuilder = repo.TreeBuilder(base_commit.tree)
+
+      # create the commit
+      author = Signature('Alice Author', 'alice@authors.tld')
+      committer = Signature('Cecil Committer', 'cecil@committers.tld')
+      tree = treeBuilder.write()
+      repo.create_commit(
+      f'refs/heads/{new_branch_name}', # the name of the reference to update
+      author, committer, 'one line commit message\n\ndetailed commit message',
+      tree, # is OID but doc says: binary string representing the tree object ID
+      [base_commit.id] # parents
+
+      #create a local branch
+      local_branch = repo.branches.local.create(new_branch_name, commit, force)
+
+
+      # put files into a tree
+
+      raise ProgramAbortError('Not implemented: git as a target')
+    else:
+      # target is a directory:
+      target_family_dir = os.path.join(target, family_dir)
+      if os.path.exists(target_family_dir):
+        if not force:
+          raise ProgramAbortError(f'Can\'t override existing directory {target_family_dir}. '
+                                  'Use --force to allow explicitly.')
+        shutil.rmtree(target_family_dir)
+      else: # not exists
+        os.makedirs(os.path.dirname(target_family_dir))
+      shutil.move(os.path.join(package_target_dir, family_dir), target_family_dir)
+
+
+
+  print(f'Created Files in {target}:')
+  for root, dirs, files in os.walk(target_family_dir):
+    for filename in files:
+      full_path = os.path.join(root, filename)
+      entry_name = os.path.relpath(full_path, target)
+
+      filesize = os.path.getsize(full_path)
+      print(f'    {entry_name} '
+            f'{int(filesize / (1<<10))}KB (len: {filesize})')
 
 #
 # CLI Sketches:
@@ -1510,87 +1637,88 @@ def make_package(file_or_family: str, is_file: bool, yes: bool, quiet: bool,
 # simple first
 #
 # check: get a path to a git-directory and figure if it has a google/fonts
-# remote, otherwise: adding the remote and fetching could done with a --force
-# flag.
-
-def is_google_fonts(repo_path):
-  repo = pygit2.Repository(repo_path)
-  #remote.name
-  #> 'origin'
-  #>  remote.url
-  # this is a good indicator that we are in fact in the right repository!
-  #>'git@github.com:google/fonts.git'
-  # so remote url can be a github ssh or https url
-
-  # need a refspec to fetch {remoteName/master} ?
-  # I'd expect
-  # remote.fetch_refspecs # ['+refs/heads/*:refs/remotes/upstream/*']
-  # to contain a refspec
-  # f'+refs/heads/*:refs/remotes/{remote.name}/*'
-  # then fetching
-  # f'{remote.name}/master'
-  # should be straight forward
-  # maybe:
-  # f'+refs/heads/master:refs/remotes/{remote.name}/master'
-  # is also sufficient, as * looks like a wildcard
-  # works well:  git fetch upstream +refs/heads/master:refs/remotes/upstream/master
+# remote, otherwise: adding the remote and fetching could be done
+# with a --force flag.
 
 
-  # if there's no remote with a github url, we could either ask the user
-  # to add the remote suggesting the command to do so, or we
-  # do it ourselves, after asking for permission.
-  # This implies that fetching is OK, which is a big amount of data.
 
+def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
+          branch: typing.Union[str, None] = None) -> typing.Union[str, None]:
+  """
+  Find a remote-name that is a good fit for the GitHub owner and repo-name.
+  A good fit is when we can use it to fetch/push from GitHubs repository
+  the `branch` if branch is given or any branch if `branch` is None.
 
-  searched_repo = 'google/fonts'
-  accepted_remote_urls = {
-  # f'git@github.com:{searched_repo}.git', # ssh
-  # f'ssh://git@github.com/{searched_repo}' # ssh
-     f'https://github.com/{searched_repo}.git' # token
-  }
-  found = None
-  candidates = []
-  # could find more remotes that work, but using the first match should suffice
+  Returns remote-name or None
+  """
+  searched_repo = f'{owner}/{name}'
+  # If we plan to also push to these, it is important which
+  # remote url we choose, esp. because of authentication methods.
+  # I'd try to pick remotes after the order below, e.g. first the
+  # ssh based urls, then the https url, because human users will
+  # likely have a working ssh setup if they are pushing to github,
+  # An environment like the FBD can have complete control over the
+  # remotes it uses.
+  # If more control is needed we'll have to add it.
+  accepted_remote_urls = [
+     f'git@github.com:{searched_repo}.git', # ssh
+     f'ssh://git@github.com/{searched_repo}', # ssh
+     f'https://github.com/{searched_repo}.git', # token (auth not needed for fetch)
+  ]
+  candidates = dict() # url->remote
+
+  # NOTE: a shallow cloned repository has no remotes.
   for remote in repo.remotes:
-    if remote.url in accepted_remote_urls:
-      print(f'looking at {remote.name} {remote.url}')
-      candidates.append(remote)
-      # FIX if insufficient:
-      accepted_refspecs = {
-        f'+refs/heads/*:refs/remotes/{remote.name}/*'
-      , f'+refs/heads/master:refs/remotes/{remote.name}/master'
-      }
-      # NOTE: a shallow repository has no remotes!
-      # but in case of a shallow repo, we probably rather
-      # use the github api anyways.
-      for refspec in remote.fetch_refspecs:
-        if refspec in accepted_refspecs:
-          if found is None:
-            found = remote
-          print(f'FOUND! {remote.name} {remote.url} with refspec {refspec}')
-        else:
-          print(f'NOPE {remote.name}')
-    else:
-      print(f'skipping {remote.name} {remote.url}')
+    if remote.url not in accepted_remote_urls:
+      continue
+    # To be honest, we'll like encounter the (default) first refspec case
+    # in almost all matching remotes.
+    accepted_refspecs = {
+      f'+refs/heads/*:refs/remotes/{remote.name}/*',
+      f'+refs/heads/master:refs/remotes/{remote.name}/master'
+    }
+    for refspec in remote.fetch_refspecs:
+      if refspec in accepted_refspecs:
+        # Could ask the user here if this remote should be used
+        # but actually, the most common case will be that there's just
+        # one that is good, and we're picking below from the ordered list
+        # of accepted_remote_urls.
+        candidates[remote.url] = remote
+      # else Skipping refspec is probably insufficient.
 
-  if found is not None:
+  for url in accepted_remote_urls:
+    if url in candidates:
+      return remote.name
+  return None
+
+def _git_fetch_master(repo, remote_name):
+  remote = repo.remotes[remote_name]
+  # can perform a fetch
+  if found_remote is not None:
     class MyRemoteCallbacks(pygit2.RemoteCallbacks):
       def credentials(self, url, username_from_url, allowed_types):
           if allowed_types & pygit2.credentials.GIT_CREDENTIAL_USERNAME:
               print('GIT_CREDENTIAL_USERNAME')
               return pygit2.Username("git")
           elif allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY:
-              print('GIT_CREDENTIAL_SSH_KEY', url, username_from_url, allowed_types)
-              sshkeys = os.path.join(os.getenv("HOME"), '.ssh')
-              pubkey = os.path.join(sshkeys, 'id_rsa.pub')
-              privkey = os.path.join(sshkeys, 'id_rsa')
-              # The username for connecting to GitHub over SSH is 'git'.
               # https://github.com/libgit2/pygit2/issues/428#issuecomment-55775298
-              print(f'pubkey {pubkey} privkey {privkey}')
-              return pygit2.Keypair(username_from_url, pubkey, privkey, '')
+              # "The username for connecting to GitHub over SSH is 'git'."
+
+
+              # I filed https://github.com/libgit2/pygit2/issues/1013
+              # because using just:
+              #      return pygit2.Keypair(username_from_url, pubkey, privkey, '')
+              # didn't work, there's also the example how I tried.
+
+              # It's probably also what the user (the git command of the user)
+              # does in this case and uses ssh-agent to do the auth
+              #   return pygit2.Keypair(username_from_url, None, None, '')
+              # There's a better readable shortcut (does the same):
+              # If "git clone ..." works with an ssh remote, this should work
+              # as well, no need to put configuration anywhere.
+              return pygit2.KeypairFromAgent(username_from_url)
           else:
-              print('NO ALLOWED TYPES???', allowed_types)
-              return None
+              return False
       def sideband_progress(self, data):
         print(f'sideband_progress: {data}')
 
@@ -1604,7 +1732,7 @@ def is_google_fonts(repo_path):
     print('start fetch')
     # fetch(refspecs=None, message=None, callbacks=None, prune=0)
     # using just 'master' instead of 'refs/heads/master' works as well
-    stats = found.fetch(['refs/heads/master'], callbacks=MyRemoteCallbacks())
+    stats = found_remote.fetch(['refs/heads/master'], callbacks=MyRemoteCallbacks())
     print('DONE fetch:\n',
           f'  received_bytes {stats.received_bytes}\n'
           f'  indexed_objects {stats.indexed_objects}\n'
@@ -1612,13 +1740,17 @@ def is_google_fonts(repo_path):
           #f'  received_bytes {stats["received_bytes"]}\n'
           #f'  indexed_objects {stats["indexed_objects"]}\n'
           #f'  received_objects {stats["received_objects"]}')
-    return
+    return True
 
-  print('candidates:', *[r.name for r in candidates])
-
+def _git_create_remote(repo: pygit2.Repository) -> None:
+  print('_git_create_remote')
+  # found_remote is None
+  # we can add a remote!
 
   # FIXME: default_remote_name must be non-existing
-  # TODO: what happens if it exists?
+  # What happens if it exists? Answer: repo.remotes.creat raises:
+  #                 "ValueError: remote 'upstream' already exists"
+
   default_remote_name = 'upstream'
   # This way it can't be 'a' (that's abort!), should be no issue.
   remote_name = input(f'Creating a git remote.\nEnter remote name (default={default_remote_name}),a=abort:')
@@ -1626,31 +1758,31 @@ def is_google_fonts(repo_path):
     raise UserAbortError()
   remote_name = remote_name or default_remote_name
 
+  searched_repo = 'google/fonts'
   # FIXME: SSH fails
   # _pygit2.GitError: Failed to retrieve list of SSH authentication methods: Failed getting response
   # https://github.com/libgit2/pygit2/issues/836
   # "These are libssh2 issues, not libgit2/pygit2. My advice is to use the latest version of libssh2: 1.9.0"
   # BUT:  "The pygit2 Linux wheels include libgit2 with libssh2 1.9.0 statically linked."
-  # url =  f'git@github.com:{searched_repo}.git'
+  url =  f'git@github.com:{searched_repo}.git'
   # url =  f'ssh://git@github.com/{searched_repo}'
-
-
-
-  url = f'https://github.com/{searched_repo}.git'
+  # url = f'https://github.com/{searched_repo}.git'
   print(f'creating remote: {remote_name} {url}')
-  # raises ValueError: remote 'upstream' already exists
 
   refspecs_candidates = {
       '1': f'+refs/heads/*:refs/remotes/{remote_name}/*'
     , '2': f'+refs/heads/master:refs/remotes/{remote_name}/master'
   }
-  print('Pick a fetch refspec:')
+  print('Pick a fetch refspec for the remote:')
   print(f'1: {refspecs_candidates["1"]} (default)')
   print(f'2: {refspecs_candidates["2"]} (minimal)')
-  refspec = input(f'1(default),2,a=abort:')
-  if remote_name == 'a':
+  refspec = input(f'1(default),2,a=abort:').strip()
+  if refspec == 'a':
     raise UserAbortError()
-  fetch_refspec = refspecs_candidates[refspec.strip()]
+  fetch_refspec = refspecs_candidates[refspec or '1']
+
+  # raises ValueError: remote 'upstream' already exists
+  # fetch argument will apply the default refspec if it is None
   repo.remotes.create(remote_name, url, fetch=fetch_refspec)
 
     # Create a new remote with the given name and url. Returns a <Remote> object.
