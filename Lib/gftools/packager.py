@@ -7,6 +7,7 @@
 
 import sys
 import os
+from pathlib import PurePath
 import shutil
 from tempfile import TemporaryDirectory, mkstemp
 import subprocess
@@ -355,7 +356,7 @@ def _print_git_object(obj, root=None):
 from collections import deque
 
 
-def _tree_iterate(path, tree, topdown):
+def _git_tree_iterate(path, tree, topdown):
   dirs = []
   files = []
   for e in tree:
@@ -368,18 +369,22 @@ def _tree_iterate(path, tree, topdown):
   # note, if topdown, caller can manipulate dirs
   for name in dirs:
     path.append(name)
-    yield from _tree_iterate(path, tree[name], topdown)
+    yield from _git_tree_iterate(path, tree[name], topdown)
     path.pop()
   if not topdown:
     yield path and os.path.join(*path) or '.', dirs, files
 
+def _git_tree_walk(path, tree, topdown=True):
+  yield from _git_tree_iterate(path.split(os.sep), tree[path], topdown)
+
 def git_tree_walk(repo, path='', reference='refs/heads/master', topdown=True):
   # will always be a tree, because of the colon in rev
-  rev = f'{reference}:{path}'
+  rev = f'{reference}'
   tree = repo.revparse_single(rev)
+  yield from _git_tree_walk(path, tree, topdown)
   # _print_git_object(tree)
   # print('>>*<<'*16)
-  yield from _tree_iterate([path] if path else [], tree, topdown)
+  yield from _git_tree_iterate([path] if path else [], tree, topdown)
 
 
 # the following two produce reasonable similar results.
@@ -432,16 +437,10 @@ def get_github_blob(repo_owner, repo_name, file_sha):
     'Accept': 'application/vnd.github.v3.raw'
   }
   response = request = requests.get(url, headers=headers)
-  print(f'response headers: {pprint.pformat(response.headers, indent=2)}')
+  # print(f'response headers: {pprint.pformat(response.headers, indent=2)}')
   # raises requests.exceptions.HTTPError
   request.raise_for_status()
   return response
-  # if 'charset' in response.headers['content-type']:
-  #   print('response.text:', response.text)
-  # else:
-  #   # use binary data
-  #   # response.content
-  #   print('response.content:', response.content)
 
 def get_github_gf_blob(file_sha):
   return get_github_blob('google', 'fonts', file_sha)
@@ -1346,7 +1345,6 @@ def _copy_upstream_files(branch: str, files: dict, repo: pygit2.Repository
     except KeyError as e:
       skipped[SKIP_SOURCE_NOT_FOUND].append(source)
       continue
-    _print_git_object(source_object)
 
     if(source_object.type != pygit2.GIT_OBJ_BLOB):
       skipped[SKIP_SOURCE_NOT_BLOB].append(f'{source} (type is {source_object.type_str})')
@@ -1369,7 +1367,8 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
                                   upstream_commit_sha:str) -> None:
   metadata_file_name = os.path.join(tmp_package_family_dir, 'METADATA.pb')
   subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
-                                , check=True, stdout=subprocess.PIPE)
+                                , check=True, stdout=subprocess.PIPE
+                                , stderr=subprocess.PIPE)
   metadata = fonts_pb2.FamilyProto()
   with open(metadata_file_name, 'rb') as f:
     text_format.Parse(f.read(), metadata)
@@ -1535,6 +1534,67 @@ def _check_target(is_gf_git: bool, target: str) -> None:
   else:
     return _check_directory_target(target)
 
+def _git_tree_from_dir(repo: pygit2.Repository, tmp_package_family_dir: str) -> str:
+  trees = {}
+  for root, dirs, files in os.walk(tmp_package_family_dir, topdown=False):
+    # if root == tmp_package_family_dir: rel_dir = '.'
+    rel_dir = os.path.relpath(root, tmp_package_family_dir)
+    treebuilder = repo.TreeBuilder()
+    for filename in files:
+      with open(os.path.join(root, filename), 'rb') as f:
+        blob_id = repo.create_blob(f.read())
+      treebuilder.insert(filename, blob_id, pygit2.GIT_FILEMODE_BLOB)
+    for dirname in dirs:
+      path = dirname if rel_dir == '.' else os.path.join(rel_dir, dirname)
+      tree_id = trees[path]
+      treebuilder.insert(dirname, tree_id, pygit2.GIT_FILEMODE_TREE)
+    # store for use in later iteration, note, we're going bottom up
+    trees[rel_dir] = treebuilder.write()
+  return trees['.']
+
+def _git_makedirs_write(repo: pygit2.Repository, tree_builder:pygit2.TreeBuilder,
+          path:typing.Tuple[str, ...], git_obj_id: str, git_obj_filemode:int) -> None:
+  name, rest_path = path[0], path[1:]
+  if not rest_path:
+    tree_builder.insert(name, git_obj_id, git_obj_filemode)
+    return
+
+  child_tree = tree_builder.get(name)
+  try:
+    child_tree_builder = repo.TreeBuilder(child_tree)
+  except TypeError as e:
+    # will raise TypeError if license_dir_tree is None i.e. not exisiting
+    # but also if child_tree is not a pygit2.GIT_FILEMODE_TREE
+
+    # os.makedirs(name, exists_ok=True) would raise FileExistsError if
+    # it is tasked to create a directory where a file already exists
+    # It seems unlikely that we want to override existing files here
+    # so I copy that behavior.
+    if child_tree is not None:
+      raise FileExistsError(f'The git entry {name} exists as f{child_tree.type_str}.')
+    child_tree_builder = repo.TreeBuilder()
+
+  _git_makedirs_write(repo, child_tree_builder, rest_path, git_obj_id, git_obj_filemode)
+  child_tree_id = child_tree_builder.write()
+  tree_builder.insert(name, child_tree_id,  pygit2.GIT_FILEMODE_TREE)
+
+def _git_copy_dir(repo: pygit2.Repository, tree_builder: pygit2.TreeBuilder,
+                      source_dir:str, target_dir:str) -> None:
+  # This is a new tree, i.e. not based on an existing tree.
+  tree_id = _git_tree_from_dir(repo, source_dir)
+
+  # Here we insert into an existing tree.
+  _git_makedirs_write(repo, tree_builder, PurePath(target_dir).parts,
+                            tree_id, pygit2.GIT_FILEMODE_TREE)
+
+# thanks https://stackoverflow.com/a/1094933
+def _sizeof_fmt(num, suffix='B'):
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
 def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
                  branch: typing.Union[str, None]=None):
@@ -1553,42 +1613,61 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
   # FIXME: should maybe be "_prepare_target" and whatever the type,
   # it would return a common interface for _create_package to write into.
   _check_target(is_gf_git, target)
-  with TemporaryDirectory() as package_target_dir:
-    family_dir = _create_package_content(package_target_dir, upstream_conf_yaml,
+  with TemporaryDirectory() as tmp_package_dir:
+    family_dir = _create_package_content(tmp_package_dir, upstream_conf_yaml,
                                 license_dir, gf_dir_content, no_whitelist)
+    tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
 
     # NOTE: if there are any files outside of family_dir that need moving
     # that is not yet supported! The reason is, there's no case for this
     # yet. So, if _create_package_content is changed to put files outside
     # of family_dir, these targets will have to follow and implement it.
     if is_gf_git:
+      new_branch_name = f'gftools_packager_{family_dir.replace(os.sep, "_")}'
+      repo = repo = pygit2.Repository(target)
+      remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
       #fetch! make sure we're on the actual gf master HEAD
-      remote.fetch(['refs/heads/master'], callbacks=MyRemoteCallbacks())
+      _git_fetch_master(repo, remote_name)
       # remote_branch = repo.branches.remote[f'{remote.name}/master']
-
-
 
       base_commit = repo.revparse_single(f'refs/remotes/{remote_name}/master')
       # Maybe I can start with the commit tree here ...
       treeBuilder = repo.TreeBuilder(base_commit.tree)
+      _git_copy_dir(repo, treeBuilder, tmp_package_family_dir, family_dir)
 
       # create the commit
-      author = Signature('Alice Author', 'alice@authors.tld')
-      committer = Signature('Cecil Committer', 'cecil@committers.tld')
-      tree = treeBuilder.write()
-      repo.create_commit(
-      f'refs/heads/{new_branch_name}', # the name of the reference to update
-      author, committer, 'one line commit message\n\ndetailed commit message',
-      tree, # is OID but doc says: binary string representing the tree object ID
-      [base_commit.id] # parents
+      user_name = list(repo.config.get_multivar('user.name'))[0]
+      user_email = list(repo.config.get_multivar('user.email'))[0]
 
-      #create a local branch
-      local_branch = repo.branches.local.create(new_branch_name, commit, force)
+      author = pygit2.Signature(user_name, user_email)
+      committer = pygit2.Signature(user_name, user_email)
 
+      commit_id = repo.create_commit(
+              None,
+              author, committer,
+              f'[gftools-packager] {"Update" if gf_dir_content else "Create"}: '
+              f'{upstream_conf_yaml["name"]}',
+              treeBuilder.write(), # string object ID
+              [base_commit.id] # parents
+      )
+      commit = repo.get(commit_id)
+      try:
+        repo.branches.local.create(new_branch_name, commit, force=force)
+      except _pygit2.AlreadyExistsError:
+        # _pygit2.AlreadyExistsError: failed to write reference
+        #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
+        #     that name already exists.
+        raise ProgramAbortError(f'Can\'t override existing branch {new_branch_name}. '
+                                  'Use --force to allow explicitly.')
 
-      # put files into a tree
-
-      raise ProgramAbortError('Not implemented: git as a target')
+      # only for reporting
+      target_label = f'git branch {new_branch_name}'
+      package_contents = []
+      for root, dirs, files in _git_tree_walk(family_dir, commit.tree):
+        for filename in files:
+          entry_name = os.path.join(root, filename)
+          filesize = commit.tree[entry_name].size
+          package_contents.append((entry_name, filesize))
     else:
       # target is a directory:
       target_family_dir = os.path.join(target, family_dir)
@@ -1599,19 +1678,22 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
         shutil.rmtree(target_family_dir)
       else: # not exists
         os.makedirs(os.path.dirname(target_family_dir))
-      shutil.move(os.path.join(package_target_dir, family_dir), target_family_dir)
+      shutil.move(tmp_package_family_dir, target_family_dir)
 
+      # only for reporting
+      target_label = f'directory {target}'
+      package_contents = []
+      for root, dirs, files in os.walk(target_family_dir):
+        for filename in files:
+          full_path = os.path.join(root, filename)
+          entry_name = os.path.relpath(full_path, target)
+          filesize = os.path.getsize(full_path)
+          package_contents.append((entry_name, filesize))
 
-
-  print(f'Created Files in {target}:')
-  for root, dirs, files in os.walk(target_family_dir):
-    for filename in files:
-      full_path = os.path.join(root, filename)
-      entry_name = os.path.relpath(full_path, target)
-
-      filesize = os.path.getsize(full_path)
-      print(f'    {entry_name} '
-            f'{int(filesize / (1<<10))}KB (len: {filesize})')
+  print(f'Created files in {target_label}:')
+  for entry_name, filesize in package_contents:
+    filesize_str = filesize
+    print(f'   {entry_name} {_sizeof_fmt(filesize_str)}')
 
 #
 # CLI Sketches:
@@ -1691,56 +1773,57 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
       return remote.name
   return None
 
+
+class PYGit2RemoteCallbacks(pygit2.RemoteCallbacks):
+  def credentials(self, url, username_from_url, allowed_types):
+      if allowed_types & pygit2.credentials.GIT_CREDENTIAL_USERNAME:
+          print('GIT_CREDENTIAL_USERNAME')
+          return pygit2.Username("git")
+      elif allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY:
+          # https://github.com/libgit2/pygit2/issues/428#issuecomment-55775298
+          # "The username for connecting to GitHub over SSH is 'git'."
+
+
+          # I filed https://github.com/libgit2/pygit2/issues/1013
+          # because using just:
+          #      return pygit2.Keypair(username_from_url, pubkey, privkey, '')
+          # didn't work, there's also the example how I tried.
+
+          # It's probably also what the user (the git command of the user)
+          # does in this case and uses ssh-agent to do the auth
+          #   return pygit2.Keypair(username_from_url, None, None, '')
+          # There's a better readable shortcut (does the same):
+          # If "git clone ..." works with an ssh remote, this should work
+          # as well, no need to put configuration anywhere.
+          return pygit2.KeypairFromAgent(username_from_url)
+      else:
+          return False
+  def sideband_progress(self, data):
+    print(f'sideband_progress: {data}')
+
+  # this works!
+  def transfer_progress(self, tp):
+      print('transfer_progress:\n'
+        f'  received_bytes {tp.received_bytes}\n'
+        f'  indexed_objects {tp.indexed_objects}\n'
+        f'  received_objects {tp.received_objects}')
+
 def _git_fetch_master(repo, remote_name):
   remote = repo.remotes[remote_name]
   # can perform a fetch
-  if found_remote is not None:
-    class MyRemoteCallbacks(pygit2.RemoteCallbacks):
-      def credentials(self, url, username_from_url, allowed_types):
-          if allowed_types & pygit2.credentials.GIT_CREDENTIAL_USERNAME:
-              print('GIT_CREDENTIAL_USERNAME')
-              return pygit2.Username("git")
-          elif allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY:
-              # https://github.com/libgit2/pygit2/issues/428#issuecomment-55775298
-              # "The username for connecting to GitHub over SSH is 'git'."
 
-
-              # I filed https://github.com/libgit2/pygit2/issues/1013
-              # because using just:
-              #      return pygit2.Keypair(username_from_url, pubkey, privkey, '')
-              # didn't work, there's also the example how I tried.
-
-              # It's probably also what the user (the git command of the user)
-              # does in this case and uses ssh-agent to do the auth
-              #   return pygit2.Keypair(username_from_url, None, None, '')
-              # There's a better readable shortcut (does the same):
-              # If "git clone ..." works with an ssh remote, this should work
-              # as well, no need to put configuration anywhere.
-              return pygit2.KeypairFromAgent(username_from_url)
-          else:
-              return False
-      def sideband_progress(self, data):
-        print(f'sideband_progress: {data}')
-
-      # this works!
-      def transfer_progress(self, tp):
-          print('transfer_progress:\n'
-            f'  received_bytes {tp.received_bytes}\n'
-            f'  indexed_objects {tp.indexed_objects}\n'
-            f'  received_objects {tp.received_objects}')
-
-    print('start fetch')
-    # fetch(refspecs=None, message=None, callbacks=None, prune=0)
-    # using just 'master' instead of 'refs/heads/master' works as well
-    stats = found_remote.fetch(['refs/heads/master'], callbacks=MyRemoteCallbacks())
-    print('DONE fetch:\n',
-          f'  received_bytes {stats.received_bytes}\n'
-          f'  indexed_objects {stats.indexed_objects}\n'
-          f'  received_objects {stats.received_objects}')
-          #f'  received_bytes {stats["received_bytes"]}\n'
-          #f'  indexed_objects {stats["indexed_objects"]}\n'
-          #f'  received_objects {stats["received_objects"]}')
-    return True
+  print('start fetch')
+  # fetch(refspecs=None, message=None, callbacks=None, prune=0)
+  # using just 'master' instead of 'refs/heads/master' works as well
+  stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
+  print('DONE fetch:\n',
+        f'  received_bytes {stats.received_bytes}\n'
+        f'  indexed_objects {stats.indexed_objects}\n'
+        f'  received_objects {stats.received_objects}')
+        #f'  received_bytes {stats["received_bytes"]}\n'
+        #f'  indexed_objects {stats["indexed_objects"]}\n'
+        #f'  received_objects {stats["received_objects"]}')
+  return True
 
 def _git_create_remote(repo: pygit2.Repository) -> None:
   print('_git_create_remote')
