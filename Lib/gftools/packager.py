@@ -2,8 +2,60 @@
 # FIXME: document dependencies, expect command line `git` with support
 # for shallow clones (not in old git versions)
 
+# FIXME: document environment variables: VISUAL, EDITOR, GITHUB_API_TOKEN
+
 # FIXME: I added some type annotations, but I did not use a static
 # type checker. Hence, there are errors and missing definitions!
+
+# FIXME: why is the license not in upstream.yaml?
+# It's not in the upstream repo list. Probably usually discovered by the
+# presence and name of the  license file.
+# For updates, it's the license_dir in the family path.
+
+# FIXME: variable fonts
+# * file names, especially with variable fonts: we could do this maybe
+#   automated? There's code afaik...
+#   ("upstream.yaml assistant")
+#   Esp. if file names are all that is needed to a family into google/fonts
+# * "static" files besides of file names, should we use an
+#   instancer tool to automatically create the "static" files if they
+#   don't exist in the upstream.
+
+
+# TODO:
+# * Add multiple families from upstream to the package, i.e. a super-family.
+#   The branch name and commit message would have to change.
+#   Super-families can be added to the branch by separate commits.
+#   The name argument would just have to accept a list.
+#   Would be nice to have somehow a switch for this, creating many upstream
+#   yaml files and referencing them via command line could be annoying.
+# * PRs, QAs?
+# * upstream.yaml assistant:
+#       * When we know the full name of the family, we could look up
+#         some data from the upstream spreadsheet, as it is used by FBD
+#       * could also help to pre-fill the files map using the files prefix
+#       * could be just all files from the repository
+#       * could be like a grep pattern or a call to find
+
+# TODO: gftools-packager.yaml
+#   * Think about this like package.yaml or bower.json or "How to Publish an
+#     Open-Source Python Package to PyPI"
+#     https://realpython.com/pypi-publish-python-package/
+#     (YO SEE: "Naming Your Package": You might need to brainstorm and do some
+#     research to find the perfect name. Use the PyPI search to check if a name
+#     is already taken. The name that you come up with will be visible on PyPI.
+#     has parallels to font naming!)
+#  * gftools-packager.yaml is not upstream.yaml, it can have many google-fonts
+#     style families configured for one repo! The keys could be the the full
+#     font name. This is for both: super families AND families co-hosted
+#     in the same upstream.
+#     This file would be rather for local checking and for initializing
+#     upstream.yaml
+#  * FBD sandbox could use this, given a repo+branch
+
+# TODO: To make the PR, we could even have a tool that calls font-bakery dashboard
+#  directly to build the package and QA. But,it's also possible to do it locally!
+
 
 import sys
 import os
@@ -15,228 +67,33 @@ import requests
 import pprint
 import typing
 from collections import OrderedDict
+import pygit2
+from strictyaml import (
+                        Map,
+                        MapPattern,
+                        Enum,
+                        Seq,
+                        Str,
+                        Any,
+                        EmptyNone,
+                        EmptyDict,
+                        dirty_load,
+                        as_document,
+                        YAMLValidationError,
+                        YAML
+                      )
+
+from warnings import warn
+import functools
+from google.protobuf import text_format
+import gftools.fonts_public_pb2 as fonts_pb2
+
 
 GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
 GITHUB_REPO_SSH_URL = 'git@github.com:{gh_repo_name_with_owner}.git'.format
 
-# how to build a package:
-#
-# Usually I would get the current files from google/fonts, not the ttfs
-# Then override with the files from upstream and add the ttfs.
-# But since it looks like getting the files from google/fonts is via
-# single http requests per file in some cases, I think it's best to
-# 1. get all relevant files from the upstream
-# 2. get all files from google/fonts that are no already in the package (excluding ttfs again)
-# 3. create or upgrade the METADATA.pb file
-# 4. create or upgrade the upstream.yaml file (or whereever the data is located)
-#    NOTE: that upstream.yaml is the beginning of all things, if it is not
-#          available, we should create it
-
-
-# get package base from google/fonts
-# -- use a directory (maybe not necessary, only implement if easy AF)
-# ++ use github http
-# ++ use pygit2 if a clone is specified
-
-# get files from upstream
-# ++ use a directory (local qa iteration workflow, not necessarily commited and pushed)
-# ++ use pygit2 (is shallow possible?) will only use committed stuff! could enforce using fetched remote)
-#     this is for creating a PR to reduce human error (uncomitted changes)
-#     so, could warn if there are not committed changes in the working directory
-# -- (use github http): directory with shallow or pygit2 with shallow seems preferable
-
-# when using remotes, we may not know the name of the remote of the
-# current user, hence we should look for a remote with the correct git address
-# that is the correct user/repo combination.
-# we could expand to allow any git remote, not just github, but that is
-# not an actual requirement, just a possibility
-
-
-
-
-
-# def get_package_data_from_upstream(upstream_dir, fonts_dir, font_files_prefix):
-#
-#
-#
-# There are different possible ways to get to the data:
-#
-# use a git repo that is bare -> we don't plan to use file system functions
-# use a git repo that is shallow -> quick download
-# use an existing non bare git repo -> should be quickest if existing,
-#       hence we need to parse from which remote to read/fetch
-# use the github API and http: can run into quotas quickly (i.e. in FBD)
-#       NOTE: below using the graphQL api fixes these:
-#       This can have a racecondition: getting separate files from the
-#       server when the data on the server changes in between. Can rather
-#       cause a problem when getting data from upstream than from google/fonts,
-#       because the lateer, esp. when getting data for one family, doesn't
-#       change often.
-#       using the tree api removes the race condition
-#         https://api.github.com/repos/google/fonts/git/trees/630a60fec397257625b0d4049577ddca4eeffaec
-#       vs content api:
-#         https://api.github.com/repos/google/fonts/contents/ofl/abhayalibre?ref=master
-#       Note how the tree api pins to the trees hasj
-#
-# For the google/fonts data:
-#   * if there's an existing clone, with an appropriate remote, using this is best
-#   * without existing git repo, using  github + http should suffice.
-#   However, later, for creating the PR we need a full, current master branch,
-#   but that's not the scope of this tool.
-#
-#   A shallow clone of google/fonts is rather much too big in order to get just
-#   the data of a single family or even super family.
-#
-#   I expect, that the common case for CLI is to have a clone of google/fonts
-#   lying around, we can expect this from our "expert users"
-#   For the Dashboard, requiring the whole repo in each worker is not super
-#   easy. however, it could just be a part of the docker image. Bloats the
-#   image, but solves the problem.
-#   Users who won't make the PR personally (maybe using the dashboard
-#   or just iterating over QA but the PR is doing someone else, wouldn't need
-#   the google/fonts clone and it may annoy them having to have it (size, bandwidth).
-#
-#   Or, maybe have a git server in the cluster, that at least speeds up
-#   downloading compared to going over the internet to github,
-#   also reduces stressing github servers if we scale big. Fetching
-#   the repo could be fetched on startup and updated prior to usages,
-#   for some cases, checked out to a fixed commit, to ensure operation
-#   on a controlled version. different versions across workers for the same
-#   job could cause trouble.
-#
-#
-#   Ok, so generally, whatever the function is to get files from somewhere
-#   (directory, git-plumbing, github-api)
-#   maybe a generator directory listing (depth first traversal?) and/or a
-#   filtering function to select files?
-#
-#
-#
-# def get_files(filenames):
-#   collected = []
-#   for filename in filenames:
-#     use = (yield filename)
-#     if use:
-#       collected.append(filename)
-#   return collected
-#
-# In [24]: ex = None
-#
-# In [25]: use = None
-#
-# In [26]: gen = get_files(['A', 'B', 'C'])
-#
-# In [27]: try: use = gen.send(use is not None or use); print('USE', use)
-#     ...: except StopIteration as e: ex = e;print('END')
-# USE A
-#
-# In [28]: try: use = gen.send(use is not None or use); print('USE', use)
-#     ...: except StopIteration as e: ex = e;print('END')
-# USE B
-#
-# In [29]: try: use = gen.send(use is not None or use); print('USE', use)
-#     ...: except StopIteration as e: ex = e;print('END')
-# USE C
-#
-# In [30]: try: use = gen.send(use is not None or use); print('USE', use)
-#     ...: except StopIteration as e: ex = e;print('END')
-# END
-#
-# In [31]: ex.value
-# Out[31]: ['A', 'B', 'C']
-#
-#
-#
-#
-# def get_files(address, collected):
-#   for filename in directoryTraversal(address):
-#     (use = yield filename)
-#     if(use)
-#       collected.add(filename, download(filename))
-#
-# collected = Files()
-# gen = get_files(address, collected)
-# result = None
-# # TypeError: can't send non-None value to a just-started generator
-# In [33]: use = None
-#
-# In [34]: gen = get_files(['A', 'B', 'C'])
-#
-# In [35]: while True:
-#     ...:     try:
-#     ...:         filename = gen.send(use)
-#     ...:         use = filename is not None
-#     ...:     except StopIteration as e:
-#     ...:         result = e.value
-#     ...:         break
-#     ...:
-#
-# In [36]: result
-# Out[36]: ['A', 'B', 'C']
-#
-#
-#
-# def gen2(filter_func):
-#   collected = list()
-#   for filename in directoryTraversal:
-#     if not filter_func(use):
-#       continue
-#     collected.append(filename)
-#   return collected
-#
-#
-#
-# it would be interesting to see if pygit2 can handle bare + shallow repositories ...
-# it can for our case, which is reading the cloned shallow tree
-
-# The idea is er search only in "prefixes" and on the way back to root.
-# to find files like LICENSE.txt or DESCRIPTION.en.us closest to the
-# font files.
-# We don't go deeper than the prefix that applies.
-# FIXME: with one prefix the depth/breath first concept works better
-#        otherwise, LICENSES could be ambiguous!
-# because we know the possibly picked file is contained in that prefix
-# depth first: topdown=False
-# breadth first: topdown=True
-def dir_walk_breath_first(dirname, prefixes=None, excludes=None):
-  topdown=False
-  gen = os.walk(dirname, topdown=topdown)
-  _dir_walk_breath_first(gen, dirname, prefixes, excludes, topdown)
-
-#this is more experimental than meant for actual code!
-def _dir_walk_breath_first(gen, basedir, prefixes, excludes, topdown):
-  print('prefixes', prefixes, 'excludes', excludes, 'topdown', topdown)
-  whitelisted_dirs = set()
-  for prfx in prefixes:
-    prfx = os.path.normpath(prfx)
-    whitelisted_dirs.add(prfx)
-    while prfx:
-      prfx, _ = os.path.split(prfx)
-      whitelisted_dirs.add(os.path.normpath(prfx))
-  for root, dirs, files in gen:
-    # is "." if root == basedir otherwise no . at the beginning
-    normalized = os.path.relpath(root, basedir)
-    if topdown:
-      # this is an optimization that only works in topdown=true mode
-      # skip dirs not in prefixes
-      dirs[:] = [d for d in dirs
-                    if not whitelisted_dirs or
-                      (os.path.join(normalized, d) if normalized != '.' else d)
-                                          in whitelisted_dirs]
-      dirs[:] = [d for d in dirs if d not in excludes]
-      # sorting is not essential here, it's just to make it easier to
-      # comparethe git generator with os.walk. The latter has no
-      # specified sort order.
-      dirs.sort()
-    if whitelisted_dirs and normalized not in whitelisted_dirs or normalized in excludes\
-        or any([os.path.commonpath([ex, normalized]) for ex in excludes]):
-      continue
-    # print('root', normalized, '| raw:', root, '|', dirs)
-    # print('dirs', type(dirs), dirs)
-    # would probably be  a yield
-    print(f'{normalized}/', *[f'\n   {f}' for f in files])
-  return
-
+GITHUB_GRAPHQL_API = 'https://api.github.com/graphql'
+GITHUB_V3_REST_API = 'https://api.github.com/'
 
 # Using object(expression:$rev), we query all three license folders
 # for family_name, but only the entry that exists will return a tree (directory).
@@ -309,11 +166,13 @@ def _get_query_variables(repo_owner, repo_name, family_name, reference='refs/hea
     'uflDir': f'{reference}:ufl/{family_name}'
   }
 
-GITHUB_GRAPHQL_API = 'https://api.github.com/graphql'
-# $ export GITHUB_API_TOKEN={the GitHub API token}
-GITHUB_API_TOKEN = os.environ['GITHUB_API_TOKEN']
+def _get_github_api_token() -> str:
+  # $ export GITHUB_API_TOKEN={the GitHub API token}
+  return os.environ['GITHUB_API_TOKEN']
+
 def _run_gh_graphql_query(query, variables):
-  headers = {"Authorization": f'bearer {GITHUB_API_TOKEN}'}
+  github_api_token = _get_github_api_token()
+  headers = {"Authorization": f'bearer {github_api_token}'}
   request = requests.post(GITHUB_GRAPHQL_API, json={'query': query, 'variables': variables}, headers=headers)
   request.raise_for_status()
   json = request.json()
@@ -329,32 +188,6 @@ def get_gh_gf_family_entry(family_name):
 
   result = _run_gh_graphql_query(GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables)
   return result
-
-
-import pygit2
-# this should be similar to dir_walk_breath_first but using the git
-# objects database, optionally on a shallow repo or on a bare repo
-# via pygit2 ...
-def _print_git_tree(tree):
-  print(f'''tree entries:
-  {"""
-  """.join([f"<{e.type_str}>: {e.name}" for e in tree])}
-  ''')
-
-def _print_git_object(obj, root=None):
-  print(f'type: {obj.type_str}')
-  print(f'oid: {obj.id}')
-  if root is not None:
-    print(f'root: {root}')
-  # , GIT_OBJ_TREE, GIT_OBJ_BLOB or GIT_OBJ_TAG
-  if obj.type == pygit2.GIT_OBJ_COMMIT:
-    print(f'message: {obj.message}')
-    _print_git_tree(obj.tree)
-  if obj.type == pygit2.GIT_OBJ_TREE:
-    _print_git_tree(obj)
-
-from collections import deque
-
 
 def _git_tree_iterate(path, tree, topdown):
   dirs = []
@@ -377,60 +210,6 @@ def _git_tree_iterate(path, tree, topdown):
 def _git_tree_walk(path, tree, topdown=True):
   yield from _git_tree_iterate(path.split(os.sep), tree[path], topdown)
 
-def git_tree_walk(repo, path='', reference='refs/heads/master', topdown=True):
-  # will always be a tree, because of the colon in rev
-  rev = f'{reference}'
-  tree = repo.revparse_single(rev)
-  yield from _git_tree_walk(path, tree, topdown)
-  # _print_git_object(tree)
-  # print('>>*<<'*16)
-  yield from _git_tree_iterate([path] if path else [], tree, topdown)
-
-
-# the following two produce reasonable similar results.
-# this means the iterators are fine!
-# needs unit testing
-def fs_directory_listing(dirname, prefixes=[], excludes=[], topdown=True):
-  gen = os.walk(dirname, topdown=topdown)
-  _dir_walk_breath_first(gen, dirname, prefixes, excludes, topdown)
-
-def git_directory_listing(repo_path, basedir='', prefixes=[], excludes=[], topdown=True):
-  repo = pygit2.Repository(repo_path)
-  # topdown = True
-  # basedir = '' # 'fonts'
-  gen = git_tree_walk(repo, basedir, topdown=topdown)
-  # prefixes = [] # ['ttf', 'variable']# ['fonts/ttf', 'fonts/variable']
-  _dir_walk_breath_first(gen, basedir, prefixes, excludes, topdown)
-
-  return
-  # repo = pygit2.Repository(repo_path)
-  # commit = repo.revparse_single('refs/heads/master')
-  # _print_git_object(commit)
-  #
-  # root = 'fonts/ttf'
-  # tree = repo.revparse_single(f'refs/heads/master:{root}')
-  # _print_git_object(tree)
-
-  #for root, dirs, files in os.walk(dirname):
-  #  depth = root.count(os.path.sep) + 1 - source.count(os.path.sep)
-  #  subdir = os.path.relpath(root, source)
-  #  if depth >= maxDepth:
-  #      # This is a the magic piece, it modifies the list that is
-  #      # used by the os.walk iterator.
-  #      # Deeper dirs won't be visited...
-  #      del dirs[:]
-  #  if depth > maxDepth:
-  #      continue
-  #  for filename in files:
-  #      if subdir != '.':
-  #          filename = os.path.join(subdir, filename)
-  #      yield from fileURLGenerator(target, filename)
-  #  for filename in target['config'].get('file_map', {}):
-  #      if subdir != '.':
-  #          filename = os.path.join(subdir, filename)
-  #      yield from fileURLGenerator(target, filename, fromFileMap=True)
-
-GITHUB_V3_REST_API = 'https://api.github.com/'
 def get_github_blob(repo_owner, repo_name, file_sha):
   url = f'{GITHUB_V3_REST_API}repos/{repo_owner}/{repo_name}/git/blobs/{file_sha}'
   headers = {
@@ -474,121 +253,6 @@ def _shallow_clone_github(target_dir, gh_repo_name_with_owner, branch_or_tag='ma
   git_url = GITHUB_REPO_HTTPS_URL(gh_repo_name_with_owner=gh_repo_name_with_owner)
   return _shallow_clone_git(target_dir, git_url, branch_or_tag=branch_or_tag)
 
-
-
-# Ok, having a fixed list of basically [cp from to] commands sounds easy.
-# Could have a helper to create such a list.
-#
-# This would work to copy all fonts from the upstream to the package and
-# handily rename as well.
-#
-# FIXME:
-#       - what to do about the field: family name is confirmed as good?
-#       - should we copy not necessarily needed fields from the upstreams spreadsheet???
-#           we should probably also document these if necessary!
-#           "Status": (OK, NOTE, RENAMED, ?) probably unnecessary if there's an upstream.yaml
-#           "sources": editor+version (maintained?)
-#           "requests": definitely not up to date/maintained
-#           "implemented count": definitely not up to date/maintained
-#           "Notes": ???
-#           "Vietnamese ranked priority": ???
-#           "glyphs_axis": don't know how these are used ot if they are maintained
-#           "family name is confirmed as good?": THIS is kind of important!
-#         Maybe we can also remove the data that is then in the upstream.yaml
-#         to make the spreadsheet not duplicate.
-#         OR: make an auto updater for the redundant data in the upstream
-#         spreadsheet using Google Drive API (Marc has done something like that).
-#       - how will SANDBOX work and what about the field "feature branch key"
-#         (e.g. = "Graphicore Fork")
-#       - "fontfiles prefix" could be useful to to automatic/assisted creation
-#                            of the "fonts" mapping however, then as
-#                            "fonts_dir" + "fonts_prefix"
-#       - file names, especially with variable fonts: we could do this maybe
-#         automated? There's code afaik...
-#         ("upstream.yaml assistant")
-#         Esp. if file names are all that is needed to a family into google/fonts
-#       - variable fonts "static" files besides of file names, should we use an
-#         instancer tool to automatically create the static files if they
-#         don't exist in the upstream
-#
-# - What is the workflow to "add" a new family? In that case there's no
-#   existing upstream.yaml file...
-# - What is the workflow to "change" an "upstream.yaml" file?
-#
-#
-# - Since there's some redundancy with METADATA.pb it's time to rethink
-# the "source of truth" handling in this case. If both files are next to
-# each other, it can be as well the METADATA.pb file.
-# THOUGH: METADATA.pb is not meant for hand-editing and it sucks a bit at it.
-#
-# Is there a possibility to have some parts of this rather in the upstream
-# than in google/fonts?
-# How to discover "SANDBOX" entries => * external db, dashboard specific, of
-#                                        upstream.yaml files.
-#                                      * the db could be repoWithOwner, branch, path/to/upstream.yaml
-#                                         though, path/to/upstream.yaml could be a default like
-#                                         "gftools-packager.yaml" in the repo root.
-#
-#
-# for DESCRIPTION.en_us.html we already accept that the version on upstream
-# supersedes the google/fonts version, so that's an option for integration,
-# that doesn't need much attention from the upstream maintainers but allows
-# for control.
-#
-# The minimal upstream info is probably: repoWithOwner + branch as that is
-# enough to find the upstream,  and if there's a local ".gftools-packager.yaml"
-# it can be used to seed/create the upstream.yaml files.
-#
-# # gftools-packager.yaml
-#   * Think about this like package.yaml or bower.json or "How to Publish an
-#     Open-Source Python Package to PyPI"
-#     https://realpython.com/pypi-publish-python-package/
-#     (YO SEE: "Naming Your Package": You might need to brainstorm and do some
-#     research to find the perfect name. Use the PyPI search to check if a name
-#     is already taken. The name that you come up with will be visible on PyPI.
-#     has parallels to font naming!)
-#  * gftools-packager.yaml is not upstream.yaml, it can have many google-fonts
-#     style families configured for one repo! The keys could be the the full
-#     font name. This is for both: super families AND families co-hosted
-#     in the same upstream.
-#  * To make the PR, we could even have a tool that calls font-bakery dashboard
-#    directly to build the package and QA ...
-#    BUT, it's also possible to do it locally!
-#  * all files that are now searched "by file name" could have an explicit
-#    mapping, I.e. map DESCRIPTION.en_us.html differently per family in the config
-#    file.
-#    Also: fontbakery.yaml files will likely need different versions per family, etc
-#
-# Superfamilies (think in the future):
-#   * We may have to upgrade a superfamily all at once, if there are breaking
-#   changes between the families. A package created by the packager could be
-#   aware of this.
-#   * Would have to run QA for each family in the package that needs upgrading.
-#     But that's not hard to do!
-#   * right now, our way to do this would be: create a PR for each family
-#     of the super family.
-#     Live with the Font Bakery FAILS and accept them as a fact of live.
-#   * We would have one PR to upgrade all of a superfamily
-#
-#
-#
-from strictyaml import (
-                        Map,
-                        MapPattern,
-                        Enum,
-                        Seq,
-                        Str,
-                        Any,
-                        EmptyNone,
-                        EmptyDict,
-                        dirty_load,
-                        as_document,
-                        YAMLValidationError,
-                        YAML
-                      )
-# FIXME: why don't I have the license in here? It's not in the upstream
-# repo list. Probably usually discovered by the presence and name of the
-# license file.
 CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'SANS_SERIF',
                   'HANDWRITING', 'MONOSPACE']
 
@@ -698,6 +362,7 @@ files:
 '''
 
 
+# ALLOWED FILES
 LICENSE_FILES_2_DIRS = (
         ('UFL.txt', 'ufl')
       , ('OFL.txt', 'ofl')
@@ -735,27 +400,13 @@ LICENSE_FILES_2_DIRS = (
 # We could allow them maybe if they are already in the upstream, so new
 # packages can't add files we don't want to have anymore. Something like
 # this.
-# All the 3 entries files are in the ufl ubuntu fonts!
-#
-# TODO: file a bug at goole/fonts, googlefonts/gf-docs or googlefonts/fontbakery?
-# Maybe we can have this phenomena acknowledged and documented.
-# These allowed files are the officially documented files:
-# https://github.com/googlefonts/gf-docs/tree/master/Spec#repository-structure
 ALLOWED_FILES = {
     'DESCRIPTION.en_us.html'
   , 'FONTLOG.txt'
   , *dict(LICENSE_FILES_2_DIRS).keys() # just the file names/keys
-}
-
-# 'METADATA.pb' # not taken from upstream, technically we update the
+# METADATA.pb is not taken from upstream, technically we update the
 # version in google fonts or create it newly
-
-
-from warnings import warn
-import functools
-
-from google.protobuf import text_format
-import gftools.fonts_public_pb2 as fonts_pb2
+}
 
 def _write_file_to_package(basedir:str, filename:str, data:bytes) -> None:
   full_name = os.path.realpath(os.path.join(basedir, filename))
@@ -781,135 +432,6 @@ def _genre_2_category(genre):
     # 'Handwriting' => 'HANDWRITING'
     # 'Monospace' => 'MONOSPACE'
     return genre.upper().replace(' ', '_').replace('-', '_')
-
-
-### REDUNDANCIES AND NORMALIZATION
-#
-# If there is a google/fonts family but no upstream.yaml how much can we
-# make from the info that is in METADATA.pb, which is certified good data.
-#
-# designer
-# genre(category)
-# family(name)
-#
-# repo (repository if already present there's probably also an upstream.yaml)
-# FIXME: rename repo->source.repository_url, expect github https urls, as in METADATA
-# FIXME: genre and family should be the same names and format as in METADATA (category, name)
-#
-# FIXME: if these are real redundancies (they are) between upsteam.yaml an METADATA it
-# would be good to normalize!
-# The argument for upstream.yaml is that it is intendet to bootstrap METADATA
-# without using data within fonts (because it's self referential). But that
-# is basically a critique on how add-fonts handles these values, and we
-# actually undo it in here using the data of upstream.yaml. So, with the
-# occasion of this tool, we could actually reform/refactor add-fonts.
-#
-# Actually new fields: branch and files (where files is a new sub-type)
-#
-# But, for the moment, it is maybe better to separate the two structures and
-# go on with upstream.yamls.
-#
-# NOTE: for bootstrapping, we could als just fill a METADATA.pb with only
-# the upstream.conf fields
-#
-#
-# So: existing repo, no upstream conf:
-# from METADATA.pb we use:
-#       designer, category, name
-# we won't get yet:
-#       repository_url
-# we still need the new stuff:
-#       branch, files
-#
-#
-#
-
-#there's some advice to chose an editor to open and how to set a default
-# https://stackoverflow.com/questions/10725238/opening-default-text-editor-in-bash
-# I like chosing VISUAL over EDITOR falling back to vi, where on my
-# system actually vi equals vim:
-# ${VISUAL:-${EDITOR:-vi}}
-#
-# then: maybe we can fill a "upstream_conf" and fill a upstream.yaml file
-# with helpful documentation/comments (just like `git rebase -i`) as a
-# super simple interface. It's good to note that strictyaml can handle
-# comments, also between open and save, so ideally we can
-# 1. open a template that has the documentation comments
-# 2. set the data that we (think) we know
-# 3. present it to the user for editing.
-#
-# interface `git rebase -i` style
-#
-# ------------------
-#
-# Rebase e810d3d..64f437f onto e810d3d (2 commands)
-#
-# Commands:
-# p, pick <commit> = use commit
-# r, reword <commit> = use commit, but edit the commit message
-# e, edit <commit> = use commit, but stop for amending
-# s, squash <commit> = use commit, but meld into previous commit
-# f, fixup <commit> = like "squash", but discard this commit's log message
-# x, exec <command> = run command (the rest of the line) using shell
-# b, break = stop here (continue rebase later with 'git rebase --continue')
-# d, drop <commit> = remove commit
-# l, label <label> = label current HEAD with a name
-# t, reset <label> = reset HEAD to a label
-# m, merge [-C <commit> | -c <commit>] <label> [# <oneline>]
-# .       create a merge commit using the original merge commit's
-# .       message (or the oneline, if no original merge commit was
-# .       specified). Use -c <commit> to reword the commit message.
-#
-# These lines can be re-ordered; they are executed from top to bottom.
-#
-# If you remove a line here THAT COMMIT WILL BE LOST.
-#
-# However, if you remove everything, the rebase will be aborted.
-# -------------------
-#
-# Then, when you break it:
-#
-# --------------------
-# error: invalid line 2:  what now?
-# You can fix this with 'git rebase --edit-todo' and then run 'git rebase --continue'.
-# Or you can abort the rebase with 'git rebase --abort'.
-# --------------------
-#
-# There are two files in .git/rebase-merge/
-#      - git-rebase-todo
-#      - git-rebase-todo.backup
-#
-# The .backup file is the version before the user edited, while the
-# other is the version that the user left for interpreting
-####
-# ----------
-###
-# The interface of `git commit --amend` is much simper:
-# ----------
-# Commit Message
-#
-# # Please enter the commit message for your changes. Lines starting
-# with '#' will be ignored, and an empty message aborts the commit.
-#
-# Date:      Wed May 20 04:45:34 2020 +0200
-#
-# On branch master
-# Changes to be committed:
-#      modified:   file1.txt
-#      new file:   file3.txt
-# -------------
-# it stores this message in .git/COMMIT_EDITMSG but there's no feedback
-# loop involved and also no cleaning up after the commit --ammend format
-#
-# NOTE: the interface AND aditional information is in the comment footer.
-#
-#
-# NOTE: if editor is not in the command line, but a GUI, the command line
-# also prints a  hint:
-# $ git commit --amend
-# > hint: Waiting for your editor to close the file...
-# AND when closed that line is removed!
-#
 
 class UserAbortError(Exception):
   pass
@@ -1104,26 +626,6 @@ def _repl_upstream_conf(initial_upstream_conf: str, yes: bool=False
   finally:
     os.unlink(upstream_yaml_file_name)
 
-# add path to make completely fresh package (similar to from_family)
-# unite with update path
-# flags ... use a local update.yaml
-#         --yes
-#         --quiet
-# make proper CLI!
-# different use cases: local workflow
-#   Where to put the package
-#
-
-# FIXME: when we know the full name of the family perhaps we can look up
-# some data from the upstream spreadsheet, as it is used by FBD
-#  - could also help to pre-fill the files map using the files prefix
-# FIXME 2: an assistent to pre-fill the files map would be nice.
-#          could be just all files from the repository
-# FIXME 3: files map add flag to override "allowed files" i.e. to allow
-#          otherwise blacklisted (=not whitelisted) files: but that should
-#          be a temporary measure. Eventually these files should be in
-#          the whitelist.
-
 def _load_or_repl_upstream(upstream_yaml_text: str, yes: bool=False
                         , quiet: bool=False) -> typing.Tuple[bool, YAML]:
   try:
@@ -1267,6 +769,10 @@ def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool, quiet: boo
   # but, as an alternative, could also be answered with a local
   # clone of the git repository. then _get_gf_dir_content needs a
   # unified api.
+  # This could be pereferable if there's a google/fonts clone on the
+  # system and e.g. if the user has a bad/no internet access or
+  # is running into github api rate limits.
+  #
   # if family_name can't be found:
   #    license_dir is None, gf_dir_content is an empty dict
   license_dir, gf_dir_content = _get_gf_dir_content(family_name)
@@ -1366,9 +872,14 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
                                   tmp_package_family_dir:str,
                                   upstream_commit_sha:str) -> None:
   metadata_file_name = os.path.join(tmp_package_family_dir, 'METADATA.pb')
-  subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
+  try:
+    completed_process = subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
                                 , check=True, stdout=subprocess.PIPE
                                 , stderr=subprocess.PIPE)
+  except subprocess.CalledProcessError as e:
+    print(str(e.stderr, 'utf-8'), file=sys.stderr)
+    raise e
+
   metadata = fonts_pb2.FamilyProto()
   with open(metadata_file_name, 'rb') as f:
     text_format.Parse(f.read(), metadata)
@@ -1460,42 +971,6 @@ def _create_package_content(package_target_dir: str, upstream_conf_yaml: YAML,
     f.write(upstream_conf_yaml.as_yaml())
   return family_dir
 
-    # from packager to QA
-    #    * I'd prefer to create the minimal required environment instead of
-    #      having to download the full google/fonts repo, but I also see
-    #      it's more complex and probably a moving target, as QA tools may
-    #      change their expectations, as they did with e.g. FB with some
-    #      recent "super family" checks, which expect to search the
-    #      license folder for name matches.
-    #    * We should actually rather update whole super-families than
-    #      just one member and get the rest from the current google/fonts
-    #      so updating a super family would mean we run this tool for each
-    #      member of the super family and build a big package of potential
-    #      updates. I'd prefer this so far!
-    #    * We could allow to write directly into a google/fonts none-bare
-    #      (checked out) git clone, but that clearly changes directories
-    #      on disk, so we either expect completely empty directories OR
-    #      a --force flag
-    #      to require explicit consent.
-    # from packager to PR
-    #    * I won't clone the github google/fonts repo, but the is_google_fonts
-    #      function is a good enough way to figure our if the provided
-    #      repo_path is sufficient. git branch will be a default string
-    #      plus (super-)family name (or default name + "multiple-families"
-    #      similar to the way FBD does it. This branch name can also be set
-    #      freely by the user and also be --force overridden if exstent.
-    #      When pushing for a PR --force will have to be used regardless.
-    #      The tool should not force push to master!!!! and maybe other
-    #      branches though. However the user could do this actually manually
-    #      if interested.
-    #      At this point we still don't have a PR.
-    #
-    #      with a branch name
-    # Maybe better “local sandbox workflow” support
-    #    * That's probably done with the copy to dir + --force flag
-    #    * we have also the --file flag
-    #    * must try and see how it goes
-
 def _check_git_target(target: str) -> None:
   try:
     repo = repo = pygit2.Repository(target)
@@ -1508,10 +983,10 @@ def _check_git_target(target: str) -> None:
     # NOTE: we could ask the user if we should add the missing remote.
     # This makes especially sense if the repository is a fork of
     # google/fonts and essentially has the same history/object database.
-    # It would be very uncommon if the repo is not related to the
-    # google/fonts repo and fetching from that remote would have to
-    # download a lot of new data, as well as probably create confusing
-    # situations for the user when dealing with GitHub PRs etc.
+    # It would be very uncommon, probably unintended, if the repo is not
+    # related to the google/fonts repo and fetching from that remote would
+    # have to download a lot of new data, as well as probably create
+    # confusing situations for the user when dealing with GitHub PRs etc.
     print (f'The git repository at target "{target}" has no remote for '
       'GitHub google/fonts.\n'
       'You can add it by running:\n'
@@ -1595,6 +1070,83 @@ def _sizeof_fmt(num, suffix='B'):
         num /= 1024.0
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
+def _packagage_to_git(tmp_package_family_dir: str, target: str,
+                     upstream_conf_yaml: YAML,
+                     family_dir: str, gf_dir_content: typing.Dict,
+                     branch: typing.Union[str, None], force:bool):
+  new_branch_name = branch or f'gftools_packager_{family_dir.replace(os.sep, "_")}'
+  repo = pygit2.Repository(target)
+  # we checked that it exists earlier!
+  remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
+  #fetch! make sure we're on the actual gf master HEAD
+  _git_fetch_master(repo, remote_name)
+
+  base_commit = repo.revparse_single(f'refs/remotes/{remote_name}/master')
+  # Maybe I can start with the commit tree here ...
+  treeBuilder = repo.TreeBuilder(base_commit.tree)
+  _git_copy_dir(repo, treeBuilder, tmp_package_family_dir, family_dir)
+
+  # create the commit
+  user_name = list(repo.config.get_multivar('user.name'))[0]
+  user_email = list(repo.config.get_multivar('user.email'))[0]
+  author = pygit2.Signature(user_name, user_email)
+  committer = pygit2.Signature(user_name, user_email)
+
+  commit_id = repo.create_commit(
+          None,
+          author, committer,
+          f'[gftools-packager] {"Update" if gf_dir_content else "Create"}: '
+          f'{upstream_conf_yaml["name"]}',
+          treeBuilder.write(), # string object ID
+          [base_commit.id] # parents
+  )
+  commit = repo.get(commit_id)
+  try:
+    repo.branches.local.create(new_branch_name, commit, force=force)
+  except _pygit2.AlreadyExistsError:
+    # _pygit2.AlreadyExistsError: failed to write reference
+    #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
+    #     that name already exists.
+    raise ProgramAbortError(f'Can\'t override existing branch {new_branch_name}. '
+                            'Use --branch to specify another branch name. '
+                            'Use --force to allow explicitly.')
+
+  # only for reporting
+  target_label = f'git branch {new_branch_name}'
+  package_contents = []
+  for root, dirs, files in _git_tree_walk(family_dir, commit.tree):
+    for filename in files:
+      entry_name = os.path.join(root, filename)
+      filesize = commit.tree[entry_name].size
+      package_contents.append((entry_name, filesize))
+  return target_label, package_contents
+
+def _packagage_to_dir(tmp_package_family_dir: str, target: str,
+                                      family_dir: str, force: bool):
+  # target is a directory:
+  target_family_dir = os.path.join(target, family_dir)
+  if os.path.exists(target_family_dir):
+    if not force:
+      raise ProgramAbortError('Can\'t override existing directory '
+                              f'{target_family_dir}. '
+                              'Use --force to allow explicitly.')
+    shutil.rmtree(target_family_dir)
+  else: # not exists
+    os.makedirs(os.path.dirname(target_family_dir))
+  shutil.move(tmp_package_family_dir, target_family_dir)
+
+  # only for reporting
+  target_label = f'directory {target}'
+  package_contents = []
+  for root, dirs, files in os.walk(target_family_dir):
+    for filename in files:
+      full_path = os.path.join(root, filename)
+      entry_name = os.path.relpath(full_path, target)
+      filesize = os.path.getsize(full_path)
+      package_contents.append((entry_name, filesize))
+  return target_label, package_contents
+
+
 def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
                  branch: typing.Union[str, None]=None):
@@ -1608,10 +1160,7 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
   ( upstream_conf_yaml, license_dir,
     gf_dir_content ) = _get_upstream_info(file_or_family, is_file, yes, quiet)
 
-  # Not sure when to run _check_target, before _get_upstream_info we don't
-  # know the actual package target, but we could do some basic early checks
-  # FIXME: should maybe be "_prepare_target" and whatever the type,
-  # it would return a common interface for _create_package to write into.
+  # Basic early checks.
   _check_target(is_gf_git, target)
   with TemporaryDirectory() as tmp_package_dir:
     family_dir = _create_package_content(tmp_package_dir, upstream_conf_yaml,
@@ -1623,106 +1172,17 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
     # yet. So, if _create_package_content is changed to put files outside
     # of family_dir, these targets will have to follow and implement it.
     if is_gf_git:
-      new_branch_name = f'gftools_packager_{family_dir.replace(os.sep, "_")}'
-      repo = repo = pygit2.Repository(target)
-      remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
-      #fetch! make sure we're on the actual gf master HEAD
-      _git_fetch_master(repo, remote_name)
-      # remote_branch = repo.branches.remote[f'{remote.name}/master']
-
-      base_commit = repo.revparse_single(f'refs/remotes/{remote_name}/master')
-      # Maybe I can start with the commit tree here ...
-      treeBuilder = repo.TreeBuilder(base_commit.tree)
-      _git_copy_dir(repo, treeBuilder, tmp_package_family_dir, family_dir)
-
-      # create the commit
-      user_name = list(repo.config.get_multivar('user.name'))[0]
-      user_email = list(repo.config.get_multivar('user.email'))[0]
-
-      author = pygit2.Signature(user_name, user_email)
-      committer = pygit2.Signature(user_name, user_email)
-
-      commit_id = repo.create_commit(
-              None,
-              author, committer,
-              f'[gftools-packager] {"Update" if gf_dir_content else "Create"}: '
-              f'{upstream_conf_yaml["name"]}',
-              treeBuilder.write(), # string object ID
-              [base_commit.id] # parents
-      )
-      commit = repo.get(commit_id)
-      try:
-        repo.branches.local.create(new_branch_name, commit, force=force)
-      except _pygit2.AlreadyExistsError:
-        # _pygit2.AlreadyExistsError: failed to write reference
-        #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
-        #     that name already exists.
-        raise ProgramAbortError(f'Can\'t override existing branch {new_branch_name}. '
-                                  'Use --force to allow explicitly.')
-
-      # only for reporting
-      target_label = f'git branch {new_branch_name}'
-      package_contents = []
-      for root, dirs, files in _git_tree_walk(family_dir, commit.tree):
-        for filename in files:
-          entry_name = os.path.join(root, filename)
-          filesize = commit.tree[entry_name].size
-          package_contents.append((entry_name, filesize))
+      target_label, package_contents = _packagage_to_git(
+                              tmp_package_family_dir, target, upstream_conf_yaml,
+                              family_dir, gf_dir_content, branch, force)
     else:
-      # target is a directory:
-      target_family_dir = os.path.join(target, family_dir)
-      if os.path.exists(target_family_dir):
-        if not force:
-          raise ProgramAbortError(f'Can\'t override existing directory {target_family_dir}. '
-                                  'Use --force to allow explicitly.')
-        shutil.rmtree(target_family_dir)
-      else: # not exists
-        os.makedirs(os.path.dirname(target_family_dir))
-      shutil.move(tmp_package_family_dir, target_family_dir)
-
-      # only for reporting
-      target_label = f'directory {target}'
-      package_contents = []
-      for root, dirs, files in os.walk(target_family_dir):
-        for filename in files:
-          full_path = os.path.join(root, filename)
-          entry_name = os.path.relpath(full_path, target)
-          filesize = os.path.getsize(full_path)
-          package_contents.append((entry_name, filesize))
+      target_label, package_contents = _packagage_to_dir(
+                      tmp_package_family_dir, target, family_dir, force)
 
   print(f'Created files in {target_label}:')
   for entry_name, filesize in package_contents:
     filesize_str = filesize
     print(f'   {entry_name} {_sizeof_fmt(filesize_str)}')
-
-#
-# CLI Sketches:
-#
-# gftools packager init # create a new gftools-packager.yaml
-# gftools packager familyname <options> # create a package
-# # both use packager:
-# gftools qa familyname # local qa, should be possible to run via FBD
-# gftools pr familyname # QA will run by google bot, should be possible to run via FBD (?)
-#
-#
-# for CLI/FBD integration, authentication is needed, maybe we can
-# pass the "GITHUB_API_TOKEN" (a "personal access token") to FBD and use
-# it on behalf of the user. OR: at the dashboard: give the user an access
-# token that is persistent, revokebale, linked to a gh-access-token.
-# That's basically the same as a sessionID, but persisitent. Maybe must
-# keep it not as clear text, not clear how to do so...
-#
-# In general here, the idea is that the dashboard could take on any task
-# of the local machine.
-
-
-# simple first
-#
-# check: get a path to a git-directory and figure if it has a google/fonts
-# remote, otherwise: adding the remote and fetching could be done
-# with a --force flag.
-
-
 
 def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
           branch: typing.Union[str, None] = None) -> typing.Union[str, None]:
@@ -1776,81 +1236,64 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
 
 class PYGit2RemoteCallbacks(pygit2.RemoteCallbacks):
   def credentials(self, url, username_from_url, allowed_types):
-      if allowed_types & pygit2.credentials.GIT_CREDENTIAL_USERNAME:
-          print('GIT_CREDENTIAL_USERNAME')
-          return pygit2.Username("git")
-      elif allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY:
-          # https://github.com/libgit2/pygit2/issues/428#issuecomment-55775298
-          # "The username for connecting to GitHub over SSH is 'git'."
+    if allowed_types & pygit2.credentials.GIT_CREDENTIAL_USERNAME:
+      print('GIT_CREDENTIAL_USERNAME')
+      return pygit2.Username("git")
+    elif allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY:
+      # https://github.com/libgit2/pygit2/issues/428#issuecomment-55775298
+      # "The username for connecting to GitHub over SSH is 'git'."
 
 
-          # I filed https://github.com/libgit2/pygit2/issues/1013
-          # because using just:
-          #      return pygit2.Keypair(username_from_url, pubkey, privkey, '')
-          # didn't work, there's also the example how I tried.
+      # I filed https://github.com/libgit2/pygit2/issues/1013
+      # because using just:
+      #      return pygit2.Keypair(username_from_url, pubkey, privkey, '')
+      # didn't work, there's also the example how I tried.
 
-          # It's probably also what the user (the git command of the user)
-          # does in this case and uses ssh-agent to do the auth
-          #   return pygit2.Keypair(username_from_url, None, None, '')
-          # There's a better readable shortcut (does the same):
-          # If "git clone ..." works with an ssh remote, this should work
-          # as well, no need to put configuration anywhere.
-          return pygit2.KeypairFromAgent(username_from_url)
-      else:
-          return False
-  def sideband_progress(self, data):
-    print(f'sideband_progress: {data}')
+      # It's probably also what the user (the git command of the user)
+      # does in this case and uses ssh-agent to do the auth
+      #   return pygit2.Keypair(username_from_url, None, None, '')
+      # There's a better readable shortcut (does the same):
+      # If "git clone ..." works with an ssh remote, this should work
+      # as well, no need to put configuration anywhere.
+      return pygit2.KeypairFromAgent(username_from_url)
+    else:
+      return False
+  # def sideband_progress(self, data):
+  #   print(f'sideband_progress: {data}')
+  #
+  # # this works!
+  # def transfer_progress(self, tp):
+  #   print('transfer_progress:\n'
+  #         f'  received_bytes {tp.received_bytes}\n'
+  #         f'  indexed_objects {tp.indexed_objects}\n'
+  #         f'  received_objects {tp.received_objects}')
 
-  # this works!
-  def transfer_progress(self, tp):
-      print('transfer_progress:\n'
-        f'  received_bytes {tp.received_bytes}\n'
-        f'  indexed_objects {tp.indexed_objects}\n'
-        f'  received_objects {tp.received_objects}')
-
-def _git_fetch_master(repo, remote_name):
+def _git_fetch_master(repo: pygit2.Repository, remote_name: str) -> None:
   remote = repo.remotes[remote_name]
-  # can perform a fetch
-
-  print('start fetch')
+  # perform a fetch
+  print(f'Start fetching {remote_name}/master')
   # fetch(refspecs=None, message=None, callbacks=None, prune=0)
   # using just 'master' instead of 'refs/heads/master' works as well
   stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
-  print('DONE fetch:\n',
-        f'  received_bytes {stats.received_bytes}\n'
-        f'  indexed_objects {stats.indexed_objects}\n'
-        f'  received_objects {stats.received_objects}')
-        #f'  received_bytes {stats["received_bytes"]}\n'
-        #f'  indexed_objects {stats["indexed_objects"]}\n'
-        #f'  received_objects {stats["received_objects"]}')
-  return True
+  print(f'DONE fetch {_sizeof_fmt(stats.received_bytes)} '
+        f'{stats.indexed_objects} receivedobjects')
 
+# note: currently unused!
 def _git_create_remote(repo: pygit2.Repository) -> None:
-  print('_git_create_remote')
-  # found_remote is None
-  # we can add a remote!
-
-  # FIXME: default_remote_name must be non-existing
-  # What happens if it exists? Answer: repo.remotes.creat raises:
-  #                 "ValueError: remote 'upstream' already exists"
-
+  # If we did not find a suitable remote, we can add it.
+  # If remote_name exists: repo.remotes.creat raises:
+  # "ValueError: remote 'upstream' already exists"
   default_remote_name = 'upstream'
-  # This way it can't be 'a' (that's abort!), should be no issue.
+
   remote_name = input(f'Creating a git remote.\nEnter remote name (default={default_remote_name}),a=abort:')
   if remote_name == 'a':
     raise UserAbortError()
   remote_name = remote_name or default_remote_name
 
   searched_repo = 'google/fonts'
-  # FIXME: SSH fails
-  # _pygit2.GitError: Failed to retrieve list of SSH authentication methods: Failed getting response
-  # https://github.com/libgit2/pygit2/issues/836
-  # "These are libssh2 issues, not libgit2/pygit2. My advice is to use the latest version of libssh2: 1.9.0"
-  # BUT:  "The pygit2 Linux wheels include libgit2 with libssh2 1.9.0 statically linked."
   url =  f'git@github.com:{searched_repo}.git'
   # url =  f'ssh://git@github.com/{searched_repo}'
   # url = f'https://github.com/{searched_repo}.git'
-  print(f'creating remote: {remote_name} {url}')
 
   refspecs_candidates = {
       '1': f'+refs/heads/*:refs/remotes/{remote_name}/*'
@@ -1867,20 +1310,3 @@ def _git_create_remote(repo: pygit2.Repository) -> None:
   # raises ValueError: remote 'upstream' already exists
   # fetch argument will apply the default refspec if it is None
   repo.remotes.create(remote_name, url, fetch=fetch_refspec)
-
-    # Create a new remote with the given name and url. Returns a <Remote> object.
-    # If ‘fetch’ is provided, this fetch refspec will be used instead of the default.
-
-
-    # Add a fetch refspec (str) to the remote
-    # repo.remotes.add_fetch(remote_name, refspec)
-
-
-
-
-  # for pushing to https github urls see:
-  # Using a token on the command line
-  # https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line#using-a-token-on-the-command-line
-
-  # import IPython
-  # IPython.embed(colors="neutral") # nice!

@@ -52,8 +52,6 @@ parser.add_argument(
             action='store_true',
             help='Don\'t require user interaction, by answering with the '
                  'default always. Removes all interactivity.')
-# for documenting of non interactive tasks
-# FIXME: maybe make this the default and quiet the choice?
 parser.add_argument(
             '-q',
             '--quiet',
@@ -68,28 +66,11 @@ parser.add_argument(
                  'be used regularly. Instead file an issue to add new '
                  'files to the whitelist.')
 
-
-
 if __name__ == '__main__':
     args = parser.parse_args()
-    print('args:', args)
-    # packager.dir_walk_breath_first(sys.argv[1], ['fonts/ttf', 'fonts/variable', 'sources'])
-    # packager.get_gh_gf_family_entry(sys.argv[1])
-    # packager.git_directory_listing(sys.argv[1])
-
-    # prefixes = ['fonts/ttf', 'fonts/variable', 'sources', 'ofl/josefinsans/static']
-    # topdown = True
-    # if sys.argv[1] == 'git':
-    #     packager.git_directory_listing(sys.argv[2], prefixes=prefixes, topdown=topdown)
-    # elif sys.argv[1] == 'fs':
-    #     packager.fs_directory_listing(sys.argv[2], prefixes=prefixes, excludes=['.git'], topdown=topdown)
-    # packager.is_google_fonts(sys.argv[1])
-
-    # args: Namespace(file=True, file_or_family='xwhyzet.upstream.yaml', verbose=False, yes=False)
     try:
       packager.make_package(**args.__dict__)
     except UserAbortError:
-
       print('Aborted',
             'by user!' if not args.yes else \
             'by program! User interaction required (don\'t use the --yes flag).')
