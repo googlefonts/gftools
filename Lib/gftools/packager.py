@@ -175,8 +175,8 @@ def _get_query_variables(repo_owner, repo_name, family_name, reference='refs/hea
   }
 
 def _get_github_api_token() -> str:
-  # $ export GITHUB_API_TOKEN={the GitHub API token}
-  return os.environ['GITHUB_API_TOKEN']
+  # $ export GH_TOKEN={the GitHub API token}
+  return os.environ['GH_TOKEN']
 
 def _run_gh_graphql_query(query, variables):
   github_api_token = _get_github_api_token()
