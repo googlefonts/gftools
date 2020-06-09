@@ -4,9 +4,6 @@
 
 # FIXME: document environment variables: VISUAL, EDITOR, GITHUB_API_TOKEN
 
-# FIXME: I added some type annotations, but I did not use a static
-# type checker. Hence, there are errors and missing definitions!
-
 # FIXME: why is the license not in upstream.yaml?
 # It's not in the upstream repo list. Probably usually discovered by the
 # presence and name of the  license file.
@@ -67,8 +64,8 @@ import requests
 import pprint
 import typing
 from collections import OrderedDict
-import pygit2
-from strictyaml import (
+import pygit2 # type: ignore
+from strictyaml import ( # type: ignore
                         Map,
                         MapPattern,
                         Enum,
@@ -85,8 +82,19 @@ from strictyaml import (
 
 from warnings import warn
 import functools
-from google.protobuf import text_format
-import gftools.fonts_public_pb2 as fonts_pb2
+
+# ignore type because mypy error: Module 'google.protobuf' has no
+# attribute 'text_format'
+from google.protobuf import text_format # type: ignore
+
+# Getting many mypy errors here like: Lib/gftools/fonts_public_pb2.py:253:
+#     error: Unexpected keyword argument "serialized_options" for "Descriptor"
+# The "type: ignore" annotation didn't help.
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+  fonts_pb2: typing.Any
+else:
+  import gftools.fonts_public_pb2 as fonts_pb2
 
 
 GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
@@ -440,7 +448,7 @@ class ProgramAbortError(Exception):
   pass
 
 def _get_gf_dir_content(family_name: str) \
-        -> typing.Tuple[typing.Union[str, None], dict]:
+        -> typing.Tuple[typing.Union[str, None], typing.Dict[str, typing.Dict[str, typing.Any]]]:
   gfentry = get_gh_gf_family_entry(family_name)
   entries = None
   for license_dir in ['apache', 'ufl', 'ofl']:
@@ -467,7 +475,7 @@ UP =  '\u001b[1A' # moves cursor 1 up
 # reset = (CLEARLINE + UP) * num_linebeaks + TOLEFT
 
 def user_input(question: str,
-               options: typing.OrderedDict,
+               options: 'OrderedDict[str, str]',
                default: typing.Union[str, None] = None,
                yes: typing.Union[bool, None] = None,
                quiet: bool = False
@@ -582,7 +590,7 @@ def _repl_upstream_conf(initial_upstream_conf: str, yes: bool=False
                                            , allow_flow_style=True)
       except Exception as e:
         answer = user_input(f'The configuration did not parse ({type(e).__name__}):\n\n'
-                       f'{err}',
+                       f'{e}',
                        OrderedDict(f='fix last edit',
                                    r='retry last edit',
                                    s='start all over',
@@ -755,7 +763,7 @@ def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool, quiet: boo
   # if present the available files for the family in the google/fonts repo.
   license_dir = None
   upstream_conf_yaml = None
-  gf_dir_content = {}
+  gf_dir_content: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
 
   if not is_file:
     family_name = file_or_family
@@ -827,7 +835,7 @@ def _copy_upstream_files(branch: str, files: dict, repo: pygit2.Repository
   SKIP_SOURCE_NOT_FOUND = 'Source not found in upstream:'
   SKIP_SOURCE_NOT_BLOB = 'Source is not a blob (blob=file):'
   SKIP_COPY_EXCEPTION = 'Can\'t copy:'
-  skipped = OrderedDict([
+  skipped: 'OrderedDict[str, typing.List[str]]' = OrderedDict([
       (SKIP_NOT_PERMITTED, []),
       (SKIP_SOURCE_NOT_FOUND, []),
       (SKIP_SOURCE_NOT_BLOB, []),
@@ -881,8 +889,9 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
     raise e
 
   metadata = fonts_pb2.FamilyProto()
-  with open(metadata_file_name, 'rb') as f:
-    text_format.Parse(f.read(), metadata)
+
+  with open(metadata_file_name, 'rb') as fb:
+    text_format.Parse(fb.read(), metadata)
 
   # make upstream_conf the source of truth for some entries
   metadata.name = upstream_conf['name']
@@ -1010,7 +1019,7 @@ def _check_target(is_gf_git: bool, target: str) -> None:
     return _check_directory_target(target)
 
 def _git_tree_from_dir(repo: pygit2.Repository, tmp_package_family_dir: str) -> str:
-  trees = {}
+  trees: typing.Dict[str, str] = {}
   for root, dirs, files in os.walk(tmp_package_family_dir, topdown=False):
     # if root == tmp_package_family_dir: rel_dir = '.'
     rel_dir = os.path.relpath(root, tmp_package_family_dir)
@@ -1079,6 +1088,8 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
   # we checked that it exists earlier!
   remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
   #fetch! make sure we're on the actual gf master HEAD
+  if remote_name is None:
+    raise Exception('No remote found for google/fonts master.')
   _git_fetch_master(repo, remote_name)
 
   base_commit = repo.revparse_single(f'refs/remotes/{remote_name}/master')
@@ -1103,7 +1114,7 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
   commit = repo.get(commit_id)
   try:
     repo.branches.local.create(new_branch_name, commit, force=force)
-  except _pygit2.AlreadyExistsError:
+  except pygit2.AlreadyExistsError:
     # _pygit2.AlreadyExistsError: failed to write reference
     #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
     #     that name already exists.
