@@ -305,7 +305,7 @@ name:
 repository_url:
 
 # The branch name used to update google fonts. e.g.: master
-branch:
+branch: master
 
 # Choose one of: {', '.join(CATEGORIES)}
 category:
