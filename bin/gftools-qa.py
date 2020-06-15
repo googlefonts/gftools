@@ -466,7 +466,11 @@ def main():
         [shutil.copy(f, fonts_dir) for f in args.fonts]
         fonts = args.fonts
     elif args.pull_request:
-        fonts = download_files_in_github_pr(args.pull_request, fonts_dir)
+        fonts = download_files_in_github_pr(
+            args.pull_request,
+            fonts_dir,
+            ignore_static_dir=False,
+        )
         if not fonts:
             logger.info("No fonts found in pull request. Skipping")
             return
@@ -482,7 +486,8 @@ def main():
         re_filter = re.compile(args.filter_fonts)
         fonts = [f for f in fonts if re_filter.search(f)]
 
-    ttfonts = [TTFont(f) for f in fonts if f.endswith((".ttf", ".otf"))]
+    ttfonts = [TTFont(f) for f in fonts if f.endswith((".ttf", ".otf"))
+               and "static" not in f]
     family_name = family_name_from_fonts(ttfonts)
     family_on_gf = Google_Fonts_has_family(family_name)
 
@@ -497,7 +502,9 @@ def main():
         fonts_before = args.fonts_before
     elif args.pull_request_before:
         fonts_before = download_files_in_github_pr(
-            args.pull_request_before, fonts_before_dir
+            args.pull_request_before,
+            fonts_before_dir,
+            ignore_static_dir=False
         )
     elif args.github_dir_before:
         fonts_before = download_files_in_github_dir(
@@ -509,7 +516,8 @@ def main():
         )
 
     if fonts_before:
-        ttfonts_before = [TTFont(f) for f in fonts_before if f.endswith((".ttf", ".otf"))]
+        ttfonts_before = [TTFont(f) for f in fonts_before if f.endswith((".ttf", ".otf"))
+                          and "static" not in f]
         qa = FontQA(ttfonts, ttfonts_before, args.out)
     else:
         qa = FontQA(ttfonts, out=args.out)
