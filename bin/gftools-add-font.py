@@ -252,7 +252,7 @@ def main(argv):
     is_new = False
 
   metadata = _MakeMetadata(fontdir, is_new)
-  text_proto = text_format.MessageToString(metadata)
+  text_proto = text_format.MessageToString(metadata, as_utf8=True)
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
   if os.path.isfile(desc):
