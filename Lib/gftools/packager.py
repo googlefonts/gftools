@@ -904,7 +904,7 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
   metadata.source.repository_url = upstream_conf['repository_url']
   metadata.source.commit = upstream_commit_sha
 
-  text_proto = text_format.MessageToString(metadata)
+  text_proto = text_format.MessageToString(metadata, as_utf8=True)
   with open(metadata_file_name, 'w') as f:
     f.write(text_proto)
 
