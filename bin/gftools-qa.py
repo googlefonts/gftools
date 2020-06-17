@@ -225,7 +225,7 @@ class FontQA:
             font_filename = os.path.basename(font)[:-4]
             dfont = DFont(font)
             if dfont.is_variable:
-                for coords in dfont.instances_coordinates:
+                for _, coords in dfont.instances_coordinates.items():
                     dfont.set_variations(coords)
                     img_out = os.path.join(
                         out,
