@@ -216,7 +216,7 @@ class TestGFToolsScripts(unittest.TestCase):
 #        self.check_script(['python', self.get_path('update-families'), self.example_font])
 
     def test_update_nameids(self):
-        self.check_script(['python', self.get_path('update-nameids'), self.example_font])
+        self.check_script(['python', self.get_path('update-nameids'), self.example_font, "-c", "Foobar"])
 
     def test_check_vtt_compile(self):
         self.check_script(['python', self.get_path('check-vtt-compile'), self.src_vtt_font])
