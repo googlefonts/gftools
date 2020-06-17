@@ -46,7 +46,7 @@ NAME_IDS = {
 def swap_name(field, font_name_field, new_name):
   '''Replace a font's name field with a new name'''
   enc = font_name_field.getName(*field).getEncoding()
-  text = str(font_name_field.getName(*field)).decode(enc)
+  text = font_name_field.getName(*field).toUnicode()
   text = new_name
   font_name_field.setName(text, *field)
 
