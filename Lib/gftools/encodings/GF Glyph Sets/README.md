@@ -42,11 +42,11 @@ Structure and Hierarchy of Glyph Sets for Latin:
 
 ### GF Latin Core
 
-[encodings/latin_unique-glyphs.nam](https://github.com/googlefonts/gftools/blob/master/Lib/gftools/encodings/latin_unique-glyphs.nam)
+[encodings/GF Glyph Sets/latin_unique-glyphs.nam](./GF-latin-core_unique-glyphs.nam)
 
 ### GF Latin Plus (567 glyphs total + 25 optional)
 
-[encodings/latin-ext_unique-glyphs.nam](https://github.com/googlefonts/gftools/blob/master/Lib/gftools/encodings/latin-ext_unique-glyphs.nam)
+[encodings/GF Glyph Sets/GF-latin-plus_unique-glyphs.nam](./GF-latin-plus_unique-glyphs.nam)
 
   - Western & Central European
   - Vietnamese
@@ -62,6 +62,8 @@ Includes characters from the following unicode ranges:
   - Latin-1 Supplement
 
 Optional additions:
+
+[encodings/GF Glyph Sets/GF-latin-plus_optional-glyphs.nam](./GF-latin-plus_optional-glyphs.nam)
 
 - Uppercase Accents, 25
 - Slashed zero (zero.zero)
@@ -86,6 +88,8 @@ Read more about this in the [GlyphsApp Ligated Dutch IJ Tutorial](https://www.gl
 
 ### GF Latin Pro (+146 for 713 glyphs total + 17 optional .case)
 
+[encodings/GF Glyph Sets/GF-latin-pro_unique-glyphs.nam](./GF-latin-pro_unique-glyphs.nam)
+
 - Math symbols and Units of Measure (∆ Ω π ℓ ℮ ∞ ∂ ∫ √ ∑ ∏ ◊ ∅)
 - Latin General Use Extensions (U+1E08 to U+1EC9)
 - Superiors and Inferiors (⁰ ⁴ ⁵ ⁶ ⁷ ⁸ ⁹ ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉)
@@ -106,9 +110,14 @@ Instructions for OT code in the GF Latin Pro set using unencoded glyphs:
 
 #### Optional glyphs in the GF Latin Pro set include:
 
+[encodings/GF Glyph Sets/GF-latin-pro_optional-glyphs.nam](./GF-latin-pro_optional-glyphs.nam)
+
 - Case Punctuation `.case`
 
 ### GF Latin Expert (+271 for 984 total)
+
+[encodings/GF Glyph Sets/GF-latin-expert_unique-glyphs.nam](./GF-latin-expert_unique-glyphs.nam)
+
 
 - Additional Unicode Fractions (⅓ ⅔ ⅛ ⅜ ⅝ ⅞)
 - Arrows (← ↑ → ↓)
@@ -133,6 +142,10 @@ Structure and Hierarchy of Glyph Sets for Cyrillic:
 **Supports the following Cyrillic languages:** Balkar, Belarusian (Cyrillic), Bosnian (Cyrillic), Bulgarian, Croatian (Cyrillic), Erzya, Karachay, Kumyk, Macedonian, Moksha, Montenigrin, Nanai, Nogai, Russian, Rusyn, Serbian (Cyrillic), Ukrainian, West Polesian
 
 ### GF Cyrillic Plus (184 Unicode characters in 277 glyphs including Small Caps + 40 localized variants: 317 total)
+
+[encodings/GF Glyph Sets/Cyrillic/GF-cyrillic-plus_unique-glyphs.nam](./Cyrillic/GF-cyrillic-plus_unique-glyphs.nam)
+
+[encodings/GF Glyph Sets/Cyrillic/GF-cyrillic-plus-locl_unique-glyphs.nam](./Cyrillic/GF-cyrillic-plus-locl_unique-glyphs.nam)
 
 **Supports the following 90 Cyrillic languages:**
 Abaza,
@@ -231,6 +244,8 @@ Includes currencies: ₮, ₴, ₸.
 The ruble sign (₽ U+20BD) is not included, since it is already present in the Latin Plus set.
 
 ### GF Cyrillic Pro (+82 glyphs for 399 glyphs total)
+
+[encodings/GF Glyph Sets/Cyrillic/GF-cyrillic-pro_unique-glyphs.nam](./Cyrillic/GF-cyrillic-pro_unique-glyphs.nam)
 
 **Additional characters in this set provide support for the following 18 languages:**
 Abkhaz,
@@ -368,6 +383,8 @@ Yupik.
 
 
 ### GF Cyrillic Historic ( 37 glyphs )
+
+[encodings/GF Glyph Sets/Cyrillic/GF-cyrillic-historical_unique-glyphs.nam](./Cyrillic/GF-cyrillic-historical_unique-glyphs.nam)
 
 Provides support for Pre-Petrine Old Church Slavonic Texts.
 
