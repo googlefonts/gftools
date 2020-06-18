@@ -1160,14 +1160,14 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
       #     that name already exists.
       answer = user_input(f'Can\'t override existing branch {new_branch_name}'
                           ' without explicit permission.',
-              OrderedDict(a='allow override',
+              OrderedDict(f='force override',
                           q='quit program'),
               default='q', yes=yes, quiet=quiet)
       if answer == 'q':
         raise ProgramAbortError(f'Can\'t override existing branch {new_branch_name}. '
                             'Use --branch to specify another branch name. '
                             'Use --force to allow explicitly.')
-      else: # answer == 'a'
+      else: # answer == 'f'
         force = True
         continue
     break
@@ -1191,7 +1191,7 @@ def _packagage_to_dir(tmp_package_family_dir: str, target: str,
     if not force:
       answer = user_input(f'Can\'t override existing directory {target_family_dir}'
                           ' without explicit permission.',
-              OrderedDict(a='allow override',
+              OrderedDict(f='force override',
                           q='quit program'),
               default='q', yes=yes, quiet=quiet)
       if answer == 'q':
