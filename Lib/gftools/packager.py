@@ -2,7 +2,7 @@
 # FIXME: document dependencies, expect command line `git` with support
 # for shallow clones (not in old git versions)
 
-# FIXME: document environment variables: VISUAL, EDITOR, GITHUB_API_TOKEN
+# FIXME: document environment variables: VISUAL, EDITOR, GH_TOKEN
 
 # FIXME: why is the license not in upstream.yaml?
 # It's not in the upstream repo list. Probably usually discovered by the
@@ -64,6 +64,8 @@ import requests
 import pprint
 import typing
 from collections import OrderedDict
+import traceback
+from io import StringIO
 import pygit2 # type: ignore
 from strictyaml import ( # type: ignore
                         Map,
@@ -189,9 +191,15 @@ def _run_gh_graphql_query(query, variables):
     raise Exception(f'GrapQL query failed:\n {errors}')
   return json
 
+def _family_name_normal(family_name: str) -> str:
+  return family_name.lower()\
+      .replace(' ', '')\
+      .replace('.', '')\
+      .replace('/', '')
+
 def get_gh_gf_family_entry(family_name):
   # needs input sanitation
-  family_name_normal = family_name.replace(' ', '').lower()
+  family_name_normal = _family_name_normal(family_name)
   variables = _get_query_variables('google','fonts', family_name_normal)
 
   result = _run_gh_graphql_query(GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables)
@@ -663,8 +671,7 @@ def _upstream_conf_from_file(filename: str, yes: bool=False
     # "edited" is only true when upstream_yaml_text did not parse and
     # was then edited successfully.
     if edited:
-      answer = user_input(f'Save changed file {filename}?\n'
-            f'{_format_upstream_yaml(upstream_conf_yaml, compact=False)}',
+      answer = user_input(f'Save changed file {filename}?',
             OrderedDict(y='yes',
                         n='no'),
             default='y', yes=yes, quiet=quiet)
@@ -757,8 +764,8 @@ def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool=False
   return upstream_conf_yaml
 
 
-def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool, quiet: bool) \
-                                    -> typing.Tuple[YAML, str, dict]:
+def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
+                          quiet: bool) -> typing.Tuple[YAML, str, dict]:
   # the first task is to acquire an upstream_conf, the license dir and
   # if present the available files for the family in the google/fonts repo.
   license_dir = None
@@ -824,6 +831,36 @@ def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool, quiet: boo
   else:
     raise Exception('Unexpected: can\'t use google fonts family data '
                     f'for {family_name}.')
+  return upstream_conf_yaml, license_dir, gf_dir_content or {}
+
+
+def _edit_upstream_info(upstream_conf_yaml: YAML, file_or_family: str,
+                        is_file: bool, yes:bool, quiet: bool)\
+                        -> typing.Tuple[YAML, str, dict]:
+  license_dir = None
+  gf_dir_content: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
+
+  print(f'Edit upstream conf.')
+  upstream_conf_yaml = _repl_upstream_conf(upstream_conf_yaml.as_yaml(),
+                                                    yes=yes, quiet=quiet)
+  if is_file:
+    answer = user_input(f'Save changed file {file_or_family}?',
+            OrderedDict(y='yes',
+                        n='no'),
+            default='y', yes=yes, quiet=quiet)
+    if answer == 'y':
+      with open(file_or_family, 'w') as upstream_yaml_file:
+        upstream_yaml_file.write(upstream_conf_yaml.as_yaml())
+  family_name = upstream_conf_yaml['name'].data
+  # if family_name can't be found:
+  #    license_dir is None, gf_dir_content is an empty dict
+  license_dir, gf_dir_content = _get_gf_dir_content(family_name)
+  if license_dir is None:
+    # The family is not specified or not found on google/fonts.
+    # Can also be an user input error, but we don't handle this yet/here.
+    print(f'Font Family "{family_name}" not found on Google Fonts.')
+    license_dir = _user_input_license(yes=yes, quiet=quiet)
+
   return upstream_conf_yaml, license_dir, gf_dir_content or {}
 
 def _copy_upstream_files(branch: str, files: dict, repo: pygit2.Repository
@@ -914,7 +951,7 @@ def _create_package_content(package_target_dir: str, upstream_conf_yaml: YAML,
   upstream_conf = upstream_conf_yaml.data
   upstream_commit_sha = None
 
-  family_name_normal = upstream_conf['name'].replace(' ', '').lower()
+  family_name_normal = _family_name_normal(upstream_conf['name'])
   family_dir = os.path.join(license_dir, family_name_normal)
   package_family_dir = os.path.join(package_target_dir, family_dir)
   # putting state into functions, could be done with classes/methods as well
@@ -1082,7 +1119,9 @@ def _sizeof_fmt(num, suffix='B'):
 def _packagage_to_git(tmp_package_family_dir: str, target: str,
                      upstream_conf_yaml: YAML,
                      family_dir: str, gf_dir_content: typing.Dict,
-                     branch: typing.Union[str, None], force:bool):
+                     branch: typing.Union[str, None], force:bool,
+                     yes: bool, quiet: bool) \
+                      -> typing.Tuple[str, typing.List[typing.Tuple[str, int]]]:
   new_branch_name = branch or f'gftools_packager_{family_dir.replace(os.sep, "_")}'
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
@@ -1112,15 +1151,26 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
           [base_commit.id] # parents
   )
   commit = repo.get(commit_id)
-  try:
-    repo.branches.local.create(new_branch_name, commit, force=force)
-  except pygit2.AlreadyExistsError:
-    # _pygit2.AlreadyExistsError: failed to write reference
-    #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
-    #     that name already exists.
-    raise ProgramAbortError(f'Can\'t override existing branch {new_branch_name}. '
+  while True:
+    try:
+      repo.branches.local.create(new_branch_name, commit, force=force)
+    except pygit2.AlreadyExistsError:
+      # _pygit2.AlreadyExistsError: failed to write reference
+      #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
+      #     that name already exists.
+      answer = user_input(f'Can\'t override existing branch {new_branch_name}'
+                          ' without explicit permission.',
+              OrderedDict(a='allow override',
+                          q='quit program'),
+              default='q', yes=yes, quiet=quiet)
+      if answer == 'q':
+        raise ProgramAbortError(f'Can\'t override existing branch {new_branch_name}. '
                             'Use --branch to specify another branch name. '
                             'Use --force to allow explicitly.')
+      else: # answer == 'a'
+        force = True
+        continue
+    break
 
   # only for reporting
   target_label = f'git branch {new_branch_name}'
@@ -1133,12 +1183,19 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
   return target_label, package_contents
 
 def _packagage_to_dir(tmp_package_family_dir: str, target: str,
-                                      family_dir: str, force: bool):
+                  family_dir: str, force: bool, yes: bool, quiet: bool):
   # target is a directory:
   target_family_dir = os.path.join(target, family_dir)
+  print('target_family_dir', target_family_dir)
   if os.path.exists(target_family_dir):
     if not force:
-      raise ProgramAbortError('Can\'t override existing directory '
+      answer = user_input(f'Can\'t override existing directory {target_family_dir}'
+                          ' without explicit permission.',
+              OrderedDict(a='allow override',
+                          q='quit program'),
+              default='q', yes=yes, quiet=quiet)
+      if answer == 'q':
+        raise ProgramAbortError('Can\'t override existing directory '
                               f'{target_family_dir}. '
                               'Use --force to allow explicitly.')
     shutil.rmtree(target_family_dir)
@@ -1158,21 +1215,28 @@ def _packagage_to_dir(tmp_package_family_dir: str, target: str,
   return target_label, package_contents
 
 
-def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
-                 quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
-                 branch: typing.Union[str, None]=None):
+def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
+  family_name_normal = _family_name_normal(upstream_conf_yaml['name'].data)
+  count = 0
+  while True:
+    counter = '' if count == 0 else f'_{count}'
+    filename = f'./{family_name_normal}.upstream{counter}.yaml'
+    try:
+      # 'x': don't override existing files
+      with open(filename, 'x') as f:
+        f.write(upstream_conf_yaml.as_yaml())
+    except FileExistsError:
+      # retry until the file could be created, file name changes
+      count += 1
+      continue
+    break
+  return filename
 
-  # FIXME: if "_create_package" raises we could go back into the interactive
-  # _get_upstream_info loop to let the user fix the problem. A Good example
-  # is a bad repository_url, that will raise in _create_package.
-  # _create_package should better not do so much interactivity, as it
-  # is just interpreting upstream_conf and failing if it can't run to
-  # the end, which seems like a good, simple model.
-  ( upstream_conf_yaml, license_dir,
-    gf_dir_content ) = _get_upstream_info(file_or_family, is_file, yes, quiet)
-
-  # Basic early checks.
-  _check_target(is_gf_git, target)
+def _create_package(upstream_conf_yaml: YAML, license_dir: str,
+                gf_dir_content: dict, no_whitelist: bool, is_gf_git: bool,
+                target: str, branch: typing.Union[str, None], force: bool,
+                yes: bool, quiet: bool
+                ) -> typing.Tuple[str, typing.List[typing.Tuple[str, int]]]:
   with TemporaryDirectory() as tmp_package_dir:
     family_dir = _create_package_content(tmp_package_dir, upstream_conf_yaml,
                                 license_dir, gf_dir_content, no_whitelist)
@@ -1183,12 +1247,75 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
     # yet. So, if _create_package_content is changed to put files outside
     # of family_dir, these targets will have to follow and implement it.
     if is_gf_git:
-      target_label, package_contents = _packagage_to_git(
+      return _packagage_to_git(
                               tmp_package_family_dir, target, upstream_conf_yaml,
-                              family_dir, gf_dir_content, branch, force)
+                              family_dir, gf_dir_content, branch, force,
+                              yes, quiet)
     else:
-      target_label, package_contents = _packagage_to_dir(
-                      tmp_package_family_dir, target, family_dir, force)
+      return _packagage_to_dir(
+                      tmp_package_family_dir, target, family_dir, force,
+                      yes, quiet)
+
+
+def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
+                 quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
+                 branch: typing.Union[str, None]=None):
+  # Basic early checks. Raises if target does not qualify.
+  _check_target(is_gf_git, target)
+  edit = False
+  while True:
+    if not edit:
+      ( upstream_conf_yaml, license_dir,
+        gf_dir_content ) = _get_upstream_info(file_or_family, is_file,
+                                                              yes, quiet)
+    else:
+      ( upstream_conf_yaml, license_dir,
+        gf_dir_content ) = _edit_upstream_info(upstream_conf_yaml,
+                                    file_or_family, is_file, yes, quiet)
+    try:
+      target_label, package_contents = _create_package(upstream_conf_yaml, license_dir,
+                      gf_dir_content, no_whitelist, is_gf_git, target, branch, force,
+                      yes, quiet)
+    except UserAbortError as e:
+      # The user aborted already, no need to bother any further.
+      # Note: looks like there's no user interaction in _create_package,
+      # hence this is a dead branch at the moment.
+      raise e
+    except Exception:
+      error_io = StringIO()
+      traceback.print_exc(file=error_io)
+      error_io.seek(0)
+      answer = user_input(f'Upstream conf caused an error:'
+                          f'\n-----\n\n{error_io.read()}\n-----\n'
+                          'How do you want to proceed?',
+              OrderedDict(e='edit upstream conf and retry',
+                          q='raise and quit program'),
+              default='q', yes=yes, quiet=quiet)
+      if answer == 'q':
+        if not yes:
+          # FIXME: should be possible to save to original file if is_file
+          # but we should give that option only if the file would change.
+          answer = user_input('Save upstream conf to disk?\nIt can be '
+                               'annoying having to redo all changes, which '
+                               'will be lost if you choose no.\n'
+                               'The saved file can be edited and used with '
+                               'the --file option.' ,
+              OrderedDict(y='yes, save to disk',
+                          n='no, discard changes'),
+              default='y', yes=yes, quiet=quiet)
+          if answer == 'y':
+            upstream_yaml_backup_filename = _write_upstream_yaml_backup(
+                                                      upstream_conf_yaml)
+            print(f'Upstream conf has been saved to: {upstream_yaml_backup_filename}')
+        raise UserAbortError()
+      else:
+        # answer == 'e'
+        # continue loop: go back to _get_upstream_info
+        edit = True
+        continue
+    break # done!
+
+
 
   print(f'Created files in {target_label}:')
   for entry_name, filesize in package_contents:
