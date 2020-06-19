@@ -1120,18 +1120,29 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
                      upstream_conf_yaml: YAML,
                      family_dir: str, gf_dir_content: typing.Dict,
                      branch: typing.Union[str, None], force:bool,
-                     yes: bool, quiet: bool) \
+                     yes: bool, quiet: bool, add_commit: bool) \
                       -> typing.Tuple[str, typing.List[typing.Tuple[str, int]]]:
   new_branch_name = branch or f'gftools_packager_{family_dir.replace(os.sep, "_")}'
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
   remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
-  #fetch! make sure we're on the actual gf master HEAD
   if remote_name is None:
     raise Exception('No remote found for google/fonts master.')
-  _git_fetch_master(repo, remote_name)
 
-  base_commit = repo.revparse_single(f'refs/remotes/{remote_name}/master')
+  base_commit = None
+  if add_commit:
+    try:
+      base_commit = repo.branches.local[branch].peel()
+    except KeyError as e:
+      pass
+
+  if not base_commit:
+    #fetch! make sure we're on the actual gf master HEAD
+    _git_fetch_master(repo, remote_name)
+    base_commit = repo.revparse_single(f'refs/remotes/{remote_name}/master')
+
+
+
   # Maybe I can start with the commit tree here ...
   treeBuilder = repo.TreeBuilder(base_commit.tree)
   _git_copy_dir(repo, treeBuilder, tmp_package_family_dir, family_dir)
@@ -1151,9 +1162,11 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
           [base_commit.id] # parents
   )
   commit = repo.get(commit_id)
+
+  # create branch or add to an existing one if add_commit
   while True:
     try:
-      repo.branches.local.create(new_branch_name, commit, force=force)
+      repo.branches.local.create(new_branch_name, commit, force=add_commit or force)
     except pygit2.AlreadyExistsError:
       # _pygit2.AlreadyExistsError: failed to write reference
       #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
@@ -1235,7 +1248,7 @@ def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
 def _create_package(upstream_conf_yaml: YAML, license_dir: str,
                 gf_dir_content: dict, no_whitelist: bool, is_gf_git: bool,
                 target: str, branch: typing.Union[str, None], force: bool,
-                yes: bool, quiet: bool
+                yes: bool, quiet: bool, add_commit: bool
                 ) -> typing.Tuple[str, typing.List[typing.Tuple[str, int]]]:
   with TemporaryDirectory() as tmp_package_dir:
     family_dir = _create_package_content(tmp_package_dir, upstream_conf_yaml,
@@ -1250,7 +1263,7 @@ def _create_package(upstream_conf_yaml: YAML, license_dir: str,
       return _packagage_to_git(
                               tmp_package_family_dir, target, upstream_conf_yaml,
                               family_dir, gf_dir_content, branch, force,
-                              yes, quiet)
+                              yes, quiet, add_commit)
     else:
       return _packagage_to_dir(
                       tmp_package_family_dir, target, family_dir, force,
@@ -1259,7 +1272,7 @@ def _create_package(upstream_conf_yaml: YAML, license_dir: str,
 
 def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
-                 branch: typing.Union[str, None]=None):
+                 add_commit: bool, branch: typing.Union[str, None]=None):
   # Basic early checks. Raises if target does not qualify.
   _check_target(is_gf_git, target)
   edit = False
@@ -1275,7 +1288,7 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
     try:
       target_label, package_contents = _create_package(upstream_conf_yaml, license_dir,
                       gf_dir_content, no_whitelist, is_gf_git, target, branch, force,
-                      yes, quiet)
+                      yes, quiet, add_commit)
     except UserAbortError as e:
       # The user aborted already, no need to bother any further.
       # Note: looks like there's no user interaction in _create_package,
@@ -1314,8 +1327,6 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
         edit = True
         continue
     break # done!
-
-
 
   print(f'Created files in {target_label}:')
   for entry_name, filesize in package_contents:

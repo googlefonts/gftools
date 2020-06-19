@@ -39,6 +39,12 @@ parser.add_argument(
             help='When -g/--gf-git is used, set the local target branch name instead '
                  'of using the generated branch name, like: "gftools-packager-{family-name}".')
 parser.add_argument(
+            '-c', '--add-commit',
+            action='store_true',
+            help='When -g/--gf-git is used, don\'t override existing branch '
+            'and instead add a new commit to the branch. Use this to create '
+            'a PR for multiple familes e.g. a super family or a bunch update.')
+parser.add_argument(
             '-f','--force',
             action='store_true',
             help='This allows the program to manipulate/change/delete data '
