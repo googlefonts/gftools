@@ -38,7 +38,7 @@ WEIGHTS = {
     "ThinItalic": 250,
     "ExtraLightItalic": 275,
     "LightItalic": 300,
-    "RegularItalic": 400,
+    "Italic": 400,
     "MediumItalic": 500,
     "SemiBoldItalic": 600,
     "BoldItalic": 700,
