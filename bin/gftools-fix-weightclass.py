@@ -34,7 +34,16 @@ WEIGHTS = {
     "SemiBold": 600,
     "Bold": 700,
     "ExtraBold": 800,
-    "Black": 900
+    "Black": 900,
+    "ThinItalic": 250,
+    "ExtraLightItalic": 275,
+    "LightItalic": 300,
+    "RegularItalic": 400,
+    "MediumItalic": 500,
+    "SemiBoldItalic": 600,
+    "BoldItalic": 700,
+    "ExtraBoldItalic": 800,
+    "BlackItalic": 900
 }
 
 
@@ -61,4 +70,3 @@ if __name__ == "__main__":
         print("Please include a path to a font")
     else:
         main(sys.argv[1])
-
