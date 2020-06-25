@@ -20,6 +20,25 @@ parser.add_argument(
             action='store_true',
             help='Load upstream.yaml from a file, use the [name] argument as path.')
 parser.add_argument(
+            '-f','--force',
+            action='store_true',
+            help='This allows the program to manipulate/change/delete data '
+                 'in [target]. Without this flag only adding new items '
+                 '(depends: files, directories or branches, trees, blobs) '
+                 'is allowed.')
+parser.add_argument(
+            '-y',
+            '--no-confirm',
+            dest='yes',
+            action='store_true',
+            help='Don\'t require user interaction, by answering with the '
+                 'default always. Removes all interactivity.')
+parser.add_argument(
+            '-q',
+            '--quiet',
+            action='store_true',
+            help='Don\'t print user interaction dialogues when --no-confirm is used.')
+parser.add_argument(
             'target',
             type=str,
             help='The target of the package. By default a path to a directory. '
@@ -45,24 +64,27 @@ parser.add_argument(
             'and instead add a new commit to the branch. Use this to create '
             'a PR for multiple familes e.g. a super family or a bunch update.')
 parser.add_argument(
-            '-f','--force',
+            '-p', '--pr',
             action='store_true',
-            help='This allows the program to manipulate/change/delete data '
-                 'in [target]. Without this flag only adding new items '
-                 '(depends: files, directories or branches, trees, blobs) '
-                 'is allowed.')
+            help='Make a pull request, when -g/--gf-git. See --pr-upstream '
+            'and --push-upstream.')
 parser.add_argument(
-            '-y',
-            '--no-confirm',
-            dest='yes',
-            action='store_true',
-            help='Don\'t require user interaction, by answering with the '
-                 'default always. Removes all interactivity.')
+            '--pr-upstream',
+            metavar='pr_upstream',
+            type=str,
+            default='google/fonts',
+            help='The upstream where the pull request goes, as a GitHub '
+                 '"owner/repoName" pair. (default: %(default)s)')
 parser.add_argument(
-            '-q',
-            '--quiet',
-            action='store_true',
-            help='Don\'t print user interaction dialogues when --no-confirm is used.')
+            '--push-upstream',
+            metavar='push_upstream',
+            type=str,
+            default='',
+            # we can push to a clone of google/fonts and then pr from
+            # that clone to --pr-upstream, however, our ghactions QA can't
+            # run on a different repo, that's why this is mostly for testing.
+            help='The upstream where the push goes, as a GitHub "owner/repoName" '
+                 'pair. (default: the value of --pr-upstream)')
 parser.add_argument(
             '--no-whitelist',
             action='store_true',
