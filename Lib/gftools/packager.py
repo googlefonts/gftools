@@ -66,6 +66,7 @@ import typing
 from collections import OrderedDict
 import traceback
 from io import StringIO
+from contextlib import contextmanager
 import pygit2 # type: ignore
 from strictyaml import ( # type: ignore
                         Map,
@@ -105,6 +106,7 @@ GITHUB_REPO_SSH_URL = 'git@github.com:{gh_repo_name_with_owner}.git'.format
 GITHUB_GRAPHQL_API = 'https://api.github.com/graphql'
 GITHUB_V3_REST_API = 'https://api.github.com/'
 
+GIT_NEW_BRANCH_PREFIX = 'gftools_packager_'
 # Using object(expression:$rev), we query all three license folders
 # for family_name, but only the entry that exists will return a tree (directory).
 # Non existing directories will be null (i.e. None).
@@ -1092,6 +1094,7 @@ def _git_makedirs_write(repo: pygit2.Repository, tree_builder:pygit2.TreeBuilder
     # It seems unlikely that we want to override existing files here
     # so I copy that behavior.
     if child_tree is not None:
+      # FileExistsError is an OSError so it's probably misused here
       raise FileExistsError(f'The git entry {name} exists as f{child_tree.type_str}.')
     child_tree_builder = repo.TreeBuilder()
 
@@ -1116,13 +1119,97 @@ def _sizeof_fmt(num, suffix='B'):
         num /= 1024.0
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
+def _push(repo: pygit2.Repository, url: str, local_branch_name: str,
+          remote_branch_name: str, force: bool):
+  full_local_ref = local_branch_name if local_branch_name.find('refs/') == 0 \
+                                     else f'refs/heads/{local_branch_name}'
+  full_remote_ref = f'refs/heads/{remote_branch_name}'
+  ref_spec = f'{full_local_ref}:{full_remote_ref}'
+  if force:
+    # ref_spec for force pushing must include a + at the start.
+    ref_spec = f'+{ref_spec}'
+
+  callbacks = PYGit2RemoteCallbacks()
+  with _create_tmp_remote(repo, url) as remote:
+    # https://www.pygit2.org/remotes.html#pygit2.Remote.push
+    # When the remote has a githook installed, that denies the reference
+    # this function will return successfully. Thus it is strongly recommended
+    # to install a callback, that implements RemoteCallbacks.push_update_reference()
+    # and check the passed parameters for successfull operations.
+    remote.push([ref_spec], callbacks=callbacks)
+
+  if callbacks.rejected_push_message is not None:
+    raise Exception(callbacks.rejected_push_message)
+
+def _make_pr(repo: pygit2.Repository, local_branch_name: str, pr_upstream: str, push_upstream: str):
+  print('Making a Pull Request …')
+  if not push_upstream:
+    push_upstream = pr_upstream
+
+  remote_branch_name = local_branch_name
+  # upstream_owner, upstream_repo = push_upstream.split('/')
+  url = GITHUB_REPO_SSH_URL(gh_repo_name_with_owner=push_upstream)
+
+  # We must only allow force pushing/general pushing to branch names that
+  # this tool *likely* created! Otherwise, we may end up force pushing
+  # to master! Hence: we expect a prefix for remote_branch_name indicating
+  # this tool created it.
+  if remote_branch_name.find(GIT_NEW_BRANCH_PREFIX) != 0:
+    remote_branch_name = f'{GIT_NEW_BRANCH_PREFIX}{remote_branch_name.replace(os.sep, "_")}'
+
+  print('git push:\n'
+          f'  url is {url}\n'
+          f'  local branch name is {local_branch_name}\n'
+          f'  remote branch name is {remote_branch_name}\n'
+  )
+  # Always force push?
+  # If force == False and we update an existing remote:
+  #   _pygit2.GitError: cannot push non-fastforwardable reference
+  # But I don't use the --force flag here, because I believe this is
+  # very much the standard case, i.e. that we update existing PRs.
+  _push(repo, url, local_branch_name, remote_branch_name, force=True)
+  print(f'git push: DONE!')
+
+    # hmm, I already know the remote name of google/fonts I believe...
+
+    #_updateUpstream(prRemoteName, prRemoteRef))
+    #// NOTE: at this point the PUSH was already successful, so the branch
+    #// of the PR exists or if it existed it has changed.
+    #getPRResult = _gitHubGetOpenPullRequest(prOAuthToken
+    #                        , prRemoteRef.repoOwner
+    #                        , prRemoteRef.repoName
+    #                        , remoteRef.prHead // head e.g. user:branchName
+    #                        , prRemoteRef.branchName // base e.g. master
+    #                        ))
+    # if(!getPRResult.length) {
+    #  _gitHubPR(prOAuthToken
+    #                       , prMessageTitle
+    #                       , prMessageBody
+    #                         // `${remoteRef.repoOwner}:${remoteRef.branchName}`
+    #                       , remoteRef.prHead
+    #                       , prRemoteRef
+    #                       );
+    #    }
+    #  else
+    #    _gitHubIssueComment(prOAuthToken
+    #                        , prRemoteRef.repoOwner
+    #                        , prRemoteRef.repoName
+    #                        , getPRResult[0].number // the issue number
+    #                        , {body: `Updated:\n\n---\n${prMessageBody}`})
+    #                        .then(result=>{
+    #                            // Add the issue number, the calling code expects it.
+    #                            result.number = getPRResult[0].number;
+    #                            return result;
+    #                        });
+
 def _packagage_to_git(tmp_package_family_dir: str, target: str,
                      upstream_conf_yaml: YAML,
                      family_dir: str, gf_dir_content: typing.Dict,
                      branch: typing.Union[str, None], force:bool,
-                     yes: bool, quiet: bool, add_commit: bool) \
+                     yes: bool, quiet: bool, add_commit: bool,pr: bool,
+                     pr_upstream: str, push_upstream: str) \
                       -> typing.Tuple[str, typing.List[typing.Tuple[str, int]]]:
-  new_branch_name = branch or f'gftools_packager_{family_dir.replace(os.sep, "_")}'
+  new_branch_name = branch or f'{GIT_NEW_BRANCH_PREFIX}{family_dir.replace(os.sep, "_")}'
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
   remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
@@ -1193,6 +1280,12 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
       entry_name = os.path.join(root, filename)
       filesize = commit.tree[entry_name].size
       package_contents.append((entry_name, filesize))
+
+
+
+  if pr:
+    _make_pr(repo, new_branch_name, pr_upstream, push_upstream)
+
   return target_label, package_contents
 
 def _packagage_to_dir(tmp_package_family_dir: str, target: str,
@@ -1248,7 +1341,8 @@ def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
 def _create_package(upstream_conf_yaml: YAML, license_dir: str,
                 gf_dir_content: dict, no_whitelist: bool, is_gf_git: bool,
                 target: str, branch: typing.Union[str, None], force: bool,
-                yes: bool, quiet: bool, add_commit: bool
+                yes: bool, quiet: bool, add_commit: bool, pr: bool,
+                pr_upstream: str, push_upstream: str
                 ) -> typing.Tuple[str, typing.List[typing.Tuple[str, int]]]:
   with TemporaryDirectory() as tmp_package_dir:
     family_dir = _create_package_content(tmp_package_dir, upstream_conf_yaml,
@@ -1262,17 +1356,17 @@ def _create_package(upstream_conf_yaml: YAML, license_dir: str,
     if is_gf_git:
       return _packagage_to_git(
                               tmp_package_family_dir, target, upstream_conf_yaml,
-                              family_dir, gf_dir_content, branch, force,
-                              yes, quiet, add_commit)
+                              family_dir, gf_dir_content, branch, force, yes,
+                              quiet, add_commit, pr, pr_upstream, push_upstream)
     else:
       return _packagage_to_dir(
                       tmp_package_family_dir, target, family_dir, force,
                       yes, quiet)
 
-
 def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
-                 add_commit: bool, branch: typing.Union[str, None]=None):
+                 add_commit: bool, pr: bool, pr_upstream: str,
+                 push_upstream: str, branch: typing.Union[str, None]=None):
   # Basic early checks. Raises if target does not qualify.
   _check_target(is_gf_git, target)
   edit = False
@@ -1288,7 +1382,7 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
     try:
       target_label, package_contents = _create_package(upstream_conf_yaml, license_dir,
                       gf_dir_content, no_whitelist, is_gf_git, target, branch, force,
-                      yes, quiet, add_commit)
+                      yes, quiet, add_commit, pr, pr_upstream, push_upstream)
     except UserAbortError as e:
       # The user aborted already, no need to bother any further.
       # Note: looks like there's no user interaction in _create_package,
@@ -1337,8 +1431,8 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
           branch: typing.Union[str, None] = None) -> typing.Union[str, None]:
   """
   Find a remote-name that is a good fit for the GitHub owner and repo-name.
-  A good fit is when we can use it to fetch/push from GitHubs repository
-  the `branch` if branch is given or any branch if `branch` is None.
+  A good fit is when we can use it to fetch/push from/to GitHubs repository
+  to/from the `branch` if branch is given or any branch if `branch` is None.
 
   Returns remote-name or None
   """
@@ -1365,9 +1459,11 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
     # To be honest, we'll like encounter the (default) first refspec case
     # in almost all matching remotes.
     accepted_refspecs = {
-      f'+refs/heads/*:refs/remotes/{remote.name}/*',
-      f'+refs/heads/master:refs/remotes/{remote.name}/master'
+      f'+refs/heads/*:refs/remotes/{remote.name}/*'
     }
+    if branch:
+      accepted_refspecs.add(
+                  f'+refs/heads/{branch}:refs/remotes/{remote.name}/{branch}')
     for refspec in remote.fetch_refspecs:
       if refspec in accepted_refspecs:
         # Could ask the user here if this remote should be used
@@ -1384,6 +1480,24 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
 
 
 class PYGit2RemoteCallbacks(pygit2.RemoteCallbacks):
+  # this will be set if a push was rejected
+  rejected_push_message: typing.Union[str, None] = None
+  def push_update_reference(self, refname, message):
+
+    """Push update reference callback. Override with your own function to
+    report the remote’s acceptance or rejection of reference updates.
+
+    refnamestr
+
+        The name of the reference (on the remote).
+    messagestr
+
+        Rejection message from the remote. If None, the update was accepted.
+    """
+    if message is not None:
+      self.rejected_push_message = (f'Update to reference {refname} got '
+                                    f'rejected with message {message}')
+
   def credentials(self, url, username_from_url, allowed_types):
     if allowed_types & pygit2.credentials.GIT_CREDENTIAL_USERNAME:
       print('GIT_CREDENTIAL_USERNAME')
@@ -1426,6 +1540,34 @@ def _git_fetch_master(repo: pygit2.Repository, remote_name: str) -> None:
   stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
   print(f'DONE fetch {_sizeof_fmt(stats.received_bytes)} '
         f'{stats.indexed_objects} receivedobjects')
+
+@contextmanager
+def _create_tmp_remote(repo: pygit2.Repository, url:str) -> typing.Iterator[pygit2.Remote]:
+  remote_name_template = 'tmp_{}'.format
+  # create a new remote (with unique name)
+  i = 0
+  tmp_name: str
+  remote: pygit2.Remote
+  # try to create and expect to fail if it exists
+  while True:
+    try:
+      tmp_name = remote_name_template(i)
+      remote = repo.remotes.create(tmp_name, url)
+      break
+    except ValueError as e:
+      # raises ValueError: remote '{tmp_name}' already exists
+      if 'already exists' not in f'{e}':
+        # ValueError is rather generic, maybe another condition can raise
+        # it, hence I check for the phrase "already exists" as well.
+        # I think something similar to FileExistsError would have been better
+        # to raise here. Though that's an OSError.
+        raise e
+      i += 1
+      continue
+  try:
+    yield remote
+  finally:
+    repo.remotes.delete(tmp_name)
 
 # note: currently unused!
 def _git_create_remote(repo: pygit2.Repository) -> None:
