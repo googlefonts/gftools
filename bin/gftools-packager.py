@@ -70,14 +70,12 @@ parser.add_argument(
             'and --push-upstream.')
 parser.add_argument(
             '--pr-upstream',
-            metavar='pr_upstream',
             type=str,
             default='google/fonts',
             help='The upstream where the pull request goes, as a GitHub '
                  '"owner/repoName" pair. (default: %(default)s)')
 parser.add_argument(
             '--push-upstream',
-            metavar='push_upstream',
             type=str,
             default='',
             # we can push to a clone of google/fonts and then pr from
