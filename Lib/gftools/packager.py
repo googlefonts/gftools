@@ -65,7 +65,7 @@ import pprint
 import typing
 from collections import OrderedDict
 import traceback
-from io import StringIO
+from io import StringIO, BytesIO
 from contextlib import contextmanager
 import urllib.parse
 import pygit2 # type: ignore
@@ -83,9 +83,9 @@ from strictyaml import ( # type: ignore
                         YAMLValidationError,
                         YAML
                       )
-
 from warnings import warn
 import functools
+from fontTools.ttLib import TTFont # type: ignore
 
 # ignore type because mypy error: Module 'google.protobuf' has no
 # attribute 'text_format'
@@ -387,10 +387,14 @@ files:
 
 # ALLOWED FILES
 LICENSE_FILES_2_DIRS = (
-        ('UFL.txt', 'ufl')
+        ('LICENSE.txt', 'apache')
+      , ('UFL.txt', 'ufl')
       , ('OFL.txt', 'ofl')
-      , ('LICENSE.txt', 'apache')
+
 )
+
+# ('apache', 'ufl', 'ofl')
+LICENSE_DIRS = tuple(zip(*LICENSE_FILES_2_DIRS))[1]
 
 # /path/to/google/Fonts$ find */*/*  | grep -E "(ofl|apache|ufl)/*/*" \
 #                                    | grep -Ev "*/*/*.ttf" \
@@ -466,7 +470,7 @@ def _get_gf_dir_content(family_name: str) \
         -> typing.Tuple[typing.Union[str, None], typing.Dict[str, typing.Dict[str, typing.Any]]]:
   gfentry = get_gh_gf_family_entry(family_name)
   entries = None
-  for license_dir in ['apache', 'ufl', 'ofl']:
+  for license_dir in LICENSE_DIRS:
     if gfentry['data']['repository'][license_dir] is not None:
       entries = gfentry['data']['repository'][license_dir]['entries']
   if entries is None:
@@ -719,7 +723,8 @@ def _user_input_license(yes: bool=False, quiet: bool=False):
               default='o', yes=yes, quiet=quiet)
   if answer == 'q':
     raise UserAbortError()
-  license_dir = dict(o='ofl', a='apache', u='ufl')[answer]
+
+  license_dir = {d[0]:d for d in LICENSE_DIRS}[answer]
   return license_dir
 
 def _upstream_conf_from_metadata(metadata_str: str, yes: bool=False
@@ -1185,7 +1190,8 @@ def create_github_issue_comment(repo_owner: str, repo_name: str,
   return _post_github(url, payload)
 
 def _make_pr(repo: pygit2.Repository, local_branch_name: str,
-                                  pr_upstream: str, push_upstream: str):
+                                  pr_upstream: str, push_upstream: str,
+                                  pr_title: str, pr_message_body: str):
   print('Making a Pull Request …')
   if not push_upstream:
     push_upstream = pr_upstream
@@ -1223,20 +1229,120 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
   open_prs = get_github_open_pull_requests(pr_owner, pr_repo, pr_head,
                                            pr_base_branch)
 
-  pr_message_body = f'Could have info about the PR content, reports are created by CI ...'
   if not len(open_prs):
     # No open PRs, creating …
-    pr_title  = f'Testing gftools packager'
     result = create_github_pull_request(pr_owner, pr_repo, pr_head,
                                 pr_base_branch, pr_title, pr_message_body)
     print(f'Created a PR #{result["number"]} {result["html_url"]}')
   else:
     # found open PR
     pr_issue_number = open_prs[0]['number']
-    pr_comment_body = f'Updated:\n\n---\n{pr_message_body}'
+    pr_comment_body = f'Updated\n\n## {pr_title}\n\n---\n{pr_message_body}'
     result = create_github_issue_comment(pr_owner, pr_repo, pr_issue_number,
                                                         pr_comment_body)
     print(f'Created a comment in PR #{pr_issue_number} {result["html_url"]}')
+
+def _get_root_commit(repo: pygit2.Repository, base_remote_branch:str,
+                                  tip_commit: pygit2.Commit) -> pygit2.Commit:
+  for root_commit in repo.walk(tip_commit.id,
+                  pygit2.GIT_SORT_TOPOLOGICAL | pygit2.GIT_SORT_TIME):
+      try:
+        # If it doesn't raise KeyError i.e. root_commit is contained in
+        # our base_remote_branch and not part of the PR.
+        return repo.branches.remote.with_commit(root_commit)[base_remote_branch]
+      except KeyError:
+        continue
+      break;
+
+def _get_change_info_from_diff(repo: pygit2.Repository, root_commit: pygit2.Commit,
+                                            tip_commit: pygit2.Commit) -> typing.Dict:
+  # I probably also want the changed files between root_commit and tip commit
+  diff =  repo.diff(root_commit, tip_commit)
+  all_touched_files = set()
+  for delta in diff.deltas:
+    # possible status chars:
+    #   GIT_DELTA_ADDED:      A
+    #   GIT_DELTA_DELETED:    D
+    #   GIT_DELTA_MODIFIED:   M
+    #   GIT_DELTA_RENAMED:    R
+    #   GIT_DELTA_COPIED:     C
+    #   GIT_DELTA_IGNORED:    I
+    #   GIT_DELTA_UNTRACKED:  ?
+    #   GIT_DELTA_TYPECHANGE: T
+    #   GIT_DELTA_UNREADABLE: X
+    #   default:              ' '
+    if delta.status_char() == 'D':
+      # don't look at D=deleted files, tgnore something else?
+      continue
+    all_touched_files.add(delta.new_file.path)
+  touched_family_dirs = set()
+  for filename in all_touched_files:
+    for dirname in LICENSE_DIRS:
+      if filename.startswith(f'{dirname}{os.path.sep}'):
+        # items are e.g. ('ofl', 'gelasio')
+        touched_family_dirs.add(tuple(filename.split(os.path.sep)[:2]))
+        break
+  family_changes_dict = {}
+  for dir_path_tuple in touched_family_dirs:
+    family_tree: pygit2.Tree = tip_commit.tree \
+                    if type(tip_commit) is pygit2.Commit else tip_commit
+    for pathpart in dir_path_tuple:
+      family_tree = family_tree / pathpart
+
+    metadata_blob: pygit2.Blob = family_tree / 'METADATA.pb'
+    metadata = fonts_pb2.FamilyProto()
+    text_format.Parse(metadata_blob.data, metadata)
+
+    # get the version
+    first_font_file_name = metadata.fonts[0].filename
+    first_font_blob: pygit2.Blob = family_tree / first_font_file_name
+    first_font_file = BytesIO(first_font_blob.data)
+    ttFont = TTFont(first_font_file)
+    version:typing.Union[None, str] = None
+    NAME_ID_VERSION = 5
+    for entry in ttFont['name'].names:
+      if entry.nameID == NAME_ID_VERSION:
+        # just taking the first instance
+        version = entry.string.decode(entry.getEncoding())
+        if version:
+          break
+
+    # repoNameWithOwner
+    prefix  = 'https://github.com/'
+    suffix = '.git'
+    repoNameWithOwner: typing.Union[None,str] = None
+    if metadata.source.repository_url.startswith(prefix):
+      repoNameWithOwner = '/'.join(metadata.source.repository_url[len(prefix):]
+                                           .split('/')[0:2])
+      if repoNameWithOwner.endswith(suffix):
+        repoNameWithOwner = repoNameWithOwner[:-len(suffix)]
+    commit_url: typing.Union[None,str] = None
+    if repoNameWithOwner:
+      commit_url = f'https://github.com/{repoNameWithOwner}/commit/{metadata.source.commit}'
+
+    family_changes_dict['/'.join(dir_path_tuple)] = {
+      'family_name': metadata.name,
+      'repository': metadata.source.repository_url,
+      'commit': metadata.source.commit,
+      'version': version or '(unknown version)',
+      'repoNameWithOwner': repoNameWithOwner,
+      'commit_url': commit_url
+    }
+  return family_changes_dict
+
+def _title_message_from_diff(repo: pygit2.Repository, root_commit: pygit2.Commit,
+                            tip_commit: pygit2.Commit) -> typing.Tuple[str, str]:
+  family_changes_dict = _get_change_info_from_diff(repo, root_commit, tip_commit)
+  title = []
+  body = []
+  for _, fam_entry in family_changes_dict.items():
+    title.append(f'{fam_entry["family_name"]}: {fam_entry["version"]} added')
+    commit = fam_entry['commit_url'] or fam_entry['commit']
+    body.append(f'* {fam_entry["family_name"]} '
+               f'{fam_entry["version"]} taken from the upstream repo '
+               f'{fam_entry["repository"]} at commit {commit}.'
+               )
+  return '; '.join(title), '\n'.join(body)
 
 def _packagage_to_git(tmp_package_family_dir: str, target: str,
                      upstream_conf_yaml: YAML,
@@ -1249,6 +1355,7 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
   remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
+  base_remote_branch = f'{remote_name}/master'
   if remote_name is None:
     raise Exception('No remote found for google/fonts master.')
 
@@ -1262,9 +1369,9 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
   if not base_commit:
     #fetch! make sure we're on the actual gf master HEAD
     _git_fetch_master(repo, remote_name)
-    base_commit = repo.revparse_single(f'refs/remotes/{remote_name}/master')
-
-
+    # base_commit = repo.revparse_single(f'refs/remotes/{base_remote_branch}')
+    # same but maybe better readable:
+    base_commit = repo.branches.remote[base_remote_branch].peel()
 
   # Maybe I can start with the commit tree here ...
   treeBuilder = repo.TreeBuilder(base_commit.tree)
@@ -1276,16 +1383,17 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
   author = pygit2.Signature(user_name, user_email)
   committer = pygit2.Signature(user_name, user_email)
 
+  new_tree_id = treeBuilder.write()
+  title, body = _title_message_from_diff(repo, base_commit.tree, repo.get(new_tree_id))
   commit_id = repo.create_commit(
           None,
           author, committer,
-          f'[gftools-packager] {"Update" if gf_dir_content else "Create"}: '
-          f'{upstream_conf_yaml["name"]}',
-          treeBuilder.write(), # string object ID
+          f'[gftools-packager] {"Update" if gf_dir_content else "Create"} — '
+          f'{title}\n\n{body}',
+          new_tree_id,
           [base_commit.id] # parents
   )
   commit = repo.get(commit_id)
-
   # create branch or add to an existing one if add_commit
   while True:
     try:
@@ -1317,10 +1425,13 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
       filesize = commit.tree[entry_name].size
       package_contents.append((entry_name, filesize))
 
-
-
   if pr:
-    _make_pr(repo, new_branch_name, pr_upstream, push_upstream)
+    git_branch: pygit2.Branch = repo.branches.local[new_branch_name]
+    tip_commit = git_branch.peel()
+    root_commit = _get_root_commit(repo, base_remote_branch, tip_commit)
+    pr_title, pr_message_body = _title_message_from_diff(repo, root_commit, tip_commit)
+    _make_pr(repo, new_branch_name, pr_upstream, push_upstream,
+                                            pr_title, pr_message_body)
 
   return target_label, package_contents
 
