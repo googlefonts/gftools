@@ -20,38 +20,34 @@ the correct value.
 """
 from __future__ import print_function
 from fontTools.ttLib import TTFont
+from fontbakery.parse import style_parse
 import sys
 import os
 
 
-# TODO (M Foley) support VFs
-WEIGHTS = {
-    "Thin": 250,
-    "ExtraLight": 275,
-    "Light": 300,
-    "Regular": 400,
-    "Medium": 500,
-    "SemiBold": 600,
-    "Bold": 700,
-    "ExtraBold": 800,
-    "Black": 900
-}
-
-
 def main(font_path):
+    filename = os.path.basename(font_path)
     font = TTFont(font_path)
-    filename = os.path.basename(font_path)[:-4]
-    if not "-" in filename:
-        raise Exception("Font filename is not canonical. Filename should "
-                        "be structured as FamilyName-StyleName.ttf "
-                        "e.g Montserrat-Regular.ttf")
-    family_name, style_name = filename.split("-")
+    desired_style = style_parse(font)
     current_weight_class = font["OS/2"].usWeightClass
-    if current_weight_class != WEIGHTS[style_name]:
-        print("{}: Updating weightClass to {}".format(filename,
-                                                      WEIGHTS[style_name]))
-        font['OS/2'].usWeightClass = WEIGHTS[style_name]
-        font.save(font_path + ".fix")
+    updated = False
+    if current_weight_class != desired_style.usWeightClass:
+        print(f"{filename}: Updating weightClass to {desired_style.usWeightClass}")
+        font['OS/2'].usWeightClass = desired_style.usWeightClass
+        updated = True
+    # If static otf, update Thin and ExtraLight
+    # TODO (M Foley) fontbakery's style_parse should do this
+    if "CFF " in font and 'fvar' not in font:
+        if desired_style.usWeightClass == 100:
+            print(f"{filename}: Updating weightClass to {250}")
+            font['OS/2'].usWeightClass = 250
+            updated = True
+        elif desired_style.usWeightClass == 200:
+            print(f"{filename}: Updating weightClass to {275}")
+            font['OS/2'].usWeightClass = 275
+            updated = True
+    if updated:
+        font.save(font.reader.file.name + ".fix")
     else:
         print("{}: Skipping. Current WeightClass is correct".format(filename))
 
