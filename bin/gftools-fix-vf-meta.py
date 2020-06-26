@@ -24,7 +24,7 @@ from fontTools.ttLib import TTFont
 import argparse
 
 
-WGHT_NAMES = {v:k for k,v in _KNOWN_WEIGHTS.items()}
+WGHT_NAMES = {v:k for k,v in _KNOWN_WEIGHTS.items() if k != "Hairline"}
 WGHT_NAMES[400] = "Regular"
 WGHT_NAMES[1000] = "ExtraBlack"
 
