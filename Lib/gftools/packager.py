@@ -67,6 +67,7 @@ from collections import OrderedDict
 import traceback
 from io import StringIO
 from contextlib import contextmanager
+import urllib.parse
 import pygit2 # type: ignore
 from strictyaml import ( # type: ignore
                         Map,
@@ -104,7 +105,7 @@ GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.forma
 GITHUB_REPO_SSH_URL = 'git@github.com:{gh_repo_name_with_owner}.git'.format
 
 GITHUB_GRAPHQL_API = 'https://api.github.com/graphql'
-GITHUB_V3_REST_API = 'https://api.github.com/'
+GITHUB_V3_REST_API = 'https://api.github.com'
 
 GIT_NEW_BRANCH_PREFIX = 'gftools_packager_'
 # Using object(expression:$rev), we query all three license folders
@@ -182,16 +183,20 @@ def _get_github_api_token() -> str:
   # $ export GH_TOKEN={the GitHub API token}
   return os.environ['GH_TOKEN']
 
-def _run_gh_graphql_query(query, variables):
+def _post_github(url: str, payload: typing.Dict):
   github_api_token = _get_github_api_token()
-  headers = {"Authorization": f'bearer {github_api_token}'}
-  request = requests.post(GITHUB_GRAPHQL_API, json={'query': query, 'variables': variables}, headers=headers)
-  request.raise_for_status()
-  json = request.json()
+  headers = {'Authorization': f'bearer {github_api_token}'}
+  response = requests.post(url, json=payload, headers=headers)
+  response.raise_for_status()
+  json = response.json()
   if 'errors' in json:
     errors = pprint.pformat(json['errors'], indent=2)
-    raise Exception(f'GrapQL query failed:\n {errors}')
+    raise Exception(f'GitHub POST query failed to url {url}:\n {errors}')
   return json
+
+def _run_gh_graphql_query(query, variables):
+  payload = {'query': query, 'variables': variables}
+  return _post_github(GITHUB_GRAPHQL_API, payload)
 
 def _family_name_normal(family_name: str) -> str:
   return family_name.lower()\
@@ -229,14 +234,14 @@ def _git_tree_walk(path, tree, topdown=True):
   yield from _git_tree_iterate(path.split(os.sep), tree[path], topdown)
 
 def get_github_blob(repo_owner, repo_name, file_sha):
-  url = f'{GITHUB_V3_REST_API}repos/{repo_owner}/{repo_name}/git/blobs/{file_sha}'
+  url = f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/git/blobs/{file_sha}'
   headers = {
     'Accept': 'application/vnd.github.v3.raw'
   }
-  response = request = requests.get(url, headers=headers)
+  response = requests.get(url, headers=headers)
   # print(f'response headers: {pprint.pformat(response.headers, indent=2)}')
   # raises requests.exceptions.HTTPError
-  request.raise_for_status()
+  response.raise_for_status()
   return response
 
 def get_github_gf_blob(file_sha):
@@ -1050,7 +1055,6 @@ def _check_directory_target(target: str) -> None:
   if not os.path.isdir(target):
     raise ProgramAbortError(f'Target "{target}" is not a directory.')
 
-
 def _check_target(is_gf_git: bool, target: str) -> None:
   if is_gf_git:
     return _check_git_target(target)
@@ -1141,13 +1145,54 @@ def _push(repo: pygit2.Repository, url: str, local_branch_name: str,
   if callbacks.rejected_push_message is not None:
     raise Exception(callbacks.rejected_push_message)
 
-def _make_pr(repo: pygit2.Repository, local_branch_name: str, pr_upstream: str, push_upstream: str):
+def get_github_open_pull_requests(repo_owner: str, repo_name: str,
+                pr_head: str, pr_base_branch: str) -> typing.Union[typing.List]:
+  url = (f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/pulls?state=open'
+         f'&head={urllib.parse.quote(pr_head)}'
+         f'&base={urllib.parse.quote(pr_base_branch)}')
+  github_api_token = _get_github_api_token()
+  headers = {'Authorization': f'bearer {github_api_token}'}
+
+  response = requests.get(url, headers=headers)
+  # print(f'response headers: {pprint.pformat(response.headers, indent=2)}')
+  # raises requests.exceptions.HTTPError
+  response.raise_for_status()
+  json = response.json()
+  if 'errors' in json:
+    errors = pprint.pformat(json['errors'], indent=2)
+    raise Exception(f'GitHub REST query failed:\n {errors}')
+  return json
+
+def create_github_pull_request(repo_owner: str, repo_name: str, pr_head: str,
+                               pr_base_branch: str, title: str, body: str):
+  url = f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/pulls'
+  payload = {
+    'title': title,
+    'body': body,
+    'head': pr_head,
+    'base': pr_base_branch,
+    'maintainer_can_modify': True
+  }
+  return _post_github(url, payload)
+
+def create_github_issue_comment(repo_owner: str, repo_name: str,
+                                issue_number: int, pr_comment_body: str):
+  url = (f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/issues'
+          f'/{issue_number}/comments')
+  payload = {
+    'body': pr_comment_body
+  }
+  return _post_github(url, payload)
+
+def _make_pr(repo: pygit2.Repository, local_branch_name: str,
+                                  pr_upstream: str, push_upstream: str):
   print('Making a Pull Request …')
   if not push_upstream:
     push_upstream = pr_upstream
 
   remote_branch_name = local_branch_name
-  # upstream_owner, upstream_repo = push_upstream.split('/')
+  push_owner, push_repo = push_upstream.split('/')
+  pr_owner, pr_repo = pr_upstream.split('/')
   url = GITHUB_REPO_SSH_URL(gh_repo_name_with_owner=push_upstream)
 
   # We must only allow force pushing/general pushing to branch names that
@@ -1170,37 +1215,28 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str, pr_upstream: str, 
   _push(repo, url, local_branch_name, remote_branch_name, force=True)
   print(f'git push: DONE!')
 
-    # hmm, I already know the remote name of google/fonts I believe...
-
+  pr_head = f'{push_owner}:{remote_branch_name}'
+  pr_base_branch = 'master'  # currently we always do PRs to master
     #_updateUpstream(prRemoteName, prRemoteRef))
     #// NOTE: at this point the PUSH was already successful, so the branch
     #// of the PR exists or if it existed it has changed.
-    #getPRResult = _gitHubGetOpenPullRequest(prOAuthToken
-    #                        , prRemoteRef.repoOwner
-    #                        , prRemoteRef.repoName
-    #                        , remoteRef.prHead // head e.g. user:branchName
-    #                        , prRemoteRef.branchName // base e.g. master
-    #                        ))
-    # if(!getPRResult.length) {
-    #  _gitHubPR(prOAuthToken
-    #                       , prMessageTitle
-    #                       , prMessageBody
-    #                         // `${remoteRef.repoOwner}:${remoteRef.branchName}`
-    #                       , remoteRef.prHead
-    #                       , prRemoteRef
-    #                       );
-    #    }
-    #  else
-    #    _gitHubIssueComment(prOAuthToken
-    #                        , prRemoteRef.repoOwner
-    #                        , prRemoteRef.repoName
-    #                        , getPRResult[0].number // the issue number
-    #                        , {body: `Updated:\n\n---\n${prMessageBody}`})
-    #                        .then(result=>{
-    #                            // Add the issue number, the calling code expects it.
-    #                            result.number = getPRResult[0].number;
-    #                            return result;
-    #                        });
+  open_prs = get_github_open_pull_requests(pr_owner, pr_repo, pr_head,
+                                           pr_base_branch)
+
+  pr_message_body = f'Could have info about the PR content, reports are created by CI ...'
+  if not len(open_prs):
+    # No open PRs, creating …
+    pr_title  = f'Testing gftools packager'
+    result = create_github_pull_request(pr_owner, pr_repo, pr_head,
+                                pr_base_branch, pr_title, pr_message_body)
+    print(f'Created a PR #{result["number"]} {result["html_url"]}')
+  else:
+    # found open PR
+    pr_issue_number = open_prs[0]['number']
+    pr_comment_body = f'Updated:\n\n---\n{pr_message_body}'
+    result = create_github_issue_comment(pr_owner, pr_repo, pr_issue_number,
+                                                        pr_comment_body)
+    print(f'Created a comment in PR #{pr_issue_number} {result["html_url"]}')
 
 def _packagage_to_git(tmp_package_family_dir: str, target: str,
                      upstream_conf_yaml: YAML,
