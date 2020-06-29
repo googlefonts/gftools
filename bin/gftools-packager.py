@@ -16,7 +16,9 @@ parser.add_argument(
                  'If the name ends with the ".yaml" suffix, it\'s treated '
                  'as a file otherwise it\'s used as family name and packager '
                  'tries to gather upstream configuration from the google/fonts '
-                 'GitHub repository.')
+                 'GitHub repository. If the name is "-", a hyphen, no package '
+                 'will be created, this is useful to only make a PR, see '
+                 '-p/--pr, from an already created branch.')
 parser.add_argument(
             '-f','--force',
             action='store_true',

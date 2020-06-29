@@ -1344,11 +1344,83 @@ def _title_message_from_diff(repo: pygit2.Repository, root_commit: pygit2.Commit
                )
   return '; '.join(title), '\n'.join(body)
 
-def _packagage_to_git(tmp_package_family_dir: str, target: str,
+def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
+            yes: bool, quiet: bool, new_branch_name: str, remote_name: str,
+            base_remote_branch: str, tmp_package_family_dir: str,
+            family_dir: str, gf_dir_content: typing.Dict):
+    base_commit = None
+    if add_commit:
+      try:
+        base_commit = repo.branches.local[new_branch_name].peel()
+      except KeyError as e:
+        pass
+
+    if not base_commit:
+      #fetch! make sure we're on the actual gf master HEAD
+      _git_fetch_master(repo, remote_name)
+      # base_commit = repo.revparse_single(f'refs/remotes/{base_remote_branch}')
+      # same but maybe better readable:
+      base_commit = repo.branches.remote[base_remote_branch].peel()
+
+    # Maybe I can start with the commit tree here ...
+    treeBuilder = repo.TreeBuilder(base_commit.tree)
+    _git_copy_dir(repo, treeBuilder, tmp_package_family_dir, family_dir)
+
+    # create the commit
+    user_name = list(repo.config.get_multivar('user.name'))[0]
+    user_email = list(repo.config.get_multivar('user.email'))[0]
+    author = pygit2.Signature(user_name, user_email)
+    committer = pygit2.Signature(user_name, user_email)
+
+    new_tree_id = treeBuilder.write()
+    title, body = _title_message_from_diff(repo, base_commit.tree, repo.get(new_tree_id))
+    commit_id = repo.create_commit(
+            None,
+            author, committer,
+            f'[gftools-packager] {"Update" if gf_dir_content else "Create"} — '
+            f'{title}\n\n{body}',
+            new_tree_id,
+            [base_commit.id] # parents
+    )
+    commit = repo.get(commit_id)
+    # create branch or add to an existing one if add_commit
+    while True:
+      try:
+        repo.branches.local.create(new_branch_name, commit, force=add_commit or force)
+      except pygit2.AlreadyExistsError:
+        # _pygit2.AlreadyExistsError: failed to write reference
+        #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
+        #     that name already exists.
+        answer = user_input(f'Can\'t override existing branch {new_branch_name}'
+                            ' without explicit permission.',
+                OrderedDict(f='force override',
+                            q='quit program'),
+                default='q', yes=yes, quiet=quiet)
+        if answer == 'q':
+          raise UserAbortError(f'Can\'t override existing branch {new_branch_name}. '
+                              'Use --branch to specify another branch name. '
+                              'Use --force to allow explicitly.')
+        else: # answer == 'f'
+          force = True
+          continue
+      break
+
+    # only for reporting
+    target_label = f'git branch {new_branch_name}'
+    package_contents = []
+    for root, dirs, files in _git_tree_walk(family_dir, commit.tree):
+      for filename in files:
+        entry_name = os.path.join(root, filename)
+        filesize = commit.tree[entry_name].size
+        package_contents.append((entry_name, filesize))
+    _print_package_report(target_label, package_contents)
+
+def _packagage_to_git(create_package: bool, tmp_package_family_dir: str,
+                     target: str,
                      upstream_conf_yaml: YAML,
                      family_dir: str, gf_dir_content: typing.Dict,
                      branch: typing.Union[str, None], force:bool,
-                     yes: bool, quiet: bool, add_commit: bool,pr: bool,
+                     yes: bool, quiet: bool, add_commit: bool, pr: bool,
                      pr_upstream: str, push_upstream: str) \
                       -> None:
   new_branch_name = branch or f'{GIT_NEW_BRANCH_PREFIX}{family_dir.replace(os.sep, "_")}'
@@ -1359,73 +1431,10 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
   if remote_name is None:
     raise Exception('No remote found for google/fonts master.')
 
-  base_commit = None
-  if add_commit:
-    try:
-      base_commit = repo.branches.local[branch].peel()
-    except KeyError as e:
-      pass
-
-  if not base_commit:
-    #fetch! make sure we're on the actual gf master HEAD
-    _git_fetch_master(repo, remote_name)
-    # base_commit = repo.revparse_single(f'refs/remotes/{base_remote_branch}')
-    # same but maybe better readable:
-    base_commit = repo.branches.remote[base_remote_branch].peel()
-
-  # Maybe I can start with the commit tree here ...
-  treeBuilder = repo.TreeBuilder(base_commit.tree)
-  _git_copy_dir(repo, treeBuilder, tmp_package_family_dir, family_dir)
-
-  # create the commit
-  user_name = list(repo.config.get_multivar('user.name'))[0]
-  user_email = list(repo.config.get_multivar('user.email'))[0]
-  author = pygit2.Signature(user_name, user_email)
-  committer = pygit2.Signature(user_name, user_email)
-
-  new_tree_id = treeBuilder.write()
-  title, body = _title_message_from_diff(repo, base_commit.tree, repo.get(new_tree_id))
-  commit_id = repo.create_commit(
-          None,
-          author, committer,
-          f'[gftools-packager] {"Update" if gf_dir_content else "Create"} — '
-          f'{title}\n\n{body}',
-          new_tree_id,
-          [base_commit.id] # parents
-  )
-  commit = repo.get(commit_id)
-  # create branch or add to an existing one if add_commit
-  while True:
-    try:
-      repo.branches.local.create(new_branch_name, commit, force=add_commit or force)
-    except pygit2.AlreadyExistsError:
-      # _pygit2.AlreadyExistsError: failed to write reference
-      #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
-      #     that name already exists.
-      answer = user_input(f'Can\'t override existing branch {new_branch_name}'
-                          ' without explicit permission.',
-              OrderedDict(f='force override',
-                          q='quit program'),
-              default='q', yes=yes, quiet=quiet)
-      if answer == 'q':
-        raise UserAbortError(f'Can\'t override existing branch {new_branch_name}. '
-                            'Use --branch to specify another branch name. '
-                            'Use --force to allow explicitly.')
-      else: # answer == 'f'
-        force = True
-        continue
-    break
-
-  # only for reporting
-  target_label = f'git branch {new_branch_name}'
-  package_contents = []
-  for root, dirs, files in _git_tree_walk(family_dir, commit.tree):
-    for filename in files:
-      entry_name = os.path.join(root, filename)
-      filesize = commit.tree[entry_name].size
-      package_contents.append((entry_name, filesize))
-  _print_package_report(target_label, package_contents)
-
+  if create_package:
+    _git_make_commit(repo, add_commit, force, yes, quiet, new_branch_name,
+                     remote_name, base_remote_branch, tmp_package_family_dir,
+                     family_dir, gf_dir_content)
 
   if pr:
     git_branch: pygit2.Branch = repo.branches.local[new_branch_name]
@@ -1484,27 +1493,43 @@ def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
     break
   return filename
 
-def _create_package(upstream_conf_yaml: YAML, license_dir: str,
-                gf_dir_content: dict, no_whitelist: bool, is_gf_git: bool,
+def _create_package_and_dispatch(create_package: bool,
+                upstream_conf_yaml: typing.Union[YAML, None],
+                license_dir: str,
+                gf_dir_content: dict,
+                no_whitelist: bool, is_gf_git: bool,
                 target: str, branch: typing.Union[str, None], force: bool,
                 yes: bool, quiet: bool, add_commit: bool, pr: bool,
                 pr_upstream: str, push_upstream: str
                 ) -> None:
-  with TemporaryDirectory() as tmp_package_dir:
-    family_dir = _create_package_content(tmp_package_dir, upstream_conf_yaml,
+  if create_package:
+    ContextManagerConstructor = TemporaryDirectory # type: ignore
+  else:
+    @contextmanager
+    def ContextManagerConstructor()-> typing.Iterator[str]:
+      yield ''
+
+  tmp_package_family_dir: typing.Union[str, None] = None
+  with ContextManagerConstructor() as tmp_package_dir:
+    if create_package:
+      family_dir = _create_package_content(tmp_package_dir, upstream_conf_yaml,
                                 license_dir, gf_dir_content, no_whitelist)
-    tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
+      tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
+    else:
+      family_dir = ''
+      tmp_package_family_dir = ''
 
     # NOTE: if there are any files outside of family_dir that need moving
     # that is not yet supported! The reason is, there's no case for this
     # yet. So, if _create_package_content is changed to put files outside
     # of family_dir, these targets will have to follow and implement it.
     if is_gf_git:
-      return _packagage_to_git(
+      return _packagage_to_git(create_package,
                               tmp_package_family_dir, target, upstream_conf_yaml,
                               family_dir, gf_dir_content, branch, force, yes,
                               quiet, add_commit, pr, pr_upstream, push_upstream)
-    else:
+    elif create_package:
+      # this branch has no use without create_package
       return _packagage_to_dir(
                       tmp_package_family_dir, target, family_dir, force,
                       yes, quiet)
@@ -1516,9 +1541,15 @@ def make_package(file_or_family: str, target: str, yes: bool,
   # Basic early checks. Raises if target does not qualify.
   _check_target(is_gf_git, target)
   is_file: bool = file_or_family.endswith('.yaml')
+  create_package: bool = file_or_family != '-'
   edit = False
   while True:
-    if not edit:
+    if not create_package:
+      upstream_conf_yaml = None
+      license_dir = ''
+      gf_dir_content: typing.Dict[str, str] = {}
+      pass
+    elif not edit:
       ( upstream_conf_yaml, license_dir,
         gf_dir_content ) = _get_upstream_info(file_or_family, is_file,
                                                               yes, quiet)
@@ -1527,7 +1558,7 @@ def make_package(file_or_family: str, target: str, yes: bool,
         gf_dir_content ) = _edit_upstream_info(upstream_conf_yaml,
                                     file_or_family, is_file, yes, quiet)
     try:
-      _create_package(upstream_conf_yaml, license_dir,
+      _create_package_and_dispatch(create_package, upstream_conf_yaml, license_dir,
                       gf_dir_content, no_whitelist, is_gf_git, target, branch, force,
                       yes, quiet, add_commit, pr, pr_upstream, push_upstream)
     except UserAbortError as e:
