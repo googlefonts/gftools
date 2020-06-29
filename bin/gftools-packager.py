@@ -13,12 +13,10 @@ parser.add_argument(
             metavar='name',
             type=str,
             help='The family name or a file name of an upstream.yaml file. '
-                  'Use --file to mark it as a file otherwise it\'s used as family name.')
-parser.add_argument(
-            '--file',
-            dest='is_file',
-            action='store_true',
-            help='Load upstream.yaml from a file, use the [name] argument as path.')
+                 'If the name ends with the ".yaml" suffix, it\'s treated '
+                 'as a file otherwise it\'s used as family name and packager '
+                 'tries to gather upstream configuration from the google/fonts '
+                 'GitHub repository.')
 parser.add_argument(
             '-f','--force',
             action='store_true',

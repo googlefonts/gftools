@@ -1509,12 +1509,13 @@ def _create_package(upstream_conf_yaml: YAML, license_dir: str,
                       tmp_package_family_dir, target, family_dir, force,
                       yes, quiet)
 
-def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
+def make_package(file_or_family: str, target: str, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
                  add_commit: bool, pr: bool, pr_upstream: str,
                  push_upstream: str, branch: typing.Union[str, None]=None):
   # Basic early checks. Raises if target does not qualify.
   _check_target(is_gf_git, target)
+  is_file: bool = file_or_family.endswith('.yaml')
   edit = False
   while True:
     if not edit:
