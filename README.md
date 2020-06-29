@@ -27,6 +27,10 @@ Check a font family against the same family hosted on Google Fonts:
 
     gftools qa [fonts.ttf] -gfb -a -o qa
 
+Check a variable font family against the same family as static fonts:
+
+    gftools qa -f [vf_fonts] -fb [static_fonts] --diffenator --diffbrowsers -o ~/path/out
+
 Add a DSIG table to a font
 
     gftools fix-dsig font1.ttf
