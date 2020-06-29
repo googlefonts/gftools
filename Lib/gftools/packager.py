@@ -1408,7 +1408,7 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
                           q='quit program'),
               default='q', yes=yes, quiet=quiet)
       if answer == 'q':
-        raise ProgramAbortError(f'Can\'t override existing branch {new_branch_name}. '
+        raise UserAbortError(f'Can\'t override existing branch {new_branch_name}. '
                             'Use --branch to specify another branch name. '
                             'Use --force to allow explicitly.')
       else: # answer == 'f'
@@ -1448,7 +1448,7 @@ def _packagage_to_dir(tmp_package_family_dir: str, target: str,
                           q='quit program'),
               default='q', yes=yes, quiet=quiet)
       if answer == 'q':
-        raise ProgramAbortError('Can\'t override existing directory '
+        raise UserAbortError('Can\'t override existing directory '
                               f'{target_family_dir}. '
                               'Use --force to allow explicitly.')
     shutil.rmtree(target_family_dir)
@@ -1532,8 +1532,8 @@ def make_package(file_or_family: str, target: str, yes: bool,
                       yes, quiet, add_commit, pr, pr_upstream, push_upstream)
     except UserAbortError as e:
       # The user aborted already, no need to bother any further.
-      # Note: looks like there's no user interaction in _create_package,
-      # hence this is a dead branch at the moment.
+      # FIXME: however, we don't get to the point where we can save
+      # the upstream conf to disk, and that may be desirable here!
       raise e
     except Exception:
       error_io = StringIO()
@@ -1547,15 +1547,17 @@ def make_package(file_or_family: str, target: str, yes: bool,
               default='q', yes=yes, quiet=quiet)
       if answer == 'q':
         if not yes:
-          # FIXME: should be possible to save to original file if is_file
+          # Should be possible to save to original file if is_file
           # but we should give that option only if the file would change.
+          # Also, in edit_upstream_info it is possible to save to the
+          # original file.
           answer = user_input('Save upstream conf to disk?\nIt can be '
                                'annoying having to redo all changes, which '
                                'will be lost if you choose no.\n'
                                'The saved file can be edited and used with '
                                'the --file option.' ,
-              OrderedDict(y='yes, save to disk',
-                          n='no, discard changes'),
+              OrderedDict(y='yes—save to disk',
+                          n='no—discard changes'),
               default='y', yes=yes, quiet=quiet)
           if answer == 'y':
             upstream_yaml_backup_filename = _write_upstream_yaml_backup(
