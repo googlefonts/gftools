@@ -1350,7 +1350,7 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
                      branch: typing.Union[str, None], force:bool,
                      yes: bool, quiet: bool, add_commit: bool,pr: bool,
                      pr_upstream: str, push_upstream: str) \
-                      -> typing.Tuple[str, typing.List[typing.Tuple[str, int]]]:
+                      -> None:
   new_branch_name = branch or f'{GIT_NEW_BRANCH_PREFIX}{family_dir.replace(os.sep, "_")}'
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
@@ -1424,6 +1424,8 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
       entry_name = os.path.join(root, filename)
       filesize = commit.tree[entry_name].size
       package_contents.append((entry_name, filesize))
+  _print_package_report(target_label, package_contents)
+
 
   if pr:
     git_branch: pygit2.Branch = repo.branches.local[new_branch_name]
@@ -1432,8 +1434,6 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str,
     pr_title, pr_message_body = _title_message_from_diff(repo, root_commit, tip_commit)
     _make_pr(repo, new_branch_name, pr_upstream, push_upstream,
                                             pr_title, pr_message_body)
-
-  return target_label, package_contents
 
 def _packagage_to_dir(tmp_package_family_dir: str, target: str,
                   family_dir: str, force: bool, yes: bool, quiet: bool):
@@ -1465,8 +1465,7 @@ def _packagage_to_dir(tmp_package_family_dir: str, target: str,
       entry_name = os.path.relpath(full_path, target)
       filesize = os.path.getsize(full_path)
       package_contents.append((entry_name, filesize))
-  return target_label, package_contents
-
+  _print_package_report(target_label, package_contents)
 
 def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
   family_name_normal = _family_name_normal(upstream_conf_yaml['name'].data)
@@ -1490,7 +1489,7 @@ def _create_package(upstream_conf_yaml: YAML, license_dir: str,
                 target: str, branch: typing.Union[str, None], force: bool,
                 yes: bool, quiet: bool, add_commit: bool, pr: bool,
                 pr_upstream: str, push_upstream: str
-                ) -> typing.Tuple[str, typing.List[typing.Tuple[str, int]]]:
+                ) -> None:
   with TemporaryDirectory() as tmp_package_dir:
     family_dir = _create_package_content(tmp_package_dir, upstream_conf_yaml,
                                 license_dir, gf_dir_content, no_whitelist)
@@ -1527,7 +1526,7 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
         gf_dir_content ) = _edit_upstream_info(upstream_conf_yaml,
                                     file_or_family, is_file, yes, quiet)
     try:
-      target_label, package_contents = _create_package(upstream_conf_yaml, license_dir,
+      _create_package(upstream_conf_yaml, license_dir,
                       gf_dir_content, no_whitelist, is_gf_git, target, branch, force,
                       yes, quiet, add_commit, pr, pr_upstream, push_upstream)
     except UserAbortError as e:
@@ -1569,6 +1568,8 @@ def make_package(file_or_family: str, target: str, is_file: bool, yes: bool,
         continue
     break # done!
 
+def _print_package_report (target_label: str,
+            package_contents: typing.List[typing.Tuple[str, int]]) -> None:
   print(f'Created files in {target_label}:')
   for entry_name, filesize in package_contents:
     filesize_str = filesize
