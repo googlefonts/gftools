@@ -37,7 +37,7 @@ parser.add_argument(
             '-q',
             '--quiet',
             action='store_true',
-            help='Don\'t print user interaction dialogues when --no-confirm is used.')
+            help='Don\'t print user interaction dialogues when -y/--no-confirm is used.')
 parser.add_argument(
             'target',
             type=str,
@@ -99,7 +99,7 @@ if __name__ == '__main__':
     except UserAbortError:
       print('Aborted',
             'by user!' if not args.yes else \
-            'by program! User interaction required (don\'t use the --yes flag).')
+            'by program! User interaction required (don\'t use the -y/--no-confirm flag).')
       sys.exit(1)
     except ProgramAbortError as e:
       print(f'Aborted by program: {e}')

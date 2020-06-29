@@ -509,14 +509,14 @@ def user_input(question: str,
     or labels.
 
     default: if *yes* is a bool this should be an option that does
-    not require user interaction. That way we can have an all --yes flag
-    will always choose the default.
+    not require user interaction. That way we can have an all -y/--no-confirm
+    flag will always choose the default.
 
     yes: don't ask the user and use the default. If the value is a boolean
     *default* must be set, because we expect the boolean comes from the
-    --yes flag and the programmers intent is to make this dialogue usable
-    with that flag. If the value is None, we don't check if default is set.
-    The boolean False versus None differentiation is intended as a self
+    -y/--no-confirm flag and the programmers intent is to make this dialogue
+    usable with that flag. If the value is None, we don't check if default is
+    set. The boolean False versus None differentiation is intended as a self
     check to raise awareness of how to use this function.
 
     quiet: if *yes* is true don't print the question to stdout.
@@ -616,8 +616,8 @@ def _repl_upstream_conf(initial_upstream_conf: str, yes: bool=False
                                    q='quit program'),
                        # the default should always be an option that does
                        # not require user interaction. That way we can
-                       # have an all --yes flag that always choses the
-                       # default.
+                       # have an all -y/--no-confirm flag that always
+                       # chooses the default.
                        default='q', yes=yes, quiet=quiet)
         if answer == 'f':
           edit_challenge = updated_upstream_conf
@@ -718,7 +718,7 @@ def _user_input_license(yes: bool=False, quiet: bool=False):
                           q='quit program'),
               # the default should always be an option that does
               # not require user interaction. That way we can
-              # have an all --yes flag that always choses the
+              # have an all -y/--no-confirm flag that always chooses the
               # default.
               default='o', yes=yes, quiet=quiet)
   if answer == 'q':
