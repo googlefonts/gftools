@@ -83,5 +83,7 @@ setup(
         'unidecode',
         'opentype-sanitizer',
         'vttlib',
+        'pygit2',
+        'strictyaml',
     ]
     )

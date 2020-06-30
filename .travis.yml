@@ -10,8 +10,9 @@ before_install:
 
 install:
   - pip install pytest
+  - pip install mypy
   - pip install .
 
 script:
   - python ./Lib/gftools/tests/test_usage.py
-
+  - mypy ./Lib/gftools/packager.py
