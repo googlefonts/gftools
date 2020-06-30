@@ -1,58 +1,8 @@
 
-# FIXME: document dependencies, expect command line `git` with support
+# TODO: document dependencies, expect command line `git` with support
 # for shallow clones (not in old git versions)
 
-# FIXME: document environment variables: VISUAL, EDITOR, GH_TOKEN
-
-# FIXME: why is the license not in upstream.yaml?
-# It's not in the upstream repo list. Probably usually discovered by the
-# presence and name of the  license file.
-# For updates, it's the license_dir in the family path.
-
-# FIXME: variable fonts
-# * file names, especially with variable fonts: we could do this maybe
-#   automated? There's code afaik...
-#   ("upstream.yaml assistant")
-#   Esp. if file names are all that is needed to a family into google/fonts
-# * "static" files besides of file names, should we use an
-#   instancer tool to automatically create the "static" files if they
-#   don't exist in the upstream.
-
-
-# TODO:
-# * Add multiple families from upstream to the package, i.e. a super-family.
-#   The branch name and commit message would have to change.
-#   Super-families can be added to the branch by separate commits.
-#   The name argument would just have to accept a list.
-#   Would be nice to have somehow a switch for this, creating many upstream
-#   yaml files and referencing them via command line could be annoying.
-# * PRs, QAs?
-# * upstream.yaml assistant:
-#       * When we know the full name of the family, we could look up
-#         some data from the upstream spreadsheet, as it is used by FBD
-#       * could also help to pre-fill the files map using the files prefix
-#       * could be just all files from the repository
-#       * could be like a grep pattern or a call to find
-
-# TODO: gftools-packager.yaml
-#   * Think about this like package.yaml or bower.json or "How to Publish an
-#     Open-Source Python Package to PyPI"
-#     https://realpython.com/pypi-publish-python-package/
-#     (YO SEE: "Naming Your Package": You might need to brainstorm and do some
-#     research to find the perfect name. Use the PyPI search to check if a name
-#     is already taken. The name that you come up with will be visible on PyPI.
-#     has parallels to font naming!)
-#  * gftools-packager.yaml is not upstream.yaml, it can have many google-fonts
-#     style families configured for one repo! The keys could be the the full
-#     font name. This is for both: super families AND families co-hosted
-#     in the same upstream.
-#     This file would be rather for local checking and for initializing
-#     upstream.yaml
-#  * FBD sandbox could use this, given a repo+branch
-
-# TODO: To make the PR, we could even have a tool that calls font-bakery dashboard
-#  directly to build the package and QA. But,it's also possible to do it locally!
-
+# TODO: document environment variables: VISUAL, EDITOR, GH_TOKEN
 
 import sys
 import os
