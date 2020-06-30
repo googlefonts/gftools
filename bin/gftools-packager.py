@@ -9,16 +9,18 @@ import argparse
 parser = argparse.ArgumentParser(description='Package upstream font families for Google Fonts.')
 
 parser.add_argument(
-            'file_or_family',
+            'file_or_families',
             metavar='name',
             type=str,
-            help='The family name or a file name of an upstream.yaml file. '
-                 'If the name ends with the ".yaml" suffix, it\'s treated '
-                 'as a file otherwise it\'s used as family name and packager '
-                 'tries to gather upstream configuration from the google/fonts '
-                 'GitHub repository. If the name is "-", a hyphen, no package '
-                 'will be created, this is useful to only make a PR, see '
-                 '-p/--pr, from an already created branch.')
+            nargs='*',
+            help='The family name(s) or file name(s) of upstream conf yaml '
+                 'files to be packaged. If a name ends with the ".yaml" suffix, '
+                 'it\'s treated as a file otherwise it\'s used as family name '
+                 'and  packager tries to gather upstream configuration from '
+                 'the google/fonts GitHub repository. If no name is specified, '
+                 'no package will be created. This is useful to only make a '
+                 'PR from an already created branch, not adding a commit, '
+                 'use -b/--branch and see see -p/--pr.')
 parser.add_argument(
             '-f','--force',
             action='store_true',

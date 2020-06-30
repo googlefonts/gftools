@@ -85,6 +85,7 @@ from strictyaml import ( # type: ignore
                       )
 from warnings import warn
 import functools
+from hashlib import sha1
 from fontTools.ttLib import TTFont # type: ignore
 
 # ignore type because mypy error: Module 'google.protobuf' has no
@@ -263,18 +264,6 @@ def _shallow_clone_git(target_dir, git_url, branch_or_tag='master'):
                        , '-b', branch_or_tag, git_url
                        , target_dir], check=True
                        , stdout=subprocess.PIPE)
-
-def _shallow_clone_github(target_dir, gh_repo_name_with_owner, branch_or_tag='master'):
-  """
-      Another way to get this data would be the github api, but there's
-      a quota (see response headers "X-Ratelimit-Limit: 60" and
-      "X-Ratelimit-Remaining"
-      https://developer.github.com/v3/#rate-limiting
-      unauthorized requests (per IP): the rate limit allows for up to 60 requests per hour.
-      Basic Authentication or OAuth: you can make up to 5000 requests per hour.
-  """
-  git_url = GITHUB_REPO_HTTPS_URL(gh_repo_name_with_owner=gh_repo_name_with_owner)
-  return _shallow_clone_git(target_dir, git_url, branch_or_tag=branch_or_tag)
 
 CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'SANS_SERIF',
                   'HANDWRITING', 'MONOSPACE']
@@ -957,8 +946,9 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
   with open(metadata_file_name, 'w') as f:
     f.write(text_proto)
 
-def _create_package_content(package_target_dir: str, upstream_conf_yaml: YAML,
-        license_dir: str, gf_dir_content:dict, no_whitelist: bool = False):
+def _create_package_content(package_target_dir: str, repos_dir: str,
+        upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
+        no_whitelist: bool = False) -> str:
   print(f'Creating package with \n{_format_upstream_yaml(upstream_conf_yaml)}')
   upstream_conf = upstream_conf_yaml.data
   upstream_commit_sha = None
@@ -972,42 +962,54 @@ def _create_package_content(package_target_dir: str, upstream_conf_yaml: YAML,
   file_in_package = functools.partial(_file_in_package,
                                       package_family_dir)
   # Get and add upstream files!
-  # Because of the add-font script (METADATA.pb) we need a directory
-  # here anyways.
-  with TemporaryDirectory() as upstream_dir:
+  upstream_dir_target = (
+      f'{upstream_conf["repository_url"]}'
+      f'__{upstream_conf["branch"]}'
+      # Despite of '.' and '/' I'd expect the other replacements
+      # not so important in this case.
+    ) \
+    .replace('://', '_') \
+    .replace('/', '_') \
+    .replace('.', '_') \
+    .replace('\\', '_')
+
+  upstream_dir = os.path.join(repos_dir, upstream_dir_target)
+  if not os.path.exists(upstream_dir):
+    # for super families it's likely that we can reuse the same clone
+    # of the repository for all members
     _shallow_clone_git(upstream_dir, upstream_conf['repository_url']
-                                      , upstream_conf['branch'])
-    repo = pygit2.Repository(upstream_dir)
+                                    , upstream_conf['branch'])
+  repo = pygit2.Repository(upstream_dir)
 
-    upstream_commit = repo.revparse_single(upstream_conf['branch'])
-    upstream_commit_sha = upstream_commit.hex
+  upstream_commit = repo.revparse_single(upstream_conf['branch'])
+  upstream_commit_sha = upstream_commit.hex
 
-    # Copy all files from upstream_conf['files'] to package_family_dir
-    # We are strict about what to allow, unexpected files
-    # are not copied. Instead print a warning an suggest filing an
-    # issue if the file is legitimate. A flag to explicitly
-    # skip the whitelist check (--no_whitelist)
-    # enables making packages even when new, yet unknown files are required).
-    # Do we have a Font Bakery check for expected/allowed files? Would
-    # be a good complement.
-    skipped = _copy_upstream_files(upstream_conf['branch'],
-                      upstream_conf['files'], repo, write_file_to_package,
-                      no_whitelist=no_whitelist)
-    if skipped:
-      message = ['Some files from upstream_conf could not be copied.']
-      for reason, items in skipped.items():
-        message.append(reason)
-        for item in items:
-          message.append(f' - {item}')
-      # The whitelist can be ignored using the flag no_whitelist flag,
-      # but the rest should be fixed in the files map, because it's
-      # obviously wrong, not working, configuration.
-      # TODO: This case could (but should it?) be a repl-case to ask
-      # interactively, if the no_whitelist flag should be used then,
-      # if yes, _copy_upstream_files could be tried again. But given
-      # that the use case for the flag is a narrow one, I doubt the
-      # effort needed and the added complexity is worth it.
-      raise ProgramAbortError('\n'.join(message))
+  # Copy all files from upstream_conf['files'] to package_family_dir
+  # We are strict about what to allow, unexpected files
+  # are not copied. Instead print a warning an suggest filing an
+  # issue if the file is legitimate. A flag to explicitly
+  # skip the whitelist check (--no_whitelist)
+  # enables making packages even when new, yet unknown files are required).
+  # Do we have a Font Bakery check for expected/allowed files? Would
+  # be a good complement.
+  skipped = _copy_upstream_files(upstream_conf['branch'],
+                    upstream_conf['files'], repo, write_file_to_package,
+                    no_whitelist=no_whitelist)
+  if skipped:
+    message = ['Some files from upstream_conf could not be copied.']
+    for reason, items in skipped.items():
+      message.append(reason)
+      for item in items:
+        message.append(f' - {item}')
+    # The whitelist can be ignored using the flag no_whitelist flag,
+    # but the rest should be fixed in the files map, because it's
+    # obviously wrong, not working, configuration.
+    # TODO: This case could (but should it?) be a repl-case to ask
+    # interactively, if the no_whitelist flag should be used then,
+    # if yes, _copy_upstream_files could be tried again. But given
+    # that the use case for the flag is a narrow one, I doubt the
+    # effort needed and the added complexity is worth it.
+    raise ProgramAbortError('\n'.join(message))
 
   # Get and add all files from google/fonts
   for name, entry in gf_dir_content.items():
@@ -1027,6 +1029,7 @@ def _create_package_content(package_target_dir: str, upstream_conf_yaml: YAML,
   # create/update upstream.yaml
   with open(os.path.join(package_family_dir, 'upstream.yaml'), 'w') as f:
     f.write(upstream_conf_yaml.as_yaml())
+  print(f'DONE Creating package for {upstream_conf["name"]}!')
   return family_dir
 
 def _check_git_target(target: str) -> None:
@@ -1196,17 +1199,18 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
   if not push_upstream:
     push_upstream = pr_upstream
 
-  remote_branch_name = local_branch_name
   push_owner, push_repo = push_upstream.split('/')
   pr_owner, pr_repo = pr_upstream.split('/')
   url = GITHUB_REPO_SSH_URL(gh_repo_name_with_owner=push_upstream)
 
+  remote_branch_name = local_branch_name
   # We must only allow force pushing/general pushing to branch names that
   # this tool *likely* created! Otherwise, we may end up force pushing
   # to master! Hence: we expect a prefix for remote_branch_name indicating
   # this tool created it.
   if remote_branch_name.find(GIT_NEW_BRANCH_PREFIX) != 0:
-    remote_branch_name = f'{GIT_NEW_BRANCH_PREFIX}{remote_branch_name.replace(os.sep, "_")}'
+    remote_branch_name = (f'{GIT_NEW_BRANCH_PREFIX}'
+                          f'{remote_branch_name.replace(os.sep, "_")}')
 
   print('git push:\n'
           f'  url is {url}\n'
@@ -1345,13 +1349,13 @@ def _title_message_from_diff(repo: pygit2.Repository, root_commit: pygit2.Commit
   return '; '.join(title), '\n'.join(body)
 
 def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
-            yes: bool, quiet: bool, new_branch_name: str, remote_name: str,
+            yes: bool, quiet: bool, local_branch: str, remote_name: str,
             base_remote_branch: str, tmp_package_family_dir: str,
-            family_dir: str, gf_dir_content: typing.Dict):
+            family_dir: str):
     base_commit = None
     if add_commit:
       try:
-        base_commit = repo.branches.local[new_branch_name].peel()
+        base_commit = repo.branches.local[local_branch].peel()
       except KeyError as e:
         pass
 
@@ -1377,8 +1381,7 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
     commit_id = repo.create_commit(
             None,
             author, committer,
-            f'[gftools-packager] {"Update" if gf_dir_content else "Create"} — '
-            f'{title}\n\n{body}',
+            f'[gftools-packager] {title}\n\n{body}',
             new_tree_id,
             [base_commit.id] # parents
     )
@@ -1386,18 +1389,18 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
     # create branch or add to an existing one if add_commit
     while True:
       try:
-        repo.branches.local.create(new_branch_name, commit, force=add_commit or force)
+        repo.branches.local.create(local_branch, commit, force=add_commit or force)
       except pygit2.AlreadyExistsError:
         # _pygit2.AlreadyExistsError: failed to write reference
         #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
         #     that name already exists.
-        answer = user_input(f'Can\'t override existing branch {new_branch_name}'
+        answer = user_input(f'Can\'t override existing branch {local_branch}'
                             ' without explicit permission.',
                 OrderedDict(f='force override',
                             q='quit program'),
                 default='q', yes=yes, quiet=quiet)
         if answer == 'q':
-          raise UserAbortError(f'Can\'t override existing branch {new_branch_name}. '
+          raise UserAbortError(f'Can\'t override existing branch {local_branch}. '
                               'Use --branch to specify another branch name. '
                               'Use --force to allow explicitly.')
         else: # answer == 'f'
@@ -1406,7 +1409,7 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
       break
 
     # only for reporting
-    target_label = f'git branch {new_branch_name}'
+    target_label = f'git branch {local_branch}'
     package_contents = []
     for root, dirs, files in _git_tree_walk(family_dir, commit.tree):
       for filename in files:
@@ -1415,15 +1418,10 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
         package_contents.append((entry_name, filesize))
     _print_package_report(target_label, package_contents)
 
-def _packagage_to_git(create_package: bool, tmp_package_family_dir: str,
-                     target: str,
-                     upstream_conf_yaml: YAML,
-                     family_dir: str, gf_dir_content: typing.Dict,
-                     branch: typing.Union[str, None], force:bool,
-                     yes: bool, quiet: bool, add_commit: bool, pr: bool,
-                     pr_upstream: str, push_upstream: str) \
-                      -> None:
-  new_branch_name = branch or f'{GIT_NEW_BRANCH_PREFIX}{family_dir.replace(os.sep, "_")}'
+def _packagage_to_git(tmp_package_family_dir: str, target: str, family_dir: str,
+                     branch: str, force:bool, yes: bool, quiet: bool,
+                     add_commit: bool) -> None:
+
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
   remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
@@ -1431,17 +1429,25 @@ def _packagage_to_git(create_package: bool, tmp_package_family_dir: str,
   if remote_name is None:
     raise Exception('No remote found for google/fonts master.')
 
-  if create_package:
-    _git_make_commit(repo, add_commit, force, yes, quiet, new_branch_name,
-                     remote_name, base_remote_branch, tmp_package_family_dir,
-                     family_dir, gf_dir_content)
+  _git_make_commit(repo, add_commit, force, yes, quiet, branch,
+                   remote_name, base_remote_branch, tmp_package_family_dir,
+                   family_dir)
 
-  if pr:
-    git_branch: pygit2.Branch = repo.branches.local[new_branch_name]
-    tip_commit = git_branch.peel()
-    root_commit = _get_root_commit(repo, base_remote_branch, tip_commit)
-    pr_title, pr_message_body = _title_message_from_diff(repo, root_commit, tip_commit)
-    _make_pr(repo, new_branch_name, pr_upstream, push_upstream,
+
+def _dispatch_git(target: str, target_branch: str,pr_upstream: str,
+                  push_upstream: str) -> None:
+  repo = pygit2.Repository(target)
+  # we checked that it exists earlier!
+  remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
+  base_remote_branch = f'{remote_name}/master'
+  if remote_name is None:
+    raise Exception('No remote found for google/fonts master.')
+
+  git_branch: pygit2.Branch = repo.branches.local[target_branch]
+  tip_commit = git_branch.peel()
+  root_commit = _get_root_commit(repo, base_remote_branch, tip_commit)
+  pr_title, pr_message_body = _title_message_from_diff(repo, root_commit, tip_commit)
+  _make_pr(repo, target_branch, pr_upstream, push_upstream,
                                             pr_title, pr_message_body)
 
 def _packagage_to_dir(tmp_package_family_dir: str, target: str,
@@ -1493,114 +1499,146 @@ def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
     break
   return filename
 
-def _create_package_and_dispatch(create_package: bool,
-                upstream_conf_yaml: typing.Union[YAML, None],
-                license_dir: str,
-                gf_dir_content: dict,
-                no_whitelist: bool, is_gf_git: bool,
-                target: str, branch: typing.Union[str, None], force: bool,
-                yes: bool, quiet: bool, add_commit: bool, pr: bool,
-                pr_upstream: str, push_upstream: str
-                ) -> None:
-  if create_package:
-    ContextManagerConstructor = TemporaryDirectory # type: ignore
-  else:
-    @contextmanager
-    def ContextManagerConstructor()-> typing.Iterator[str]:
-      yield ''
-
-  tmp_package_family_dir: typing.Union[str, None] = None
-  with ContextManagerConstructor() as tmp_package_dir:
-    if create_package:
-      family_dir = _create_package_content(tmp_package_dir, upstream_conf_yaml,
-                                license_dir, gf_dir_content, no_whitelist)
-      tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
-    else:
-      family_dir = ''
-      tmp_package_family_dir = ''
-
+def _packages_to_target(tmp_package_dir: str, family_dirs: typing.List[str],
+                        target: str, is_gf_git: bool,
+                        branch: str, force: bool,
+                        yes: bool, quiet: bool, add_commit: bool) ->None:
+  for i, family_dir in enumerate(family_dirs):
+    tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
     # NOTE: if there are any files outside of family_dir that need moving
     # that is not yet supported! The reason is, there's no case for this
     # yet. So, if _create_package_content is changed to put files outside
     # of family_dir, these targets will have to follow and implement it.
     if is_gf_git:
-      return _packagage_to_git(create_package,
-                              tmp_package_family_dir, target, upstream_conf_yaml,
-                              family_dir, gf_dir_content, branch, force, yes,
-                              quiet, add_commit, pr, pr_upstream, push_upstream)
-    elif create_package:
-      # this branch has no use without create_package
-      return _packagage_to_dir(
-                      tmp_package_family_dir, target, family_dir, force,
-                      yes, quiet)
+      if i > 0:
+        add_commit = True
+      _packagage_to_git(tmp_package_family_dir, target, family_dir,
+                               branch, force, yes, quiet, add_commit)
+    else:
+      _packagage_to_dir(tmp_package_family_dir, target, family_dir,
+                               force, yes, quiet)
 
-def make_package(file_or_family: str, target: str, yes: bool,
+
+def _branch_name_from_family_dirs(family_dirs: typing.List[str]) -> str:
+  if len(family_dirs) == 1:
+    return f'{GIT_NEW_BRANCH_PREFIX}{family_dirs[0].replace(os.sep, "_")}'
+
+  by_licensedir: typing.Dict[str, typing.List[str]] = {};
+  for f in family_dirs:
+    license_dir = os.path.dirname(f)
+    if license_dir not in by_licensedir:
+      by_licensedir[license_dir] = []
+    by_licensedir[license_dir].append(os.path.basename(f))
+
+  # All the sorting is to achieve the same branch name, when
+  # family_dirs comes in a different order but with the same content.
+  particles = []
+  for license_dir, families in by_licensedir.items():
+    particles.append(f'{license_dir}_{"-".join(sorted(families))}')
+
+  # Could be like (in an extreme case):
+  # gftools_packager_apache_arimo-cherrycreamsoda_ofl_acme-balsamiqsans-librebarcode39extendedtext
+  full_branch_name = f'{GIT_NEW_BRANCH_PREFIX}{"_".join(sorted(particles))}'
+  # I don't know hard limits here
+  max_len = 60
+  if len(full_branch_name) <= max_len:
+    return full_branch_name
+  hash_hex_ini = sha1(full_branch_name.encode('utf-8')).hexdigest()[:10]
+  # This is the shortened version from above:
+  # gftools_packager_apache_arimo-cherrycreamsoda_ofl_d79615d347
+  return f'{full_branch_name[:max_len-11]}_{hash_hex_ini}'
+
+def make_package(file_or_families: typing.List[str], target: str, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
                  add_commit: bool, pr: bool, pr_upstream: str,
                  push_upstream: str, branch: typing.Union[str, None]=None):
   # Basic early checks. Raises if target does not qualify.
   _check_target(is_gf_git, target)
-  is_file: bool = file_or_family.endswith('.yaml')
-  create_package: bool = file_or_family != '-'
-  edit = False
-  while True:
-    if not create_package:
-      upstream_conf_yaml = None
-      license_dir = ''
-      gf_dir_content: typing.Dict[str, str] = {}
-      pass
-    elif not edit:
-      ( upstream_conf_yaml, license_dir,
-        gf_dir_content ) = _get_upstream_info(file_or_family, is_file,
-                                                              yes, quiet)
-    else:
-      ( upstream_conf_yaml, license_dir,
-        gf_dir_content ) = _edit_upstream_info(upstream_conf_yaml,
-                                    file_or_family, is_file, yes, quiet)
-    try:
-      _create_package_and_dispatch(create_package, upstream_conf_yaml, license_dir,
-                      gf_dir_content, no_whitelist, is_gf_git, target, branch, force,
-                      yes, quiet, add_commit, pr, pr_upstream, push_upstream)
-    except UserAbortError as e:
-      # The user aborted already, no need to bother any further.
-      # FIXME: however, we don't get to the point where we can save
-      # the upstream conf to disk, and that may be desirable here!
-      raise e
-    except Exception:
-      error_io = StringIO()
-      traceback.print_exc(file=error_io)
-      error_io.seek(0)
-      answer = user_input(f'Upstream conf caused an error:'
-                          f'\n-----\n\n{error_io.read()}\n-----\n'
-                          'How do you want to proceed?',
-              OrderedDict(e='edit upstream conf and retry',
-                          q='raise and quit program'),
-              default='q', yes=yes, quiet=quiet)
-      if answer == 'q':
-        if not yes:
-          # Should be possible to save to original file if is_file
-          # but we should give that option only if the file would change.
-          # Also, in edit_upstream_info it is possible to save to the
-          # original file.
-          answer = user_input('Save upstream conf to disk?\nIt can be '
-                               'annoying having to redo all changes, which '
-                               'will be lost if you choose no.\n'
-                               'The saved file can be edited and used with '
-                               'the --file option.' ,
-              OrderedDict(y='yes—save to disk',
-                          n='no—discard changes'),
-              default='y', yes=yes, quiet=quiet)
-          if answer == 'y':
-            upstream_yaml_backup_filename = _write_upstream_yaml_backup(
-                                                      upstream_conf_yaml)
-            print(f'Upstream conf has been saved to: {upstream_yaml_backup_filename}')
-        raise UserAbortError()
-      else:
-        # answer == 'e'
-        # continue loop: go back to _get_upstream_info
-        edit = True
-        continue
-    break # done!
+
+  # note: use branch if it explicit (and if is_gf_git)
+  target_branch = branch if branch is not None else ''
+
+  family_dirs: typing.List[str] = []
+  with TemporaryDirectory() as tmp_dir:
+    tmp_package_dir = os.path.join(tmp_dir, 'packages')
+    os.makedirs(tmp_package_dir, exist_ok=True)
+    tmp_repos_dir = os.path.join(tmp_dir, 'repos')
+    os.makedirs(tmp_repos_dir, exist_ok=True)
+
+    for file_or_family in file_or_families:
+      is_file: bool = file_or_family.endswith('.yaml')
+      edit = False
+      while True: # repl
+        if not edit:
+          ( upstream_conf_yaml, license_dir,
+            gf_dir_content ) = _get_upstream_info(file_or_family, is_file,
+                                                                  yes, quiet)
+        else:
+          ( upstream_conf_yaml, license_dir,
+            gf_dir_content ) = _edit_upstream_info(upstream_conf_yaml,
+                                        file_or_family, is_file, yes, quiet)
+          edit = False # reset
+
+        try:
+          family_dir = _create_package_content(tmp_package_dir, tmp_repos_dir,
+                                upstream_conf_yaml, license_dir,
+                                gf_dir_content, no_whitelist)
+          family_dirs.append(family_dir)
+        except UserAbortError as e:
+          # The user aborted already, no need to bother any further.
+          # FIXME: however, we don't get to the point where we can save
+          # the upstream conf to disk, and that may be desirable here!
+          raise e
+        except Exception:
+          error_io = StringIO()
+          traceback.print_exc(file=error_io)
+          error_io.seek(0)
+          answer = user_input(f'Upstream conf caused an error:'
+                              f'\n-----\n\n{error_io.read()}\n-----\n'
+                              'How do you want to proceed?',
+                  OrderedDict(e='edit upstream conf and retry',
+                              q='raise and quit program'),
+                  default='q', yes=yes, quiet=quiet)
+          if answer == 'q':
+            if not yes:
+              # Should be possible to save to original file if is_file
+              # but we should give that option only if the file would change.
+              # Also, in edit_upstream_info it is possible to save to the
+              # original file.
+              answer = user_input('Save upstream conf to disk?\nIt can be '
+                                   'annoying having to redo all changes, which '
+                                   'will be lost if you choose no.\n'
+                                   'The saved file can be edited and used with '
+                                   'the --file option.' ,
+                  OrderedDict(y='yes—save to disk',
+                              n='no—discard changes'),
+                  default='y', yes=yes, quiet=quiet)
+              if answer == 'y':
+                upstream_yaml_backup_filename = _write_upstream_yaml_backup(
+                                                          upstream_conf_yaml)
+                print(f'Upstream conf has been saved to: {upstream_yaml_backup_filename}')
+            raise UserAbortError()
+          else:
+            # answer == 'e'
+            # continue loop: go back to _get_upstream_info
+            edit = True
+            continue
+        # Done with file_or_family!
+        break # break the REPL while loop.
+
+    # done with collecting data for all file_or_families
+
+    if is_gf_git:
+    # need to have a unified branch for all file_or_families ...
+    # if there are more than one families ...
+      if not branch:
+        target_branch = _branch_name_from_family_dirs(family_dirs)
+      _packages_to_target(tmp_package_dir, family_dirs, target, is_gf_git,
+                        target_branch, force, yes, quiet, add_commit)
+
+  if pr and is_gf_git:
+    _dispatch_git(target, target_branch, pr_upstream, push_upstream)
+
 
 def _print_package_report (target_label: str,
             package_contents: typing.List[typing.Tuple[str, int]]) -> None:
