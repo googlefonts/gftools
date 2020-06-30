@@ -23,7 +23,6 @@ from strictyaml import ( # type: ignore
                         Map,
                         MapPattern,
                         Enum,
-                        Seq,
                         Str,
                         Any,
                         EmptyNone,
@@ -33,7 +32,6 @@ from strictyaml import ( # type: ignore
                         YAMLValidationError,
                         YAML
                       )
-from warnings import warn
 import functools
 from hashlib import sha1
 from fontTools.ttLib import TTFont # type: ignore
@@ -52,7 +50,7 @@ else:
   import gftools.fonts_public_pb2 as fonts_pb2
 
 
-GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
+# GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
 GITHUB_REPO_SSH_URL = 'git@github.com:{gh_repo_name_with_owner}.git'.format
 
 GITHUB_GRAPHQL_API = 'https://api.github.com/graphql'
@@ -349,15 +347,6 @@ def _file_in_package(basedir, filename):
   full_name = os.path.join(basedir, filename)
   return os.path.isfile(full_name)
 
-def _genre_2_category(genre):
-    # 'Display' => 'DISPLAY'
-    # 'Serif' => 'SERIF'
-    # 'Sans Serif' => 'SANS_SERIF'
-    # 'sans-serif' => 'SANS_SERIF' // this is not what we use
-    # 'Handwriting' => 'HANDWRITING'
-    # 'Monospace' => 'MONOSPACE'
-    return genre.upper().replace(' ', '_').replace('-', '_')
-
 class UserAbortError(Exception):
   pass
 
@@ -388,7 +377,7 @@ def _get_editor_command():
 # ANSI controls
 TOLEFT = '\u001b[1000D' # Move all the way left (max 1000 steps
 CLEARLINE = '\u001b[2K'    # Clear the line
-UP =  '\u001b[1A' # moves cursor 1 up
+# UP =  '\u001b[1A' # moves cursor 1 up
 # reset = (CLEARLINE + UP) * num_linebeaks + TOLEFT
 
 def user_input(question: str,
@@ -601,7 +590,7 @@ def _upstream_conf_from_scratch(family_name: typing.Union[str, None]=None,
     template = upstream_conf_yaml.as_yaml()
   else:
     template = upstream_yaml_template
-  upstream_conf_yaml = _repl_upstream_conf(upstream_yaml_template,
+  upstream_conf_yaml = _repl_upstream_conf(template,
                                            yes=yes, quiet=quiet)
 
   return upstream_conf_yaml
@@ -822,7 +811,7 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
                                   upstream_commit_sha:str) -> None:
   metadata_file_name = os.path.join(tmp_package_family_dir, 'METADATA.pb')
   try:
-    completed_process = subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
+    subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
                                 , check=True, stdout=subprocess.PIPE
                                 , stderr=subprocess.PIPE)
   except subprocess.CalledProcessError as e:
@@ -1102,7 +1091,7 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
   if not push_upstream:
     push_upstream = pr_upstream
 
-  push_owner, push_repo = push_upstream.split('/')
+  push_owner, _push_repo = push_upstream.split('/')
   pr_owner, pr_repo = pr_upstream.split('/')
   url = GITHUB_REPO_SSH_URL(gh_repo_name_with_owner=push_upstream)
 
@@ -1692,35 +1681,35 @@ def _create_tmp_remote(repo: pygit2.Repository, url:str) -> typing.Iterator[pygi
   finally:
     repo.remotes.delete(tmp_name)
 
-# note: currently unused!
-def _git_create_remote(repo: pygit2.Repository) -> None:
-  # If we did not find a suitable remote, we can add it.
-  # If remote_name exists: repo.remotes.creat raises:
-  # "ValueError: remote 'upstream' already exists"
-  default_remote_name = 'upstream'
-
-  remote_name = input(f'Creating a git remote.\nEnter remote name (default={default_remote_name}),a=abort:')
-  if remote_name == 'a':
-    raise UserAbortError()
-  remote_name = remote_name or default_remote_name
-
-  searched_repo = 'google/fonts'
-  url =  f'git@github.com:{searched_repo}.git'
-  # url =  f'ssh://git@github.com/{searched_repo}'
-  # url = f'https://github.com/{searched_repo}.git'
-
-  refspecs_candidates = {
-      '1': f'+refs/heads/*:refs/remotes/{remote_name}/*'
-    , '2': f'+refs/heads/master:refs/remotes/{remote_name}/master'
-  }
-  print('Pick a fetch refspec for the remote:')
-  print(f'1: {refspecs_candidates["1"]} (default)')
-  print(f'2: {refspecs_candidates["2"]} (minimal)')
-  refspec = input(f'1(default),2,a=abort:').strip()
-  if refspec == 'a':
-    raise UserAbortError()
-  fetch_refspec = refspecs_candidates[refspec or '1']
-
-  # raises ValueError: remote 'upstream' already exists
-  # fetch argument will apply the default refspec if it is None
-  repo.remotes.create(remote_name, url, fetch=fetch_refspec)
+# note: currently unused, example!
+# def _git_create_remote(repo: pygit2.Repository) -> None:
+#   # If we did not find a suitable remote, we can add it.
+#   # If remote_name exists: repo.remotes.creat raises:
+#   # "ValueError: remote 'upstream' already exists"
+#   default_remote_name = 'upstream'
+#
+#   remote_name = input(f'Creating a git remote.\nEnter remote name (default={default_remote_name}),a=abort:')
+#   if remote_name == 'a':
+#     raise UserAbortError()
+#   remote_name = remote_name or default_remote_name
+#
+#   searched_repo = 'google/fonts'
+#   url =  f'git@github.com:{searched_repo}.git'
+#   # url =  f'ssh://git@github.com/{searched_repo}'
+#   # url = f'https://github.com/{searched_repo}.git'
+#
+#   refspecs_candidates = {
+#       '1': f'+refs/heads/*:refs/remotes/{remote_name}/*'
+#     , '2': f'+refs/heads/master:refs/remotes/{remote_name}/master'
+#   }
+#   print('Pick a fetch refspec for the remote:')
+#   print(f'1: {refspecs_candidates["1"]} (default)')
+#   print(f'2: {refspecs_candidates["2"]} (minimal)')
+#   refspec = input(f'1(default),2,a=abort:').strip()
+#   if refspec == 'a':
+#     raise UserAbortError()
+#   fetch_refspec = refspecs_candidates[refspec or '1']
+#
+#   # raises ValueError: remote 'upstream' already exists
+#   # fetch argument will apply the default refspec if it is None
+#   repo.remotes.create(remote_name, url, fetch=fetch_refspec)
