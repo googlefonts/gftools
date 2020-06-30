@@ -1017,11 +1017,11 @@ def _git_copy_dir(repo: pygit2.Repository, tree_builder: pygit2.TreeBuilder,
 
 # thanks https://stackoverflow.com/a/1094933
 def _sizeof_fmt(num, suffix='B'):
-    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
-        if abs(num) < 1024.0:
-            return "%3.1f%s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.1f%s%s" % (num, 'Yi', suffix)
+  for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+    if abs(num) < 1024.0:
+      return "%3.1f%s%s" % (num, unit, suffix)
+    num /= 1024.0
+  return "%.1f%s%s" % (num, 'Yi', suffix)
 
 def _push(repo: pygit2.Repository, url: str, local_branch_name: str,
           remote_branch_name: str, force: bool):
@@ -1142,13 +1142,13 @@ def _get_root_commit(repo: pygit2.Repository, base_remote_branch:str,
                                   tip_commit: pygit2.Commit) -> pygit2.Commit:
   for root_commit in repo.walk(tip_commit.id,
                   pygit2.GIT_SORT_TOPOLOGICAL | pygit2.GIT_SORT_TIME):
-      try:
-        # If it doesn't raise KeyError i.e. root_commit is contained in
-        # our base_remote_branch and not part of the PR.
-        return repo.branches.remote.with_commit(root_commit)[base_remote_branch]
-      except KeyError:
-        continue
-      break;
+    try:
+      # If it doesn't raise KeyError i.e. root_commit is contained in
+      # our base_remote_branch and not part of the PR.
+      return repo.branches.remote.with_commit(root_commit)[base_remote_branch]
+    except KeyError:
+      continue
+    break;
 
 def _get_change_info_from_diff(repo: pygit2.Repository, root_commit: pygit2.Commit,
                                             tip_commit: pygit2.Commit) -> typing.Dict:
@@ -1241,74 +1241,74 @@ def _title_message_from_diff(repo: pygit2.Repository, root_commit: pygit2.Commit
   return '; '.join(title), '\n'.join(body)
 
 def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
-            yes: bool, quiet: bool, local_branch: str, remote_name: str,
-            base_remote_branch: str, tmp_package_family_dir: str,
-            family_dir: str):
-    base_commit = None
-    if add_commit:
-      try:
-        base_commit = repo.branches.local[local_branch].peel()
-      except KeyError as e:
-        pass
+          yes: bool, quiet: bool, local_branch: str, remote_name: str,
+          base_remote_branch: str, tmp_package_family_dir: str,
+          family_dir: str):
+  base_commit = None
+  if add_commit:
+    try:
+      base_commit = repo.branches.local[local_branch].peel()
+    except KeyError as e:
+      pass
 
-    if not base_commit:
-      #fetch! make sure we're on the actual gf master HEAD
-      _git_fetch_master(repo, remote_name)
-      # base_commit = repo.revparse_single(f'refs/remotes/{base_remote_branch}')
-      # same but maybe better readable:
-      base_commit = repo.branches.remote[base_remote_branch].peel()
+  if not base_commit:
+    #fetch! make sure we're on the actual gf master HEAD
+    _git_fetch_master(repo, remote_name)
+    # base_commit = repo.revparse_single(f'refs/remotes/{base_remote_branch}')
+    # same but maybe better readable:
+    base_commit = repo.branches.remote[base_remote_branch].peel()
 
-    # Maybe I can start with the commit tree here ...
-    treeBuilder = repo.TreeBuilder(base_commit.tree)
-    _git_copy_dir(repo, treeBuilder, tmp_package_family_dir, family_dir)
+  # Maybe I can start with the commit tree here ...
+  treeBuilder = repo.TreeBuilder(base_commit.tree)
+  _git_copy_dir(repo, treeBuilder, tmp_package_family_dir, family_dir)
 
-    # create the commit
-    user_name = list(repo.config.get_multivar('user.name'))[0]
-    user_email = list(repo.config.get_multivar('user.email'))[0]
-    author = pygit2.Signature(user_name, user_email)
-    committer = pygit2.Signature(user_name, user_email)
+  # create the commit
+  user_name = list(repo.config.get_multivar('user.name'))[0]
+  user_email = list(repo.config.get_multivar('user.email'))[0]
+  author = pygit2.Signature(user_name, user_email)
+  committer = pygit2.Signature(user_name, user_email)
 
-    new_tree_id = treeBuilder.write()
-    title, body = _title_message_from_diff(repo, base_commit.tree, repo.get(new_tree_id))
-    commit_id = repo.create_commit(
-            None,
-            author, committer,
-            f'[gftools-packager] {title}\n\n{body}',
-            new_tree_id,
-            [base_commit.id] # parents
-    )
-    commit = repo.get(commit_id)
-    # create branch or add to an existing one if add_commit
-    while True:
-      try:
-        repo.branches.local.create(local_branch, commit, force=add_commit or force)
-      except pygit2.AlreadyExistsError:
-        # _pygit2.AlreadyExistsError: failed to write reference
-        #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
-        #     that name already exists.
-        answer = user_input(f'Can\'t override existing branch {local_branch}'
-                            ' without explicit permission.',
-                OrderedDict(f='force override',
-                            q='quit program'),
-                default='q', yes=yes, quiet=quiet)
-        if answer == 'q':
-          raise UserAbortError(f'Can\'t override existing branch {local_branch}. '
-                              'Use --branch to specify another branch name. '
-                              'Use --force to allow explicitly.')
-        else: # answer == 'f'
-          force = True
-          continue
-      break
+  new_tree_id = treeBuilder.write()
+  title, body = _title_message_from_diff(repo, base_commit.tree, repo.get(new_tree_id))
+  commit_id = repo.create_commit(
+          None,
+          author, committer,
+          f'[gftools-packager] {title}\n\n{body}',
+          new_tree_id,
+          [base_commit.id] # parents
+  )
+  commit = repo.get(commit_id)
+  # create branch or add to an existing one if add_commit
+  while True:
+    try:
+      repo.branches.local.create(local_branch, commit, force=add_commit or force)
+    except pygit2.AlreadyExistsError:
+      # _pygit2.AlreadyExistsError: failed to write reference
+      #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
+      #     that name already exists.
+      answer = user_input(f'Can\'t override existing branch {local_branch}'
+                          ' without explicit permission.',
+              OrderedDict(f='force override',
+                          q='quit program'),
+              default='q', yes=yes, quiet=quiet)
+      if answer == 'q':
+        raise UserAbortError(f'Can\'t override existing branch {local_branch}. '
+                            'Use --branch to specify another branch name. '
+                            'Use --force to allow explicitly.')
+      else: # answer == 'f'
+        force = True
+        continue
+    break
 
-    # only for reporting
-    target_label = f'git branch {local_branch}'
-    package_contents = []
-    for root, dirs, files in _git_tree_walk(family_dir, commit.tree):
-      for filename in files:
-        entry_name = os.path.join(root, filename)
-        filesize = commit.tree[entry_name].size
-        package_contents.append((entry_name, filesize))
-    _print_package_report(target_label, package_contents)
+  # only for reporting
+  target_label = f'git branch {local_branch}'
+  package_contents = []
+  for root, dirs, files in _git_tree_walk(family_dir, commit.tree):
+    for filename in files:
+      entry_name = os.path.join(root, filename)
+      filesize = commit.tree[entry_name].size
+      package_contents.append((entry_name, filesize))
+  _print_package_report(target_label, package_contents)
 
 def _packagage_to_git(tmp_package_family_dir: str, target: str, family_dir: str,
                      branch: str, force:bool, yes: bool, quiet: bool,
