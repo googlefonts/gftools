@@ -283,47 +283,6 @@ files:
   # fonts/variable/Gelasio-Italic-VF.ttf: Gelasio-Italic[wght].ttf
 '''
 
-
-gelasio_upstream_yaml  = '''
-# ofl/gelasio/upstream.yaml
-# ---
-
-name: Gelasio # (full family name, with initial upper cases and spaces)
-repository_url: https://github.com/SorkinType/Gelasio.git # (used to be "upstream" using "repoWithOwnerStyle")
-branch: master
-category: SANS_SERIF
-designer: Eben Sorkin
-# NOTE: this is an example how mapping font file names could work!
-#  this replaces "fontfiles prefix"
-
-files:
-  DESCRIPTION.en_us.html:
-      DESCRIPTION.en_us.html
-  OFL.txt:
-      OFL.txt
-  fonts/variable/Gelasio-Italic-VF.ttf:
-      Gelasio-Italic[wght].ttf
-  fonts/variable/Gelasio-VF.ttf:
-      Gelasio[wght].ttf
-  fonts/ttf/Gelasio-BoldItalic.ttf:
-      static/Gelasio-BoldItalic.ttf
-  fonts/ttf/Gelasio-Medium.ttf:
-      static/Gelasio-Medium.ttf
-  fonts/ttf/Gelasio-MediumItalic.ttf:
-      static/Gelasio-MediumItalic.ttf
-  fonts/ttf/Gelasio-SemiBold.ttf:
-      static/Gelasio-SemiBold.ttf
-  fonts/ttf/Gelasio-Regular.ttf:
-      static/Gelasio-Regular.ttf
-  fonts/ttf/Gelasio-Italic.ttf:
-      static/Gelasio-Italic.ttf
-  fonts/ttf/Gelasio-Bold.ttf:
-      static/Gelasio-Bold.ttf
-  fonts/ttf/Gelasio-SemiBoldItalic.ttf:
-      static/Gelasio-SemiBoldItalic.ttf
-'''
-
-
 # ALLOWED FILES
 LICENSE_FILES_2_DIRS = (
         ('LICENSE.txt', 'apache')
@@ -759,12 +718,6 @@ def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
     # loaded via file:// or from_scratch
     pass
   # found on google/fonts and use gf_dir_content
-  elif family_name == 'Gelasio':
-    # CAUTION: SHIM IN PLACE!
-    # FIXME temp
-    warn(f'TEMP! Using upstream_yaml shim for {family_name}!')
-    upstream_conf_yaml = _upstream_conf_from_yaml(gelasio_upstream_yaml
-                                                  , yes=yes, quiet=quiet)
   elif 'upstream.yaml' in gf_dir_content:
     # normal case
     print(f'Using upstream.yaml from google/fonts for {family_name}.')
