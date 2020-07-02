@@ -1446,6 +1446,10 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
                  add_commit: bool, pr: bool, pr_upstream: str,
                  push_upstream: str, branch: typing.Union[str, None]=None):
+
+  # some flags can be set implicitly
+  pr = pr or bool(pr_upstream) or bool(push_upstream)
+  is_gf_git = is_gf_git or bool(branch) or add_commit or pr
   # Basic early checks. Raises if target does not qualify.
   _check_target(is_gf_git, target)
 

@@ -44,8 +44,8 @@ parser.add_argument(
             'target',
             type=str,
             help='The target of the package. By default a path to a directory. '
-                  'See -f/--force to allow changing none-empty directories. '
-                  'See -g/--gf-git to use it as a git repository.')
+                 'See -f/--force to allow changing none-empty directories. '
+                 'See -g/--gf-git to use it as a git repository.')
 parser.add_argument(
             '-g','--gf-git',
             dest='is_gf_git',
@@ -57,25 +57,31 @@ parser.add_argument(
             '-b', '--branch',
             type=str,
             default=None,
-            help='When -g/--gf-git is used, set the local target branch name instead '
-                 'of using the generated branch name, like: "gftools-packager-{family-name}".')
+            help='Set the local target branch name instead '
+                 'of using the generated branch name, like: "gftools_packager_{familyname}". '
+                 'This implies -g/--gf-git, i.e. target will be treated as if -g/--gf-git is set.')
 parser.add_argument(
-            '-c', '--add-commit',
+            '-a', '--add-commit',
             action='store_true',
-            help='When -g/--gf-git is used, don\'t override existing branch '
-            'and instead add a new commit to the branch. Use this to create '
-            'a PR for multiple familes e.g. a super family or a bunch update.')
+            help='Don\'t override existing branch and instead add a new '
+                 'commit to the branch. Use this to create a PR for multiple '
+                 'familes e.g. a super family or a bunch update. '
+                 'It\'s likely that you want to combine this with -b/--branch. '
+                 'This implies -g/--gf-git, i.e. target will be treated as if -g/--gf-git is set.')
 parser.add_argument(
             '-p', '--pr',
             action='store_true',
-            help='Make a pull request, when -g/--gf-git. See --pr-upstream '
-            'and --push-upstream.')
+            help='Make a pull request. '
+                 'This implies -g/--gf-git, i.e. target will be treated as if -g/--gf-git is set. '
+                 'See --pr-upstream  and --push-upstream.')
 parser.add_argument(
             '--pr-upstream',
             type=str,
             default='google/fonts',
             help='The upstream where the pull request goes, as a GitHub '
-                 '"owner/repoName" pair. (default: %(default)s)')
+                 '"owner/repoName" pair (default: %(default)s). '
+                 'This implies -p/--pr, i.e. target will be treated as if -p/--pr is set.'
+                 )
 parser.add_argument(
             '--push-upstream',
             type=str,
@@ -84,7 +90,8 @@ parser.add_argument(
             # that clone to --pr-upstream, however, our ghactions QA can't
             # run on a different repo, that's why this is mostly for testing.
             help='The upstream where the push goes, as a GitHub "owner/repoName" '
-                 'pair. (default: the value of --pr-upstream)')
+                 'pair (default: the value of --pr-upstream). '
+                 'This implies -p/--pr, i.e. target will be treated as if -p/--pr is set.')
 parser.add_argument(
             '--no-whitelist',
             action='store_true',
