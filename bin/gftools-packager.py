@@ -87,9 +87,9 @@ parser.add_argument(
 parser.add_argument(
             '--pr-upstream',
             type=str,
-            default='google/fonts',
+            default='',
             help='The upstream where the pull request goes, as a GitHub '
-                 '"owner/repoName" pair (default: %(default)s). '
+                 '"owner/repoName" pair (default: google/fonts). '
                  'This implies -p/--pr, i.e. target will be treated as if -p/--pr is set.'
                  )
 parser.add_argument(
