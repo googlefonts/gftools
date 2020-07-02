@@ -893,11 +893,17 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
     .replace('.', '_') \
     .replace('\\', '_')
 
-  upstream_dir = os.path.join(repos_dir, upstream_dir_target)
-  if not os.path.exists(upstream_dir):
-    # for super families it's likely that we can reuse the same clone
-    # of the repository for all members
-    _shallow_clone_git(upstream_dir, upstream_conf['repository_url']
+  local_repo_path_marker = 'local://'
+  if upstream_conf['repository_url'].startswith(local_repo_path_marker):
+    print(f'WARNING using "local://" hack for repository_url: {upstream_conf["repository_url"]}')
+    local_path = upstream_conf['repository_url'][len(local_repo_path_marker):]
+    upstream_dir = os.path.expanduser(local_path)
+  else:
+    upstream_dir = os.path.join(repos_dir, upstream_dir_target)
+    if not os.path.exists(upstream_dir):
+      # for super families it's likely that we can reuse the same clone
+      # of the repository for all members
+      _shallow_clone_git(upstream_dir, upstream_conf['repository_url']
                                     , upstream_conf['branch'])
   repo = pygit2.Repository(upstream_dir)
 
@@ -1596,16 +1602,16 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
             continue
         # Done with file_or_family!
         break # break the REPL while loop.
-    else:
+    if not family_dirs:
       print('No families to package.')
     # done with collecting data for all file_or_families
 
     if is_gf_git:
-    # need to have a unified branch for all file_or_families ...
-    # if there are more than one families ...
+      # need to have a unified branch for all file_or_families ...
+      # if there are more than one families ...
       if not branch:
         target_branch = _branch_name_from_family_dirs(family_dirs)
-      _packages_to_target(tmp_package_dir, family_dirs, target, is_gf_git,
+    _packages_to_target(tmp_package_dir, family_dirs, target, is_gf_git,
                         target_branch, force, yes, quiet, add_commit)
 
   if pr and is_gf_git:
