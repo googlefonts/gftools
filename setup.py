@@ -49,7 +49,8 @@ setup(
     package_data={'gftools.util': ["GlyphsInfo/*.xml"],
                   'gftools': [
                       "encodings/*.nam",
-                      "encodings/GF Glyph Sets/*.nam"
+                      "encodings/GF Glyph Sets/*.nam",
+                      'template.upstream.yaml'
                   ]
                  },
     scripts=gftools_scripts(),

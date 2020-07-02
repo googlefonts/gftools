@@ -49,6 +49,11 @@ if TYPE_CHECKING:
 else:
   import gftools.fonts_public_pb2 as fonts_pb2
 
+from pkg_resources import resource_filename
+with open(resource_filename('gftools', 'template.upstream.yaml')) as f:
+  upstream_yaml_template = f.read()
+
+
 
 # GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
 GITHUB_REPO_SSH_URL = 'git@github.com:{repo_name_with_owner}.git'.format
@@ -241,45 +246,6 @@ upstream_yaml_template_schema = Map({
     'designer': EmptyNone() |Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
 })
-
-upstream_yaml_template  = f'''
-# Please edit this upstream configuration for the family accordingly.
-# This is a yaml formatted file.
-# An "#" (number sign) denotes a comment.
-# For more help see the docs at:
-# https://github.com/googlefonts/gf-docs/tree/master/METADATA
-
-# Full family name, with initial upper cases and spaces
-name:
-
-# In most cases this should be based on the GitHub https repo url:
-# this https://github.com/{{owner}}/{{repo}}.git
-repository_url:
-
-# The branch name used to update google fonts. e.g.: master
-branch: master
-
-# Choose one of: {', '.join(CATEGORIES)}
-category:
-
-# Full name of the type designer(s) or foundry who designed the fonts.
-designer:
-
-# Dictionary mapping of SOURCE file names to TARGET file names. Where
-# SOURCE is the file path in the upstream repo and TARGET is the file
-# path in the google fonts family directory.
-# Accepted and expected files:
-#     - The font files, ending with ".ttf"
-#     - In case of a variable font, static instances in: static/Family-instance.ttf
-#     - DESCRIPTION.en_us.html
-#     - OFL.txt, the license.  Less likely UFL.txt and LICENSE.txt.
-#     - (optional) FONTLOG.txt
-files:
-  # These are some examples as comments, please modify, add, delete as necessary:
-  # OFL.txt: OFL.txt
-  # DESCRIPTION.en_us.html: DESCRIPTION.en_us.html
-  # fonts/variable/Gelasio-Italic-VF.ttf: Gelasio-Italic[wght].ttf
-'''
 
 # ALLOWED FILES
 LICENSE_FILES_2_DIRS = (
