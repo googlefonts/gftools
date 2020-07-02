@@ -451,8 +451,10 @@ def _format_upstream_yaml (upstream_yaml: YAML, compact: bool = True):
     f'{"-"*len(top)}'
   )
 
+
+
 def _repl_upstream_conf(initial_upstream_conf: str, yes: bool=False
-                      , quiet: bool=False):
+                      , quiet: bool=False, use_template_schema=False):
   if yes:
     raise UserAbortError()
   # repl means "read-eval-print loop"
@@ -492,8 +494,10 @@ def _repl_upstream_conf(initial_upstream_conf: str, yes: bool=False
 
       # parse the file
       try:
-        last_good_conf = dirty_load(updated_upstream_conf, upstream_yaml_schema
-                                           , allow_flow_style=True)
+        yaml_schema = upstream_yaml_schema if not use_template_schema \
+                                      else upstream_yaml_template_schema
+        last_good_conf = dirty_load(updated_upstream_conf, yaml_schema,
+                                    allow_flow_style=True)
       except Exception as e:
         answer = user_input(f'The configuration did not parse ({type(e).__name__}):\n\n'
                        f'{e}',
@@ -540,10 +544,14 @@ def _repl_upstream_conf(initial_upstream_conf: str, yes: bool=False
   finally:
     os.unlink(upstream_yaml_file_name)
 
-def _load_or_repl_upstream(upstream_yaml_text: str, yes: bool=False
-                        , quiet: bool=False) -> typing.Tuple[bool, YAML]:
+def _load_or_repl_upstream(upstream_yaml_text: str, yes: bool = False,
+                           quiet: bool = False,
+                           use_template_schema: bool = False
+                          ) -> typing.Tuple[bool, YAML]:
   try:
-    return False, dirty_load(upstream_yaml_text, upstream_yaml_schema
+    yaml_schema = upstream_yaml_schema if not use_template_schema \
+                                    else upstream_yaml_template_schema
+    return False, dirty_load(upstream_yaml_text, yaml_schema
                                         , allow_flow_style=True)
   except YAMLValidationError as err:
     answer = user_input('The configuration has schema errors:\n\n'
@@ -553,10 +561,13 @@ def _load_or_repl_upstream(upstream_yaml_text: str, yes: bool=False
                      default='q', yes=yes, quiet=quiet)
     if answer == 'q':
       raise UserAbortError()
-    return True, _repl_upstream_conf(upstream_yaml_text, yes=yes, quiet=quiet)
+    return True, _repl_upstream_conf(upstream_yaml_text, yes=yes, quiet=quiet,
+                                    use_template_schema=use_template_schema)
 
-def _upstream_conf_from_file(filename: str, yes: bool=False
-                                          , quiet: bool=False) -> YAML:
+def _upstream_conf_from_file(filename: str, yes: bool = False,
+                                            quiet: bool = False,
+                                            use_template_schema: bool = False
+                                          ) -> YAML:
   """ If this parses there will be no repl, the user can edit
   the file directly on disk.
   If it doesn't parse, there's a chance to edit until the yaml parses
@@ -565,7 +576,8 @@ def _upstream_conf_from_file(filename: str, yes: bool=False
   with open(filename, 'r+') as upstream_yaml_file:
     upstream_yaml_text = upstream_yaml_file.read()
     edited, upstream_conf_yaml = _load_or_repl_upstream(upstream_yaml_text
-                                                  , yes=yes, quiet=quiet)
+                                                  , yes=yes, quiet=quiet
+                                                  , use_template_schema=use_template_schema)
     # "edited" is only true when upstream_yaml_text did not parse and
     # was then edited successfully.
     if edited:
@@ -580,20 +592,21 @@ def _upstream_conf_from_file(filename: str, yes: bool=False
   return upstream_conf_yaml
 
 
-def _upstream_conf_from_scratch(family_name: typing.Union[str, None]=None,
-                                yes: bool=False, quiet: bool=False) \
-                                                  -> YAML:
-  if family_name is not None:
-    upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
-                                            , allow_flow_style=True)
-    upstream_conf_yaml['name'] = family_name
-    template = upstream_conf_yaml.as_yaml()
-  else:
-    template = upstream_yaml_template
-  upstream_conf_yaml = _repl_upstream_conf(template,
-                                           yes=yes, quiet=quiet)
+def _upstream_conf_from_scratch(family_name: typing.Union[str, None] = None,
+                                yes: bool = False, quiet: bool = False,
+                                use_template_schema:bool = False) -> YAML:
 
-  return upstream_conf_yaml
+  upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
+                                            , allow_flow_style=True)
+  if family_name is not None:
+    upstream_conf_yaml['name'] = family_name
+
+  if use_template_schema and yes: # for -u/--upstream-yaml
+    return upstream_conf_yaml
+
+  template = upstream_conf_yaml.as_yaml()
+  return _repl_upstream_conf(template, yes=yes, quiet=quiet,
+                                           use_template_schema=use_template_schema)
 
 def _user_input_license(yes: bool=False, quiet: bool=False):
   answer = user_input('To add a new typeface family to Google Fonts we '
@@ -614,8 +627,10 @@ def _user_input_license(yes: bool=False, quiet: bool=False):
   license_dir = {d[0]:d for d in LICENSE_DIRS}[answer]
   return license_dir
 
-def _upstream_conf_from_metadata(metadata_str: str, yes: bool=False
-                                                  , quiet: bool=False):
+def _upstream_conf_from_metadata(metadata_str: str, yes: bool = False,
+                                 quiet: bool = False,
+                                 use_template_schema: bool = False
+                                ) -> YAML:
   """Use the data that is already in METADATA,pb to bootstrap filling
      the upstream conf.
   """
@@ -641,10 +656,14 @@ def _upstream_conf_from_metadata(metadata_str: str, yes: bool=False
   for k,v in upstream_conf.items():
     if v is None: continue
     upstream_conf_yaml[k] = v
-  return _repl_upstream_conf(upstream_conf_yaml.as_yaml(), yes=yes, quiet=quiet)
+  if use_template_schema and yes:
+    return upstream_conf_yaml
+  return _repl_upstream_conf(upstream_conf_yaml.as_yaml(), yes=yes,
+                  quiet=quiet, use_template_schema=use_template_schema)
 
-def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool=False
-                            , quiet: bool=False) -> YAML:
+def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool = False,
+                             quiet: bool = False,
+                             use_template_schema: bool = False) -> YAML:
   """ Make a package when the upstream.yaml file is already in the
   google/fonts repo.
 
@@ -658,16 +677,20 @@ def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool=False
                              n='no'),
                  default='n', yes=yes, quiet=quiet)
   if answer == 'y':
-    return _repl_upstream_conf(upstream_yaml_text, yes=yes, quiet=quiet)
-  _, upstream_conf_yaml =  _load_or_repl_upstream(upstream_yaml_text, yes=yes, quiet=quiet)
+    return _repl_upstream_conf(upstream_yaml_text, yes=yes, quiet=quiet ,
+                              use_template_schema=use_template_schema)
+  _, upstream_conf_yaml =  _load_or_repl_upstream(upstream_yaml_text, yes=yes,
+                              quiet=quiet, use_template_schema=use_template_schema)
   return upstream_conf_yaml
 
 
 def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
-                          quiet: bool) -> typing.Tuple[YAML, str, dict]:
+                          quiet: bool, require_license_dir: bool = True,
+                          use_template_schema: bool = False
+                          ) -> typing.Tuple[YAML, typing.Union[str, None], dict]:
   # the first task is to acquire an upstream_conf, the license dir and
   # if present the available files for the family in the google/fonts repo.
-  license_dir = None
+  license_dir: typing.Union[str, None] = None
   upstream_conf_yaml = None
   gf_dir_content: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
 
@@ -675,8 +698,9 @@ def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
     family_name = file_or_family
   else:
     # load a upstream.yaml from disk
-    upstream_conf_yaml = _upstream_conf_from_file(file_or_family
-                                                  , yes=yes, quiet=quiet)
+    upstream_conf_yaml = _upstream_conf_from_file(file_or_family,
+                                      yes=yes, quiet=quiet,
+                                      use_template_schema=use_template_schema)
     family_name = upstream_conf_yaml['name'].data
 
   # TODO:_get_gf_dir_content: is implemented as github graphql query,
@@ -695,11 +719,13 @@ def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
     # The family is not specified or not found on google/fonts.
     # Can also be an user input error, but we don't handle this yet/here.
     print(f'Font Family "{family_name}" not found on Google Fonts.')
-    license_dir = _user_input_license(yes=yes, quiet=quiet)
+    if require_license_dir:
+      license_dir = _user_input_license(yes=yes, quiet=quiet)
     if upstream_conf_yaml is None:
-      # if there was no local upstream yaml 'file://'
-      upstream_conf_yaml = _upstream_conf_from_scratch(family_name
-                                                  , yes=yes, quiet=quiet)
+      # if there was no local upstream yaml
+      upstream_conf_yaml = _upstream_conf_from_scratch(family_name,
+                                        yes=yes, quiet=quiet,
+                                        use_template_schema=use_template_schema)
   else:
     print(f'Font Family "{family_name}" is on Google Fonts under "{license_dir}".')
 
@@ -712,15 +738,17 @@ def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
     print(f'Using upstream.yaml from google/fonts for {family_name}.')
     file_sha = gf_dir_content['upstream.yaml']['oid']
     response = get_github_gf_blob(file_sha)
-    upstream_conf_yaml = _upstream_conf_from_yaml(response.text
-                                                  , yes=yes, quiet=quiet)
+    upstream_conf_yaml = _upstream_conf_from_yaml(response.text,
+                                          yes=yes, quiet=quiet,
+                                          use_template_schema=use_template_schema)
   elif 'METADATA.pb' in gf_dir_content:
     # until there's upstream_conf in each family dir
     print(f'Using METADATA.pb.yaml from google/fonts for {family_name}.')
     file_sha = gf_dir_content['METADATA.pb']['oid']
     response = get_github_gf_blob(file_sha)
-    upstream_conf_yaml = _upstream_conf_from_metadata(response.text
-                                                , yes=yes, quiet=quiet)
+    upstream_conf_yaml = _upstream_conf_from_metadata(response.text,
+                                            yes=yes, quiet=quiet,
+                                            use_template_schema=use_template_schema)
   else:
     raise Exception('Unexpected: can\'t use google fonts family data '
                     f'for {family_name}.')
@@ -1117,7 +1145,7 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
   # But I don't use the --force flag here, because I believe this is
   # very much the standard case, i.e. that we update existing PRs.
   _push(repo, url, local_branch_name, remote_branch_name, force=True)
-  print(f'git push: DONE!')
+  print('DONE git push!')
 
   pr_head = f'{push_owner}:{remote_branch_name}'
   pr_base_branch = 'master'  # currently we always do PRs to master
@@ -1442,11 +1470,53 @@ def _branch_name_from_family_dirs(family_dirs: typing.List[str]) -> str:
   # gftools_packager_apache_arimo-cherrycreamsoda_ofl_d79615d347
   return f'{full_branch_name[:max_len-11]}_{hash_hex_ini}'
 
+def _file_or_family_is_file(file_or_family: str) -> bool:
+  return file_or_family.endswith('.yaml') or \
+         file_or_family.endswith('.yml') # .yml is common, too
+
+def _output_upstream_yaml(file_or_family: typing.Union[str, None], target: str,
+                    yes: bool, quiet: bool, force: bool) -> None:
+  if not file_or_family:
+     # just use the template
+     upstream_conf_yaml =  dirty_load(upstream_yaml_template, upstream_yaml_template_schema
+                                            , allow_flow_style=True)
+  else:
+    is_file = _file_or_family_is_file(file_or_family)
+    upstream_conf_yaml, _, _ = _get_upstream_info(file_or_family, is_file,
+                                    yes, quiet, require_license_dir=False,
+                                    use_template_schema=True)
+  # save!
+  while True:
+    try:
+      with open(target, 'x' if not force else 'w') as f:
+        f.write(upstream_conf_yaml.as_yaml())
+      break
+    except FileExistsError:
+      if not force:
+        answer = user_input(f'Can\'t override existing target file {target}'
+                          ' without explicit permission.',
+              OrderedDict(f='force override',
+                          q='quit program'),
+              default='q', yes=yes, quiet=quiet)
+      if answer == 'q':
+        raise UserAbortError('Can\'t override existing target file '
+                              f'{target}. '
+                              'Use --force to allow explicitly.')
+      else: # answer == 'f'
+        force = True
+        continue
+  print(f'DONE upstream conf saved as {target}!')
+
+
 def make_package(file_or_families: typing.List[str], target: str, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
                  add_commit: bool, pr: bool, pr_upstream: str,
-                 push_upstream: str, branch: typing.Union[str, None]=None):
+                 push_upstream: str, upstream_yaml: bool,
+                 branch: typing.Union[str, None]=None):
 
+  if upstream_yaml:
+    return _output_upstream_yaml(file_or_families[0] if file_or_families else None,
+                            target, yes, quiet, force)
   # some flags can be set implicitly
   pr = pr or bool(push_upstream) or bool(pr_upstream)
   # set default
@@ -1467,8 +1537,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
     os.makedirs(tmp_repos_dir, exist_ok=True)
 
     for file_or_family in file_or_families:
-      is_file: bool = file_or_family.endswith('.yaml') or \
-                      file_or_family.endswith('.yml') # .yml is common, too
+      is_file = _file_or_family_is_file(file_or_family)
       edit = False
       while True: # repl
         if not edit:
@@ -1480,7 +1549,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
             gf_dir_content ) = _edit_upstream_info(upstream_conf_yaml,
                                         file_or_family, is_file, yes, quiet)
           edit = False # reset
-
+        assert isinstance(license_dir, str)
         try:
           family_dir = _create_package_content(tmp_package_dir, tmp_repos_dir,
                                 upstream_conf_yaml, license_dir,
@@ -1662,7 +1731,7 @@ def _git_fetch_master(repo: pygit2.Repository, remote_name: str) -> None:
   # using just 'master' instead of 'refs/heads/master' works as well
   stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
   print(f'DONE fetch {_sizeof_fmt(stats.received_bytes)} '
-        f'{stats.indexed_objects} receivedobjects')
+        f'{stats.indexed_objects} receivedobjects!')
 
 @contextmanager
 def _create_tmp_remote(repo: pygit2.Repository, url:str) -> typing.Iterator[pygit2.Remote]:

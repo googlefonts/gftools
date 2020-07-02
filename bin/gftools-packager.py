@@ -55,7 +55,9 @@ parser.add_argument(
             type=str,
             help='The target of the package. By default a path to a directory. '
                  'See -f/--force to allow changing none-empty directories. '
-                 'See -g/--gf-git to use it as a git repository.')
+                 'See -g/--gf-git to use it as a git repository. '
+                 'A notable exception is -u/--upstream-yaml where the upstream.yaml '
+                 'template will be saved to target file name.')
 parser.add_argument(
             '-g','--gf-git',
             dest='is_gf_git',
@@ -102,6 +104,18 @@ parser.add_argument(
             help='The upstream where the push goes, as a GitHub "owner/repoName" '
                  'pair (default: the value of --pr-upstream). '
                  'This implies -p/--pr, i.e. target will be treated as if -p/--pr is set.')
+parser.add_argument(
+            '-u', '--upstream-yaml',
+            action='store_true',
+            help='Create and output the upstream.yaml to the file name given by target. '
+                 'This is intended to help bootstrapping new upstream configurations. '
+                 'In it\'s simplest form, if no name argument is given, it will output the '
+                 'yaml template. '
+                 'However, if name is given, this will also try to include all available '
+                 'information and interact with the user. This can only handle one name, '
+                 'because there can only be one target. '
+                 'Use -y/--no-confirm to skip interactive mode.'
+                 'Use -f/--force to override existing target.')
 parser.add_argument(
             '--no-whitelist',
             action='store_true',
