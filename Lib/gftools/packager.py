@@ -51,7 +51,7 @@ else:
 
 
 # GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
-GITHUB_REPO_SSH_URL = 'git@github.com:{gh_repo_name_with_owner}.git'.format
+GITHUB_REPO_SSH_URL = 'git@github.com:{repo_name_with_owner}.git'.format
 
 GITHUB_GRAPHQL_API = 'https://api.github.com/graphql'
 GITHUB_V3_REST_API = 'https://api.github.com'
@@ -930,8 +930,10 @@ def _check_git_target(target: str) -> None:
   except Exception as e:
     raise ProgramAbortError(f'Can\'t open "{target}" as git repository. '
                             f'{e} ({type(e).__name__}).')
-
-  remote_name_or_none = _find_github_remote(repo, 'google', 'fonts', 'master')
+  repo_owner = 'google'
+  repo_name = 'fonts'
+  repo_name_with_owner = f'{repo_owner}/{repo_name}'
+  remote_name_or_none = _find_github_remote(repo, repo_owner, repo_name, 'master')
   if remote_name_or_none is None:
     # NOTE: we could ask the user if we should add the missing remote.
     # This makes especially sense if the repository is a fork of
@@ -941,10 +943,10 @@ def _check_git_target(target: str) -> None:
     # have to download a lot of new data, as well as probably create
     # confusing situations for the user when dealing with GitHub PRs etc.
     print (f'The git repository at target "{target}" has no remote for '
-      'GitHub google/fonts.\n'
+      f'GitHub {repo_name_with_owner}.\n'
       'You can add it by running:\n'
       f'$ cd {target}\n'
-      '$ git remote add googlefonts git@github.com:google/fonts.git\n'
+      f'$ git remote add googlefonts {GITHUB_REPO_SSH_URL(repo_name_with_owner=repo_name_with_owner)}.git\n'
       'For more context, run:\n'
       '$ git remote help')
 
@@ -1093,7 +1095,7 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
 
   push_owner, _push_repo = push_upstream.split('/')
   pr_owner, pr_repo = pr_upstream.split('/')
-  url = GITHUB_REPO_SSH_URL(gh_repo_name_with_owner=push_upstream)
+  url = GITHUB_REPO_SSH_URL(repo_name_with_owner=push_upstream)
 
   remote_branch_name = local_branch_name
   # We must only allow force pushing/general pushing to branch names that
@@ -1558,7 +1560,7 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
   # remotes it uses.
   # If more control is needed we'll have to add it.
   accepted_remote_urls = [
-     f'git@github.com:{searched_repo}.git', # ssh
+     GITHUB_REPO_SSH_URL(repo_name_with_owner=searched_repo), # ssh
      f'ssh://git@github.com/{searched_repo}', # ssh
      f'https://github.com/{searched_repo}.git', # token (auth not needed for fetch)
   ]
