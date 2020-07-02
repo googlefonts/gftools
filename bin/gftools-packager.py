@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
+
 import sys
 from gftools import packager
 from gftools.packager import UserAbortError, ProgramAbortError
-
-
 import argparse
 
-parser = argparse.ArgumentParser(description='Package upstream font families for Google Fonts.')
+def _ansi_bold(text:str) ->str:
+  return f'\033[1m{text}\033[0m'
+
+parser = argparse.ArgumentParser(
+    prog='gftools packager',
+    description='Package upstream font families for Google Fonts.',
+    epilog=f'{_ansi_bold("Documentation:")} '
+           'https://github.com/googlefonts/gftools/tree/master/docs/gftools-packager'
+           '\n'
+           f'{_ansi_bold("Issues:")} '
+           'https://github.com/googlefonts/gftools/issues'
+)
 
 parser.add_argument(
             'file_or_families',

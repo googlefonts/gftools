@@ -1464,7 +1464,8 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
     os.makedirs(tmp_repos_dir, exist_ok=True)
 
     for file_or_family in file_or_families:
-      is_file: bool = file_or_family.endswith('.yaml')
+      is_file: bool = file_or_family.endswith('.yaml') or \
+                      file_or_family.endswith('.yml') # .yml is common, too
       edit = False
       while True: # repl
         if not edit:
@@ -1523,7 +1524,8 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
             continue
         # Done with file_or_family!
         break # break the REPL while loop.
-
+    else:
+      print('No families to package.')
     # done with collecting data for all file_or_families
 
     if is_gf_git:
