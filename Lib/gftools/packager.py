@@ -1,9 +1,11 @@
+"""
+This module implements gftools/bin/gftools-packager.py
 
-# TODO: document dependencies, expect command line `git` with support
-# for shallow clones (not in old git versions)
+Tool to take files from a font family project upstream git repository
+to the google/fonts GitHub repository structure, taking care of all the details.
 
-# TODO: document environment variables: VISUAL, EDITOR, GH_TOKEN
-
+Documentation at gftools/docs/gftools-packager/README.md
+"""
 import sys
 import os
 from pathlib import PurePath

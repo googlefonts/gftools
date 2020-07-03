@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""Tool to take files from a font family project upstream git repository
+to the google/fonts GitHub repository structure, taking care of all the details.
+
+Documentation at gftools/docs/gftools-packager/README.md
+"""
 
 import sys
 from gftools import packager
