@@ -1348,7 +1348,6 @@ def _packagage_to_dir(tmp_package_family_dir: str, target: str,
                   family_dir: str, force: bool, yes: bool, quiet: bool):
   # target is a directory:
   target_family_dir = os.path.join(target, family_dir)
-  print('target_family_dir', target_family_dir)
   if os.path.exists(target_family_dir):
     if not force:
       answer = user_input(f'Can\'t override existing directory {target_family_dir}'
@@ -1362,7 +1361,7 @@ def _packagage_to_dir(tmp_package_family_dir: str, target: str,
                               'Use --force to allow explicitly.')
     shutil.rmtree(target_family_dir)
   else: # not exists
-    os.makedirs(os.path.dirname(target_family_dir))
+    os.makedirs(os.path.dirname(target_family_dir), exist_ok=True)
   shutil.move(tmp_package_family_dir, target_family_dir)
 
   # only for reporting
@@ -1374,6 +1373,7 @@ def _packagage_to_dir(tmp_package_family_dir: str, target: str,
       entry_name = os.path.relpath(full_path, target)
       filesize = os.path.getsize(full_path)
       package_contents.append((entry_name, filesize))
+  print(f'Package Directory: {target_family_dir}')
   _print_package_report(target_label, package_contents)
 
 def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
