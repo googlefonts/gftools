@@ -64,7 +64,7 @@ Make sure the submodule is up to date by running:
 
 ### Google Fonts API Key
 
-In order to use the scripts **gftools qa** and **gftools family-html-snippet**, you will need to generate a Google Fonts api key, https://developers.google.com/fonts/. You will then need to create a new file located on your system at `~/.gf-api-key`, which contains the following:
+In order to use the scripts **gftools qa** and **gftools family-html-snippet**, you will need to generate a Google Fonts api key, https://developers.google.com/fonts/. You will then need to create a new file located on your system at `~/.gf-api-key` (where ~ is your home directory), which contains the following:
 
 ```
 [Credentials]
