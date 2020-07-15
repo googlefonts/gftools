@@ -508,7 +508,7 @@ def main():
         )
     elif args.github_dir_before:
         fonts_before = download_files_in_github_dir(
-            args.github_dir_before, font_before_dir
+            args.github_dir_before, fonts_before_dir
         )
     elif args.googlefonts_before and family_on_gf:
         fonts_before = download_family_from_Google_Fonts(
