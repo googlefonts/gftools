@@ -116,14 +116,15 @@ def _MakeMetadata(fontdir, is_new):
   file_family_style_weights = _FileFamilyStyleWeights(fontdir)
 
   first_file = file_family_style_weights[0].file
-  subsets = ['menu'] + [s[0] for s in fonts.SubsetsInFont(first_file,
-                                                          FLAGS.min_pct,
-                                                          FLAGS.min_pct_ext)]
   old_metadata_file = os.path.join(fontdir, 'METADATA.pb')
   font_license = fonts.LicenseFromPath(fontdir)
 
   metadata = fonts_pb2.FamilyProto()
   metadata.name = file_family_style_weights[0].family
+
+  subsets_in_font = [s[0] for s in fonts.SubsetsInFont(
+    first_file, FLAGS.min_pct, FLAGS.min_pct_ext
+  )]
 
   if not is_new:
     old_metadata = fonts_pb2.FamilyProto()
@@ -132,10 +133,12 @@ def _MakeMetadata(fontdir, is_new):
       metadata.designer = old_metadata.designer
       metadata.category = old_metadata.category
       metadata.date_added = old_metadata.date_added
+      subsets = set(old_metadata.subsets) | set(subsets_in_font)
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category = 'SANS_SERIF'
     metadata.date_added = time.strftime('%Y-%m-%d')
+    subsets = ['menu'] + subsets_in_font
 
   metadata.license = font_license
   subsets = sorted(subsets)
