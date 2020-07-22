@@ -328,6 +328,7 @@ def _get_gf_dir_content(family_name: str) \
   for license_dir in LICENSE_DIRS:
     if gfentry['data']['repository'][license_dir] is not None:
       entries = gfentry['data']['repository'][license_dir]['entries']
+      break
   if entries is None:
     return None, {}
   gf_dir_content = {f['name']: f for f in entries}
