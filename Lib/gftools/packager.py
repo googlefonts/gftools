@@ -51,9 +51,14 @@ if TYPE_CHECKING:
 else:
   import gftools.fonts_public_pb2 as fonts_pb2
 
+CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'HANDWRITING', 'MONOSPACE']
+
 from pkg_resources import resource_filename
 with open(resource_filename('gftools', 'template.upstream.yaml')) as f:
   upstream_yaml_template = f.read()
+  # string.format fails if we use other instances of {variables}
+  # without adding them to the call to format (KeyError).
+  upstream_yaml_template = upstream_yaml_template.replace('{CATEGORIES}', ', '.join(CATEGORIES))
 
 
 
@@ -224,9 +229,6 @@ def _shallow_clone_git(target_dir, git_url, branch_or_tag='master'):
                        , '-b', branch_or_tag, git_url
                        , target_dir], check=True
                        , stdout=subprocess.PIPE)
-
-CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'SANS_SERIF',
-                  'HANDWRITING', 'MONOSPACE']
 
 upstream_yaml_schema = Map({
     'name': Str(),
