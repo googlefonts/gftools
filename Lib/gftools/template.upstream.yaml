@@ -8,13 +8,13 @@
 name:
 
 # In most cases this should be based on the GitHub https repo url:
-# this https://github.com/{{owner}}/{{repo}}.git
+# this https://github.com/{owner}/{repo}.git
 repository_url:
 
 # The branch name used to update google fonts. e.g.: master
 branch: master
 
-# Choose one of: {', '.join(CATEGORIES)}
+# Choose one of: {CATEGORIES}
 category:
 
 # Full name of the type designer(s) or foundry who designed the fonts.
