@@ -215,6 +215,11 @@ def _shallow_clone_git(target_dir, git_url, branch_or_tag='master'):
       structure.
   """
 
+  # I don't understand why git clone doesn't take this more explicit form.
+  # But, I recommended it in the docs, so here's a little fix.
+  if branch_or_tag.startswith('tags/'):
+    branch_or_tag = branch_or_tag[len('tags/'):]
+
   return subprocess.run(['git', 'clone', '--depth', '1', '--bare'
                        , '-b', branch_or_tag, git_url
                        , target_dir], check=True
