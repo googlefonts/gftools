@@ -67,7 +67,7 @@ def families_from_file(fp):
     with open(fp) as doc:
         family_dirs = doc.read().split()
     metadata_files = [Path(fp).parent / d / 'METADATA.pb' for d in family_dirs]
-    missing_files = [f for f in metadata_files if not f.is_file()]
+    missing_files = [str(f) for f in metadata_files if not f.is_file()]
     if missing_files:
         raise FileNotFoundError(
             "Following METADATA.pbs files are missing:\n{}".format(
