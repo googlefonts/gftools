@@ -63,6 +63,7 @@ def fix_isFixedPitch(ttfont):
                   " Setting values to defaults (FamilyType = 2, Proportion = 9).")
             ttfont['OS/2'].panose.bFamilyType = 2
             ttfont['OS/2'].panose.bProportion = 9
+            expected = None
         else:
             expected = None
 
