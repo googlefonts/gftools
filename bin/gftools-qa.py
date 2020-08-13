@@ -33,6 +33,7 @@ import requests
 from io import BytesIO
 import json
 from zipfile import ZipFile
+import time
 from gftools.utils import (
     download_family_from_Google_Fonts,
     download_files_in_github_pr,
@@ -171,6 +172,86 @@ class FontQA:
     def chunkify(items, size):
         return [items[i : i + size] for i in range(0, len(items), size)]
 
+    def _diffbrowsers_job(self, dst, group, browsers_to_test):
+        styles = [i[0] for i in group]
+        dir_name = "_".join(styles)
+        fonts_before = [i[1] for i in group]
+        fonts_after = [i[2] for i in group]
+        out = os.path.join(dst, dir_name)
+        diff_browsers = DiffBrowsers(
+            auth=self._bstack_auth,
+            gfr_instance_url=self.GFR_URL,
+            dst_dir=out,
+            browsers=browsers_to_test,
+        )
+        diff_browsers.new_session(set(fonts_before), set(fonts_after))
+
+        waterfall_diff_view = diff_browsers.diff_view("waterfall", styles=styles)
+        glyphs_all_diff_view = diff_browsers.diff_view("glyphs_all", pt=16, styles=styles)
+
+        poll_jobs = []
+        generators = [waterfall_diff_view, glyphs_all_diff_view]
+        for gen in generators:
+            status, jobs = next(gen)
+            assert status == 'poll jobs'
+            poll_jobs.extend(jobs)
+
+        yield 'poll jobs', poll_jobs
+        # finalize, only the result of waterfall_diff_view_stats will be captured
+        try:
+            next(waterfall_diff_view)
+            raise Exception('StopIteration expected.')
+        except StopIteration as e:
+            waterfall_diff_view_stats = e.value
+        info = os.path.join(out, "info.json")
+        json.dump(waterfall_diff_view_stats, open(info, "w"))
+        # finish all properly
+        for gen in generators:
+            yield from gen
+
+    def _poll_jobs(self, poll_jobs):
+        jobs_active = {}
+        jobs_done = set()
+        started = 0
+        suspend = 0
+
+        while len(jobs_active) or started < len(poll_jobs):
+            if started < len(poll_jobs):
+                for job in poll_jobs:
+                    if suspend > time.time():
+                        break;
+                    if job in jobs_active or job in jobs_done:
+                        continue
+                    status, min_wait_time = next(job)
+                    # yield 'suspend', generate_resp_json['Retry-After']
+                    if status == 'suspend':
+                        suspend = time.time() + min_wait_time
+                        break
+                    assert status == 'initial'
+                    started += 1
+                    jobs_active[job] = (time.time(), min_wait_time)
+
+            min_next = 0
+            for job in list(jobs_active):
+                last_tick, min_wait_time = jobs_active[job]
+                now = time.time()
+                schedule = last_tick + min_wait_time
+                if now >= schedule:
+                    # due for an iteration
+                    try:
+                        status, min_wait_time = next(job)
+                        assert status == 'pending'
+                        jobs_active[job] = (time.time(), min_wait_time)
+                    except StopIteration:
+                        # this one is done
+                        del jobs_active[job]
+                        jobs_done.add(job)
+                else:
+                    min_next = min(min_next, min_wait_time)
+            sleep_time = min_next - time.time()
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+
     def diffbrowsers(self, **kwargs):
         """Test fonts on GFR regression and take screenshots using
         diffbrowsers. A browserstack account is required."""
@@ -186,23 +267,22 @@ class FontQA:
         fonts = [(k, self.instances_before[k]['filename'],
                      self.instances[k]['filename']) for k in self.matching_instances]
         font_groups = self.chunkify(sorted(fonts), 4)
+
+        poll_jobs = []
+        generators = []
         for group in font_groups:
-            styles = [i[0] for i in group]
-            dir_name = "_".join(styles)
-            fonts_before = [i[1] for i in group]
-            fonts_after = [i[2] for i in group]
-            out = os.path.join(dst, dir_name)
-            diff_browsers = DiffBrowsers(
-                auth=self._bstack_auth,
-                gfr_instance_url=self.GFR_URL,
-                dst_dir=out,
-                browsers=browsers_to_test,
-            )
-            diff_browsers.new_session(set(fonts_before), set(fonts_after))
-            diff_browsers.diff_view("waterfall", styles=styles)
-            info = os.path.join(out, "info.json")
-            json.dump(diff_browsers.stats, open(info, "w"))
-            diff_browsers.diff_view("glyphs_all", pt=16, styles=styles)
+            generators.append(self._diffbrowsers_job(dst, group, browsers_to_test))
+        for gen in generators:
+            status, jobs = next(gen)
+            assert status == 'poll jobs'
+            poll_jobs.extend(jobs)
+
+        self._poll_jobs(poll_jobs)
+
+        for gen in generators:
+            # finalize all generators
+            for _ in gen: pass
+
 
     def fontbakery(self):
         logger.info("Running Fontbakery")
