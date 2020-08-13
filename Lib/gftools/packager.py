@@ -996,6 +996,13 @@ def _git_tree_from_dir(repo: pygit2.Repository, tmp_package_family_dir: str) -> 
     trees[rel_dir] = treebuilder.write()
   return trees['.']
 
+def _git_write_file(repo: pygit2.Repository, tree_builder: pygit2.TreeBuilder,
+                                        file_path: str, data: bytes) -> None:
+  blob_id = repo.create_blob(data)
+  return _git_makedirs_write(repo, tree_builder, PurePath(file_path).parts,
+                            blob_id, pygit2.GIT_FILEMODE_BLOB)
+
+
 def _git_makedirs_write(repo: pygit2.Repository, tree_builder:pygit2.TreeBuilder,
           path:typing.Tuple[str, ...], git_obj_id: str, git_obj_filemode:int) -> None:
   name, rest_path = path[0], path[1:]
@@ -1162,15 +1169,15 @@ def _get_root_commit(repo: pygit2.Repository, base_remote_branch:str,
     try:
       # If it doesn't raise KeyError i.e. root_commit is contained in
       # our base_remote_branch and not part of the PR.
-      return repo.branches.remote.with_commit(root_commit)[base_remote_branch]
+      return repo.branches.remote.with_commit(root_commit)[base_remote_branch].peel()
     except KeyError:
       continue
     break;
 
-def _get_change_info_from_diff(repo: pygit2.Repository, root_commit: pygit2.Commit,
-                                            tip_commit: pygit2.Commit) -> typing.Dict:
+def _get_change_info_from_diff(repo: pygit2.Repository, root_tree: pygit2.Tree,
+                                            tip_tree: pygit2.Tree) -> typing.Dict:
   # I probably also want the changed files between root_commit and tip commit
-  diff =  repo.diff(root_commit, tip_commit)
+  diff =  repo.diff(root_tree, tip_tree)
   all_touched_files = set()
   for delta in diff.deltas:
     # possible status chars:
@@ -1197,8 +1204,7 @@ def _get_change_info_from_diff(repo: pygit2.Repository, root_commit: pygit2.Comm
         break
   family_changes_dict = {}
   for dir_path_tuple in touched_family_dirs:
-    family_tree: pygit2.Tree = tip_commit.tree \
-                    if type(tip_commit) is pygit2.Commit else tip_commit
+    family_tree: pygit2.Tree = tip_tree
     for pathpart in dir_path_tuple:
       family_tree = family_tree / pathpart
 
@@ -1243,9 +1249,9 @@ def _get_change_info_from_diff(repo: pygit2.Repository, root_commit: pygit2.Comm
     }
   return family_changes_dict
 
-def _title_message_from_diff(repo: pygit2.Repository, root_commit: pygit2.Commit,
-                            tip_commit: pygit2.Commit) -> typing.Tuple[str, str]:
-  family_changes_dict = _get_change_info_from_diff(repo, root_commit, tip_commit)
+def _title_message_from_diff(repo: pygit2.Repository, root_tree: pygit2.Tree,
+                            tip_tree: pygit2.Tree) -> typing.Tuple[str, str]:
+  family_changes_dict = _get_change_info_from_diff(repo, root_tree, tip_tree)
   title = []
   body = []
   for _, fam_entry in family_changes_dict.items():
@@ -1257,10 +1263,16 @@ def _title_message_from_diff(repo: pygit2.Repository, root_commit: pygit2.Commit
                )
   return '; '.join(title), '\n'.join(body)
 
+def _git_get_path(tree: pygit2.Tree, path: str) -> pygit2.Object:
+  last = tree
+  for pathpart in PurePath(path).parts:
+    last = last / pathpart
+  return last
+
 def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
           yes: bool, quiet: bool, local_branch: str, remote_name: str,
           base_remote_branch: str, tmp_package_family_dir: str,
-          family_dir: str):
+          family_dir: str, no_source: bool):
   base_commit = None
   if add_commit:
     try:
@@ -1286,7 +1298,9 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
   committer = pygit2.Signature(user_name, user_email)
 
   new_tree_id = treeBuilder.write()
-  title, body = _title_message_from_diff(repo, base_commit.tree, repo.get(new_tree_id))
+  new_tree: pygit2.Tree = repo.get(new_tree_id)
+  title, body = _title_message_from_diff(repo, base_commit.tree, new_tree)
+
   commit_id = repo.create_commit(
           None,
           author, committer,
@@ -1294,6 +1308,33 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
           new_tree_id,
           [base_commit.id] # parents
   )
+
+  if no_source:
+    # remove source from METADATA.pb in an extra new commit, this will make it
+    # easy to track these changes and to revert them when feasible.
+    treeBuilder = repo.TreeBuilder(new_tree)
+    # read METADATA.pb
+    metadata_filename = os.path.join(family_dir, 'METADATA.pb')
+    metadata_blob = _git_get_path(new_tree, metadata_filename)
+    metadata = fonts_pb2.FamilyProto()
+    text_format.Parse(metadata_blob.data, metadata)
+    # delete source fields
+    metadata.ClearField('source')
+    #write METADATA.pb
+    text_proto = text_format.MessageToString(metadata, as_utf8=True)
+    metadata_filename = os.path.join(family_dir, 'METADATA.pb')
+    _git_write_file(repo, treeBuilder, metadata_filename, text_proto)
+    # commit
+    new_tree_id = treeBuilder.write()
+    commit_id = repo.create_commit(
+            None,
+            author, committer,
+            f'[gftools-packager] {family_dir} remove METADATA "source".  google/fonts#2587',
+            new_tree_id,
+            [commit_id] # parents
+    )
+
+
   commit = repo.get(commit_id)
   # create branch or add to an existing one if add_commit
   while True:
@@ -1329,7 +1370,7 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
 
 def _packagage_to_git(tmp_package_family_dir: str, target: str, family_dir: str,
                      branch: str, force:bool, yes: bool, quiet: bool,
-                     add_commit: bool) -> None:
+                     add_commit: bool, no_source: bool) -> None:
 
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
@@ -1340,7 +1381,7 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str, family_dir: str,
 
   _git_make_commit(repo, add_commit, force, yes, quiet, branch,
                    remote_name, base_remote_branch, tmp_package_family_dir,
-                   family_dir)
+                   family_dir, no_source)
 
 
 def _dispatch_git(target: str, target_branch: str,pr_upstream: str,
@@ -1353,9 +1394,17 @@ def _dispatch_git(target: str, target_branch: str,pr_upstream: str,
     raise Exception('No remote found for google/fonts master.')
 
   git_branch: pygit2.Branch = repo.branches.local[target_branch]
-  tip_commit = git_branch.peel()
-  root_commit = _get_root_commit(repo, base_remote_branch, tip_commit)
-  pr_title, pr_message_body = _title_message_from_diff(repo, root_commit, tip_commit)
+  tip_commit: pygit2.Commit = git_branch.peel()
+  root_commit: pygit2.Commit = _get_root_commit(repo, base_remote_branch, tip_commit)
+  pr_title, _ = _title_message_from_diff(repo, root_commit.tree, tip_commit.tree)
+
+  current_commit = tip_commit
+  messages = []
+  while current_commit.id != root_commit.id:
+    messages.append(f' {current_commit.short_id}: {current_commit.message}')
+    current_commit = current_commit.parents[0]
+  pr_message_body  = '\n\n'.join(reversed(messages))
+
   _make_pr(repo, target_branch, pr_upstream, push_upstream,
                                             pr_title, pr_message_body)
 
@@ -1411,7 +1460,8 @@ def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
 def _packages_to_target(tmp_package_dir: str, family_dirs: typing.List[str],
                         target: str, is_gf_git: bool,
                         branch: str, force: bool,
-                        yes: bool, quiet: bool, add_commit: bool) ->None:
+                        yes: bool, quiet: bool, add_commit: bool,
+                        no_source: bool) ->None:
   for i, family_dir in enumerate(family_dirs):
     tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
     # NOTE: if there are any files outside of family_dir that need moving
@@ -1422,7 +1472,7 @@ def _packages_to_target(tmp_package_dir: str, family_dirs: typing.List[str],
       if i > 0:
         add_commit = True
       _packagage_to_git(tmp_package_family_dir, target, family_dir,
-                               branch, force, yes, quiet, add_commit)
+                               branch, force, yes, quiet, add_commit, no_source)
     else:
       _packagage_to_dir(tmp_package_family_dir, target, family_dir,
                                force, yes, quiet)
@@ -1540,7 +1590,11 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
         try:
           family_dir = _create_package_content(tmp_package_dir, tmp_repos_dir,
                                 upstream_conf_yaml, license_dir,
-                                gf_dir_content, no_source, no_whitelist)
+                                gf_dir_content,
+                                # if is_gf_git source is removed in an
+                                # extra commit
+                                no_source and not is_gf_git,
+                                no_whitelist)
           family_dirs.append(family_dir)
         except UserAbortError as e:
           # The user aborted already, no need to bother any further.
@@ -1593,7 +1647,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
       if not branch:
         target_branch = _branch_name_from_family_dirs(family_dirs)
     _packages_to_target(tmp_package_dir, family_dirs, target, is_gf_git,
-                        target_branch, force, yes, quiet, add_commit)
+                        target_branch, force, yes, quiet, add_commit, no_source)
 
   if pr and is_gf_git:
     _dispatch_git(target, target_branch, pr_upstream, push_upstream)
