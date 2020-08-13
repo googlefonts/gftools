@@ -20,6 +20,14 @@ category:
 # Full name of the type designer(s) or foundry who designed the fonts.
 designer:
 
+# optional commands to build, using bash -c {build}
+# if you need a python virtual env, this must be created with build as well
+# TODO: sandboxing and venv creation should be handled by the tool, maybe
+# using docker ...
+# FIXME: for FDB this is a security issue! should only run sanctioned/signed
+# scripts. Maybe we can have a secure $ gftools fontmake ...
+build:
+
 # Dictionary mapping of SOURCE file names to TARGET file names. Where
 # SOURCE is the file path in the upstream repo and TARGET is the file
 # path in the google fonts family directory.

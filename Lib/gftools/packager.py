@@ -244,6 +244,7 @@ upstream_yaml_schema = Map({
     'branch': Str(),
     'category': Enum(CATEGORIES),
     'designer': Str(),
+    Optional('build', default=''): EmptyNone() | Str(),
     # allowing EmptyDict here, even though we need files in here,
     # but we will catch missing files later in the process.
     # When we have repository_url and branch we can add a editor based
@@ -261,6 +262,7 @@ upstream_yaml_template_schema = Map({
     'branch': EmptyNone() | Str(),
     Optional('category', default=None):  EmptyNone() | Enum(CATEGORIES),
     Optional('designer', default=''): EmptyNone() |Str(),
+    Optional('build', default=''): EmptyNone() | Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
 })
 
@@ -268,6 +270,7 @@ upstream_yaml_stripped_schema = Map({ # TODO: custom validation please
     # Only optional until it can be in METADATA.pb
     Optional('repository_url', default=''): Str(),
     'branch': EmptyNone() | Str(),
+    Optional('build', default=''): EmptyNone() | Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
 })
 
@@ -793,15 +796,28 @@ def _edit_upstream_info(upstream_conf_yaml: YAML, file_or_family: str,
 
   return upstream_conf_yaml, license_dir, gf_dir_content or {}
 
-def _copy_upstream_files(branch: str, files: dict, repo: pygit2.Repository
+def _is_allowed_file(filename: str, no_whitelist: bool=False):
+  # there are two places where .ttf files are allowed to go
+  # we don't do filename/basename validation here, that's
+  # a job for font bakery
+  if filename.endswith('.ttf') \
+      and os.path.dirname(filename) in ['', 'static']:
+    return True # using this!
+  elif filename not in ALLOWED_FILES \
+                        and not no_whitelist: # this is the default
+    return False
+  return True
+
+SKIP_NOT_PERMITTED = 'Target is not a permitted filename (see --no_whitelist):'
+SKIP_SOURCE_NOT_FOUND = 'Source not found in upstream:'
+SKIP_SOURCE_NOT_BLOB = 'Source is not a blob (blob=file):'
+SKIP_COPY_EXCEPTION = 'Can\'t copy:'
+
+def _copy_upstream_files_from_git(branch: str, files: dict, repo: pygit2.Repository
             , write_file_to_package: typing.Callable[[str, bytes], None]
             , no_whitelist: bool=False) \
               -> OrderedDict:
 
-  SKIP_NOT_PERMITTED = 'Target is not a permitted filename (see --no_whitelist):'
-  SKIP_SOURCE_NOT_FOUND = 'Source not found in upstream:'
-  SKIP_SOURCE_NOT_BLOB = 'Source is not a blob (blob=file):'
-  SKIP_COPY_EXCEPTION = 'Can\'t copy:'
   skipped: 'OrderedDict[str, typing.List[str]]' = OrderedDict([
       (SKIP_NOT_PERMITTED, []),
       (SKIP_SOURCE_NOT_FOUND, []),
@@ -809,17 +825,10 @@ def _copy_upstream_files(branch: str, files: dict, repo: pygit2.Repository
       (SKIP_COPY_EXCEPTION, [])
   ])
   for source, target in files.items():
-    # there are two places where .ttf files are allowed to go
-    # we don't do filename/basename validation here, that's
-    # a job for font bakery
-    if target.endswith('.ttf') \
-        and os.path.dirname(target) in ['', 'static']:
-      pass # using this!
-    elif target not in ALLOWED_FILES \
-                          and not no_whitelist: # this is the default
+    # else: allow, write_file_to_package will raise errors if target is bad
+    if not _is_allowed_file(target, no_whitelist):
       skipped[SKIP_NOT_PERMITTED].append(target)
       continue
-    # else: allow, write_file_to_package will raise errors if target is bad
 
     try:
       source_object = repo.revparse_single(f"{branch}:{source}")
@@ -836,6 +845,46 @@ def _copy_upstream_files(branch: str, files: dict, repo: pygit2.Repository
     except Exception as e:
       # i.e. file exists
       skipped[SKIP_COPY_EXCEPTION].append(f'{target} ERROR: {e}')
+  # Clean up empty entries in skipped.
+  # using list() because we can't delete from a dict during iterated
+  for key in list(skipped):
+    if not skipped[key]: del skipped[key]
+  # If skipped is empty all went smooth.
+  return skipped
+
+def _copy_upstream_files_from_dir(source_dir: str, files: dict,
+              write_file_to_package: typing.Callable[[str, bytes], None],
+              no_whitelist: bool=False) -> OrderedDict:
+
+  skipped: 'OrderedDict[str, typing.List[str]]' = OrderedDict([
+      (SKIP_NOT_PERMITTED, []),
+      (SKIP_SOURCE_NOT_FOUND, []),
+      (SKIP_SOURCE_NOT_BLOB, []),
+      (SKIP_COPY_EXCEPTION, [])
+  ])
+  for source, target in files.items():
+    # else: allow, write_file_to_package will raise errors if target is bad
+    if not _is_allowed_file(target, no_whitelist):
+      skipped[SKIP_NOT_PERMITTED].append(target)
+      continue
+
+    try:
+      with open(os.path.join(source_dir, source), 'rb') as f:
+        source_data = f.read()
+    except FileNotFoundError:
+      skipped[SKIP_SOURCE_NOT_FOUND].append(source)
+      continue
+    except Exception as err:
+      # e.g. IsADirectoryError
+      skipped[SKIP_SOURCE_NOT_BLOB].append(f'{source} ({type(err).__name__})')
+      continue
+
+    try:
+      write_file_to_package(target, source_data)
+    except Exception as e:
+      # i.e. file exists
+      skipped[SKIP_COPY_EXCEPTION].append(f'{target} ERROR: {e}')
+
   # Clean up empty entries in skipped.
   # using list() because we can't delete from a dict during iterated
   for key in list(skipped):
@@ -932,7 +981,16 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
   # enables making packages even when new, yet unknown files are required).
   # Do we have a Font Bakery check for expected/allowed files? Would
   # be a good complement.
-  skipped = _copy_upstream_files(upstream_conf['branch'],
+  if upstream_conf['build']:
+    with TemporaryDirectory() as tmp:
+      subprocess.run(['git', 'clone', upstream_dir, tmp], check=True)
+      subprocess.run(['bash', '-c', upstream_conf['build']]
+                       , cwd=tmp
+                       , check=True)
+      skipped = _copy_upstream_files_from_dir(tmp, upstream_conf['files'],
+                        write_file_to_package, no_whitelist=no_whitelist)
+  else:
+    skipped = _copy_upstream_files_from_git(upstream_conf['branch'],
                     upstream_conf['files'], repo, write_file_to_package,
                     no_whitelist=no_whitelist)
   if skipped:
