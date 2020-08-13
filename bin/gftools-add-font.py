@@ -31,12 +31,12 @@ Generating a METADATA.pb file for a new family:
 1. Determine the family's license type, ofl, ufl or apache
 2. Create a new folder under the license type directory
 3. Name the folder so it's the family name, all lowercase and no spaces.
-4. Run the following: python add_font.py /path/to/new/family
+4. Run the following: gftools add-font /path/to/new/family
 5. Update the category field in the generated METADATA.pb file.
 
 Generating a METADATA.pb file for an existing family:
 
-1. run the following: python add_font.py --update /path/to/existing/family
+1. run the following: gftools add-font /path/to/existing/family
 """
 from __future__ import print_function
 from functools import cmp_to_key
@@ -108,7 +108,7 @@ def _MakeMetadata(fontdir, is_new):
     fontdir: Directory containing font files for which we want metadata.
     is_new: Whether this is an existing or new family.
   Returns:
-    OrderedDict of a complete METADATA.pb structure.
+    A fonts_pb2.FamilyProto message, the METADATA.pb structure.
   Raises:
     RuntimeError: If the variable font axes info differs between font files of
     same family.
