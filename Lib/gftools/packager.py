@@ -812,7 +812,8 @@ def _copy_upstream_files(branch: str, files: dict, repo: pygit2.Repository
 
 def _create_or_update_metadata_pb(upstream_conf: YAML,
                                   tmp_package_family_dir:str,
-                                  upstream_commit_sha:str) -> None:
+                                  upstream_commit_sha:str,
+                                  no_source: bool) -> None:
   metadata_file_name = os.path.join(tmp_package_family_dir, 'METADATA.pb')
   try:
     subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
@@ -835,8 +836,12 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
   metadata.category = upstream_conf['category']
   # metadata.date_added # is handled well
 
-  metadata.source.repository_url = upstream_conf['repository_url']
-  metadata.source.commit = upstream_commit_sha
+  if no_source:
+    # remove in case it is present
+    metadata.ClearField('source')
+  else:
+    metadata.source.repository_url = upstream_conf['repository_url']
+    metadata.source.commit = upstream_commit_sha
 
   text_proto = text_format.MessageToString(metadata, as_utf8=True)
   with open(metadata_file_name, 'w') as f:
@@ -844,7 +849,7 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
 
 def _create_package_content(package_target_dir: str, repos_dir: str,
         upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
-        no_whitelist: bool = False) -> str:
+        no_source: bool, no_whitelist: bool = False) -> str:
   print(f'Creating package with \n{_format_upstream_yaml(upstream_conf_yaml)}')
   upstream_conf = upstream_conf_yaml.data
   upstream_commit_sha = None
@@ -926,7 +931,7 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
 
   # create/update METADATA.pb
   _create_or_update_metadata_pb(upstream_conf, package_family_dir,
-                                                  upstream_commit_sha)
+                                upstream_commit_sha, no_source)
 
   # create/update upstream.yaml
   with open(os.path.join(package_family_dir, 'upstream.yaml'), 'w') as f:
@@ -1493,7 +1498,7 @@ def _output_upstream_yaml(file_or_family: typing.Union[str, None], target: str,
 def make_package(file_or_families: typing.List[str], target: str, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
                  add_commit: bool, pr: bool, pr_upstream: str,
-                 push_upstream: str, upstream_yaml: bool,
+                 push_upstream: str, upstream_yaml: bool, no_source: bool,
                  branch: typing.Union[str, None]=None):
 
   if upstream_yaml:
@@ -1535,7 +1540,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
         try:
           family_dir = _create_package_content(tmp_package_dir, tmp_repos_dir,
                                 upstream_conf_yaml, license_dir,
-                                gf_dir_content, no_whitelist)
+                                gf_dir_content, no_source, no_whitelist)
           family_dirs.append(family_dir)
         except UserAbortError as e:
           # The user aborted already, no need to bother any further.
