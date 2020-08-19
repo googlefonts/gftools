@@ -1687,9 +1687,9 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
 
   # NOTE: a shallow cloned repository has no remotes.
   for remote in repo.remotes:
-    if remote.url not in accepted_remote_urls:
+    if remote.url not in accepted_remote_urls or remote.url in candidates:
       continue
-    # To be honest, we'll like encounter the (default) first refspec case
+    # To be honest, we'll likely encounter the (default) first refspec case
     # in almost all matching remotes.
     accepted_refspecs = {
       f'+refs/heads/*:refs/remotes/{remote.name}/*'
@@ -1708,7 +1708,7 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
 
   for url in accepted_remote_urls:
     if url in candidates:
-      return remote.name
+      return candidates[url].name
   return None
 
 
@@ -1772,7 +1772,7 @@ def _git_fetch_master(repo: pygit2.Repository, remote_name: str) -> None:
   # using just 'master' instead of 'refs/heads/master' works as well
   stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
   print(f'DONE fetch {_sizeof_fmt(stats.received_bytes)} '
-        f'{stats.indexed_objects} receivedobjects!')
+        f'{stats.indexed_objects} receive dobjects!')
 
 @contextmanager
 def _create_tmp_remote(repo: pygit2.Repository, url:str) -> typing.Iterator[pygit2.Remote]:
