@@ -148,7 +148,11 @@ def _post_github(url: str, payload: typing.Dict):
   github_api_token = _get_github_api_token()
   headers = {'Authorization': f'bearer {github_api_token}'}
   response = requests.post(url, json=payload, headers=headers)
-  response.raise_for_status()
+  if response.status_code == requests.codes.unprocessable:
+    # has a helpful response.json with an 'errors' key.
+    pass
+  else:
+    response.raise_for_status()
   json = response.json()
   if 'errors' in json:
     errors = pprint.pformat(json['errors'], indent=2)
@@ -1192,9 +1196,9 @@ def _get_change_info_from_diff(repo: pygit2.Repository, root_tree: pygit2.Tree,
     #   GIT_DELTA_UNREADABLE: X
     #   default:              ' '
     if delta.status_char() == 'D':
-      # don't look at D=deleted files, tgnore something else?
-      continue
-    all_touched_files.add(delta.new_file.path)
+      all_touched_files.add(delta.old_file.path)
+    else:
+      all_touched_files.add(delta.new_file.path)
   touched_family_dirs = set()
   for filename in all_touched_files:
     for dirname in LICENSE_DIRS:
@@ -1397,6 +1401,14 @@ def _dispatch_git(target: str, target_branch: str,pr_upstream: str,
   tip_commit: pygit2.Commit = git_branch.peel()
   root_commit: pygit2.Commit = _get_root_commit(repo, base_remote_branch, tip_commit)
   pr_title, _ = _title_message_from_diff(repo, root_commit.tree, tip_commit.tree)
+  if not pr_title:
+    # Happens e.g. if we have a bunch of commits that revert themselves,
+    # to me this happened in development, in a for production use very unlikely
+    # situation.
+    # But can also happen if we PR commits that don't do changes in family
+    # dirs. In these cases the PR author should probably come up with a
+    # better title than this placeholder an change it in the GitHub web-GUI.
+    pr_title = '(UNKNOWN gftools-packager: found no family changes)'
 
   current_commit = tip_commit
   messages = []
