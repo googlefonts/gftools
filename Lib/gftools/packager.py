@@ -1575,7 +1575,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
   # Basic early checks. Raises if target does not qualify.
   _check_target(is_gf_git, target)
 
-  # note: use branch if it explicit (and if is_gf_git)
+  # note: use branch if it is explicit (and if is_gf_git)
   target_branch = branch if branch is not None else ''
 
   family_dirs: typing.List[str] = []
