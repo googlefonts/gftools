@@ -29,6 +29,7 @@ from strictyaml import ( # type: ignore
                         Any,
                         EmptyNone,
                         EmptyDict,
+                        Optional,
                         dirty_load,
                         as_document,
                         YAMLValidationError,
@@ -234,6 +235,9 @@ def _shallow_clone_git(target_dir, git_url, branch_or_tag='master'):
                        , target_dir], check=True
                        , stdout=subprocess.PIPE)
 
+# Eventually we need all these keys to make an update, so this
+# can't have Optional/Empty entries, unless that's really optional for
+# the process.
 upstream_yaml_schema = Map({
     'name': Str(),
     'repository_url': Str(), # TODO: custom validation please
@@ -248,15 +252,22 @@ upstream_yaml_schema = Map({
     'files': EmptyDict() | MapPattern(Str(), Str()) # Mappings with arbitrary key names
 })
 
-# since upstream_yaml_template is incomplete, it can't be parsed with
+# Since upstream_yaml_template is incomplete, it can't be parsed with
 # the complete upstream_yaml_schema. Here's a more forgiving schema for
-# the template.
+# the template and for initializing with a stripped upstream_conf.
 upstream_yaml_template_schema = Map({
-    'name': EmptyNone() | Str(),
-    'repository_url': EmptyNone() | Str(), # TODO: custom validation please
+    Optional('name', default=''): EmptyNone() | Str(),
+    Optional('repository_url', default=''): EmptyNone() | Str(), # TODO: custom validation please
     'branch': EmptyNone() | Str(),
-    'category':  EmptyNone() | Enum(CATEGORIES),
-    'designer': EmptyNone() |Str(),
+    Optional('category', default=None):  EmptyNone() | Enum(CATEGORIES),
+    Optional('designer', default=''): EmptyNone() |Str(),
+    'files': EmptyDict() | MapPattern(Str(), Str())
+})
+
+upstream_yaml_stripped_schema = Map({ # TODO: custom validation please
+    # Only optional until it can be in METADATA.pb
+    Optional('repository_url', default=''): Str(),
+    'branch': EmptyNone() | Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
 })
 
@@ -952,8 +963,19 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
                                 upstream_commit_sha, no_source)
 
   # create/update upstream.yaml
+  # Remove keys that are also in METADATA.pb googlefonts/gftools#233
+  # and also clear all comments.
+  redundant_keys = {'name', 'category', 'designer', 'repository_url'}
+  if no_source:
+    # source is NOT in METADATA.pb so we want to keep it in upstream_conf
+    # NOTE: there's another position where this has to be considered
+    # i.e. in case of git as target when making a commit.
+    redundant_keys.remove('repository_url')
+  upstream_conf_stripped = OrderedDict((k, v) for k, v in upstream_conf.items() \
+                                                  if k not in redundant_keys)
+  upstream_conf_stripped_yaml = as_document(upstream_conf_stripped, upstream_yaml_stripped_schema)
   with open(os.path.join(package_family_dir, 'upstream.yaml'), 'w') as f:
-    f.write(upstream_conf_yaml.as_yaml())
+    f.write(upstream_conf_stripped_yaml.as_yaml())
   print(f'DONE Creating package for {upstream_conf["name"]}!')
   return family_dir
 
@@ -1337,11 +1359,20 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
     metadata = fonts_pb2.FamilyProto()
     text_format.Parse(metadata_blob.data, metadata)
     # delete source fields
+    repository_url = metadata.source.repository_url
     metadata.ClearField('source')
-    #write METADATA.pb
+    # write METADATA.pb
     text_proto = text_format.MessageToString(metadata, as_utf8=True)
-    metadata_filename = os.path.join(family_dir, 'METADATA.pb')
     _git_write_file(repo, treeBuilder, metadata_filename, text_proto)
+    # read upstream.yaml
+    upstream_filename = os.path.join(family_dir, 'upstream.yaml')
+    upstream_text = _git_get_path(new_tree, upstream_filename).data.decode('utf-8')
+    upstream_conf_yaml = dirty_load(upstream_text, upstream_yaml_stripped_schema,
+                                                    allow_flow_style=True)
+    # preserve the info: transfer from METADATA.pb
+    upstream_conf_yaml['repository_url'] = repository_url
+    # write upstream.yaml
+    _git_write_file(repo, treeBuilder, upstream_filename, upstream_conf_yaml.as_yaml())
     # commit
     new_tree_id = treeBuilder.write()
     commit_id = repo.create_commit(
