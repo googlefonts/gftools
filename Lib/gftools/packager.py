@@ -931,7 +931,8 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
 
 def _create_package_content(package_target_dir: str, repos_dir: str,
         upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
-        no_source: bool, no_whitelist: bool = False) -> str:
+        no_source: bool, allow_build: bool, yes: bool, quiet: bool,
+        no_whitelist: bool = False) -> str:
   print(f'Creating package with \n{_format_upstream_yaml(upstream_conf_yaml)}')
   upstream_conf = upstream_conf_yaml.data
   upstream_commit_sha = None
@@ -982,11 +983,27 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
   # Do we have a Font Bakery check for expected/allowed files? Would
   # be a good complement.
   if upstream_conf['build']:
+
+    print(f'Found build command:\n  $ {upstream_conf["build"]}')
+    if not allow_build:
+      answer = user_input(f'Can\'t execute build command without explicit '
+              'permission. Don\'t allow this lightly '
+              'and review build command, build process and its dependencies prior. '
+              'This support for building from sources is provisional, a '
+              'discussion can be found at https://github.com/googlefonts/gftools/issues/231',
+              OrderedDict(b='build',
+                          q='quit program'),
+              default='q', yes=yes, quiet=quiet)
+      if answer == 'q':
+        raise UserAbortError('Can\'t execute required build command. '
+                              'Use --allow-build to allow explicitly.')
     with TemporaryDirectory() as tmp:
+      print(f'Building...')
       subprocess.run(['git', 'clone', upstream_dir, tmp], check=True)
       subprocess.run(['bash', '-c', upstream_conf['build']]
                        , cwd=tmp
                        , check=True)
+      print(f'DONE building!')
       skipped = _copy_upstream_files_from_dir(tmp, upstream_conf['files'],
                         write_file_to_package, no_whitelist=no_whitelist)
   else:
@@ -1033,8 +1050,13 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
     # NOTE: there's another position where this has to be considered
     # i.e. in case of git as target when making a commit.
     redundant_keys.remove('repository_url')
+
   upstream_conf_stripped = OrderedDict((k, v) for k, v in upstream_conf.items() \
                                                   if k not in redundant_keys)
+  # Don't keep an empty build key.
+  if 'build' in upstream_conf_stripped and (upstream_conf_stripped['build'] == ''\
+                or upstream_conf_stripped['build'] is None):
+    del upstream_conf_stripped['build']
   upstream_conf_stripped_yaml = as_document(upstream_conf_stripped, upstream_yaml_stripped_schema)
   with open(os.path.join(package_family_dir, 'upstream.yaml'), 'w') as f:
     f.write(upstream_conf_stripped_yaml.as_yaml())
@@ -1680,7 +1702,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
                  quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
                  add_commit: bool, pr: bool, pr_upstream: str,
                  push_upstream: str, upstream_yaml: bool, no_source: bool,
-                 branch: typing.Union[str, None]=None):
+                 allow_build: bool, branch: typing.Union[str, None]=None):
 
   if upstream_yaml:
     return _output_upstream_yaml(file_or_families[0] if file_or_families else None,
@@ -1725,7 +1747,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
                                 # if is_gf_git source is removed in an
                                 # extra commit
                                 no_source and not is_gf_git,
-                                no_whitelist)
+                                allow_build, yes, quiet, no_whitelist)
           family_dirs.append(family_dir)
         except UserAbortError as e:
           # The user aborted already, no need to bother any further.
