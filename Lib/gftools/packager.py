@@ -607,52 +607,62 @@ def _user_input_license(yes: bool=False, quiet: bool=False):
   license_dir = {d[0]:d for d in LICENSE_DIRS}[answer]
   return license_dir
 
-def _upstream_conf_from_metadata(metadata_str: str, yes: bool = False,
-                                 quiet: bool = False,
-                                 use_template_schema: bool = False
-                                ) -> YAML:
-  """Use the data that is already in METADATA,pb to bootstrap filling
-     the upstream conf.
+
+def _upstream_conf_from_yaml_metadata(
+                              upstream_yaml_text: typing.Union[str, None],
+                              metadata_text: typing.Union[str, None],
+                              yes: bool = False,
+                              quiet: bool = False,
+                              use_template_schema: bool = False) -> YAML:
+  """ Make a package when the family is in the google/fonts repo.
+  Uses data preferred from upstream.yaml, if already present, and fills
+  the gaps with data from METADATA.pb. This is to enable the removal of
+  redundant data from upstream.yaml when it is in METADATA.pb, while also
+  keeping upstream.yaml as the source of truth when in doubt.
+
+  Eventually the common update path.
   """
-  metadata = fonts_pb2.FamilyProto()
-  text_format.Parse(metadata_str, metadata)
-  # existing repo, no upstream conf:
-  # from METADATA.pb we use:
-  #       designer, category, name
-  # we won't get **yet**:
-  #       source.repository_url
-  # we still need the new stuff:
-  #       branch, files
-  upstream_conf = {
-    'designer': metadata.designer or None,
-    'category': metadata.category or None,
-    'name': metadata.name  or None,
-    # we won't get this just now in most cases!
-    'repository_url': metadata.source.repository_url or None,
-  }
+  upstream_conf = {}
+  if metadata_text is not None:
+    metadata = fonts_pb2.FamilyProto()
+    text_format.Parse(metadata_text, metadata)
+    # existing repo, no upstream conf:
+    # from METADATA.pb we use:
+    #       designer, category, name
+    # we won't get **yet**:
+    #       source.repository_url
+    # we still need the new stuff:
+    #       branch, files
+    upstream_conf.update({
+      'designer': metadata.designer or None,
+      'category': metadata.category or None,
+      'name': metadata.name  or None,
+      # we won't get this just now in most cases!
+      'repository_url': metadata.source.repository_url or None,
+    })
+  if upstream_yaml_text is not None:
+    # Only drop into REPL mode if can't parse and validate,
+    # and use use_template_schema, because this is not the real deal
+    # yet and we can be very forgiving.
+    _, upstream_conf_yaml = _load_or_repl_upstream(upstream_yaml_text
+                                                  , yes=yes, quiet=quiet
+                                                  , use_template_schema=True)
+    # Override keys set by METADATA.pb before, if there's overlap.
+    upstream_conf.update(upstream_conf_yaml.data)
 
   upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
                                        , allow_flow_style=True)
   for k,v in upstream_conf.items():
     if v is None: continue
     upstream_conf_yaml[k] = v
-  if use_template_schema and yes:
-    return upstream_conf_yaml
-  return _repl_upstream_conf(upstream_conf_yaml.as_yaml(), yes=yes,
-                  quiet=quiet, use_template_schema=use_template_schema)
 
-def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool = False,
-                             quiet: bool = False,
-                             use_template_schema: bool = False) -> YAML:
-  """ Make a package when the upstream.yaml file is already in the
-  google/fonts repo.
+  upstream_yaml_text = upstream_conf_yaml.as_yaml()
+  assert upstream_yaml_text is not None
 
-  Eventually the common update path.
-  """
   # two cases:
   # - upstream.yaml may need an update by the user
   # - upstream.yaml may be invalid (updated schema, syntax)
-  answer = user_input('Do you want to edit upstream.yaml?',
+  answer = user_input('Do you want to edit the current upstream configuration?',
                  OrderedDict(y='yes',
                              n='no'),
                  default='n', yes=yes, quiet=quiet)
@@ -662,7 +672,6 @@ def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool = False,
   _, upstream_conf_yaml =  _load_or_repl_upstream(upstream_yaml_text, yes=yes,
                               quiet=quiet, use_template_schema=use_template_schema)
   return upstream_conf_yaml
-
 
 def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
                           quiet: bool, require_license_dir: bool = True,
@@ -710,28 +719,33 @@ def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
     print(f'Font Family "{family_name}" is on Google Fonts under "{license_dir}".')
 
   if upstream_conf_yaml is not None:
-    # loaded via file:// or from_scratch
-    pass
-  # found on google/fonts and use gf_dir_content
-  elif 'upstream.yaml' in gf_dir_content:
+    # loaded from_file or created from_scratch
+    return upstream_conf_yaml, license_dir, gf_dir_content or {}
+
+  upstream_yaml_text: typing.Union[str, None] = None
+  metadata_text: typing.Union[str, None] = None
+
+  if 'upstream.yaml' in gf_dir_content:
     # normal case
     print(f'Using upstream.yaml from google/fonts for {family_name}.')
     file_sha = gf_dir_content['upstream.yaml']['oid']
     response = get_github_gf_blob(file_sha)
-    upstream_conf_yaml = _upstream_conf_from_yaml(response.text,
-                                          yes=yes, quiet=quiet,
-                                          use_template_schema=use_template_schema)
-  elif 'METADATA.pb' in gf_dir_content:
-    # until there's upstream_conf in each family dir
-    print(f'Using METADATA.pb.yaml from google/fonts for {family_name}.')
+    upstream_yaml_text = response.text
+
+  if 'METADATA.pb' in gf_dir_content:
     file_sha = gf_dir_content['METADATA.pb']['oid']
     response = get_github_gf_blob(file_sha)
-    upstream_conf_yaml = _upstream_conf_from_metadata(response.text,
-                                            yes=yes, quiet=quiet,
-                                            use_template_schema=use_template_schema)
-  else:
+    metadata_text = response.text
+
+  if upstream_yaml_text is None and metadata_text is None:
     raise Exception('Unexpected: can\'t use google fonts family data '
                     f'for {family_name}.')
+
+  upstream_conf_yaml = _upstream_conf_from_yaml_metadata(upstream_yaml_text,
+                                          metadata_text,
+                                          yes=yes, quiet=quiet,
+                                          use_template_schema=use_template_schema)
+
   return upstream_conf_yaml, license_dir, gf_dir_content or {}
 
 
