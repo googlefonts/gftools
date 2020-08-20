@@ -26,6 +26,7 @@ designer:
 # using docker ...
 # FIXME: for FDB this is a security issue! should only run sanctioned/signed
 # scripts. Maybe we can have a secure $ gftools fontmake ...
+# See: discussion at https://github.com/googlefonts/gftools/issues/231
 build:
 
 # Dictionary mapping of SOURCE file names to TARGET file names. Where

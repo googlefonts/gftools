@@ -125,7 +125,7 @@ parser.add_argument(
             '--no-whitelist',
             action='store_true',
             help='Don\'t use the whitelist of allowed files to copy from '
-                 'TARGET in upstream_conf.files. This is meant to enable '
+                 'TARGET in upstream-conf "files". This is meant to enable '
                  'forward compatibility with new files and should not '
                  'be used regularly. Instead file an issue to add new '
                  'files to the whitelist.')
@@ -135,6 +135,15 @@ parser.add_argument(
             help='Don\'t add the "source" key to METADATA.pb. Use this temporarily '
             'until all back-end systems have been updated. '
             'See https://github.com/google/fonts/issues/2587'
+            )
+parser.add_argument(
+            '-B', '--allow-build',
+            action='store_true',
+            help='Allow executing the bash command in stored in the "build" '
+            'key of upstream-conf, if present. Don\'t allow this lightly '
+            'and review build command, build process and its dependencies prior. '
+            'This support for building from sources is provisional, a '
+            'discussion can be found at https://github.com/googlefonts/gftools/issues/231'
             )
 
 
