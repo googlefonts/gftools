@@ -6,8 +6,14 @@ This script can also add STAT tables to a variable font family which
 consists of two fonts, one for Roman, the other for Italic.
 Both of these fonts must also only contain a weight axis.
 
-For variable fonts with multiple axes, use DaMa statmake:
-https://github.com/daltonmaag/statmake
+For variable fonts with multiple axes, write a python script which
+uses fontTools.otlLib.builder.buildStatTable e.g
+https://github.com/googlefonts/literata/blob/master/sources/gen_stat.py
+
+The generated STAT tables use format 2 Axis Values. These are needed in
+order for Indesign to work.
+
+Special mention to Thomas Linard for reviewing the output of this script.
 
 
 Usage:
@@ -18,15 +24,23 @@ gftools fix-vf-meta FontFamily[wght].ttf
 Roman + Italic family:
 gftools fix-vf-meta FontFamily[wght].ttf FontFamily-Italic[wght].ttf
 """
-from gftools.util.google_fonts import _KNOWN_WEIGHTS
 from fontTools.otlLib.builder import buildStatTable
 from fontTools.ttLib import TTFont
 import argparse
 
 
-WGHT_NAMES = {v:k for k,v in _KNOWN_WEIGHTS.items() if k != "Hairline"}
-WGHT_NAMES[400] = "Regular"
-WGHT_NAMES[1000] = "ExtraBlack"
+WGHT = {
+    100: "Thin",
+    200: "ExtraLight",
+    300: "Light",
+    400: "Regular",
+    500: "Medium",
+    600: "SemiBold",
+    700: "Bold",
+    800: "ExtraBold",
+    900: "Black",
+    1000: "ExtraBlack",
+}
 
 
 def font_is_italic(ttfont):
@@ -93,6 +107,8 @@ def build_axis_values(ttfont):
     instances = ttfont['fvar'].instances
     has_bold = any([True for i in instances if i.coordinates['wght'] == 700])
     for instance in instances:
+        wght_val = instance.coordinates["wght"]
+        desired_inst_info = WGHT[wght_val]
         name = nametable.getName(
             instance.subfamilyNameID,
             3,
@@ -104,12 +120,29 @@ def build_axis_values(ttfont):
             name = "Regular"
         inst = {
             "name": name,
-            "value": instance.coordinates['wght'],
+            "nominalValue": wght_val,
         }
-        if inst["value"] == 400:
+        if inst["nominalValue"] == 400:
             inst["flags"] = 0x2
-            if has_bold:
-                inst["linkedValue"] = 700
+        results.append(inst)
+
+    # Dynamically generate rangeMinValues and rangeMaxValues
+    entries = [results[0]["nominalValue"]] + \
+              [i["nominalValue"] for i in results] + \
+              [results[-1]["nominalValue"]]
+    for i, entry in enumerate(results):
+        entry["rangeMinValue"] = (entries[i] + entries[i+1]) / 2
+        entry["rangeMaxValue"] = (entries[i+1] + entries[i+2]) / 2
+
+    # Format 2 doesn't support linkedValues so we have to append another
+    # Axis Value (format 3) for Reg which does support linkedValues
+    if has_bold:
+        inst = {
+            "name": "Regular",
+            "value": 400,
+            "flags": 0x2,
+            "linkedValue": 700
+        }
         results.append(inst)
     return results
 
@@ -130,12 +163,13 @@ def update_nametable(ttfont):
     instances = ttfont["fvar"].instances
     for inst in instances:
         wght_val = inst.coordinates["wght"]
-        if wght_val not in WGHT_NAMES:
-            raise ValueError(f"Fvar instance coord {wght_val} needs to be "
-                              "within range 0-1000 and be a multiple of 100")
+        if wght_val not in WGHT:
+            raise ValueError(f"Unsupported wght coord '{wght_val}'. Coord "
+                              "needs to be in {WGHT.keys()}")
 
         # Update instance subfamilyNameID
-        inst_name = WGHT_NAMES[wght_val]
+        wght_name = WGHT[wght_val]
+        inst_name = wght_name
         if is_italic:
             inst_name = f"{inst_name} Italic"
             inst_name = inst_name.replace("Regular Italic", "Italic")
@@ -144,7 +178,7 @@ def update_nametable(ttfont):
             ttfont['name'].setName(inst_name, inst.subfamilyNameID, 1, 0, 0)
 
         # Add instance psName
-        ps_name = f"{vf_ps_name}-{WGHT_NAMES[wght_val]}"
+        ps_name = f"{vf_ps_name}-{wght_name}"
         ps_name_id = ttfont['name'].addName(ps_name)
         inst.postscriptNameID = ps_name_id
 
