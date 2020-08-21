@@ -1,3 +1,4 @@
+syntax = "proto2";
 // GF Axis Registry Protos
 
 // An axis in the GF Axis Registry
@@ -29,4 +30,9 @@ message AxisProto {
   optional string description = 8;
 
   // Next = 9
+}
+
+message FallbackProto {
+  optional string name = 1;
+  optional float value = 2;
 }
