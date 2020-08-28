@@ -1097,17 +1097,29 @@ def _push(repo: pygit2.Repository, url: str, local_branch_name: str,
     # ref_spec for force pushing must include a + at the start.
     ref_spec = f'+{ref_spec}'
 
-  callbacks = PYGit2RemoteCallbacks()
-  with _create_tmp_remote(repo, url) as remote:
-    # https://www.pygit2.org/remotes.html#pygit2.Remote.push
-    # When the remote has a githook installed, that denies the reference
-    # this function will return successfully. Thus it is strongly recommended
-    # to install a callback, that implements RemoteCallbacks.push_update_reference()
-    # and check the passed parameters for successfull operations.
-    remote.push([ref_spec], callbacks=callbacks)
+  # NOTE: pushing using pygit2 is currently not working on MacOS, this is
+  # related to SSH issues. Here's a traceback:
+  #                   https://github.com/googlefonts/gftools/issues/238
+  # Since we did it already once with `git clone --depth 1`, this is also
+  # being worked around by using the CLI git directly.
+  #
+  # callbacks = PYGit2RemoteCallbacks()
+  # with _create_tmp_remote(repo, url) as remote:
+  #   # https://www.pygit2.org/remotes.html#pygit2.Remote.push
+  #   # When the remote has a githook installed, that denies the reference
+  #   # this function will return successfully. Thus it is strongly recommended
+  #   # to install a callback, that implements RemoteCallbacks.push_update_reference()
+  #   # and check the passed parameters for successfull operations.
+  #
+  #
+  #   remote.push([ref_spec], callbacks=callbacks)
+  subprocess.run(['git', 'push', url, ref_spec],
+                    cwd=repo.path,
+                    check=True,
+                    stdout=subprocess.PIPE)
 
-  if callbacks.rejected_push_message is not None:
-    raise Exception(callbacks.rejected_push_message)
+  #if callbacks.rejected_push_message is not None:
+  #  raise Exception(callbacks.rejected_push_message)
 
 def get_github_open_pull_requests(repo_owner: str, repo_name: str,
                 pr_head: str, pr_base_branch: str) -> typing.Union[typing.List]:
