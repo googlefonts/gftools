@@ -1834,14 +1834,25 @@ class PYGit2RemoteCallbacks(pygit2.RemoteCallbacks):
   #         f'  received_objects {tp.received_objects}')
 
 def _git_fetch_master(repo: pygit2.Repository, remote_name: str) -> None:
-  remote = repo.remotes[remote_name]
+
   # perform a fetch
   print(f'Start fetching {remote_name}/master')
   # fetch(refspecs=None, message=None, callbacks=None, prune=0)
   # using just 'master' instead of 'refs/heads/master' works as well
-  stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
-  print(f'DONE fetch {_sizeof_fmt(stats.received_bytes)} '
-        f'{stats.indexed_objects} receive dobjects!')
+
+  # This fails on MacOS, just as any oother pygit2 network interaction.
+  # remote = repo.remotes[remote_name]
+  # stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
+
+  subprocess.run(['git', 'fetch', remote_name, 'master'],
+    cwd=repo.path,
+    check=True,
+    stdout=subprocess.PIPE
+  )
+
+
+  print(f'DONE fetch') # {_sizeof_fmt(stats.received_bytes)} '
+        # f'{stats.indexed_objects} receive dobjects!')
 
 @contextmanager
 def _create_tmp_remote(repo: pygit2.Repository, url:str) -> typing.Iterator[pygit2.Remote]:
