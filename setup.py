@@ -77,7 +77,7 @@ setup(
         'absl-py',
         'glyphsLib',
         'PyGithub',
-        'pillow==7.0.0',
+        'pillow',
         'protobuf',
         'requests',
         'tabulate',
