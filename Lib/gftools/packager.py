@@ -29,6 +29,7 @@ from strictyaml import ( # type: ignore
                         Any,
                         EmptyNone,
                         EmptyDict,
+                        Optional,
                         dirty_load,
                         as_document,
                         YAMLValidationError,
@@ -148,7 +149,11 @@ def _post_github(url: str, payload: typing.Dict):
   github_api_token = _get_github_api_token()
   headers = {'Authorization': f'bearer {github_api_token}'}
   response = requests.post(url, json=payload, headers=headers)
-  response.raise_for_status()
+  if response.status_code == requests.codes.unprocessable:
+    # has a helpful response.json with an 'errors' key.
+    pass
+  else:
+    response.raise_for_status()
   json = response.json()
   if 'errors' in json:
     errors = pprint.pformat(json['errors'], indent=2)
@@ -230,6 +235,9 @@ def _shallow_clone_git(target_dir, git_url, branch_or_tag='master'):
                        , target_dir], check=True
                        , stdout=subprocess.PIPE)
 
+# Eventually we need all these keys to make an update, so this
+# can't have Optional/Empty entries, unless that's really optional for
+# the process.
 upstream_yaml_schema = Map({
     'name': Str(),
     'repository_url': Str(), # TODO: custom validation please
@@ -244,15 +252,22 @@ upstream_yaml_schema = Map({
     'files': EmptyDict() | MapPattern(Str(), Str()) # Mappings with arbitrary key names
 })
 
-# since upstream_yaml_template is incomplete, it can't be parsed with
+# Since upstream_yaml_template is incomplete, it can't be parsed with
 # the complete upstream_yaml_schema. Here's a more forgiving schema for
-# the template.
+# the template and for initializing with a stripped upstream_conf.
 upstream_yaml_template_schema = Map({
-    'name': EmptyNone() | Str(),
-    'repository_url': EmptyNone() | Str(), # TODO: custom validation please
+    Optional('name', default=''): EmptyNone() | Str(),
+    Optional('repository_url', default=''): EmptyNone() | Str(), # TODO: custom validation please
     'branch': EmptyNone() | Str(),
-    'category':  EmptyNone() | Enum(CATEGORIES),
-    'designer': EmptyNone() |Str(),
+    Optional('category', default=None):  EmptyNone() | Enum(CATEGORIES),
+    Optional('designer', default=''): EmptyNone() |Str(),
+    'files': EmptyDict() | MapPattern(Str(), Str())
+})
+
+upstream_yaml_stripped_schema = Map({ # TODO: custom validation please
+    # Only optional until it can be in METADATA.pb
+    Optional('repository_url', default=''): Str(),
+    'branch': EmptyNone() | Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
 })
 
@@ -603,52 +618,62 @@ def _user_input_license(yes: bool=False, quiet: bool=False):
   license_dir = {d[0]:d for d in LICENSE_DIRS}[answer]
   return license_dir
 
-def _upstream_conf_from_metadata(metadata_str: str, yes: bool = False,
-                                 quiet: bool = False,
-                                 use_template_schema: bool = False
-                                ) -> YAML:
-  """Use the data that is already in METADATA,pb to bootstrap filling
-     the upstream conf.
+
+def _upstream_conf_from_yaml_metadata(
+                              upstream_yaml_text: typing.Union[str, None],
+                              metadata_text: typing.Union[str, None],
+                              yes: bool = False,
+                              quiet: bool = False,
+                              use_template_schema: bool = False) -> YAML:
+  """ Make a package when the family is in the google/fonts repo.
+  Uses data preferred from upstream.yaml, if already present, and fills
+  the gaps with data from METADATA.pb. This is to enable the removal of
+  redundant data from upstream.yaml when it is in METADATA.pb, while also
+  keeping upstream.yaml as the source of truth when in doubt.
+
+  Eventually the common update path.
   """
-  metadata = fonts_pb2.FamilyProto()
-  text_format.Parse(metadata_str, metadata)
-  # existing repo, no upstream conf:
-  # from METADATA.pb we use:
-  #       designer, category, name
-  # we won't get **yet**:
-  #       source.repository_url
-  # we still need the new stuff:
-  #       branch, files
-  upstream_conf = {
-    'designer': metadata.designer or None,
-    'category': metadata.category or None,
-    'name': metadata.name  or None,
-    # we won't get this just now in most cases!
-    'repository_url': metadata.source.repository_url or None,
-  }
+  upstream_conf = {}
+  if metadata_text is not None:
+    metadata = fonts_pb2.FamilyProto()
+    text_format.Parse(metadata_text, metadata)
+    # existing repo, no upstream conf:
+    # from METADATA.pb we use:
+    #       designer, category, name
+    # we won't get **yet**:
+    #       source.repository_url
+    # we still need the new stuff:
+    #       branch, files
+    upstream_conf.update({
+      'designer': metadata.designer or None,
+      'category': metadata.category or None,
+      'name': metadata.name  or None,
+      # we won't get this just now in most cases!
+      'repository_url': metadata.source.repository_url or None,
+    })
+  if upstream_yaml_text is not None:
+    # Only drop into REPL mode if can't parse and validate,
+    # and use use_template_schema, because this is not the real deal
+    # yet and we can be very forgiving.
+    _, upstream_conf_yaml = _load_or_repl_upstream(upstream_yaml_text
+                                                  , yes=yes, quiet=quiet
+                                                  , use_template_schema=True)
+    # Override keys set by METADATA.pb before, if there's overlap.
+    upstream_conf.update(upstream_conf_yaml.data)
 
   upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
                                        , allow_flow_style=True)
   for k,v in upstream_conf.items():
     if v is None: continue
     upstream_conf_yaml[k] = v
-  if use_template_schema and yes:
-    return upstream_conf_yaml
-  return _repl_upstream_conf(upstream_conf_yaml.as_yaml(), yes=yes,
-                  quiet=quiet, use_template_schema=use_template_schema)
 
-def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool = False,
-                             quiet: bool = False,
-                             use_template_schema: bool = False) -> YAML:
-  """ Make a package when the upstream.yaml file is already in the
-  google/fonts repo.
+  upstream_yaml_text = upstream_conf_yaml.as_yaml()
+  assert upstream_yaml_text is not None
 
-  Eventually the common update path.
-  """
   # two cases:
   # - upstream.yaml may need an update by the user
   # - upstream.yaml may be invalid (updated schema, syntax)
-  answer = user_input('Do you want to edit upstream.yaml?',
+  answer = user_input('Do you want to edit the current upstream configuration?',
                  OrderedDict(y='yes',
                              n='no'),
                  default='n', yes=yes, quiet=quiet)
@@ -658,7 +683,6 @@ def _upstream_conf_from_yaml(upstream_yaml_text: str, yes: bool = False,
   _, upstream_conf_yaml =  _load_or_repl_upstream(upstream_yaml_text, yes=yes,
                               quiet=quiet, use_template_schema=use_template_schema)
   return upstream_conf_yaml
-
 
 def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
                           quiet: bool, require_license_dir: bool = True,
@@ -706,28 +730,33 @@ def _get_upstream_info(file_or_family: str, is_file: bool, yes: bool,
     print(f'Font Family "{family_name}" is on Google Fonts under "{license_dir}".')
 
   if upstream_conf_yaml is not None:
-    # loaded via file:// or from_scratch
-    pass
-  # found on google/fonts and use gf_dir_content
-  elif 'upstream.yaml' in gf_dir_content:
+    # loaded from_file or created from_scratch
+    return upstream_conf_yaml, license_dir, gf_dir_content or {}
+
+  upstream_yaml_text: typing.Union[str, None] = None
+  metadata_text: typing.Union[str, None] = None
+
+  if 'upstream.yaml' in gf_dir_content:
     # normal case
     print(f'Using upstream.yaml from google/fonts for {family_name}.')
     file_sha = gf_dir_content['upstream.yaml']['oid']
     response = get_github_gf_blob(file_sha)
-    upstream_conf_yaml = _upstream_conf_from_yaml(response.text,
-                                          yes=yes, quiet=quiet,
-                                          use_template_schema=use_template_schema)
-  elif 'METADATA.pb' in gf_dir_content:
-    # until there's upstream_conf in each family dir
-    print(f'Using METADATA.pb.yaml from google/fonts for {family_name}.')
+    upstream_yaml_text = response.text
+
+  if 'METADATA.pb' in gf_dir_content:
     file_sha = gf_dir_content['METADATA.pb']['oid']
     response = get_github_gf_blob(file_sha)
-    upstream_conf_yaml = _upstream_conf_from_metadata(response.text,
-                                            yes=yes, quiet=quiet,
-                                            use_template_schema=use_template_schema)
-  else:
+    metadata_text = response.text
+
+  if upstream_yaml_text is None and metadata_text is None:
     raise Exception('Unexpected: can\'t use google fonts family data '
                     f'for {family_name}.')
+
+  upstream_conf_yaml = _upstream_conf_from_yaml_metadata(upstream_yaml_text,
+                                          metadata_text,
+                                          yes=yes, quiet=quiet,
+                                          use_template_schema=use_template_schema)
+
   return upstream_conf_yaml, license_dir, gf_dir_content or {}
 
 
@@ -934,8 +963,19 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
                                 upstream_commit_sha, no_source)
 
   # create/update upstream.yaml
+  # Remove keys that are also in METADATA.pb googlefonts/gftools#233
+  # and also clear all comments.
+  redundant_keys = {'name', 'category', 'designer', 'repository_url'}
+  if no_source:
+    # source is NOT in METADATA.pb so we want to keep it in upstream_conf
+    # NOTE: there's another position where this has to be considered
+    # i.e. in case of git as target when making a commit.
+    redundant_keys.remove('repository_url')
+  upstream_conf_stripped = OrderedDict((k, v) for k, v in upstream_conf.items() \
+                                                  if k not in redundant_keys)
+  upstream_conf_stripped_yaml = as_document(upstream_conf_stripped, upstream_yaml_stripped_schema)
   with open(os.path.join(package_family_dir, 'upstream.yaml'), 'w') as f:
-    f.write(upstream_conf_yaml.as_yaml())
+    f.write(upstream_conf_stripped_yaml.as_yaml())
   print(f'DONE Creating package for {upstream_conf["name"]}!')
   return family_dir
 
@@ -1057,17 +1097,29 @@ def _push(repo: pygit2.Repository, url: str, local_branch_name: str,
     # ref_spec for force pushing must include a + at the start.
     ref_spec = f'+{ref_spec}'
 
-  callbacks = PYGit2RemoteCallbacks()
-  with _create_tmp_remote(repo, url) as remote:
-    # https://www.pygit2.org/remotes.html#pygit2.Remote.push
-    # When the remote has a githook installed, that denies the reference
-    # this function will return successfully. Thus it is strongly recommended
-    # to install a callback, that implements RemoteCallbacks.push_update_reference()
-    # and check the passed parameters for successfull operations.
-    remote.push([ref_spec], callbacks=callbacks)
+  # NOTE: pushing using pygit2 is currently not working on MacOS, this is
+  # related to SSH issues. Here's a traceback:
+  #                   https://github.com/googlefonts/gftools/issues/238
+  # Since we did it already once with `git clone --depth 1`, this is also
+  # being worked around by using the CLI git directly.
+  #
+  # callbacks = PYGit2RemoteCallbacks()
+  # with _create_tmp_remote(repo, url) as remote:
+  #   # https://www.pygit2.org/remotes.html#pygit2.Remote.push
+  #   # When the remote has a githook installed, that denies the reference
+  #   # this function will return successfully. Thus it is strongly recommended
+  #   # to install a callback, that implements RemoteCallbacks.push_update_reference()
+  #   # and check the passed parameters for successfull operations.
+  #
+  #
+  #   remote.push([ref_spec], callbacks=callbacks)
+  subprocess.run(['git', 'push', url, ref_spec],
+                    cwd=repo.path,
+                    check=True,
+                    stdout=subprocess.PIPE)
 
-  if callbacks.rejected_push_message is not None:
-    raise Exception(callbacks.rejected_push_message)
+  #if callbacks.rejected_push_message is not None:
+  #  raise Exception(callbacks.rejected_push_message)
 
 def get_github_open_pull_requests(repo_owner: str, repo_name: str,
                 pr_head: str, pr_base_branch: str) -> typing.Union[typing.List]:
@@ -1192,9 +1244,9 @@ def _get_change_info_from_diff(repo: pygit2.Repository, root_tree: pygit2.Tree,
     #   GIT_DELTA_UNREADABLE: X
     #   default:              ' '
     if delta.status_char() == 'D':
-      # don't look at D=deleted files, tgnore something else?
-      continue
-    all_touched_files.add(delta.new_file.path)
+      all_touched_files.add(delta.old_file.path)
+    else:
+      all_touched_files.add(delta.new_file.path)
   touched_family_dirs = set()
   for filename in all_touched_files:
     for dirname in LICENSE_DIRS:
@@ -1319,11 +1371,20 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
     metadata = fonts_pb2.FamilyProto()
     text_format.Parse(metadata_blob.data, metadata)
     # delete source fields
+    repository_url = metadata.source.repository_url
     metadata.ClearField('source')
-    #write METADATA.pb
+    # write METADATA.pb
     text_proto = text_format.MessageToString(metadata, as_utf8=True)
-    metadata_filename = os.path.join(family_dir, 'METADATA.pb')
     _git_write_file(repo, treeBuilder, metadata_filename, text_proto)
+    # read upstream.yaml
+    upstream_filename = os.path.join(family_dir, 'upstream.yaml')
+    upstream_text = _git_get_path(new_tree, upstream_filename).data.decode('utf-8')
+    upstream_conf_yaml = dirty_load(upstream_text, upstream_yaml_stripped_schema,
+                                                    allow_flow_style=True)
+    # preserve the info: transfer from METADATA.pb
+    upstream_conf_yaml['repository_url'] = repository_url
+    # write upstream.yaml
+    _git_write_file(repo, treeBuilder, upstream_filename, upstream_conf_yaml.as_yaml())
     # commit
     new_tree_id = treeBuilder.write()
     commit_id = repo.create_commit(
@@ -1397,6 +1458,14 @@ def _dispatch_git(target: str, target_branch: str,pr_upstream: str,
   tip_commit: pygit2.Commit = git_branch.peel()
   root_commit: pygit2.Commit = _get_root_commit(repo, base_remote_branch, tip_commit)
   pr_title, _ = _title_message_from_diff(repo, root_commit.tree, tip_commit.tree)
+  if not pr_title:
+    # Happens e.g. if we have a bunch of commits that revert themselves,
+    # to me this happened in development, in a for production use very unlikely
+    # situation.
+    # But can also happen if we PR commits that don't do changes in family
+    # dirs. In these cases the PR author should probably come up with a
+    # better title than this placeholder an change it in the GitHub web-GUI.
+    pr_title = '(UNKNOWN gftools-packager: found no family changes)'
 
   current_commit = tip_commit
   messages = []
@@ -1563,7 +1632,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
   # Basic early checks. Raises if target does not qualify.
   _check_target(is_gf_git, target)
 
-  # note: use branch if it explicit (and if is_gf_git)
+  # note: use branch if it is explicit (and if is_gf_git)
   target_branch = branch if branch is not None else ''
 
   family_dirs: typing.List[str] = []
@@ -1687,9 +1756,9 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
 
   # NOTE: a shallow cloned repository has no remotes.
   for remote in repo.remotes:
-    if remote.url not in accepted_remote_urls:
+    if remote.url not in accepted_remote_urls or remote.url in candidates:
       continue
-    # To be honest, we'll like encounter the (default) first refspec case
+    # To be honest, we'll likely encounter the (default) first refspec case
     # in almost all matching remotes.
     accepted_refspecs = {
       f'+refs/heads/*:refs/remotes/{remote.name}/*'
@@ -1708,7 +1777,7 @@ def _find_github_remote(repo: pygit2.Repository, owner: str, name: str,
 
   for url in accepted_remote_urls:
     if url in candidates:
-      return remote.name
+      return candidates[url].name
   return None
 
 
@@ -1765,14 +1834,25 @@ class PYGit2RemoteCallbacks(pygit2.RemoteCallbacks):
   #         f'  received_objects {tp.received_objects}')
 
 def _git_fetch_master(repo: pygit2.Repository, remote_name: str) -> None:
-  remote = repo.remotes[remote_name]
+
   # perform a fetch
   print(f'Start fetching {remote_name}/master')
   # fetch(refspecs=None, message=None, callbacks=None, prune=0)
   # using just 'master' instead of 'refs/heads/master' works as well
-  stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
-  print(f'DONE fetch {_sizeof_fmt(stats.received_bytes)} '
-        f'{stats.indexed_objects} receivedobjects!')
+
+  # This fails on MacOS, just as any oother pygit2 network interaction.
+  # remote = repo.remotes[remote_name]
+  # stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
+
+  subprocess.run(['git', 'fetch', remote_name, 'master'],
+    cwd=repo.path,
+    check=True,
+    stdout=subprocess.PIPE
+  )
+
+
+  print(f'DONE fetch') # {_sizeof_fmt(stats.received_bytes)} '
+        # f'{stats.indexed_objects} receive dobjects!')
 
 @contextmanager
 def _create_tmp_remote(repo: pygit2.Repository, url:str) -> typing.Iterator[pygit2.Remote]:
