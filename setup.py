@@ -29,7 +29,7 @@ with open('README.md') as f:
 
 setup(
     name="gftools",
-    version='0.4.3',
+    version='0.4.4',
     url='https://github.com/googlefonts/tools/',
     description='Google Fonts Tools is a set of command-line tools'
                 ' for testing font projects',
