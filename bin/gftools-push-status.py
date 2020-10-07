@@ -65,7 +65,7 @@ def families_from_file(fp):
     family names."""
     results = set()
     with open(fp) as doc:
-        family_dirs = doc.read().split()
+        family_dirs = [p for p in doc.read().split() if p.startswith(("ofl", "ufl", "apache"))]
     metadata_files = [Path(fp).parent / d / 'METADATA.pb' for d in family_dirs]
     missing_files = [str(f) for f in metadata_files if not f.is_file()]
     if missing_files:
