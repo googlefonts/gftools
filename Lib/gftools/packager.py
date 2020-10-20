@@ -658,8 +658,12 @@ def _upstream_conf_from_yaml_metadata(
     _, upstream_conf_yaml = _load_or_repl_upstream(upstream_yaml_text
                                                   , yes=yes, quiet=quiet
                                                   , use_template_schema=True)
+
+    # remove None values:
+    upstream_conf_yaml_data = {k:v for k,v in upstream_conf_yaml.data.items()
+                                              if v is not None }
     # Override keys set by METADATA.pb before, if there's overlap.
-    upstream_conf.update(upstream_conf_yaml.data)
+    upstream_conf.update(upstream_conf_yaml_data)
 
   upstream_conf_yaml = dirty_load(upstream_yaml_template, upstream_yaml_template_schema
                                        , allow_flow_style=True)
