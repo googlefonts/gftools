@@ -55,7 +55,7 @@ If you need to use `gftools qa`, you will need to install Harfbuzz, Cairo, FreeT
 
 Once You have installed these system packages, install gftools using the following command:
 
-    pip install gftools[qa]
+    pip install 'gftools[qa]'
 
 
 ### Requirements and Dependencies
