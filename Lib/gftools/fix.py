@@ -6,8 +6,10 @@ https://github.com/googlefonts/gf-docs/tree/master/Spec
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
+from fontTools.otlLib.builder import buildStatTable
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
 from gftools.utils import download_family_from_Google_Fonts, Google_Fonts_has_family
+from gftools.axisreg import axis_registry
 from copy import deepcopy
 import logging
 
@@ -33,6 +35,7 @@ __all__ = [
     "fix_vertical_metrics",
     "fix_font",
     "fix_family",
+    "gen_stat_tables",
 ]
 
 
@@ -48,6 +51,18 @@ WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 UNWANTED_TABLES = frozenset(
     ["FFTM", "TTFA", "TSI0", "TSI1", "TSI2", "TSI3", "TSI5", "prop", "MVAR",]
 )
+
+
+ELIDABLE_AXIS_VALUE_NAME = 0x2
+
+
+# TODO we may have more of these. Please note that some applications may not
+# implement variable font style linking.
+LINKED_VALUES = {
+    "wght": (400, 700),
+    "ital": (0.0, 1.0),
+}
+
 
 
 def remove_tables(ttFont, tables=None):
@@ -624,3 +639,212 @@ def fix_family(fonts, include_source_fixes=False):
                 "fix fonts. See Repo readme to add keys."
             )
         fix_vertical_metrics(fonts)
+
+
+def stylename_to_axes(font_style, axisreg=axis_registry):
+    """Get axis names for stylename particles using the axis registry e.g
+
+    "Condensed Bold Italic" --> ["wdth", "wght", "ital"]
+
+    Args:
+        axisreg: gf axis registry
+        font_style: str
+
+    Returns: list(str,...)
+    """
+    axes = []
+    seen = set()
+
+    style_tokens = font_style.split()
+    for token in style_tokens:
+        for axis_tag, axis_object in axisreg.items():
+            if token in [f.name for f in axis_object.fallback]:
+                seen.add(token)
+                axes.append(axis_tag)
+
+    unparsed_tokens = set(style_tokens) - seen
+    if unparsed_tokens:
+        log.warning(
+            "Following style tokens were not found in Axis Registry "
+            "{list(unparsed_tokens)}. Axis Values will not be created "
+            "for these tokens"
+        )
+    return axes
+
+
+def _default_axis_value(axis, axisreg=axis_registry):
+    axis_record = axisreg[axis]
+    default_value = axis_record.default_value
+    default_name = next(
+        (i.name for i in axis_record.fallback if i.value == default_value), None
+    )
+    return _add_axis_value(default_name, default_value, flags=ELIDABLE_AXIS_VALUE_NAME)
+
+
+def _gen_stat_using_fvar(axis_reg, font):
+    """Generate a STAT table using a font's fvar and the GF axis registry.
+
+    This function will not determine the relationship between font in a
+    variable font family.
+
+    Args:
+        axis_reg: gf axis registry
+        font: TTFont instance
+    """
+    fvar = font["fvar"]
+
+    axis_defaults = {a.axisTag: a.defaultValue for a in fvar.axes}
+    results = {}
+    for axis in fvar.axes:
+        axis_tag = axis.axisTag
+        if axis_tag not in axis_reg:
+            log.warning(
+                f"'{axis_tag}' isn't in our axis registry. Please open an issue "
+                "to discuss the inclusion of this axis, "
+                "https://github.com/google/fonts/issues"
+            )
+            continue
+        results[axis_tag] = {
+            "tag": axis_tag,
+            "name": axis_reg[axis_tag].display_name,
+            "values": [],
+        }
+        # Add Axis Values
+        min_value = axis.minValue
+        max_value = axis.maxValue
+        for fallback in axis_reg[axis_tag].fallback:
+            if fallback.value >= min_value and fallback.value <= max_value:
+                axis_value = _add_axis_value(fallback.name, fallback.value)
+                # set elided axis_values
+                # if axis is opsz, we want to use the fvar default
+                if axis_tag == "opsz" and axis_defaults[axis_tag] == fallback.value:
+                    axis_value["flags"] |= ELIDABLE_AXIS_VALUE_NAME
+                # for all other weights, we want to use the axis reg default
+                elif fallback.value == axis_reg[axis_tag].default_value:
+                    axis_value["flags"] |= ELIDABLE_AXIS_VALUE_NAME
+                results[axis_tag]["values"].append(axis_value)
+    return results
+
+
+def _add_axis_value(style_name, value, flags=0x0, linked_value=None):
+    value = {"value": value, "name": style_name, "flags": flags}
+    if linked_value:
+        value["linkedValue"] = linked_value
+    return value
+
+
+
+def gen_stat_tables(
+    fonts, elided_axis_values=None, inplace=False, axis_reg=axis_registry
+):
+    """
+    Generate a stat table for each font in a family using the Google Fonts
+    Axis Registry.
+
+    Heuristic:
+    - Collect all the axes which exist in all font stylenames e.g
+      "Bold Italic" --> set(["wght", "ital"])
+    - Iterate through each font
+        - Build a STAT table for each font using the axis registry and
+          each font's fvar table
+        - If a font's stylename features an axis which isn't in the fvar,
+          add an Axis record and include an Axis Value for the found
+          stylename token e.g
+        "Bold Italic" --> axis=Ital, axis_value={"name": "Italic", "value": 1}
+        - If a font's stylename doesn't include a found axis and isn't in
+          the fvar, create a new Axis record for this axis and include an
+          Axis Value for the default value and set it to elided e.g
+          "Bold" --> axis=Ital, axis_value={
+              "name": "Italics", "value": 0, "flags": 0x2
+          }
+
+    Args:
+        fonts: [TTFont]
+        axis_reg: dict
+    """
+    # Which axes exist in all font stylenames
+    family_axes = set()
+    for font in fonts:
+        font_style = font_stylename(font)
+        family_axes |= set(stylename_to_axes(font_style))
+
+    seen_axis_values = {}
+    stat_tbls = []
+    for font in fonts:
+        stat_tbl = _gen_stat_using_fvar(axis_reg, font)
+
+        font_style = font_stylename(font)
+        font_style_axes = stylename_to_axes(font_style)
+        # {"wght": "Regular", "ital": "Roman", ...}
+        font_style_tokens = {k: v for k, v in zip(font_style_axes, font_style.split())}
+
+        # Add axes to font which exist across the family but are not in the font's fvar
+        axes_missing = family_axes - set(stat_tbl)
+        for axis in axes_missing:
+            axis_record = {
+                "tag": axis,
+                "name": axis_reg[axis].display_name,
+                "values": [],
+            }
+            # Add axis value for axis which isn't in the fvar or font stylename
+            if axis not in font_style_tokens:
+                axis_record["values"].append(_default_axis_value(axis, axis_reg))
+            # Add axis value for axis which isn't in the fvar but does exist in
+            # the font stylename
+            else:
+                style_name = font_style_tokens[axis]
+                value = next(
+                    (i.value for i in axis_reg[axis].fallback if i.name == style_name),
+                    None,
+                )
+                axis_value = _add_axis_value(style_name, value)
+                axis_record["values"].append(axis_value)
+            stat_tbl[axis] = axis_record
+        stat_tbls.append(stat_tbl)
+
+    # add linkedValues to Axis Values in each stat table
+    for stat_tbl in stat_tbls:
+        for axis in stat_tbl:
+            if axis not in seen_axis_values:
+                seen_axis_values[axis] = set()
+            seen_axis_values[axis] |= set(
+                [i["value"] for i in stat_tbl[axis]["values"]]
+            )
+    for stat_tbl in stat_tbls:
+        for axis_tag, axis_obj in stat_tbl.items():
+            if axis_tag not in LINKED_VALUES:
+                continue
+            start, end = LINKED_VALUES[axis_tag]
+            for axis_value in axis_obj["values"]:
+                if axis_value["value"] == start and end in seen_axis_values[axis_tag]:
+                    axis_value["linkedValue"] = end
+
+    # add stat table to each font
+    for stat_tbl, font in zip(stat_tbls, fonts):
+        # TODO sort stat entries
+        axes = [v for k, v in stat_tbl.items()]
+
+        if elided_axis_values:
+            _update_elided_axis_values(axes, elided_axis_values)
+        buildStatTable(font, axes)
+
+        print(f"Updated STAT for {font.reader.file.name}")
+        dst = font.reader.file.name if inplace else font.reader.file.name + ".fix"
+        font.save(dst)
+
+
+def _update_elided_axis_values(stat, elided_values):
+    """Overwrite which axis values should be elided.
+
+    Args:
+        stat: a stat table
+        elided_values: dict structured as {"axisTag": [100,200 ...]}"""
+    for axis in stat:
+        if axis["tag"] not in elided_values:
+            continue
+        for val in axis["values"]:
+            if val["value"] in elided_values[axis["tag"]]:
+                val["flags"] |= ELIDABLE_AXIS_VALUE_NAME
+            else:
+                val["flags"] &= ~ELIDABLE_AXIS_VALUE_NAME
+
