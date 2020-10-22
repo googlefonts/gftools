@@ -5,6 +5,8 @@ https://github.com/googlefonts/gf-docs/tree/master/Spec
 """
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import ttProgram
+from fontTools.ttLib.tables._f_v_a_r import NamedInstance
+from gftools.util.google_fonts import _KNOWN_WEIGHTS
 
 
 __all__ = [
@@ -14,7 +16,14 @@ __all__ = [
     "fix_fs_selection",
     "fix_mac_style",
     "font_stylename",
+    "fix_fvar_instances",
 ]
+
+
+WEIGHTS = _KNOWN_WEIGHTS
+for style in ("Hairline", ""):
+    del WEIGHTS[style]
+WEIGHTS = {v:k for k,v in WEIGHTS.items()}
 
 
 def add_dummy_dsig(ttFont):
@@ -123,3 +132,51 @@ def font_stylename(ttFont):
             "Cannot find stylename since NameID 2 and NameID 16 are missing"
         )
     return style_record.toUnicode()
+
+
+def fix_fvar_instances(ttFont):
+    """Replace a variable font's fvar instances with a set of instances that
+    conform to the Google Fonts instance spec:
+    https://github.com/googlefonts/gf-docs/tree/master/Spec#fvar-instances
+
+    Args:
+        ttFont: a TTFont instance
+    """
+    fvar = ttFont["fvar"]
+    default_axis_vals = {a.axisTag: a.defaultValue for a in fvar.axes}
+    nametable = ttFont["name"]
+    subfamily_name = nametable.getName(2, 3, 1, 0x409)
+    if not subfamily_name:
+        raise ValueError("Name table is missing subFamily Name Record")
+    is_italic = "italic" in nametable.getName(2, 3, 1, 0x409).toUnicode().lower()
+    font_is_roman_and_italic = any(a for a in ("slnt", "ital") if a in default_axis_vals)
+
+    wght_axis = next((a for a in fvar.axes if a.axisTag == "wght"), None)
+    wght_min = int(wght_axis.minValue)
+    wght_max = int(wght_axis.maxValue)
+
+    def gen_instances(is_italic):
+        results = []
+        for wght_val in range(wght_min, wght_max+100, 100):
+            name = WEIGHTS[wght_val] if not is_italic else f"{WEIGHTS[wght_val]} Italic"
+            name = name.replace("Regular Italic", "Italic")
+
+            coordinates = default_axis_vals
+            coordinates["wght"] = wght_val
+
+            inst = NamedInstance()
+            inst.subfamilyNameID = nametable.addName(name)
+            inst.coordinates = coordinates
+            results.append(inst)
+        return results
+
+    instances = []
+    if font_is_roman_and_italic:
+        for bool_ in (False, True):
+            instances += gen_instances(is_italic=bool_)
+    elif font_is_italic:
+        instances += gen_instances(is_italic=True)
+    else:
+        instances += gen_instances(is_italic=False)
+    fvar.instances = instances
+
