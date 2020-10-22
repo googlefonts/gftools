@@ -24,23 +24,17 @@ def main():
     font = TTFont(args.font)
 
     if "DSIG" not in font:
-        log.info("Adding dummy dsig")
         add_dummy_dsig(font)
 
     if "fpgm" in font:
-        log.info("Improving hinted render quality")
         fix_hinted_font(font)
     else:
-        log.info("Improving unhinted render quality")
         fix_unhinted_font(font)
 
     if args.hotfix:
         log.warning("Hotfixing fonts. Please consider fixing the source files instead")
-        log.info("Fixing fsType")
         fix_fs_type(font)
-        log.info("Fixing fsSelection")
         fix_fs_selection(font)
-        log.info("Fixing macStyle")
         fix_mac_style(font)
         # TODO usWeightClass, nametable...
 
