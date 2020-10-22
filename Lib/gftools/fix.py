@@ -7,24 +7,27 @@ from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
-
+from copy import deepcopy
 
 __all__ = [
     "add_dummy_dsig",
     "fix_unhinted_font",
     "fix_hinted_font",
     "fix_fs_type",
+    "fix_weight_class",
     "fix_fs_selection",
     "fix_mac_style",
     "font_stylename",
     "fix_fvar_instances",
 ]
 
+WEIGHT_NAMES = deepcopy(_KNOWN_WEIGHTS)
 
 WEIGHTS = _KNOWN_WEIGHTS
-for style in ("Hairline", ""):
+for style in ["Hairline"]:
     del WEIGHTS[style]
-WEIGHTS = {v:k for k,v in WEIGHTS.items()}
+    del WEIGHT_NAMES[style]
+WEIGHTS = {v: k for k, v in WEIGHTS.items()}
 
 
 def add_dummy_dsig(ttFont):
@@ -87,7 +90,29 @@ def fix_fs_type(ttFont):
     Args:
         ttFont: a TTFont instance
     """
-    ttFont['OS/2'].fsType = 0
+    ttFont["OS/2"].fsType = 0
+
+
+def fix_weight_class(ttFont):
+    """Set the OS/2 table's usWeightClass so it conforms to GF's supported
+    styles:
+    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+
+    Args:
+        ttFont: a TTFont instance
+    """
+    stylename = font_stylename(ttFont)
+
+    for style in sorted(WEIGHTS.values(), key=lambda k: len(k), reverse=True):
+        italic_variant = f"{style} Italic"
+        if style in stylename or italic_variant in stylename:
+            ttFont["OS/2"].usWeightClass = WEIGHT_NAMES[style]
+            return
+    raise ValueError(
+        f"Cannot determine usWeightClass because font style, '{stylename}' "
+        "doesn't have a weight token which is in our known "
+        "weights, '{WEIGHTS.keys()}'"
+    )
 
 
 def fix_fs_selection(ttFont):
@@ -136,7 +161,7 @@ def font_stylename(ttFont):
         ttFont: a TTFont instance
     """
     name = ttFont["name"]
-    style_record = name.getName(2, 3, 1, 0x409) or name.getName(17, 3, 1, 0x409)
+    style_record = name.getName(17, 3, 1, 0x409) or name.getName(2, 3, 1, 0x409)
     if not style_record:
         raise ValueError(
             "Cannot find stylename since NameID 2 and NameID 16 are missing"
@@ -159,7 +184,9 @@ def fix_fvar_instances(ttFont):
     if not subfamily_name:
         raise ValueError("Name table is missing subFamily Name Record")
     is_italic = "italic" in nametable.getName(2, 3, 1, 0x409).toUnicode().lower()
-    font_is_roman_and_italic = any(a for a in ("slnt", "ital") if a in default_axis_vals)
+    font_is_roman_and_italic = any(
+        a for a in ("slnt", "ital") if a in default_axis_vals
+    )
 
     wght_axis = next((a for a in fvar.axes if a.axisTag == "wght"), None)
     wght_min = int(wght_axis.minValue)
@@ -167,7 +194,7 @@ def fix_fvar_instances(ttFont):
 
     def gen_instances(is_italic):
         results = []
-        for wght_val in range(wght_min, wght_max+100, 100):
+        for wght_val in range(wght_min, wght_max + 100, 100):
             name = WEIGHTS[wght_val] if not is_italic else f"{WEIGHTS[wght_val]} Italic"
             name = name.replace("Regular Italic", "Italic")
 
@@ -190,3 +217,6 @@ def fix_fvar_instances(ttFont):
         instances += gen_instances(is_italic=False)
     fvar.instances = instances
 
+if __name__ == "__main__":
+    f = TTFont('/Users/marcfoley/Downloads/Cabin 2/static/Cabin-SemiBold.ttf')
+    fix_weight_class(f)

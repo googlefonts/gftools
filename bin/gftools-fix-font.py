@@ -36,6 +36,7 @@ def main():
         fix_fs_type(font)
         fix_fs_selection(font)
         fix_mac_style(font)
+        fix_weight_class(font)
         # TODO usWeightClass, nametable...
 
         if "fvar" in font:

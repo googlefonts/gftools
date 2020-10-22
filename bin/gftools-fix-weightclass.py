@@ -21,6 +21,7 @@ the correct value.
 from __future__ import print_function
 from fontTools.ttLib import TTFont
 from fontbakery.parse import style_parse
+from gftools.fix import fix_weight_class
 import sys
 import os
 
@@ -28,25 +29,9 @@ import os
 def main(font_path):
     filename = os.path.basename(font_path)
     font = TTFont(font_path)
-    desired_style = style_parse(font)
     current_weight_class = font["OS/2"].usWeightClass
-    updated = False
-    if current_weight_class != desired_style.usWeightClass:
-        print(f"{filename}: Updating weightClass to {desired_style.usWeightClass}")
-        font['OS/2'].usWeightClass = desired_style.usWeightClass
-        updated = True
-    # If static otf, update Thin and ExtraLight
-    # TODO (M Foley) fontbakery's style_parse should do this
-    if "CFF " in font and 'fvar' not in font:
-        if desired_style.usWeightClass == 100:
-            print(f"{filename}: Updating weightClass to {250}")
-            font['OS/2'].usWeightClass = 250
-            updated = True
-        elif desired_style.usWeightClass == 200:
-            print(f"{filename}: Updating weightClass to {275}")
-            font['OS/2'].usWeightClass = 275
-            updated = True
-    if updated:
+    fix_weight_class(font)
+    if current_weight_class != font["OS/2"].usWeightClass:
         font.save(font.reader.file.name + ".fix")
     else:
         print("{}: Skipping. Current WeightClass is correct".format(filename))
