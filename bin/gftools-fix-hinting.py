@@ -29,6 +29,7 @@ Bit 3 = Force ppem to integer values for all internal scaler math;
 from __future__ import print_function, unicode_literals
 import argparse
 from fontTools.ttLib import TTFont
+from gftools.fix import fix_hinted_font
 
 
 def font_has_hinting(font):
@@ -42,12 +43,7 @@ def main():
 
     font = TTFont(args.font)
     if font_has_hinting(font):
-        head_flags = font['head'].flags
-        if head_flags != head_flags | (1 << 3):
-            font['head'].flags |= (1 << 3)
-            font.save(args.font + ".fix")
-        else:
-            print("Skipping. Font already has bit 3 enabled")
+        fix_hinted_font(font)
     else:
         print("Skipping. Font is not hinted")
 

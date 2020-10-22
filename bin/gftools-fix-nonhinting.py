@@ -51,6 +51,9 @@ from argparse import (ArgumentParser,
 import os
 from fontTools import ttLib
 from fontTools.ttLib.tables import ttProgram
+from gftools.fix import fix_unhinted_font
+
+
 parser = ArgumentParser(description=__doc__,
                         formatter_class=RawTextHelpFormatter)
 parser.add_argument('fontfile_in',
@@ -87,33 +90,7 @@ def main():
   else:
     print("PREP wasn't there")
 
-  # Create a new GASP table
-  gasp = ttLib.newTable("gasp")
-
-  # Set GASP to the magic number
-  gasp.gaspRange = {0xFFFF: 15}
-
-  # Create a new hinting program
-  program = ttProgram.Program()
-
-  assembly = ['PUSHW[]',
-              '511',
-              'SCANCTRL[]',
-              'PUSHB[]',
-              '4',
-              'SCANTYPE[]']
-  program.fromAssembly(assembly)
-
-  # Create a new PREP table
-  prep = ttLib.newTable("prep")
-
-  # Insert the magic program into it
-  prep.program = program
-
-  # Add the tables to the font, replacing existing ones
-  font["gasp"] = gasp
-  font["prep"] = prep
-
+  fix_unhinted_font(font)
   # Print the Gasp table
   print("GASP now: ", font["gasp"].gaspRange)
 
