@@ -36,6 +36,8 @@ def main():
 
     if args.hotfix:
         log.warning("Hotfixing fonts. Please consider fixing the source files instead")
+        log.info("Fixing fsType")
+        fix_fs_type(font)
         log.info("Fixing fsSelection")
         fix_fs_selection(font)
         log.info("Fixing macStyle")

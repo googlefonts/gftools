@@ -27,6 +27,7 @@ from __future__ import print_function
 from argparse import (ArgumentParser,
                       RawTextHelpFormatter)
 from fontTools.ttLib import TTFont
+from gftools.fix import fix_fs_type
 parser = ArgumentParser(description=__doc__,
                         formatter_class=RawTextHelpFormatter)
 parser.add_argument('fonts',
@@ -40,7 +41,7 @@ def main():
     font = TTFont(font_path)
 
     if font['OS/2'].fsType != 0:
-      font['OS/2'].fsType = 0
+      fix_fs_type(font)
       font.save(font_path + '.fix')
       print('font saved %s.fix' % font_path)
     else:

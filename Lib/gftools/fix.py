@@ -13,6 +13,7 @@ __all__ = [
     "add_dummy_dsig",
     "fix_unhinted_font",
     "fix_hinted_font",
+    "fix_fs_type",
     "fix_fs_selection",
     "fix_mac_style",
     "font_stylename",
@@ -78,6 +79,15 @@ def fix_hinted_font(ttFont):
         ttFont["head"].flags |= 1 << 3
     else:
         print("Skipping. Font already has bit 3 enabled")
+
+
+def fix_fs_type(ttFont):
+    """Set the OS/2 table's fsType flag to 0 (Installable embedding)
+
+    Args:
+        ttFont: a TTFont instance
+    """
+    ttFont['OS/2'].fsType = 0
 
 
 def fix_fs_selection(ttFont):
