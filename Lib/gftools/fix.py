@@ -7,6 +7,9 @@ from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import ttProgram
 
 
+__all__ = ["add_dummy_dsig", "fix_unhinted_font", "fix_hinted_font"]
+
+
 def add_dummy_dsig(ttFont):
     """Add a dummy dsig table to a font. Older versions of MS Word
     require this table.
