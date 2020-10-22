@@ -17,7 +17,7 @@ def add_dummy_dsig(ttFont):
     Args:
         ttFont: a TTFont instance
     """
-    newDSIG = ttLib.newTable("DSIG")
+    newDSIG = newTable("DSIG")
     newDSIG.ulVersion = 1
     newDSIG.usFlag = 0
     newDSIG.usNumSigs = 0
