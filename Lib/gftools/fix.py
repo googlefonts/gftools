@@ -165,18 +165,19 @@ def fix_fs_selection(ttFont):
         ttFont: a TTFont instance
     """
     stylename = font_stylename(ttFont)
+    tokens = set(stylename.split())
     fs_selection = ttFont["OS/2"].fsSelection
 
     # turn off all bits except for bit 7 (USE_TYPO_METRICS)
     fs_selection &= 0b10000000
 
-    if "Italic" in stylename:
-        fs_selection |= 0b1
-    if stylename in ["Bold", "Bold Italic"]:
-        fs_selection |= 0b100000
+    if "Italic" in tokens:
+        fs_selection |= (1 << 0)
+    if set(["Bold"]) & tokens:
+        fs_selection |= (1 << 5)
     # enable Regular bit for all other styles
-    if stylename not in ["Bold", "Bold Italic"] and "Italic" not in stylename:
-        fs_selection |= 0b1000000
+    if not tokens & set(["Bold", "Italic"]):
+        fs_selection |= (1 << 6)
     ttFont["OS/2"].fsSelection = fs_selection
 
 
@@ -187,11 +188,12 @@ def fix_mac_style(ttFont):
         ttFont: a TTFont instance
     """
     stylename = font_stylename(ttFont)
-    mac_style = 0b0
-    if "Italic" in stylename:
-        mac_style |= 0b10
-    if stylename in ["Bold", "Bold Italic"]:
-        mac_style |= 0b1
+    tokens = set(stylename.split())
+    mac_style = 0
+    if "Italic" in tokens:
+        mac_style |= (1 << 1)
+    if "Bold" in tokens:
+        mac_style |= (1 << 0)
     ttFont["head"].macStyle = mac_style
 
 
