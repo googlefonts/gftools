@@ -31,16 +31,19 @@ def main():
     else:
         fix_unhinted_font(font)
 
+    if "fvar" in font:
+        remove_tables(font)
+
     if args.hotfix:
         log.warning("Hotfixing fonts. Please consider fixing the source files instead")
         fix_fs_type(font)
         fix_fs_selection(font)
         fix_mac_style(font)
         fix_weight_class(font)
-        # TODO usWeightClass, nametable...
 
         if "fvar" in font:
             fix_fvar_instances(font)
+            # TODO (Marc F) add gen-stat
 
     if args.out:
         font.save(args.out)

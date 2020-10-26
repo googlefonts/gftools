@@ -22,18 +22,7 @@ import os
 import sys
 
 from fontTools.ttLib import TTFont
-
-UNWANTED_TABLES = [
-    "FFTM",
-    "TTFA",
-    "TSI0",
-    "TSI1",
-    "TSI2",
-    "TSI3",
-    "TSI5",
-    "prop",
-    "MVAR",
-]
+from gftools.fix import UNWANTED_TABLES, remove_tables
 
 
 def parse_tables(table_string):
@@ -51,57 +40,12 @@ def main():
 
     args = parser.parse_args()
 
-    if args.tables:
-        user_table_request = parse_tables(args.tables)
-        # validate user table removal request
-        for table in user_table_request:
-            if table not in UNWANTED_TABLES:
-                sys.stderr.write(
-                    "'{}' table cannot be removed with this script because it is not defined as an unwanted table.{}".format(
-                        table, os.linesep
-                    )
-                )
-                sys.stderr.write(
-                    "The unwanted table list includes the following tables: {}{}".format(
-                        UNWANTED_TABLES, os.linesep
-                    )
-                )
-                sys.exit(1)
-    else:
-        user_table_request = UNWANTED_TABLES
+    tables = parse_tables(args.tables) if args.tables else None
 
     for fontpath in args.FONTPATH:
-        # validate file
-        if not os.path.exists(fontpath):
-            sys.stderr.write(
-                "The file path '{}' does not appear to be valid.{}".format(
-                    fontpath, os.linesep
-                )
-            )
-            sys.exit(1)
-
-        try:
-            tt = TTFont(fontpath)
-
-            removed_table_list = []
-            for table in user_table_request:
-                if table in tt:
-                    removed_table_list.append(table)
-                    del tt[table]
-                else:
-                    print("'{}' table was not found in '{}'".format(table, fontpath))
-
-            # save edited font
-            tt.save(fontpath)
-
-            # validate table removals
-            tt_edited = TTFont(fontpath)
-            for removed_table in removed_table_list:
-                assert removed_table not in tt_edited
-                print("'{}' table removed from '{}'".format(removed_table, fontpath))
-        except Exception as e:
-            sys.stderr.write("Error during execution: {}{}".format(str(e), os.linesep))
-            sys.exit(1)
+        ttfont = TTFont(fontpath)
+        remove_tables(ttfont, tables)
+        ttfont.save(fontpath)
 
 
 if __name__ == "__main__":

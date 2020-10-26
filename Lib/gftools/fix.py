@@ -8,8 +8,14 @@ from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
 from copy import deepcopy
+import logging
+
+
+log = logging.getLogger(__name__)
+
 
 __all__ = [
+    "remove_tables",
     "add_dummy_dsig",
     "fix_unhinted_font",
     "fix_hinted_font",
@@ -28,6 +34,43 @@ for style in ["Hairline"]:
     del WEIGHTS[style]
     del WEIGHT_NAMES[style]
 WEIGHTS = {v: k for k, v in WEIGHTS.items()}
+
+
+UNWANTED_TABLES = frozenset(
+    ["FFTM", "TTFA", "TSI0", "TSI1", "TSI2", "TSI3", "TSI5", "prop", "MVAR",]
+)
+
+
+def remove_tables(ttFont, tables=None):
+    """Remove unwanted tables from a font. The unwanted tables must belong
+    to the UNWANTED_TABLES set.
+
+    Args:
+        ttFont: a TTFont instance
+        tables: an iterable containing tables remove
+    """
+    tables_to_remove = UNWANTED_TABLES if not tables else frozenset(tables)
+    font_tables = frozenset(ttFont.keys())
+
+    tables_not_in_font = tables_to_remove - font_tables
+    if tables_not_in_font:
+        log.warning(
+            f"Cannot remove tables '{list(tables_not_in_font)}' since they are "
+            f"not in the font."
+        )
+
+    essential_tables = tables_to_remove - UNWANTED_TABLES
+    if essential_tables:
+        log.warning(
+            f"Cannot remove tables '{list(essential_tables)}' since they are required"
+        )
+
+    tables_to_remove = UNWANTED_TABLES & font_tables & tables_to_remove
+    if not tables_to_remove:
+        return
+    log.info(f"Removing tables '{list(tables_to_remove)}' from font")
+    for tbl in tables_to_remove:
+        del ttFont[tbl]
 
 
 def add_dummy_dsig(ttFont):
@@ -216,7 +259,3 @@ def fix_fvar_instances(ttFont):
     else:
         instances += gen_instances(is_italic=False)
     fvar.instances = instances
-
-if __name__ == "__main__":
-    f = TTFont('/Users/marcfoley/Downloads/Cabin 2/static/Cabin-SemiBold.ttf')
-    fix_weight_class(f)
