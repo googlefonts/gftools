@@ -25,7 +25,10 @@ __all__ = [
     "fix_mac_style",
     "font_stylename",
     "fix_fvar_instances",
+    "update_nametable",
+    "fix_nametable",
 ]
+
 
 WEIGHT_NAMES = deepcopy(_KNOWN_WEIGHTS)
 
@@ -172,12 +175,12 @@ def fix_fs_selection(ttFont):
     fs_selection &= 0b10000000
 
     if "Italic" in tokens:
-        fs_selection |= (1 << 0)
+        fs_selection |= 1 << 0
     if set(["Bold"]) & tokens:
-        fs_selection |= (1 << 5)
+        fs_selection |= 1 << 5
     # enable Regular bit for all other styles
     if not tokens & set(["Bold", "Italic"]):
-        fs_selection |= (1 << 6)
+        fs_selection |= 1 << 6
     ttFont["OS/2"].fsSelection = fs_selection
 
 
@@ -191,9 +194,9 @@ def fix_mac_style(ttFont):
     tokens = set(stylename.split())
     mac_style = 0
     if "Italic" in tokens:
-        mac_style |= (1 << 1)
+        mac_style |= 1 << 1
     if "Bold" in tokens:
-        mac_style |= (1 << 0)
+        mac_style |= 1 << 0
     ttFont["head"].macStyle = mac_style
 
 
@@ -261,3 +264,104 @@ def fix_fvar_instances(ttFont):
     else:
         instances += gen_instances(is_italic=False)
     fvar.instances = instances
+
+
+def update_nametable(ttFont, family_name=None, style_name=None):
+    """..."""
+    nametable = ttFont["name"]
+
+    # Remove nametable records which are not Win US English since they
+    # are redundant
+    platforms = set()
+    for rec in nametable.names:
+        platforms.add((rec.platformID, rec.platEncID, rec.langID))
+    platforms_to_remove = platforms ^ set([(3, 1, 0x409)])
+    if platforms_to_remove:
+        log.warning(f"Removing records which are not Win US English, {list(platforms_to_remove)}")
+        for platformID, platEncID, langID in platforms_to_remove:
+            nametable.removeNames(platformID=platformID, platEncID=platEncID, langID=langID)
+
+    if not family_name:
+        family_name = nametable.getName(16, 3, 1, 0x409) or nametable.getName(
+            1, 3, 1, 0x409
+        )
+        family_name = family_name.toUnicode()
+
+    if not style_name:
+        style_name = nametable.getName(17, 3, 1, 0x409) or nametable.getName(
+            2, 3, 1, 0x409
+        )
+        style_name = style_name.toUnicode()
+
+    is_ribbi = style_name in ("Regular", "Bold", "Italic", "Bold Italic")
+
+    nameids = {}
+    if is_ribbi:
+        nameids[1] = family_name
+        nameids[2] = style_name
+    else:
+        tokens = style_name.split()
+        family_name_suffix = " ".join([t for t in tokens if t not in ["Italic"]])
+        nameids[1] = f"{family_name} {family_name_suffix}"
+        nameids[2] = "Regular" if "Italic" not in tokens else "Italic"
+        nameids[16] = f"{family_name} {' '.join(t for t in tokens if t not in list(WEIGHT_NAMES) + ['Italic'])}"
+        nameids[17] = f"{' '.join(t for t in tokens if t in list(WEIGHT_NAMES) + ['Italic'])}"
+
+    family_name = nameids.get(16) or nameids.get(1)
+    style_name = nameids.get(17) or nameids.get(2)
+
+    # create NameIDs 3, 4, 6
+    nameids[4] = f"{family_name} {style_name}"
+    nameids[6] = f"{family_name.replace(' ', '')}-{style_name.replace(' ', '')}"
+    nameids[3] = _unique_name(ttFont, nameids)
+
+    # Pass through all records and replace occurences of the old family name
+    # with the new family name
+    current_family_name = nametable.getName(16, 3, 1, 0x409) or nametable.getName(
+        1, 3, 1, 0x409
+    )
+    current_family_name = current_family_name.toUnicode()
+    for record in nametable.names:
+        string = record.toUnicode()
+        if current_family_name in string:
+            nametable.setName(
+                string.replace(current_family_name, family_name),
+                record.nameID,
+                record.platformID,
+                record.platEncID,
+                record.langID,
+            )
+
+    # Remove previous typographic names
+    for nameID in (16, 17):
+        nametable.removeNames(nameID=nameID)
+
+    # Update nametable with new names
+    for nameID, string in nameids.items():
+        nametable.setName(string, nameID, 3, 1, 0x409)
+
+
+def _unique_name(ttFont, nameids):
+    font_version = _font_version(ttFont)
+    vendor = ttFont["OS/2"].achVendID.strip()
+    ps_name = nameids[6]
+    return f"{font_version};{vendor};{ps_name}"
+
+
+def _font_version(font, platEncLang=(3, 1, 0x409)):
+    nameRecord = font["name"].getName(5, *platEncLang)
+    if nameRecord is None:
+        return f'{font["head"].fontRevision:.3f}'
+    # "Version 1.101; ttfautohint (v1.8.1.43-b0c9)" --> "1.101"
+    # Also works fine with inputs "Version 1.101" or "1.101" etc
+    versionNumber = nameRecord.toUnicode().split(";")[0]
+    return versionNumber.lstrip("Version ").strip()
+
+
+def fix_nametable(ttFont):
+    name = ttFont["name"]
+    # make family_name its own function
+    family_name = name.getName(16, 3, 1, 0x409) or name.getName(1, 3, 1, 0x409)
+    family_name = family_name.toUnicode()
+    style_name = font_stylename(font)
+    update_nametable(ttFont, family_name, style_name)
