@@ -229,9 +229,7 @@ def get_name_record(ttFont, nameID, fallbackID=None):
     if not record and fallbackID:
         record = name.getName(fallbackID, 3, 1, 0x409)
     if not record:
-        raise ValueError(
-            f"Cannot find record with nameID {nameID}"
-        )
+        raise ValueError(f"Cannot find record with nameID {nameID}")
     return record.toUnicode()
 
 
@@ -250,9 +248,7 @@ def fix_fvar_instances(ttFont):
     if not subfamily_name:
         raise ValueError("Name table is missing subFamily Name Record")
     is_italic = "italic" in nametable.getName(2, 3, 1, 0x409).toUnicode().lower()
-    is_roman_and_italic = any(
-        a for a in ("slnt", "ital") if a in default_axis_vals
-    )
+    is_roman_and_italic = any(a for a in ("slnt", "ital") if a in default_axis_vals)
 
     wght_axis = next((a for a in fvar.axes if a.axisTag == "wght"), None)
     wght_min = int(wght_axis.minValue)
@@ -261,7 +257,11 @@ def fix_fvar_instances(ttFont):
     def gen_instances(is_italic):
         results = []
         for wght_val in range(wght_min, wght_max + 100, 100):
-            name = WEIGHTS[wght_val] if not is_italic else f"{WEIGHTS[wght_val]} Italic".strip()
+            name = (
+                WEIGHTS[wght_val]
+                if not is_italic
+                else f"{WEIGHTS[wght_val]} Italic".strip()
+            )
             name = name.replace("Regular Italic", "Italic")
             if name == "":
                 name = "Regular"
@@ -301,9 +301,13 @@ def update_nametable(ttFont, family_name=None, style_name=None):
         platforms.add((rec.platformID, rec.platEncID, rec.langID))
     platforms_to_remove = platforms ^ set([(3, 1, 0x409)])
     if platforms_to_remove:
-        log.warning(f"Removing records which are not Win US English, {list(platforms_to_remove)}")
+        log.warning(
+            f"Removing records which are not Win US English, {list(platforms_to_remove)}"
+        )
         for platformID, platEncID, langID in platforms_to_remove:
-            nametable.removeNames(platformID=platformID, platEncID=platEncID, langID=langID)
+            nametable.removeNames(
+                platformID=platformID, platEncID=platEncID, langID=langID
+            )
 
     if not family_name:
         family_name = font_familyname(ttFont)
@@ -323,7 +327,9 @@ def update_nametable(ttFont, family_name=None, style_name=None):
         nameids[1] = f"{family_name} {family_name_suffix}".strip()
         nameids[2] = "Regular" if "Italic" not in tokens else "Italic"
 
-        typo_family_suffix = " ".join(t for t in tokens if t not in list(WEIGHT_NAMES) + ["Italic"])
+        typo_family_suffix = " ".join(
+            t for t in tokens if t not in list(WEIGHT_NAMES) + ["Italic"]
+        )
         nameids[16] = f"{family_name} {typo_family_suffix}".strip()
         typo_style = " ".join(t for t in tokens if t in list(WEIGHT_NAMES) + ["Italic"])
         nameids[17] = typo_style
