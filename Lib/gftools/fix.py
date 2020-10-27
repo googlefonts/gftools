@@ -24,6 +24,7 @@ __all__ = [
     "fix_fs_selection",
     "fix_mac_style",
     "font_stylename",
+    "font_familyname",
     "fix_fvar_instances",
     "update_nametable",
     "fix_nametable",
@@ -208,13 +209,30 @@ def font_stylename(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    return get_name_record(ttFont, 17, fallbackID=2)
+
+
+def font_familyname(ttFont):
+    """Get a font's familyname using the name table. since our fonts use the
+    RIBBI naming model, use the Typographic Family Name (NameID 16) if it
+    exists, otherwise use the Family Name (Name ID 1)
+
+    Args:
+        ttFont: a TTFont instance
+    """
+    return get_name_record(ttFont, 16, fallbackID=1)
+
+
+def get_name_record(ttFont, nameID, fallbackID=None):
     name = ttFont["name"]
-    style_record = name.getName(17, 3, 1, 0x409) or name.getName(2, 3, 1, 0x409)
-    if not style_record:
+    record = name.getName(nameID, 3, 1, 0x409)
+    if not record and fallbackID:
+        record = name.getName(fallbackID, 3, 1, 0x409)
+    if not record:
         raise ValueError(
-            "Cannot find stylename since NameID 2 and NameID 16 are missing"
+            f"Cannot find record with nameID {nameID}"
         )
-    return style_record.toUnicode()
+    return record.toUnicode()
 
 
 def fix_fvar_instances(ttFont):
@@ -270,8 +288,9 @@ def update_nametable(ttFont, family_name=None, style_name=None):
     """..."""
     nametable = ttFont["name"]
 
-    # Remove nametable records which are not Win US English since they
-    # are redundant
+    # Remove nametable records which are not Win US English
+    # TODO this is too greedy. We should preserve multilingual
+    # names
     platforms = set()
     for rec in nametable.names:
         platforms.add((rec.platformID, rec.platEncID, rec.langID))
@@ -282,16 +301,10 @@ def update_nametable(ttFont, family_name=None, style_name=None):
             nametable.removeNames(platformID=platformID, platEncID=platEncID, langID=langID)
 
     if not family_name:
-        family_name = nametable.getName(16, 3, 1, 0x409) or nametable.getName(
-            1, 3, 1, 0x409
-        )
-        family_name = family_name.toUnicode()
+        family_name = font_familyname(ttFont)
 
     if not style_name:
-        style_name = nametable.getName(17, 3, 1, 0x409) or nametable.getName(
-            2, 3, 1, 0x409
-        )
-        style_name = style_name.toUnicode()
+        style_name = font_stylename(ttFont)
 
     is_ribbi = style_name in ("Regular", "Bold", "Italic", "Bold Italic")
 
@@ -359,6 +372,11 @@ def _font_version(font, platEncLang=(3, 1, 0x409)):
 
 
 def fix_nametable(ttFont):
+    if "fvar" in ttFont:
+        # TODO, regen the nametable so it reflects the default fvar axes
+        # coordinates. Implement once https://github.com/fonttools/fonttools/pull/2078
+        # is merged
+        return
     name = ttFont["name"]
     # make family_name its own function
     family_name = name.getName(16, 3, 1, 0x409) or name.getName(1, 3, 1, 0x409)
