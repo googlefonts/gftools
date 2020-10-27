@@ -2,11 +2,17 @@ from fontTools.ttLib import newTable, TTFont
 from gftools.fix import *
 import pytest
 import os
+from copy import deepcopy
+
 
 @pytest.fixture
 def static_font():
-    f = TTFont(os.path.join("data", "test", "Lora-Regular.ttf"))
-    return f
+    return TTFont(os.path.join("data", "test", "Lora-Regular.ttf"))
+
+
+@pytest.fixture
+def var_font():
+    return TTFont(os.path.join("data", "test", "Inconsolata[wdth,wght].ttf"))
 
 
 def test_remove_tables(static_font):
@@ -163,3 +169,64 @@ def test_update_nametable(static_font, family_name, style, id1, id2, id16, id17)
 
 
 # TODO test fix_nametable once https://github.com/fonttools/fonttools/pull/2078 is merged
+
+
+def _get_fvar_instance_names(var_font):
+    inst_names = []
+    for inst in var_font['fvar'].instances:
+        inst_name = var_font['name'].getName(inst.subfamilyNameID, 3, 1, 0x409)
+        inst_names.append(inst_name.toUnicode())
+    return inst_names
+
+
+def test_fix_fvar_instances(var_font):
+    roman_instances = [
+        "ExtraLight",
+        "Light",
+        "Regular",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "ExtraBold",
+        "Black"
+    ]
+    italic_instances = [
+        "ExtraLight Italic",
+        "Light Italic",
+        "Italic",
+        "Medium Italic",
+        "SemiBold Italic",
+        "Bold Italic",
+        "ExtraBold Italic",
+        "Black Italic",
+    ]
+    var_font["fvar"].instances = []
+
+    fix_fvar_instances(var_font)
+    inst_names = _get_fvar_instance_names(var_font)
+    assert inst_names == roman_instances
+
+
+    # Let's rename the font style so it's an Italic variant
+    var_font2 = deepcopy(var_font)
+    var_font2["name"].setName("Italic", 2, 3, 1, 0x409)
+    var_font2["name"].setName("Italic", 17, 3, 1, 0x409)
+
+    fix_fvar_instances(var_font2)
+    inst_names = _get_fvar_instance_names(var_font2)
+    assert inst_names == italic_instances
+
+
+    # Let's mock the font so it has both ital and wght axes
+    new_fvar = deepcopy(var_font["fvar"])
+    new_fvar.axes[1].axisTag = "ital"
+    new_fvar.axes[1].minValue = 0
+    new_fvar.axes[1].maxValue = 1
+    new_fvar.axes[1].defaultValue = 0
+
+    var_font3 = deepcopy(var_font)
+    var_font3['fvar'] = new_fvar
+    fix_fvar_instances(var_font3)
+
+    inst_names = _get_fvar_instance_names(var_font3)
+    assert inst_names == roman_instances + italic_instances
