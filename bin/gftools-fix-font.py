@@ -4,6 +4,13 @@ gftools fix-font
 
 Update a font so it conforms to the Google Fonts specification
 https://github.com/googlefonts/gf-docs/tree/master/Spec
+
+Usage:
+
+gftools fix-font font.ttf
+
+# Fix font issues that should be fixed in the source files
+gftools fix-font font.ttf --include-source-fixes
 """
 import argparse
 import logging
@@ -18,7 +25,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("font", help="Path to font")
     parser.add_argument("-o", "--out", help="Output path for fixed font")
-    parser.add_argument("--hotfix", action="store_true", help="Hotfix fonts.")
+    parser.add_argument(
+        "--include-source-fixes",
+        action="store_true",
+        help="Fix font issues that should be fixed in the source files."
+    )
     args = parser.parse_args()
 
     font = TTFont(args.font)
@@ -34,8 +45,11 @@ def main():
     if "fvar" in font:
         remove_tables(font, ["MVAR"])
 
-    if args.hotfix:
-        log.warning("Hotfixing fonts. Please consider fixing the source files instead")
+    if args.include_source_fixes:
+        log.warning(
+            "include-source-fixes is enabled. Please consider fixing the "
+            "source files instead."
+        )
         remove_tables(font)
         fix_nametable(font)
         fix_fs_type(font)
@@ -46,7 +60,8 @@ def main():
 
         if "fvar" in font:
             fix_fvar_instances(font)
-            # TODO (Marc F) add gen-stat
+            # TODO (Marc F) add gen-stat once merged 
+            # https://github.com/googlefonts/gftools/pull/263
 
     if args.out:
         font.save(args.out)
