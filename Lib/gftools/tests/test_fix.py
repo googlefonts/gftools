@@ -40,9 +40,9 @@ def test_add_dummy_dsig(static_font):
 
 def test_fix_hinted_font(static_font):
     static_font["head"].flags &= ~(1 << 3)
-    assert static_font["head"].flags & (1 << 3) != 8
+    assert static_font["head"].flags & (1 << 3) != (1 << 3)
     fix_hinted_font(static_font)
-    assert static_font["head"].flags & (1 << 3) == 8
+    assert static_font["head"].flags & (1 << 3) == (1 << 3)
 
 
 def test_fix_unhinted_font(static_font):
@@ -92,18 +92,22 @@ STYLE_TABLE = [
     STYLE_HEADERS,
     STYLE_TABLE
 )
-def test_weight_class(static_font, style, weight_class, fs_selection, mac_style):
+def test_fix_weight_class(static_font, style, weight_class, fs_selection, mac_style):
     name = static_font["name"]
-    if style in ("Regular", "Italic", "Bold", "Bold Italic"):
-        name.setName(style, 2, 3, 1, 0x409)
-    else:
-        if "Italic" in style:
-            name.setName("Italic", 2, 3, 1, 0x409)
-        else:
-            name.setName("Regular", 2, 3, 1, 0x409)
-        name.setName(style, 17, 3, 1, 0x409)
+    name.setName(style, 2, 3, 1, 0x409)
+    name.setName(style, 17, 3, 1, 0x409)
     fix_weight_class(static_font)
     assert static_font["OS/2"].usWeightClass == weight_class
+
+
+def test_unknown_weight_class(static_font):
+    name = static_font["name"]
+    name.setName("Foobar", 2, 3, 1, 0x409)
+    name.setName("Foobar", 17, 3, 1, 0x409)
+    from gftools.fix import WEIGHT_NAMES
+
+    with pytest.raises(ValueError, match="Cannot determine usWeightClass"):
+        fix_weight_class(static_font)
 
 
 @pytest.mark.parametrize(
@@ -115,6 +119,7 @@ def test_fs_selection(static_font, style, weight_class, fs_selection, mac_style)
     for i in range(7, 12):
         static_font["OS/2"].fsSelection &= ~(1 << i)
     name = static_font["name"]
+    name.setName(style, 2, 3, 1, 0x409)
     name.setName(style, 17, 3, 1, 0x409)
     fix_fs_selection(static_font)
     assert static_font["OS/2"].fsSelection == fs_selection
@@ -126,6 +131,7 @@ def test_fs_selection(static_font, style, weight_class, fs_selection, mac_style)
 )
 def test_fix_mac_style(static_font, style, weight_class, fs_selection, mac_style):
     name = static_font["name"]
+    name.setName(style, 2, 3, 1, 0x409)
     name.setName(style, 17, 3, 1, 0x409)
     fix_mac_style(static_font)
     assert static_font["head"].macStyle == mac_style
@@ -166,6 +172,9 @@ def test_update_nametable(static_font, family_name, style, id1, id2, id16, id17)
     if id16 and id17:
         assert nametable.getName(16, 3, 1, 0x409).toUnicode() == id16
         assert nametable.getName(17, 3, 1, 0x409).toUnicode() == id17
+    else:
+        assert nametable.getName(16, 3, 1, 0x409) == None
+        assert nametable.getName(17, 3, 1, 0x409) == None
 
 
 # TODO test fix_nametable once https://github.com/fonttools/fonttools/pull/2078 is merged
@@ -207,7 +216,7 @@ def test_fix_fvar_instances(var_font):
     assert inst_names == roman_instances
 
 
-    # Let's rename the font style so it's an Italic variant
+    # Let's rename the font style so the font becomes an Italic variant
     var_font2 = deepcopy(var_font)
     var_font2["name"].setName("Italic", 2, 3, 1, 0x409)
     var_font2["name"].setName("Italic", 17, 3, 1, 0x409)
@@ -217,7 +226,7 @@ def test_fix_fvar_instances(var_font):
     assert inst_names == italic_instances
 
 
-    # Let's mock the font so it has both ital and wght axes
+    # Let's mock an ital axis so the font has both ital and wght axes
     new_fvar = deepcopy(var_font["fvar"])
     new_fvar.axes[1].axisTag = "ital"
     new_fvar.axes[1].minValue = 0

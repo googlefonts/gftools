@@ -32,15 +32,17 @@ def main():
         fix_unhinted_font(font)
 
     if "fvar" in font:
-        remove_tables(font)
+        remove_tables(font, ["MVAR"])
 
     if args.hotfix:
         log.warning("Hotfixing fonts. Please consider fixing the source files instead")
+        remove_tables(font)
         fix_nametable(font)
         fix_fs_type(font)
         fix_fs_selection(font)
         fix_mac_style(font)
         fix_weight_class(font)
+        # TODO inherit vertical metrics if font exists on Google Fonts
 
         if "fvar" in font:
             fix_fvar_instances(font)

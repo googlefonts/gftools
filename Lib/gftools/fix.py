@@ -1,6 +1,6 @@
 """
 Functions to fix fonts so they conform to the Google Fonts
-specification
+specification:
 https://github.com/googlefonts/gf-docs/tree/master/Spec
 """
 from fontTools.ttLib import TTFont, newTable
@@ -31,13 +31,13 @@ __all__ = [
 ]
 
 
-WEIGHT_NAMES = deepcopy(_KNOWN_WEIGHTS)
 
-WEIGHTS = _KNOWN_WEIGHTS
-for style in ["Hairline"]:
-    del WEIGHTS[style]
+# The _KNOWN_WEIGHT_VALUES constant is used internally by the GF Engineering
+# team so we cannot update ourselves. TODO (Marc F) unify this one day
+WEIGHT_NAMES = _KNOWN_WEIGHTS
+for style in ["Hairline", ""]:
     del WEIGHT_NAMES[style]
-WEIGHTS = {v: k for k, v in WEIGHTS.items()}
+WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
 
 UNWANTED_TABLES = frozenset(
@@ -63,10 +63,10 @@ def remove_tables(ttFont, tables=None):
             f"not in the font."
         )
 
-    essential_tables = tables_to_remove - UNWANTED_TABLES
-    if essential_tables:
+    required_tables = tables_to_remove - UNWANTED_TABLES
+    if required_tables:
         log.warning(
-            f"Cannot remove tables '{list(essential_tables)}' since they are required"
+            f"Cannot remove tables '{list(required_tables)}' since they are required"
         )
 
     tables_to_remove = UNWANTED_TABLES & font_tables & tables_to_remove
@@ -94,10 +94,9 @@ def add_dummy_dsig(ttFont):
 
 def fix_unhinted_font(ttFont):
     """Improve the appearance of an unhinted font on Win platforms by:
-        - Overwriting the GASP table with a newtable that has a single
-          which range which is set to smooth.
-        - Overwriting the prep table with a new table that includes new
-          instructions.
+        - Add a new GASP table with a newtable that has a single
+          range which is set to smooth.
+        - Add a new prep table which is optimized for unhinted fonts.
     
     Args:
         ttFont: a TTFont instance
@@ -119,20 +118,16 @@ def fix_unhinted_font(ttFont):
 
 def fix_hinted_font(ttFont):
     """Improve the appearance of a hinted font on Win platforms by enabling
-    the head table's flag 3
+    the head table's flag 3.
 
     Args:
         ttFont: a TTFont instance
     """
-    head_flags = ttFont["head"].flags
-    if head_flags != head_flags | (1 << 3):
-        ttFont["head"].flags |= 1 << 3
-    else:
-        print("Skipping. Font already has bit 3 enabled")
+    ttFont["head"].flags |= 1 << 3
 
 
 def fix_fs_type(ttFont):
-    """Set the OS/2 table's fsType flag to 0 (Installable embedding)
+    """Set the OS/2 table's fsType flag to 0 (Installable embedding).
 
     Args:
         ttFont: a TTFont instance
@@ -142,28 +137,34 @@ def fix_fs_type(ttFont):
 
 def fix_weight_class(ttFont):
     """Set the OS/2 table's usWeightClass so it conforms to GF's supported
-    styles:
+    styles table:
     https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
 
     Args:
         ttFont: a TTFont instance
     """
     stylename = font_stylename(ttFont)
-
-    for style in sorted(WEIGHTS.values(), key=lambda k: len(k), reverse=True):
-        italic_variant = f"{style} Italic"
-        if style in stylename or italic_variant in stylename:
+    tokens = stylename.split()
+    # Order WEIGHT_NAMES so longest names are first
+    for style in sorted(WEIGHT_NAMES, key=lambda k: len(k), reverse=True):
+        if style in tokens:
             ttFont["OS/2"].usWeightClass = WEIGHT_NAMES[style]
             return
+
+    if "Italic" in tokens:
+        ttFont["OS/2"].usWeightClass = 400
+        return
     raise ValueError(
         f"Cannot determine usWeightClass because font style, '{stylename}' "
         "doesn't have a weight token which is in our known "
-        "weights, '{WEIGHTS.keys()}'"
+        "weights, '{WEIGHT_VALUES.keys()}'"
     )
 
 
 def fix_fs_selection(ttFont):
-    """Fix the OS/2 table's fsSelection
+    """Fix the OS/2 table's fsSelection so it conforms to GF's supported
+    styles table:
+    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
 
     Args:
         ttFont: a TTFont instance
@@ -173,11 +174,11 @@ def fix_fs_selection(ttFont):
     fs_selection = ttFont["OS/2"].fsSelection
 
     # turn off all bits except for bit 7 (USE_TYPO_METRICS)
-    fs_selection &= 0b10000000
+    fs_selection &= (1 << 7)
 
     if "Italic" in tokens:
         fs_selection |= 1 << 0
-    if set(["Bold"]) & tokens:
+    if "Bold" in tokens:
         fs_selection |= 1 << 5
     # enable Regular bit for all other styles
     if not tokens & set(["Bold", "Italic"]):
@@ -186,7 +187,9 @@ def fix_fs_selection(ttFont):
 
 
 def fix_mac_style(ttFont):
-    """Fix the head table's macStyle
+    """Fix the head table's macStyle so it conforms to GF's supported
+    styles table:
+    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
 
     Args:
         ttFont: a TTFont instance
@@ -204,7 +207,7 @@ def fix_mac_style(ttFont):
 def font_stylename(ttFont):
     """Get a font's stylename using the name table. Since our fonts use the
     RIBBI naming model, use the Typographic SubFamily Name (NAmeID 17) if it
-    exists, otherwise use the SubFamily Name (NameID 2)
+    exists, otherwise use the SubFamily Name (NameID 2).
 
     Args:
         ttFont: a TTFont instance
@@ -215,7 +218,7 @@ def font_stylename(ttFont):
 def font_familyname(ttFont):
     """Get a font's familyname using the name table. since our fonts use the
     RIBBI naming model, use the Typographic Family Name (NameID 16) if it
-    exists, otherwise use the Family Name (Name ID 1)
+    exists, otherwise use the Family Name (Name ID 1).
 
     Args:
         ttFont: a TTFont instance
@@ -223,7 +226,18 @@ def font_familyname(ttFont):
     return get_name_record(ttFont, 16, fallbackID=1)
 
 
-def get_name_record(ttFont, nameID, fallbackID=None):
+def get_name_record(ttFont, nameID, fallbackID=None, platform=(3, 1, 0x409)):
+    """Return a name table record which has the specified nameID.
+
+    Args:
+        ttFont: a TTFont instance
+        nameID: nameID of name record to return,
+        fallbackID: if nameID doesn't exist, use this nameID instead
+        platform: Platform of name record. Default is Win US English
+
+    Returns:
+        str
+    """
     name = ttFont["name"]
     record = name.getName(nameID, 3, 1, 0x409)
     if not record and fallbackID:
@@ -234,37 +248,37 @@ def get_name_record(ttFont, nameID, fallbackID=None):
 
 
 def fix_fvar_instances(ttFont):
-    """Replace a variable font's fvar instances with a set of instances that
-    conform to the Google Fonts instance spec:
+    """Replace a variable font's fvar instances with a set of new instances
+    that conform to the Google Fonts instance spec:
     https://github.com/googlefonts/gf-docs/tree/master/Spec#fvar-instances
 
     Args:
         ttFont: a TTFont instance
     """
+    if 'fvar' not in ttFont:
+        raise ValueError("ttFont is not a variable font")
+
     fvar = ttFont["fvar"]
     default_axis_vals = {a.axisTag: a.defaultValue for a in fvar.axes}
-    nametable = ttFont["name"]
-    subfamily_name = nametable.getName(2, 3, 1, 0x409)
-    if not subfamily_name:
-        raise ValueError("Name table is missing subFamily Name Record")
-    is_italic = "italic" in nametable.getName(2, 3, 1, 0x409).toUnicode().lower()
+
+    stylename = font_stylename(ttFont)
+    is_italic = "Italic" in stylename
     is_roman_and_italic = any(a for a in ("slnt", "ital") if a in default_axis_vals)
 
     wght_axis = next((a for a in fvar.axes if a.axisTag == "wght"), None)
     wght_min = int(wght_axis.minValue)
     wght_max = int(wght_axis.maxValue)
 
+    nametable = ttFont["name"]
     def gen_instances(is_italic):
         results = []
         for wght_val in range(wght_min, wght_max + 100, 100):
             name = (
-                WEIGHTS[wght_val]
+                WEIGHT_VALUES[wght_val]
                 if not is_italic
-                else f"{WEIGHTS[wght_val]} Italic".strip()
+                else f"{WEIGHT_VALUES[wght_val]} Italic".strip()
             )
             name = name.replace("Regular Italic", "Italic")
-            if name == "":
-                name = "Regular"
 
             coordinates = default_axis_vals
             coordinates["wght"] = wght_val
@@ -287,15 +301,38 @@ def fix_fvar_instances(ttFont):
 
 
 def update_nametable(ttFont, family_name=None, style_name=None):
-    """..."""
+    """Update a static font's name table. The updated name table will conform
+    to the Google Fonts support styles table:
+    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+
+    If a style_name includes tokens other than wght and ital, these tokens
+    will be appended to the family name e.g
+
+    Input:
+    family_name="MyFont"
+    style_name="SemiCondensed SemiBold"
+
+    Output:
+    familyName (nameID 1) = "MyFont SemiCondensed SemiBold
+    subFamilyName (nameID 2) = "Regular"
+    typo familyName (nameID 16) = "MyFont SemiCondensed"
+    typo subFamilyName (nameID 17) = "SemiBold"
+
+    Google Fonts has used this model for several years e.g
+    https://fonts.google.com/?query=cabin
+
+    Args:
+        ttFont:
+        family_name: New family name
+        style_name: New style name
+    """
     if "fvar" in ttFont:
-        log.warning("Cannot update the nametable for a variable font")
-        return
+        raise ValueError("Cannot update the nametable for a variable font")
     nametable = ttFont["name"]
 
     # Remove nametable records which are not Win US English
     # TODO this is too greedy. We should preserve multilingual
-    # names
+    # names in the future. Please note, this has always been an issue.
     platforms = set()
     for rec in nametable.names:
         platforms.add((rec.platformID, rec.platEncID, rec.langID))
@@ -344,10 +381,7 @@ def update_nametable(ttFont, family_name=None, style_name=None):
 
     # Pass through all records and replace occurences of the old family name
     # with the new family name
-    current_family_name = nametable.getName(16, 3, 1, 0x409) or nametable.getName(
-        1, 3, 1, 0x409
-    )
-    current_family_name = current_family_name.toUnicode()
+    current_family_name = font_familyname(ttFont)
     for record in nametable.names:
         string = record.toUnicode()
         if current_family_name in string:
@@ -386,14 +420,18 @@ def _font_version(font, platEncLang=(3, 1, 0x409)):
 
 
 def fix_nametable(ttFont):
+    """Fix a static font's name table so it conforms to teh Google Fonts
+    supported styles table:
+    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+
+    Args:
+        ttFont: a TTFont instance
+    """
     if "fvar" in ttFont:
         # TODO, regen the nametable so it reflects the default fvar axes
         # coordinates. Implement once https://github.com/fonttools/fonttools/pull/2078
-        # is merged
+        # is merged.
         return
-    name = ttFont["name"]
-    # make family_name its own function
-    family_name = name.getName(16, 3, 1, 0x409) or name.getName(1, 3, 1, 0x409)
-    family_name = family_name.toUnicode()
+    family_name = font_familyname(ttFont)
     style_name = font_stylename(font)
     update_nametable(ttFont, family_name, style_name)
