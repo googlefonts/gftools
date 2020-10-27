@@ -16,4 +16,5 @@ install:
 
 script:
   - python ./Lib/gftools/tests/test_usage.py
+  - python ./Lib/gftools/tests/test_fix.py
   - mypy ./Lib/gftools/packager.py
