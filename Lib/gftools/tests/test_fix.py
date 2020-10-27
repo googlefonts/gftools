@@ -123,3 +123,43 @@ def test_fix_mac_style(static_font, style, weight_class, fs_selection, mac_style
     name.setName(style, 17, 3, 1, 0x409)
     fix_mac_style(static_font)
     assert static_font["head"].macStyle == mac_style
+
+
+STYLENAME_HEADERS = "family_name, style, id1, id2, id16, id17"
+STYLENAME_TABLE = [
+    # Roman
+    ("Test Family", "Thin", "Test Family Thin", "Regular", "Test Family", "Thin"),
+    ("Test Family", "ExtraLight", "Test Family ExtraLight", "Regular", "Test Family", "ExtraLight"),
+    ("Test Family", "Light", "Test Family Light", "Regular", "Test Family", "Light"),
+    ("Test Family", "Regular", "Test Family", "Regular", "", ""),
+    ("Test Family", "Medium", "Test Family Medium", "Regular", "Test Family", "Medium"),
+    ("Test Family", "SemiBold", "Test Family SemiBold", "Regular", "Test Family", "SemiBold"),
+    ("Test Family", "Bold", "Test Family", "Bold", "", ""),
+    ("Test Family", "ExtraBold", "Test Family ExtraBold", "Regular", "Test Family", "ExtraBold"),
+    # Italics
+    ("Test Family", "Thin Italic", "Test Family Thin", "Italic", "Test Family", "Thin Italic"),
+    ("Test Family", "ExtraLight Italic", "Test Family ExtraLight", "Italic", "Test Family", "ExtraLight Italic"),
+    ("Test Family", "Light Italic", "Test Family Light", "Italic", "Test Family", "Light Italic"),
+    ("Test Family", "Italic", "Test Family", "Italic", "", ""),
+    ("Test Family", "Medium Italic", "Test Family Medium", "Italic", "Test Family", "Medium Italic"),
+    ("Test Family", "SemiBold Italic", "Test Family SemiBold", "Italic", "Test Family", "SemiBold Italic"),
+    ("Test Family", "Bold Italic", "Test Family", "Bold Italic", "", ""),
+    ("Test Family", "ExtraBold Italic", "Test Family ExtraBold", "Italic", "Test Family", "ExtraBold Italic"),
+    ("Test Family", "Black Italic", "Test Family Black", "Italic", "Test Family", "Black Italic"),
+    ("Test Family", "Black", "Test Family Black", "Regular", "Test Family", "Black"),
+]
+@pytest.mark.parametrize(
+    STYLENAME_HEADERS,
+    STYLENAME_TABLE
+)
+def test_update_nametable(static_font, family_name, style, id1, id2, id16, id17):
+    update_nametable(static_font, family_name, style)
+    nametable = static_font["name"]
+    assert nametable.getName(1, 3, 1, 0x409).toUnicode() == id1
+    assert nametable.getName(2, 3, 1, 0x409).toUnicode() == id2
+    if id16 and id17:
+        assert nametable.getName(16, 3, 1, 0x409).toUnicode() == id16
+        assert nametable.getName(17, 3, 1, 0x409).toUnicode() == id17
+
+
+# TODO test fix_nametable once https://github.com/fonttools/fonttools/pull/2078 is merged
