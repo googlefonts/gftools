@@ -250,7 +250,7 @@ def fix_fvar_instances(ttFont):
     if not subfamily_name:
         raise ValueError("Name table is missing subFamily Name Record")
     is_italic = "italic" in nametable.getName(2, 3, 1, 0x409).toUnicode().lower()
-    font_is_roman_and_italic = any(
+    is_roman_and_italic = any(
         a for a in ("slnt", "ital") if a in default_axis_vals
     )
 
@@ -261,8 +261,10 @@ def fix_fvar_instances(ttFont):
     def gen_instances(is_italic):
         results = []
         for wght_val in range(wght_min, wght_max + 100, 100):
-            name = WEIGHTS[wght_val] if not is_italic else f"{WEIGHTS[wght_val]} Italic"
+            name = WEIGHTS[wght_val] if not is_italic else f"{WEIGHTS[wght_val]} Italic".strip()
             name = name.replace("Regular Italic", "Italic")
+            if name == "":
+                name = "Regular"
 
             coordinates = default_axis_vals
             coordinates["wght"] = wght_val
@@ -274,10 +276,10 @@ def fix_fvar_instances(ttFont):
         return results
 
     instances = []
-    if font_is_roman_and_italic:
+    if is_roman_and_italic:
         for bool_ in (False, True):
             instances += gen_instances(is_italic=bool_)
-    elif font_is_italic:
+    elif is_italic:
         instances += gen_instances(is_italic=True)
     else:
         instances += gen_instances(is_italic=False)
@@ -286,6 +288,9 @@ def fix_fvar_instances(ttFont):
 
 def update_nametable(ttFont, family_name=None, style_name=None):
     """..."""
+    if "fvar" in ttFont:
+        log.warning("Cannot update the nametable for a variable font")
+        return
     nametable = ttFont["name"]
 
     # Remove nametable records which are not Win US English
@@ -315,10 +320,13 @@ def update_nametable(ttFont, family_name=None, style_name=None):
     else:
         tokens = style_name.split()
         family_name_suffix = " ".join([t for t in tokens if t not in ["Italic"]])
-        nameids[1] = f"{family_name} {family_name_suffix}"
+        nameids[1] = f"{family_name} {family_name_suffix}".strip()
         nameids[2] = "Regular" if "Italic" not in tokens else "Italic"
-        nameids[16] = f"{family_name} {' '.join(t for t in tokens if t not in list(WEIGHT_NAMES) + ['Italic'])}"
-        nameids[17] = f"{' '.join(t for t in tokens if t in list(WEIGHT_NAMES) + ['Italic'])}"
+
+        typo_family_suffix = " ".join(t for t in tokens if t not in list(WEIGHT_NAMES) + ["Italic"])
+        nameids[16] = f"{family_name} {typo_family_suffix}".strip()
+        typo_style = " ".join(t for t in tokens if t in list(WEIGHT_NAMES) + ["Italic"])
+        nameids[17] = typo_style
 
     family_name = nameids.get(16) or nameids.get(1)
     style_name = nameids.get(17) or nameids.get(2)
