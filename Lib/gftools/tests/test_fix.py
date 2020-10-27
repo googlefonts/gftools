@@ -56,32 +56,37 @@ def test_fix_fs_type(static_font):
     assert static_font["OS/2"].fsType == 0
 
 
+# Taken from https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+STYLE_HEADERS = "style, weight_class, fs_selection, mac_style"
+STYLE_TABLE = [
+    ("Thin", 100, (1 << 6), (0 << 0)),
+    ("ExtraLight", 200, (1 << 6), (0 << 0)),
+    ("Light", 300, (1 << 6), (0 << 0)),
+    ("Regular", 400, (1 << 6), (0 << 0)),
+    ("Medium", 500, (1 << 6), (0 << 0)),
+    ("SemiBold", 600, (1 << 6), (0 << 0)),
+    ("Bold", 700, (1 << 5), (1 << 0)),
+    ("ExtraBold", 800, (1 << 6), (0 << 0)),
+    ("Black", 900, (1 << 6), (0 << 0)),
+    ("Thin Italic", 100, (1 << 0), (1 << 1)),
+    ("ExtraLight Italic", 200, (1 << 0), (1 << 1)),
+    ("Light Italic", 300, (1 << 0), (1 << 1)),
+    ("Italic", 400, (1 << 0), (1 << 1)),
+    ("Medium Italic", 500, (1 << 0), (1 << 1)),
+    ("SemiBold Italic", 600, (1 << 0), (1 << 1)),
+    ("Bold Italic", 700, (1 << 0) | (1 << 5), (1 << 0) | (1 << 1)),
+    ("ExtraBold Italic", 800, (1 << 0), (1 << 1)),
+    ("Black Italic", 900, (1 << 0), (1 << 1)),
+    # Variable fonts may have tokens other than weight and italic in their names
+    ("SemiCondensed Bold Italic", 700, (1 << 0) | (1 << 5), (1 << 0) | (1 << 1)),
+    ("12pt Italic", 400, (1 << 0), (1 << 1)),
+]
+
 @pytest.mark.parametrize(
-    "style, value",
-    [
-        ("Thin", 100),
-        ("ExtraLight", 200),
-        ("Light", 300),
-        ("Regular", 400),
-        ("Medium", 500),
-        ("SemiBold", 600),
-        ("Bold", 700),
-        ("ExtraBold", 800),
-        ("Black", 900),
-        ("Thin Italic", 100),
-        ("ExtraLight Italic", 200),
-        ("Light Italic", 300),
-        ("Italic", 400),
-        ("Medium Italic", 500),
-        ("SemiBold Italic", 600),
-        ("Bold Italic", 700),
-        ("ExtraBold Italic", 800),
-        ("Black Italic", 900),
-        ("SemiCondensed Bold Italic", 700),
-        ("12pt Italic", 400),
-    ],
+    STYLE_HEADERS,
+    STYLE_TABLE
 )
-def test_weight_class(static_font, style, value):
+def test_weight_class(static_font, style, weight_class, fs_selection, mac_style):
     name = static_font["name"]
     if style in ("Regular", "Italic", "Bold", "Bold Italic"):
         name.setName(style, 2, 3, 1, 0x409)
@@ -92,71 +97,29 @@ def test_weight_class(static_font, style, value):
             name.setName("Regular", 2, 3, 1, 0x409)
         name.setName(style, 17, 3, 1, 0x409)
     fix_weight_class(static_font)
-    assert static_font["OS/2"].usWeightClass == value
+    assert static_font["OS/2"].usWeightClass == weight_class
 
 
 @pytest.mark.parametrize(
-    "style, value",
-    [
-        ("Thin", (1 << 6)),
-        ("ExtraLight", (1 << 6)),
-        ("Light", (1 << 6)),
-        ("Regular", (1 << 6)),
-        ("Medium", (1 << 6)),
-        ("SemiBold", (1 << 6)),
-        ("Bold", (1 << 5)),
-        ("ExtraBold", (1 << 6)),
-        ("Black", (1 << 6)),
-        ("Thin Italic", (1 << 0)),
-        ("ExtraLight Italic", (1 << 0)),
-        ("Light Italic", (1 << 0)),
-        ("Italic", (1 << 0)),
-        ("Medium Italic", (1 << 0)),
-        ("SemiBold Italic", (1 << 0)),
-        ("Bold Italic", (1 << 0) | (1 << 5)),
-        ("ExtraBold Italic", (1 << 0)),
-        ("Black Italic", (1 << 0)),
-        ("SemiCondensed Bold Italic", (1 << 0) | (1 << 5)),
-        ("12pt Italic", (1 << 0)),
-    ],
+    STYLE_HEADERS,
+    STYLE_TABLE
 )
-def test_fs_selection(static_font, style, value):
+def test_fs_selection(static_font, style, weight_class, fs_selection, mac_style):
     # disable fsSelection bits above 6
     for i in range(7, 12):
         static_font["OS/2"].fsSelection &= ~(1 << i)
     name = static_font["name"]
     name.setName(style, 17, 3, 1, 0x409)
     fix_fs_selection(static_font)
-    assert static_font["OS/2"].fsSelection == value
+    assert static_font["OS/2"].fsSelection == fs_selection
 
 
 @pytest.mark.parametrize(
-    "style, value",
-    [
-        ("Thin", (0 << 0)),
-        ("ExtraLight", (0 << 0)),
-        ("Light", (0 << 0)),
-        ("Regular", (0 << 0)),
-        ("Medium", (0 << 0)),
-        ("SemiBold", (0 << 0)),
-        ("Bold", (1 << 0)),
-        ("ExtraBold", (0 << 0)),
-        ("Black", (0 << 0)),
-        ("Thin Italic", (1 << 1)),
-        ("ExtraLight Italic", (1 << 1)),
-        ("Light Italic", (1 << 1)),
-        ("Italic", (1 << 1)),
-        ("Medium Italic", (1 << 1)),
-        ("SemiBold Italic", (1 << 1)),
-        ("Bold Italic", (1 << 0) | (1 << 1)),
-        ("ExtraBold Italic", (1 << 1)),
-        ("Black Italic", (1 << 1)),
-        ("SemiCondensed Bold Italic", (1 << 0) | (1 << 1)),
-        ("12pt Italic", (1 << 1)),
-    ],
+    STYLE_HEADERS,
+    STYLE_TABLE
 )
-def test_fix_mac_style(static_font, style, value):
+def test_fix_mac_style(static_font, style, weight_class, fs_selection, mac_style):
     name = static_font["name"]
     name.setName(style, 17, 3, 1, 0x409)
     fix_mac_style(static_font)
-    assert static_font["head"].macStyle == value
+    assert static_font["head"].macStyle == mac_style
