@@ -433,5 +433,5 @@ def fix_nametable(ttFont):
         # is merged.
         return
     family_name = font_familyname(ttFont)
-    style_name = font_stylename(font)
+    style_name = font_stylename(ttFont)
     update_nametable(ttFont, family_name, style_name)
