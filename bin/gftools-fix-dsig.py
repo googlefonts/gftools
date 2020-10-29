@@ -20,6 +20,8 @@ from __future__ import print_function, unicode_literals
 import argparse
 import os
 from fontTools import ttLib
+from gftools.fix import add_dummy_dsig
+
 
 description = 'Fixes TTF to have a dummy DSIG table'
 parser = argparse.ArgumentParser(description=description)
@@ -63,7 +65,7 @@ def main():
               "signature (DSIG)".format(path))
 
     if write_DSIG:
-      set_empty_dsig(font)
+      add_dummy_dsig(font)
       font.save(path)
 
       if not args.force:

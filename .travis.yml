@@ -15,5 +15,6 @@ install:
   - pip install .
 
 script:
-  - python ./Lib/gftools/tests/test_usage.py
+  - pytest ./Lib/gftools/tests/test_usage.py
+  - pytest ./Lib/gftools/tests/test_fix.py
   - mypy ./Lib/gftools/packager.py
