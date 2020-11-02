@@ -46,7 +46,12 @@ def main():
     elided_values = (
         parse_elided_values(args.elided_values) if args.elided_values else None
     )
-    gen_stat_tables(fonts, elided_values, args.inplace)
+    gen_stat_tables(fonts, elided_values)
+
+    for font in fonts:
+        print(f"Updated STAT for {font.reader.file.name}")
+        dst = font.reader.file.name if inplace else font.reader.file.name + ".fix"
+        font.save(dst)
 
 
 if __name__ == "__main__":

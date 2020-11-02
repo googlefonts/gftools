@@ -735,7 +735,7 @@ def _add_axis_value(style_name, value, flags=0x0, linked_value=None):
 
 
 def gen_stat_tables(
-    fonts, elided_axis_values=None, inplace=False, axis_reg=axis_registry
+    fonts, elided_axis_values=None, axis_reg=axis_registry
 ):
     """
     Generate a stat table for each font in a family using the Google Fonts
@@ -828,9 +828,6 @@ def gen_stat_tables(
             _update_elided_axis_values(axes, elided_axis_values)
         buildStatTable(font, axes)
 
-        print(f"Updated STAT for {font.reader.file.name}")
-        dst = font.reader.file.name if inplace else font.reader.file.name + ".fix"
-        font.save(dst)
 
 
 def _update_elided_axis_values(stat, elided_values):
