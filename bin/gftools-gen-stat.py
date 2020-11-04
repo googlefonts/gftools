@@ -7,10 +7,13 @@ using the GF axis registry.
 
 Usage:
 
-gftools gen-stat [fonts.ttf] 
+gftools gen-stat [fonts.ttf] --axis-order wdth wght
 
 # Overwrite existing fonts
-gftools gen-stat [fonts.ttf] --inplace
+gftools gen-stat [fonts.ttf] --axis-order wdth wght --inplace
+
+# Overide which axis values are elided
+gftools gen-stat [fonts.ttf] --elided-values wght=400
 """
 from fontTools.ttLib import TTFont
 from gftools.fix import gen_stat_tables
