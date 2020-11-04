@@ -348,7 +348,7 @@ def test_fix_vertical_metrics_typo_metrics_enabled(static_fonts):
 
 def test_gen_stat(var_font):
     del var_font["STAT"]
-    gen_stat_tables([var_font])
+    gen_stat_tables([var_font], axis_order=["wdth", "wght"])
     stat = var_font["STAT"].table
     axes = {i: a.AxisTag for i,a in enumerate(stat.DesignAxisRecord.Axis)}
 
@@ -375,7 +375,7 @@ def test_gen_stat(var_font):
         
 def test_gen_stat_linked_values(var_font):
     del var_font["STAT"]
-    gen_stat_tables([var_font])
+    gen_stat_tables([var_font], axis_order=["wdth", "wght"])
     stat = var_font["STAT"].table
 
     reg_axis_value = next(
@@ -407,7 +407,7 @@ def _get_axis_value(font, axis, name, value):
 def test_gen_stat_roman_and_italic_family(var_fonts):
     for var_font in var_fonts:
         del var_font["STAT"]
-    gen_stat_tables(var_fonts)
+    gen_stat_tables(var_fonts, axis_order=["wght", "ital"])
     roman, italic = var_fonts
 
     roman_axis_val = _get_axis_value(roman, "ital", "Roman", 0.0)
@@ -416,3 +416,4 @@ def test_gen_stat_roman_and_italic_family(var_fonts):
 
     italic_axis_val = _get_axis_value(italic, "ital", "Italic", 1.0)
     assert italic_axis_val != None
+

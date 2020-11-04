@@ -13,6 +13,8 @@ gftools gen-stat [fonts.ttf]
 gftools gen-stat [fonts.ttf] --inplace
 """
 from fontTools.ttLib import TTFont
+from gftools.fix import gen_stat_tables
+from gftools.axisreg import axis_registry
 import argparse
 import os
 
@@ -36,6 +38,10 @@ def parse_elided_values(string):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("fonts", nargs="+")
+    parser.add_argument(
+        "--axis-order", "-ao", nargs="+", required=True, choices=axis_registry.keys(),
+        help="Stat table axis order"
+    )
     parser.add_argument("--elided-values", nargs="+", default=None)
     parser.add_argument(
         "--inplace", action="store_true", default=False, help="Overwrite input files"
@@ -46,11 +52,11 @@ def main():
     elided_values = (
         parse_elided_values(args.elided_values) if args.elided_values else None
     )
-    gen_stat_tables(fonts, elided_values)
+    gen_stat_tables(fonts, args.axis_order, elided_values)
 
     for font in fonts:
         print(f"Updated STAT for {font.reader.file.name}")
-        dst = font.reader.file.name if inplace else font.reader.file.name + ".fix"
+        dst = font.reader.file.name if args.inplace else font.reader.file.name + ".fix"
         font.save(dst)
 
 

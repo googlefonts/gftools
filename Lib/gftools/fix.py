@@ -735,7 +735,7 @@ def _add_axis_value(style_name, value, flags=0x0, linked_value=None):
 
 
 def gen_stat_tables(
-    fonts, elided_axis_values=None, axis_reg=axis_registry
+    fonts, axis_order, elided_axis_values=None, axis_reg=axis_registry
 ):
     """
     Generate a stat table for each font in a family using the Google Fonts
@@ -768,7 +768,6 @@ def gen_stat_tables(
         font_style = font_stylename(font)
         family_axes |= set(stylename_to_axes(font_style))
 
-    seen_axis_values = {}
     stat_tbls = []
     for font in fonts:
         stat_tbl = _gen_stat_using_fvar(axis_reg, font)
@@ -803,6 +802,7 @@ def gen_stat_tables(
         stat_tbls.append(stat_tbl)
 
     # add linkedValues to Axis Values in each stat table
+    seen_axis_values = {}
     for stat_tbl in stat_tbls:
         for axis in stat_tbl:
             if axis not in seen_axis_values:
@@ -820,9 +820,15 @@ def gen_stat_tables(
                     axis_value["linkedValue"] = end
 
     # add stat table to each font
+    # TODO make axis_order an optional arg. We can only do this once we
+    # have established an axis order in the axis registry
+    seen_axes = set(axis_tag for axis in stat_tbls for axis_tag in axis)
+    axes_not_ordered = seen_axes - set(axis_order)
+    if axes_not_ordered:
+        raise ValueError(f"Axis order arg is missing {axes_not_ordered} axes.")
+    axis_order = [a for a in axis_order if a in seen_axes]
     for stat_tbl, font in zip(stat_tbls, fonts):
-        # TODO sort stat entries
-        axes = [v for k, v in stat_tbl.items()]
+        axes = [stat_tbl[a] for a in axis_order]
 
         if elided_axis_values:
             _update_elided_axis_values(axes, elided_axis_values)
