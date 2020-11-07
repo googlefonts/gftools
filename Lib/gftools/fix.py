@@ -7,6 +7,8 @@ from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
+from gftools.utils import download_family_from_Google_Fonts, Google_Fonts_has_family
+from collections import Counter
 from copy import deepcopy
 import logging
 
@@ -28,8 +30,10 @@ __all__ = [
     "fix_fvar_instances",
     "update_nametable",
     "fix_nametable",
+    "fix_vertical_metrics",
+    "fix_font",
+    "fix_family",
 ]
-
 
 
 # The _KNOWN_WEIGHT_VALUES constant is used internally by the GF Engineering
@@ -174,7 +178,7 @@ def fix_fs_selection(ttFont):
     fs_selection = ttFont["OS/2"].fsSelection
 
     # turn off all bits except for bit 7 (USE_TYPO_METRICS)
-    fs_selection &= (1 << 7)
+    fs_selection &= 1 << 7
 
     if "Italic" in tokens:
         fs_selection |= 1 << 0
@@ -255,7 +259,7 @@ def fix_fvar_instances(ttFont):
     Args:
         ttFont: a TTFont instance
     """
-    if 'fvar' not in ttFont:
+    if "fvar" not in ttFont:
         raise ValueError("ttFont is not a variable font")
 
     fvar = ttFont["fvar"]
@@ -270,6 +274,7 @@ def fix_fvar_instances(ttFont):
     wght_max = int(wght_axis.maxValue)
 
     nametable = ttFont["name"]
+
     def gen_instances(is_italic):
         results = []
         for wght_val in range(wght_min, wght_max + 100, 100):
@@ -435,3 +440,161 @@ def fix_nametable(ttFont):
     family_name = font_familyname(ttFont)
     style_name = font_stylename(ttFont)
     update_nametable(ttFont, family_name, style_name)
+
+
+def _validate_family(ttFonts):
+    family_is_vf(ttFonts)
+    family_names = set(font_familyname(f) for f in ttFonts)
+    if len(family_names) != 1:
+        raise ValueError(f"Multiple families found {family_names}")
+    return True
+
+
+def _validate_vertical_metrics(ttFonts):
+    # Check vertical metrics are consistent across a family
+    results = {}
+
+    for key, table in [
+        ("sTypoAscender", "OS/2"),
+        ("sTypoDescender", "OS/2"),
+        ("sTypoLineGap", "OS/2"),
+        ("usWinAscent", "OS/2"),
+        ("usWinDescent", "OS/2"),
+        ("ascent", "hhea"),
+        ("descent", "hhea"),
+        ("lineGap", "hhea"),
+    ]:
+        for ttFont in ttFonts:
+            if key not in results:
+                results[key] = []
+            results[key].append(getattr(ttFont[table], key))
+
+    for k, v in results.items():
+        count = Counter(v)
+        if len(count) != 1:
+            log.warning(
+                f"Family on Google Fonts doesn't have consistent {k} values, {count}"
+            )
+
+
+def fix_vertical_metrics(ttFonts, family_name_override=None):
+    """Update a family's vertical metrics so it has the same visual
+    appearance as the version hosted on Google Fonts
+
+    https://github.com/googlefonts/gf-docs/tree/master/VerticalMetrics#2-recalculating-the-vertical-metrics-for-an-upgraded-family
+
+
+    Args:
+        ttFonts: a list of TTFont instances which belong to a family
+        family_name_override: Use the metrics from this family instead
+    """
+    family_name = (
+        font_familyname(ttFonts[0])
+        if not family_name_override
+        else family_name_override
+    )
+
+    gf_fonts = list(map(TTFont, download_family_from_Google_Fonts(family_name)))
+    _validate_vertical_metrics(gf_fonts)
+
+    if family_is_vf(gf_fonts):
+        # TODO (Marc F) use the VF which contains the Regular instance
+        src_font = gf_fonts[0]
+    else:
+        src_font = next((f for f in gf_fonts if font_stylename(f) == "Regular"), None)
+
+    src_has_typo_metrics = typo_metrics_enabled(src_font)
+
+    win_desc, win_asc = family_bounding_box(ttFonts)
+    for ttFont in ttFonts:
+        has_typo_metrics = typo_metrics_enabled(ttFont)
+        ttFont["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
+        if src_has_typo_metrics:
+            ttFont["OS/2"].sTypoAscender = src_font["OS/2"].sTypoAscender
+            ttFont["OS/2"].sTypoDescender = src_font["OS/2"].sTypoDecender
+            ttFont["OS/2"].sTypoLineGap = src_font["OS/2"].sTypoLineGap
+            ttFont["hhea"].ascent = src_font["hhea"].ascent
+            ttFont["hhea"].descent = src_font["hhea"].descent
+            ttFont["hhea"].lineGap = src_font["hhea"].lineGap
+        else:
+            log.warning("Family on Google Fonts doesn't have fsSelection bit 7 enabled")
+            ttFont["OS/2"].sTypoAscender = src_font["OS/2"].usWinAscent
+            ttFont["OS/2"].sTypoDescender = -src_font["OS/2"].usWinDescent
+            ttFont["OS/2"].sTypoLineGap = 0
+            ttFont["hhea"].ascent = src_font["hhea"].ascent
+            ttFont["hhea"].descent = src_font["hhea"].descent
+            ttFont["hhea"].lineGap = src_font["hhea"].lineGap
+        ttFont["OS/2"].usWinAscent = win_asc
+        ttFont["OS/2"].usWinDescent = abs(win_desc)  # Should always be positive
+
+
+def family_bounding_box(ttFonts):
+    y_min = min(f["head"].yMin for f in ttFonts)
+    y_max = max(f["head"].yMax for f in ttFonts)
+    return y_min, y_max
+
+
+def typo_metrics_enabled(ttFont):
+    return True if ttFont["OS/2"].fsSelection & (1 << 7) else False
+
+
+def family_is_vf(ttFonts):
+    has_fvar = ["fvar" in ttFont for ttFont in ttFonts]
+    if any(has_fvar):
+        if all(has_fvar):
+            return True
+        raise ValueError("Families cannot contain both static and variable fonts")
+    return False
+
+
+def fix_font(font, include_source_fixes=False):
+    if "DSIG" not in font:
+        add_dummy_dsig(font)
+
+    if "fpgm" in font:
+        fix_hinted_font(font)
+    else:
+        fix_unhinted_font(font)
+
+    if "fvar" in font:
+        remove_tables(font, ["MVAR"])
+
+    if include_source_fixes:
+        log.warning(
+            "include-source-fixes is enabled. Please consider fixing the "
+            "source files instead."
+        )
+        remove_tables(font)
+        fix_nametable(font)
+        fix_fs_type(font)
+        fix_fs_selection(font)
+        fix_mac_style(font)
+        fix_weight_class(font)
+
+        if "fvar" in font:
+            fix_fvar_instances(font)
+            # TODO (Marc F) add gen-stat once merged
+            # https://github.com/googlefonts/gftools/pull/263
+
+
+def fix_family(fonts, include_source_fixes=False):
+    """Fix all fonts in a family"""
+    _validate_family(fonts)
+    for font in fonts:
+        fix_font(font, include_source_fixes=include_source_fixes)
+
+    if include_source_fixes:
+        try:
+            family_name = font_familyname(fonts[0])
+            if Google_Fonts_has_family(family_name):
+                fix_vertical_metrics(fonts)
+            else:
+                log.warning(
+                    f"{family_name} is not on Google Fonts. Skipping "
+                    "regression fixes"
+                )
+        except FileNotFoundError:
+            log.warning(
+                f"Google Fonts api key not found so we can't regression "
+                "fix fonts. See Repo readme to add keys."
+            )

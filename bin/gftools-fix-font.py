@@ -34,34 +34,7 @@ def main():
 
     font = TTFont(args.font)
 
-    if "DSIG" not in font:
-        add_dummy_dsig(font)
-
-    if "fpgm" in font:
-        fix_hinted_font(font)
-    else:
-        fix_unhinted_font(font)
-
-    if "fvar" in font:
-        remove_tables(font, ["MVAR"])
-
-    if args.include_source_fixes:
-        log.warning(
-            "include-source-fixes is enabled. Please consider fixing the "
-            "source files instead."
-        )
-        remove_tables(font)
-        fix_nametable(font)
-        fix_fs_type(font)
-        fix_fs_selection(font)
-        fix_mac_style(font)
-        fix_weight_class(font)
-        # TODO inherit vertical metrics if font exists on Google Fonts
-
-        if "fvar" in font:
-            fix_fvar_instances(font)
-            # TODO (Marc F) add gen-stat once merged 
-            # https://github.com/googlefonts/gftools/pull/263
+    fix_font(font, args.include_source_fixes)
 
     if args.out:
         font.save(args.out)
