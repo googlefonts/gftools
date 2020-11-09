@@ -13,10 +13,11 @@ jobs:
       matrix:
         python-version: [3.9]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@master
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
+          fetch-depth: 0
           python-version: ${{ matrix.python-version }}
       - name: Install release dependencies
         run: |
@@ -25,7 +26,15 @@ jobs:
       - name: Get release notes
         id: release_notes
         run: |
-          CHANGELOG=$(git tag -l --format='%(contents)' ${{ github.ref }})
+          git fetch --tags --force
+          GITHUB_REF=${{ github.ref }}
+          TAG_NAME=${GITHUB_REF/refs\/tags\//}
+          echo "Got tag: $TAG_NAME"
+          CHANGELOG=$(git tag -l --format='%(contents)' $TAG_NAME)
+          CHANGELOG="${CHANGELOG//'%'/'%25'}"
+          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+          echo "Got changelog: $CHANGELOG"
           echo "::set-output name=changelog::$CHANGELOG"
       - name: Create GitHub release
         id: create_release
@@ -35,7 +44,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
-          body: ${{ steps.release_notes.outputs.changelog }}
+          body: "${{ steps.release_notes.outputs.changelog }}"
           draft: false
           prerelease: false
       - name: Build and publish to PyPI
