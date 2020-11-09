@@ -350,6 +350,8 @@ def update_nametable(ttFont, family_name=None, style_name=None):
             nametable.removeNames(
                 platformID=platformID, platEncID=platEncID, langID=langID
             )
+    # remove nameID 10 (Description)
+    nametable.removeNames(nameID=10)
 
     if not family_name:
         family_name = font_familyname(ttFont)
@@ -425,7 +427,7 @@ def _font_version(font, platEncLang=(3, 1, 0x409)):
 
 
 def fix_nametable(ttFont):
-    """Fix a static font's name table so it conforms to teh Google Fonts
+    """Fix a static font's name table so it conforms to the Google Fonts
     supported styles table:
     https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
 
@@ -511,7 +513,7 @@ def fix_vertical_metrics(ttFonts, family_name_override=None):
         ttFont["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
         if src_has_typo_metrics:
             ttFont["OS/2"].sTypoAscender = src_font["OS/2"].sTypoAscender
-            ttFont["OS/2"].sTypoDescender = src_font["OS/2"].sTypoDecender
+            ttFont["OS/2"].sTypoDescender = src_font["OS/2"].sTypoDescender
             ttFont["OS/2"].sTypoLineGap = src_font["OS/2"].sTypoLineGap
             ttFont["hhea"].ascent = src_font["hhea"].ascent
             ttFont["hhea"].descent = src_font["hhea"].descent
@@ -547,6 +549,13 @@ def family_is_vf(ttFonts):
     return False
 
 
+def fix_italic_angle(ttFont):
+    style_name = font_stylename(ttFont)
+    if "Italic" not in style_name and ttFont["post"].italicAngle != 0:
+        ttFont["post"].italicAngle = 0
+    # TODO (Marc F) implement for italic fonts
+
+
 def fix_font(font, include_source_fixes=False):
     if "DSIG" not in font:
         add_dummy_dsig(font)
@@ -570,6 +579,7 @@ def fix_font(font, include_source_fixes=False):
         fix_fs_selection(font)
         fix_mac_style(font)
         fix_weight_class(font)
+        fix_italic_angle(font)
 
         if "fvar" in font:
             fix_fvar_instances(font)
