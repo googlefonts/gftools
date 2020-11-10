@@ -31,6 +31,7 @@ __all__ = [
     "update_nametable",
     "fix_nametable",
     "inherit_vertical_metrics",
+    "fix_vertical_metrics",
     "fix_font",
     "fix_family",
 ]
