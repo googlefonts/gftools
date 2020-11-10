@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-gftools fix-font
+gftools fix-family
 
-Update a font so it conforms to the Google Fonts specification
+Update a family so it conforms to the Google Fonts specification
 https://github.com/googlefonts/gf-docs/tree/master/Spec
 
 Usage:
 
-gftools fix-font font.ttf
+gftools fix-family fonts1.ttf fonts2.ttf
 
 # Fix font issues that should be fixed in the source files
-gftools fix-font font.ttf --include-source-fixes
+gftools fix-family fonts1.ttf --include-source-fixes
 """
 import argparse
 import logging
