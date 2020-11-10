@@ -30,7 +30,7 @@ __all__ = [
     "fix_fvar_instances",
     "update_nametable",
     "fix_nametable",
-    "fix_vertical_metrics",
+    "inherit_vertical_metrics",
     "fix_font",
     "fix_family",
 ]
@@ -479,7 +479,7 @@ def _validate_vertical_metrics(ttFonts):
             )
 
 
-def fix_vertical_metrics(ttFonts, family_name_override=None):
+def inherit_vertical_metrics(ttFonts, family_name_override=None):
     """Update a family's vertical metrics so it has the same visual
     appearance as the version hosted on Google Fonts
 
@@ -597,7 +597,7 @@ def fix_family(fonts, include_source_fixes=False):
         try:
             family_name = font_familyname(fonts[0])
             if Google_Fonts_has_family(family_name):
-                fix_vertical_metrics(fonts)
+                inherit_vertical_metrics(fonts)
             else:
                 log.warning(
                     f"{family_name} is not on Google Fonts. Skipping "
