@@ -37,7 +37,8 @@ jobs:
         id: create_release
         # create-release@v1 doesn't support the body arg so we use
         # create-release@master instead.
-        uses: actions/create-release@master
+        # CS attempt
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
