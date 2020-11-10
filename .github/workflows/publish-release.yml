@@ -31,15 +31,7 @@ jobs:
           # https://github.com/actions/checkout/issues/290
           git fetch --tags --force
           TAG_NAME=${GITHUB_REF/refs\/tags\//}
-          CHANGELOG=$(git tag -l --format='%(contents)' $TAG_NAME)
-          # we have to escape all new line characters and carriage
-          # returns before passing them into set-output otherwise the
-          # body content of the release will only contain the first line
-          # https://github.com/actions/create-release/issues/38#issuecomment-640072234
-          CHANGELOG="${CHANGELOG//'%'/'%25'}"
-          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
-          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
-          echo "::set-output name=changelog::$CHANGELOG"
+          echo "$(git tag -l --format='%(contents)' $TAG_NAME)" > CHANGELOG.md
 
       - name: Create GitHub release
         id: create_release
@@ -51,10 +43,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
-          # To set the body arg, we fetch the changelog variable we created
-          # in the previous step. Implementation is based on
-          # the third example in https://github.com/actions/create-release/pull/11
-          body: ${{ steps.release_notes.outputs.changelog }}
+          body_path: CHANGELOG.md
           draft: false
           prerelease: false
 
