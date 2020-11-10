@@ -530,6 +530,48 @@ def inherit_vertical_metrics(ttFonts, family_name_override=None):
         ttFont["OS/2"].usWinDescent = abs(win_desc)  # Should always be positive
 
 
+def fix_vertical_metrics(ttFonts):
+    """Fix a family's vertical metrics
+
+    Args:
+        ttFonts: a list of TTFont instances which belong to a family
+    """
+    src_font = next((f for f in ttFonts if font_stylename(f) == "Regular"), None)
+
+    # Enable typo metrics and set the typo metrics to the previous win metrics
+    if not typo_metrics_enabled(src_font):
+        src_font["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
+        src_font['OS/2'].sTypoAscender = src_font['OS/2'].usWinAscent
+        src_font['OS/2'].sTypoDescender = -src_font['OS/2'].usWinDescent
+        src_font['OS/2'].sTypoLineGap = 0
+
+    # Set the hhea metrics so they are the same as the typo
+    src_font['hhea'].ascent = src_font['OS/2'].sTypoAscender
+    src_font['hhea'].descent = src_font['OS/2'].sTypoDescender
+    src_font['hhea'].lineGap = src_font['OS/2'].sTypoLineGap
+
+    # Ensure that the win Ascent and win Descent match the family's bounding box
+    win_desc, win_asc = family_bounding_box(ttFonts)
+    src_font['OS/2'].usWinAscent = win_asc
+    src_font['OS/2'].usWinDescent = abs(win_desc)
+
+    # Set all fonts vertical metric values so they match the src_font
+    for ttFont in ttFonts:
+        ttFont["OS/2"].fsSelection |= 1 << 7
+        for table, key in [
+            ("OS/2", "usWinAscent"),
+            ("OS/2", "usWinDescent"),
+            ("OS/2", "sTypoAscender"),
+            ("OS/2", "sTypoDescender"),
+            ("OS/2", "sTypoLineGap"),
+            ("hhea", "ascent"),
+            ("hhea", "descent"),
+            ("hhea", "lineGap"),
+        ]:
+            val = getattr(src_font[table], key)
+            setattr(ttFont[table], key, val)
+
+
 def family_bounding_box(ttFonts):
     y_min = min(f["head"].yMin for f in ttFonts)
     y_max = max(f["head"].yMax for f in ttFonts)
@@ -597,7 +639,8 @@ def fix_family(fonts, include_source_fixes=False):
         try:
             family_name = font_familyname(fonts[0])
             if Google_Fonts_has_family(family_name):
-                inherit_vertical_metrics(fonts)
+#                inherit_vertical_metrics(fonts)
+                fix_vertical_metrics(fonts)
             else:
                 log.warning(
                     f"{family_name} is not on Google Fonts. Skipping "
