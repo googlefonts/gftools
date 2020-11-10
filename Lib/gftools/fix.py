@@ -452,39 +452,9 @@ def _validate_family(ttFonts):
     return True
 
 
-def _validate_vertical_metrics(ttFonts):
-    # Check vertical metrics are consistent across a family
-    results = {}
-
-    for key, table in [
-        ("sTypoAscender", "OS/2"),
-        ("sTypoDescender", "OS/2"),
-        ("sTypoLineGap", "OS/2"),
-        ("usWinAscent", "OS/2"),
-        ("usWinDescent", "OS/2"),
-        ("ascent", "hhea"),
-        ("descent", "hhea"),
-        ("lineGap", "hhea"),
-    ]:
-        for ttFont in ttFonts:
-            if key not in results:
-                results[key] = []
-            results[key].append(getattr(ttFont[table], key))
-
-    for k, v in results.items():
-        count = Counter(v)
-        if len(count) != 1:
-            log.warning(
-                f"Family on Google Fonts doesn't have consistent {k} values, {count}"
-            )
-
-
 def inherit_vertical_metrics(ttFonts, family_name_override=None):
-    """Update a family's vertical metrics so it has the same visual
-    appearance as the version hosted on Google Fonts
-
-    https://github.com/googlefonts/gf-docs/tree/master/VerticalMetrics#2-recalculating-the-vertical-metrics-for-an-upgraded-family
-
+    """Inherit the vertical metrics from the same family which is
+    hosted on Google Fonts.
 
     Args:
         ttFonts: a list of TTFont instances which belong to a family
@@ -497,48 +467,34 @@ def inherit_vertical_metrics(ttFonts, family_name_override=None):
     )
 
     gf_fonts = list(map(TTFont, download_family_from_Google_Fonts(family_name)))
-    _validate_vertical_metrics(gf_fonts)
+    gf_fonts = {font_stylename(f): f for f in gf_fonts}
+    gf_fallback = list(gf_fonts.values())[0]
 
-    if family_is_vf(gf_fonts):
-        # TODO (Marc F) use the VF which contains the Regular instance
-        src_font = gf_fonts[0]
-    else:
-        src_font = next((f for f in gf_fonts if font_stylename(f) == "Regular"), None)
-
-    src_has_typo_metrics = typo_metrics_enabled(src_font)
-
-    win_desc, win_asc = family_bounding_box(ttFonts)
-    for ttFont in ttFonts:
-        has_typo_metrics = typo_metrics_enabled(ttFont)
-        ttFont["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
-        if src_has_typo_metrics:
-            ttFont["OS/2"].sTypoAscender = src_font["OS/2"].sTypoAscender
-            ttFont["OS/2"].sTypoDescender = src_font["OS/2"].sTypoDescender
-            ttFont["OS/2"].sTypoLineGap = src_font["OS/2"].sTypoLineGap
-            ttFont["hhea"].ascent = src_font["hhea"].ascent
-            ttFont["hhea"].descent = src_font["hhea"].descent
-            ttFont["hhea"].lineGap = src_font["hhea"].lineGap
+    fonts = {font_stylename(f): f for f in ttFonts}
+    for style, font in fonts.items():
+        if style in gf_fonts:
+            src_font = gf_fonts[style]
         else:
-            log.warning("Family on Google Fonts doesn't have fsSelection bit 7 enabled")
-            ttFont["OS/2"].sTypoAscender = src_font["OS/2"].usWinAscent
-            ttFont["OS/2"].sTypoDescender = -src_font["OS/2"].usWinDescent
-            ttFont["OS/2"].sTypoLineGap = 0
-            ttFont["hhea"].ascent = src_font["hhea"].ascent
-            ttFont["hhea"].descent = src_font["hhea"].descent
-            ttFont["hhea"].lineGap = src_font["hhea"].lineGap
-        ttFont["OS/2"].usWinAscent = win_asc
-        ttFont["OS/2"].usWinDescent = abs(win_desc)  # Should always be positive
+            src_font = gf_fallback
+        copy_vertical_metrics(src_font, font)
+
+        if typo_metrics_enabled(src_font):
+            font["OS/2"].fsSelection |= 1 << 7
 
 
 def fix_vertical_metrics(ttFonts):
-    """Fix a family's vertical metrics
+    """Fix a family's vertical metrics based on:
+    https://github.com/googlefonts/gf-docs/tree/master/VerticalMetrics
 
     Args:
         ttFonts: a list of TTFont instances which belong to a family
     """
-    src_font = next((f for f in ttFonts if font_stylename(f) == "Regular"), None)
+    src_font = next((f for f in ttFonts if font_stylename(f) == "Regular"), ttFonts[0])
 
-    # Enable typo metrics and set the typo metrics to the previous win metrics
+    # TODO (Marc F) CJK Fonts?
+
+    # If OS/2.fsSelection bit 7 isn't enabled, enabled it and set the typo metrics
+    # to the previous win metrics.
     if not typo_metrics_enabled(src_font):
         src_font["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
         src_font['OS/2'].sTypoAscender = src_font['OS/2'].usWinAscent
@@ -550,26 +506,30 @@ def fix_vertical_metrics(ttFonts):
     src_font['hhea'].descent = src_font['OS/2'].sTypoDescender
     src_font['hhea'].lineGap = src_font['OS/2'].sTypoLineGap
 
-    # Ensure that the win Ascent and win Descent match the family's bounding box
+    # Set the win Ascent and win Descent to match the family's bounding box
     win_desc, win_asc = family_bounding_box(ttFonts)
     src_font['OS/2'].usWinAscent = win_asc
     src_font['OS/2'].usWinDescent = abs(win_desc)
 
-    # Set all fonts vertical metric values so they match the src_font
+    # Set all fonts vertical metrics so they match the src_font
     for ttFont in ttFonts:
         ttFont["OS/2"].fsSelection |= 1 << 7
-        for table, key in [
-            ("OS/2", "usWinAscent"),
-            ("OS/2", "usWinDescent"),
-            ("OS/2", "sTypoAscender"),
-            ("OS/2", "sTypoDescender"),
-            ("OS/2", "sTypoLineGap"),
-            ("hhea", "ascent"),
-            ("hhea", "descent"),
-            ("hhea", "lineGap"),
-        ]:
-            val = getattr(src_font[table], key)
-            setattr(ttFont[table], key, val)
+        copy_vertical_metrics(src_font, ttFont)
+
+
+def copy_vertical_metrics(src_font, dst_font):
+    for table, key in [
+        ("OS/2", "usWinAscent"),
+        ("OS/2", "usWinDescent"),
+        ("OS/2", "sTypoAscender"),
+        ("OS/2", "sTypoDescender"),
+        ("OS/2", "sTypoLineGap"),
+        ("hhea", "ascent"),
+        ("hhea", "descent"),
+        ("hhea", "lineGap"),
+    ]:
+        val = getattr(src_font[table], key)
+        setattr(dst_font[table], key, val)
 
 
 def family_bounding_box(ttFonts):
@@ -639,7 +599,7 @@ def fix_family(fonts, include_source_fixes=False):
         try:
             family_name = font_familyname(fonts[0])
             if Google_Fonts_has_family(family_name):
-#                inherit_vertical_metrics(fonts)
+                inherit_vertical_metrics(fonts)
                 fix_vertical_metrics(fonts)
             else:
                 log.warning(
