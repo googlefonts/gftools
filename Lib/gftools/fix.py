@@ -497,19 +497,19 @@ def fix_vertical_metrics(ttFonts):
     # to the previous win metrics.
     if not typo_metrics_enabled(src_font):
         src_font["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
-        src_font['OS/2'].sTypoAscender = src_font['OS/2'].usWinAscent
-        src_font['OS/2'].sTypoDescender = -src_font['OS/2'].usWinDescent
-        src_font['OS/2'].sTypoLineGap = 0
+        src_font["OS/2"].sTypoAscender = src_font["OS/2"].usWinAscent
+        src_font["OS/2"].sTypoDescender = -src_font["OS/2"].usWinDescent
+        src_font["OS/2"].sTypoLineGap = 0
 
     # Set the hhea metrics so they are the same as the typo
-    src_font['hhea'].ascent = src_font['OS/2'].sTypoAscender
-    src_font['hhea'].descent = src_font['OS/2'].sTypoDescender
-    src_font['hhea'].lineGap = src_font['OS/2'].sTypoLineGap
+    src_font["hhea"].ascent = src_font["OS/2"].sTypoAscender
+    src_font["hhea"].descent = src_font["OS/2"].sTypoDescender
+    src_font["hhea"].lineGap = src_font["OS/2"].sTypoLineGap
 
     # Set the win Ascent and win Descent to match the family's bounding box
     win_desc, win_asc = family_bounding_box(ttFonts)
-    src_font['OS/2'].usWinAscent = win_asc
-    src_font['OS/2'].usWinDescent = abs(win_desc)
+    src_font["OS/2"].usWinAscent = win_asc
+    src_font["OS/2"].usWinDescent = abs(win_desc)
 
     # Set all fonts vertical metrics so they match the src_font
     for ttFont in ttFonts:
