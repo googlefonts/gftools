@@ -593,15 +593,15 @@ def fix_font(font, include_source_fixes=False):
 def fix_family(fonts, include_source_fixes=False):
     """Fix all fonts in a family"""
     _validate_family(fonts)
+    family_name = font_familyname(fonts[0])
+
     for font in fonts:
         fix_font(font, include_source_fixes=include_source_fixes)
 
     if include_source_fixes:
         try:
-            family_name = font_familyname(fonts[0])
             if Google_Fonts_has_family(family_name):
                 inherit_vertical_metrics(fonts)
-                fix_vertical_metrics(fonts)
             else:
                 log.warning(
                     f"{family_name} is not on Google Fonts. Skipping "
@@ -612,3 +612,4 @@ def fix_family(fonts, include_source_fixes=False):
                 f"Google Fonts api key not found so we can't regression "
                 "fix fonts. See Repo readme to add keys."
             )
+        fix_vertical_metrics(fonts)
