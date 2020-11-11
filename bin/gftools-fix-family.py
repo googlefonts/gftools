@@ -25,7 +25,9 @@ log = logging.getLogger(__name__)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("fonts", nargs="+", help="Font family paths")
-    parser.add_argument("--inplace", action='store_true', default=False, help="Save fixed fonts inplace")
+    parser.add_argument(
+        "--inplace", action="store_true", default=False, help="Save fixed fonts inplace"
+    )
     parser.add_argument("-o", "--out", help="Output dir for fixed fonts")
     parser.add_argument(
         "--include-source-fixes",

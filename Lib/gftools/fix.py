@@ -461,11 +461,7 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
         family_name: Optional string which allows users to specify a
             different family to inherit from e.g "Maven Pro".
     """
-    family_name = (
-        font_familyname(ttFonts[0])
-        if not family_name
-        else family_name
-    )
+    family_name = font_familyname(ttFonts[0]) if not family_name else family_name
 
     gf_fonts = list(map(TTFont, download_family_from_Google_Fonts(family_name)))
     gf_fonts = {font_stylename(f): f for f in gf_fonts}

@@ -28,7 +28,7 @@ def main():
     parser.add_argument(
         "--include-source-fixes",
         action="store_true",
-        help="Fix font issues that should be fixed in the source files."
+        help="Fix font issues that should be fixed in the source files.",
     )
     args = parser.parse_args()
 
