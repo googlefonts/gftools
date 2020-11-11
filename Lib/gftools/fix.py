@@ -350,8 +350,15 @@ def update_nametable(ttFont, family_name=None, style_name=None):
             nametable.removeNames(
                 platformID=platformID, platEncID=platEncID, langID=langID
             )
-    # remove nameID 10 (Description)
-    nametable.removeNames(nameID=10)
+
+    # Remove any name records which contain linebreaks
+    contains_linebreaks = []
+    for r in nametable.names:
+        for char in ("\n", "\r"):
+            if char in r.toUnicode():
+                contains_linebreaks.append(r.nameID)
+    for nameID in contains_linebreaks:
+        nametable.removeNames(nameID)
 
     if not family_name:
         family_name = font_familyname(ttFont)
@@ -461,7 +468,11 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
         family_name: Optional string which allows users to specify a
             different family to inherit from e.g "Maven Pro".
     """
-    family_name = font_familyname(ttFonts[0]) if not family_name else family_name
+    family_name = (
+        font_familyname(ttFonts[0])
+        if not family_name
+        else family_name
+    )
 
     gf_fonts = list(map(TTFont, download_family_from_Google_Fonts(family_name)))
     gf_fonts = {font_stylename(f): f for f in gf_fonts}
@@ -558,6 +569,7 @@ def fix_italic_angle(ttFont):
 
 
 def fix_font(font, include_source_fixes=False):
+    font["OS/2"].version = 4
     if "DSIG" not in font:
         add_dummy_dsig(font)
 
