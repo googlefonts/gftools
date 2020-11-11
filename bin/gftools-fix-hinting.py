@@ -46,6 +46,7 @@ def main():
         fix_hinted_font(font)
     else:
         print("Skipping. Font is not hinted")
+    font.save(args.font + ".fix")
 
 
 if __name__ == '__main__':
