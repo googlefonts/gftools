@@ -45,11 +45,11 @@ def main():
     elif args.out:
         if not os.path.isdir(args.out):
             os.mkdir(args.out)
-            for font in fonts:
-                out_path = os.path.join(
-                    args.out, os.path.basename(font.reader.file.name)
-                )
-                font.save(out_path)
+        for font in fonts:
+            out_path = os.path.join(
+                args.out, os.path.basename(font.reader.file.name)
+            )
+            font.save(out_path)
     else:
         for font in fonts:
             font.save(font.reader.file.name + ".fix")
