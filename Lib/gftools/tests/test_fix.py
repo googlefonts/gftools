@@ -1,6 +1,8 @@
 from fontTools.ttLib import newTable, TTFont
 from gftools.fix import *
+from glob import glob
 import pytest
+import random
 import os
 from copy import deepcopy
 
@@ -13,6 +15,11 @@ def static_font():
 @pytest.fixture
 def var_font():
     return TTFont(os.path.join("data", "test", "Inconsolata[wdth,wght].ttf"))
+
+
+@pytest.fixture
+def static_fonts():
+    return [TTFont(f) for f in glob(os.path.join("data", "test", "mavenpro", "*.ttf"))]
 
 
 def test_remove_tables(static_font):
@@ -239,3 +246,83 @@ def test_fix_fvar_instances(var_font):
 
     inst_names = _get_fvar_instance_names(var_font3)
     assert inst_names == roman_instances + italic_instances
+
+
+def _check_vertical_metrics(fonts):
+    ref_font = fonts[0]
+    y_min = min(f["head"].yMin for f in fonts)
+    y_max = max(f["head"].yMax for f in fonts)
+    for font in fonts:
+        # Check fsSelection bit 7 (USE_TYPO_METRICS) is enabled
+        assert font["OS/2"].fsSelection & (1 << 7) > 0
+
+        # Check metrics are consistent across family
+        assert font["OS/2"].usWinAscent == ref_font["OS/2"].usWinAscent
+        assert font["OS/2"].usWinDescent == ref_font["OS/2"].usWinDescent
+        assert font["OS/2"].sTypoAscender == ref_font["OS/2"].sTypoAscender
+        assert font["OS/2"].sTypoDescender == ref_font["OS/2"].sTypoDescender
+        assert font["OS/2"].sTypoLineGap == ref_font["OS/2"].sTypoLineGap
+        assert font["hhea"].ascent == ref_font["hhea"].ascent
+        assert font["hhea"].descent == ref_font["hhea"].descent
+        assert font["hhea"].lineGap == ref_font["hhea"].lineGap
+
+        # Check typo and hhea match
+        assert font["OS/2"].sTypoAscender == font["hhea"].ascent
+        assert font["OS/2"].sTypoDescender == ref_font["hhea"].descent
+        assert font["OS/2"].sTypoLineGap == ref_font["hhea"].lineGap
+
+        # Check win matches family_bounds
+        assert font["OS/2"].usWinAscent == y_max
+        assert font["OS/2"].usWinDescent == abs(y_min)
+
+
+def test_fix_vertical_metrics_family_consistency(static_fonts):
+    _check_vertical_metrics(static_fonts)
+    static_fonts[0]["OS/2"].sTypoLineGap = 1000
+    static_fonts[0]["OS/2"].usWinAscent = 4000
+
+    fix_vertical_metrics(static_fonts)
+    _check_vertical_metrics(static_fonts)
+
+
+def test_fix_vertical_metrics_win_values(static_fonts):
+    _check_vertical_metrics(static_fonts)
+    for font in static_fonts:
+        font["OS/2"].usWinAscent = font["OS/2"].usWinDescent = 0
+        assert font["OS/2"].usWinAscent == 0 and font["OS/2"].usWinDescent == 0
+
+    fix_vertical_metrics(static_fonts)
+    _check_vertical_metrics(static_fonts)
+
+
+def test_fix_vertical_metrics_typo_and_hhea_match(static_fonts):
+    _check_vertical_metrics(static_fonts)
+    for font in static_fonts:
+        font["hhea"].ascent = 5000
+        font["OS/2"].sTypoAscender == 1000
+        assert font["hhea"].ascent != font["OS/2"].sTypoAscender
+
+    fix_vertical_metrics(static_fonts)
+    _check_vertical_metrics(static_fonts)
+
+
+def test_fix_vertical_metrics_typo_metrics_enabled(static_fonts):
+    _check_vertical_metrics(static_fonts)
+
+    # family currently has fsSelection bit 7 enabled, unset it and change
+    # the win Metrics to Typo values
+    for font in static_fonts:
+        font["OS/2"].fsSelection &= ~(1 << 7)
+        font["OS/2"].usWinAscent = 500
+        font["OS/2"].usWinDescent = 300
+
+    fix_vertical_metrics(static_fonts)
+    # Since fsSelection bit 7 is now enabled, in order for the metrics to visually
+    # match the unfixed metrics, the typo values should now be the same as the
+    # unfixed win values.
+    for font in static_fonts:
+        assert font["OS/2"].sTypoAscender == 500
+        assert font["OS/2"].sTypoDescender == -300
+        assert font["OS/2"].sTypoLineGap == 0
+    _check_vertical_metrics(static_fonts)
+

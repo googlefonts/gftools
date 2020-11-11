@@ -494,7 +494,7 @@ def fix_vertical_metrics(ttFonts):
 
     # TODO (Marc F) CJK Fonts?
 
-    # If OS/2.fsSelection bit 7 isn't enabled, enabled it and set the typo metrics
+    # If OS/2.fsSelection bit 7 isn't enabled, enable it and set the typo metrics
     # to the previous win metrics.
     if not typo_metrics_enabled(src_font):
         src_font["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
