@@ -453,18 +453,21 @@ def _validate_family(ttFonts):
     return True
 
 
-def inherit_vertical_metrics(ttFonts, family_name_override=None):
+def inherit_vertical_metrics(ttFonts, family_name=None):
     """Inherit the vertical metrics from the same family which is
     hosted on Google Fonts.
 
     Args:
         ttFonts: a list of TTFont instances which belong to a family
-        family_name_override: Use the metrics from this family instead
+        family_name: Optional string which allows users to specify a
+            different family to inherit from e.g "Maven Pro", the
+            family's metrics will now be the same as the Maven Pro
+            family on Google Fonts.
     """
     family_name = (
         font_familyname(ttFonts[0])
-        if not family_name_override
-        else family_name_override
+        if not family_name
+        else family_name
     )
 
     gf_fonts = list(map(TTFont, download_family_from_Google_Fonts(family_name)))
