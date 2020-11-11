@@ -8,7 +8,6 @@ from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
 from gftools.utils import download_family_from_Google_Fonts, Google_Fonts_has_family
-from collections import Counter
 from copy import deepcopy
 import logging
 
@@ -460,9 +459,7 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
     Args:
         ttFonts: a list of TTFont instances which belong to a family
         family_name: Optional string which allows users to specify a
-            different family to inherit from e.g "Maven Pro", the
-            family's metrics will now be the same as the Maven Pro
-            family on Google Fonts.
+            different family to inherit from e.g "Maven Pro".
     """
     family_name = (
         font_familyname(ttFonts[0])
@@ -472,6 +469,8 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
 
     gf_fonts = list(map(TTFont, download_family_from_Google_Fonts(family_name)))
     gf_fonts = {font_stylename(f): f for f in gf_fonts}
+    # TODO (Marc F) use Regular font instead. If VF use font which has Regular
+    # instance
     gf_fallback = list(gf_fonts.values())[0]
 
     fonts = {font_stylename(f): f for f in ttFonts}

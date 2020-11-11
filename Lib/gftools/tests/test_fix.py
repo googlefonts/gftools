@@ -2,7 +2,6 @@ from fontTools.ttLib import newTable, TTFont
 from gftools.fix import *
 from glob import glob
 import pytest
-import random
 import os
 from copy import deepcopy
 
