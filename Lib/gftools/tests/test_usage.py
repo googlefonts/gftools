@@ -17,6 +17,7 @@
 """Unittests to check the functionality of Google Fonts Tools"""
 import os
 import re
+from glob import glob
 import unittest
 import subprocess
 
@@ -45,6 +46,7 @@ class TestGFToolsScripts(unittest.TestCase):
         self.get_path = lambda name: os.path.join('bin', 'gftools-' + name + '.py')
         self.example_dir = os.path.join('data', 'test', 'cabin')
         self.example_font = os.path.join(self.example_dir, 'Cabin-Regular.ttf')
+        self.example_family = glob(os.path.join("data", "test", "mavenpro", "*.ttf"))
         self.example_vf_font = os.path.join("data", "test", 'Lora-Roman-VF.ttf')
         self.src_vtt_font = os.path.join("data", "test", "Inconsolata[wdth,wght].ttf")
         self.gf_family_dir = os.path.join('data', 'test', 'mock_googlefonts', 'ofl', 'abel')
@@ -158,6 +160,12 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def test_font_weights_coveraget(self):
         self.check_script(['python', self.get_path('font-weights-coverage'), self.example_font])
+
+    def test_fix_font(self):
+        self.check_script(['python', self.get_path('fix-font'), self.example_font])
+
+    def test_fix_family(self):
+        self.check_script(['python', self.get_path('fix-family')] + self.example_family)
 
     def test_list_italicangle(self):
         self.check_script(['python', self.get_path('list-italicangle'), self.example_font])
