@@ -41,6 +41,7 @@ __all__ = [
 WEIGHT_NAMES = _KNOWN_WEIGHTS
 for style in ["Hairline", ""]:
     del WEIGHT_NAMES[style]
+WEIGHT_NAMES["ExtraBlack"] = 1000
 WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
 

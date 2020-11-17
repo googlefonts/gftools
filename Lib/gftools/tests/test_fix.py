@@ -80,6 +80,7 @@ STYLE_TABLE = [
     ("Bold", 700, (1 << 5), (1 << 0)),
     ("ExtraBold", 800, (1 << 6), (0 << 0)),
     ("Black", 900, (1 << 6), (0 << 0)),
+    ("ExtraBlack", 1000, (1 << 6), (0 << 0)),
     ("Thin Italic", 100, (1 << 0), (1 << 1)),
     ("ExtraLight Italic", 200, (1 << 0), (1 << 1)),
     ("Light Italic", 300, (1 << 0), (1 << 1)),
@@ -89,6 +90,7 @@ STYLE_TABLE = [
     ("Bold Italic", 700, (1 << 0) | (1 << 5), (1 << 0) | (1 << 1)),
     ("ExtraBold Italic", 800, (1 << 0), (1 << 1)),
     ("Black Italic", 900, (1 << 0), (1 << 1)),
+    ("ExtraBlack Italic", 1000, (1 << 0), (1 << 1)),
     # Variable fonts may have tokens other than weight and italic in their names
     ("SemiCondensed Bold Italic", 700, (1 << 0) | (1 << 5), (1 << 0) | (1 << 1)),
     ("12pt Italic", 400, (1 << 0), (1 << 1)),
@@ -154,6 +156,8 @@ STYLENAME_TABLE = [
     ("Test Family", "SemiBold", "Test Family SemiBold", "Regular", "Test Family", "SemiBold"),
     ("Test Family", "Bold", "Test Family", "Bold", "", ""),
     ("Test Family", "ExtraBold", "Test Family ExtraBold", "Regular", "Test Family", "ExtraBold"),
+    ("Test Family", "Black", "Test Family Black", "Regular", "Test Family", "Black"),
+    ("Test Family", "ExtraBlack", "Test Family ExtraBlack", "Regular", "Test Family", "ExtraBlack"),
     # Italics
     ("Test Family", "Thin Italic", "Test Family Thin", "Italic", "Test Family", "Thin Italic"),
     ("Test Family", "ExtraLight Italic", "Test Family ExtraLight", "Italic", "Test Family", "ExtraLight Italic"),
@@ -164,7 +168,7 @@ STYLENAME_TABLE = [
     ("Test Family", "Bold Italic", "Test Family", "Bold Italic", "", ""),
     ("Test Family", "ExtraBold Italic", "Test Family ExtraBold", "Italic", "Test Family", "ExtraBold Italic"),
     ("Test Family", "Black Italic", "Test Family Black", "Italic", "Test Family", "Black Italic"),
-    ("Test Family", "Black", "Test Family Black", "Regular", "Test Family", "Black"),
+    ("Test Family", "ExtraBlack Italic", "Test Family ExtraBlack", "Italic", "Test Family", "ExtraBlack Italic"),
 ]
 @pytest.mark.parametrize(
     STYLENAME_HEADERS,
