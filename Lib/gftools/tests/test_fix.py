@@ -71,6 +71,7 @@ def test_fix_fs_type(static_font):
 # Taken from https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
 STYLE_HEADERS = "style, weight_class, fs_selection, mac_style"
 STYLE_TABLE = [
+    ("Hairline", 1, (1 << 6), (0 << 0)),
     ("Thin", 100, (1 << 6), (0 << 0)),
     ("ExtraLight", 200, (1 << 6), (0 << 0)),
     ("Light", 300, (1 << 6), (0 << 0)),
@@ -81,6 +82,7 @@ STYLE_TABLE = [
     ("ExtraBold", 800, (1 << 6), (0 << 0)),
     ("Black", 900, (1 << 6), (0 << 0)),
     ("ExtraBlack", 1000, (1 << 6), (0 << 0)),
+    ("Hairline Italic", 1, (1 << 0), (1 << 1)),
     ("Thin Italic", 100, (1 << 0), (1 << 1)),
     ("ExtraLight Italic", 200, (1 << 0), (1 << 1)),
     ("Light Italic", 300, (1 << 0), (1 << 1)),
@@ -148,6 +150,7 @@ def test_fix_mac_style(static_font, style, weight_class, fs_selection, mac_style
 STYLENAME_HEADERS = "family_name, style, id1, id2, id16, id17"
 STYLENAME_TABLE = [
     # Roman
+    ("Test Family", "Hairline", "Test Family Hairline", "Regular", "Test Family", "Hairline"),
     ("Test Family", "Thin", "Test Family Thin", "Regular", "Test Family", "Thin"),
     ("Test Family", "ExtraLight", "Test Family ExtraLight", "Regular", "Test Family", "ExtraLight"),
     ("Test Family", "Light", "Test Family Light", "Regular", "Test Family", "Light"),
@@ -159,6 +162,7 @@ STYLENAME_TABLE = [
     ("Test Family", "Black", "Test Family Black", "Regular", "Test Family", "Black"),
     ("Test Family", "ExtraBlack", "Test Family ExtraBlack", "Regular", "Test Family", "ExtraBlack"),
     # Italics
+    ("Test Family", "Hairline Italic", "Test Family Hairline", "Italic", "Test Family", "Hairline Italic"),
     ("Test Family", "Thin Italic", "Test Family Thin", "Italic", "Test Family", "Thin Italic"),
     ("Test Family", "ExtraLight Italic", "Test Family ExtraLight", "Italic", "Test Family", "ExtraLight Italic"),
     ("Test Family", "Light Italic", "Test Family Light", "Italic", "Test Family", "Light Italic"),

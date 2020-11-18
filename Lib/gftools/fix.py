@@ -39,8 +39,8 @@ __all__ = [
 # The _KNOWN_WEIGHT_VALUES constant is used internally by the GF Engineering
 # team so we cannot update ourselves. TODO (Marc F) unify this one day
 WEIGHT_NAMES = _KNOWN_WEIGHTS
-for style in ["Hairline", ""]:
-    del WEIGHT_NAMES[style]
+del WEIGHT_NAMES[""]
+WEIGHT_NAMES["Hairline"] = 1
 WEIGHT_NAMES["ExtraBlack"] = 1000
 WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
