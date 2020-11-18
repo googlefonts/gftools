@@ -27,4 +27,4 @@ wheels/
 MANIFEST
 
 # auto-generated version file
-Lib/fontmake/_version.py
+Lib/gftools/_version.py
