@@ -29,7 +29,7 @@ with open('README.md') as f:
 
 setup(
     name="gftools",
-    version='0.5.1',
+    use_scm_version={"write_to": "Lib/gftools/_version.py"},
     url='https://github.com/googlefonts/tools/',
     description='Google Fonts Tools is a set of command-line tools'
                 ' for testing font projects',
