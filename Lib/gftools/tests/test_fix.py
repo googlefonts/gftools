@@ -71,6 +71,7 @@ def test_fix_fs_type(static_font):
 # Taken from https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
 STYLE_HEADERS = "style, weight_class, fs_selection, mac_style"
 STYLE_TABLE = [
+    ("Hairline", 1, (1 << 6), (0 << 0)),
     ("Thin", 100, (1 << 6), (0 << 0)),
     ("ExtraLight", 200, (1 << 6), (0 << 0)),
     ("Light", 300, (1 << 6), (0 << 0)),
@@ -80,6 +81,8 @@ STYLE_TABLE = [
     ("Bold", 700, (1 << 5), (1 << 0)),
     ("ExtraBold", 800, (1 << 6), (0 << 0)),
     ("Black", 900, (1 << 6), (0 << 0)),
+    ("ExtraBlack", 1000, (1 << 6), (0 << 0)),
+    ("Hairline Italic", 1, (1 << 0), (1 << 1)),
     ("Thin Italic", 100, (1 << 0), (1 << 1)),
     ("ExtraLight Italic", 200, (1 << 0), (1 << 1)),
     ("Light Italic", 300, (1 << 0), (1 << 1)),
@@ -89,6 +92,7 @@ STYLE_TABLE = [
     ("Bold Italic", 700, (1 << 0) | (1 << 5), (1 << 0) | (1 << 1)),
     ("ExtraBold Italic", 800, (1 << 0), (1 << 1)),
     ("Black Italic", 900, (1 << 0), (1 << 1)),
+    ("ExtraBlack Italic", 1000, (1 << 0), (1 << 1)),
     # Variable fonts may have tokens other than weight and italic in their names
     ("SemiCondensed Bold Italic", 700, (1 << 0) | (1 << 5), (1 << 0) | (1 << 1)),
     ("12pt Italic", 400, (1 << 0), (1 << 1)),
@@ -146,6 +150,7 @@ def test_fix_mac_style(static_font, style, weight_class, fs_selection, mac_style
 STYLENAME_HEADERS = "family_name, style, id1, id2, id16, id17"
 STYLENAME_TABLE = [
     # Roman
+    ("Test Family", "Hairline", "Test Family Hairline", "Regular", "Test Family", "Hairline"),
     ("Test Family", "Thin", "Test Family Thin", "Regular", "Test Family", "Thin"),
     ("Test Family", "ExtraLight", "Test Family ExtraLight", "Regular", "Test Family", "ExtraLight"),
     ("Test Family", "Light", "Test Family Light", "Regular", "Test Family", "Light"),
@@ -154,7 +159,10 @@ STYLENAME_TABLE = [
     ("Test Family", "SemiBold", "Test Family SemiBold", "Regular", "Test Family", "SemiBold"),
     ("Test Family", "Bold", "Test Family", "Bold", "", ""),
     ("Test Family", "ExtraBold", "Test Family ExtraBold", "Regular", "Test Family", "ExtraBold"),
+    ("Test Family", "Black", "Test Family Black", "Regular", "Test Family", "Black"),
+    ("Test Family", "ExtraBlack", "Test Family ExtraBlack", "Regular", "Test Family", "ExtraBlack"),
     # Italics
+    ("Test Family", "Hairline Italic", "Test Family Hairline", "Italic", "Test Family", "Hairline Italic"),
     ("Test Family", "Thin Italic", "Test Family Thin", "Italic", "Test Family", "Thin Italic"),
     ("Test Family", "ExtraLight Italic", "Test Family ExtraLight", "Italic", "Test Family", "ExtraLight Italic"),
     ("Test Family", "Light Italic", "Test Family Light", "Italic", "Test Family", "Light Italic"),
@@ -164,7 +172,7 @@ STYLENAME_TABLE = [
     ("Test Family", "Bold Italic", "Test Family", "Bold Italic", "", ""),
     ("Test Family", "ExtraBold Italic", "Test Family ExtraBold", "Italic", "Test Family", "ExtraBold Italic"),
     ("Test Family", "Black Italic", "Test Family Black", "Italic", "Test Family", "Black Italic"),
-    ("Test Family", "Black", "Test Family Black", "Regular", "Test Family", "Black"),
+    ("Test Family", "ExtraBlack Italic", "Test Family ExtraBlack", "Italic", "Test Family", "ExtraBlack Italic"),
 ]
 @pytest.mark.parametrize(
     STYLENAME_HEADERS,
