@@ -778,7 +778,7 @@ def gen_stat_tables(
     """
     # Heuristic:
     # - Gen a STAT table for each font based on each font's fvar table
-    # - Find which axes exist in each font's style name (not fvar!)
+    # - Find which axes exist in each font's nametable (not fvar!)
     # - Append axis records to each stat table which are not part of each
     #   font's fvar but exist across the family. This step allows us to
     #   establish the relationship between fonts in a family.
@@ -809,7 +809,36 @@ def gen_stat_tables(
     axis_order = [a for a in axis_order if a in seen_axis_values.keys()]
     for stat_table, ttfont in zip(stat_tables, ttfonts):
         stat_table = [stat_table[axis] for axis in axis_order]
+        _update_fvar_nametable_records(ttfont, stat_table)
         buildStatTable(ttfont, stat_table)
+
+
+def _update_fvar_nametable_records(ttfont, stat_table):
+    nametable = ttfont["name"]
+    fvar = ttfont["fvar"]
+    family_name = font_familyname(ttfont)
+    axes_with_one_entry = [a['values'][0] for a in stat_table if len(a['values']) == 1]
+    tokens = [v["name"] for v in axes_with_one_entry]
+    ps_tokens = "".join(t for t in tokens)
+
+    # Variations PostScript Name Prefix
+    ps_prefix = f"{family_name}{ps_tokens}".replace(" ", "")
+    for rec in [(25, 1, 0, 0), (25, 3, 1, 0x409)]:
+        nametable.setName(ps_prefix, *rec)
+
+    # Add or update fvar instance postscript names
+    for instance in fvar.instances:
+        subfamily_id = instance.subfamilyNameID
+        name = nametable.getName(subfamily_id, 3, 1, 0x409).toUnicode()
+        for token in tokens:
+            name = name.replace(token, "")
+            if name == "":
+                name = "Regular"
+        ps_name = f"{ps_prefix}-{name}".replace(" ", "")
+        # Remove ps name records if they already exist
+        if instance.postscriptNameID != 65535:
+            nametable.removeNames(nameID=instance.postscriptNameID)
+        instance.postscriptNameID = nametable.addName(ps_name)
 
 
 def fix_font(font, include_source_fixes=False):
