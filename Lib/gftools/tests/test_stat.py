@@ -39,6 +39,15 @@ def var_fonts2():
 
 
 @pytest.fixture
+def var_fonts3():
+    paths = [
+        os.path.join(TEST_DATA, "cabin_multi", "Cabin[wdth,wght].ttf"),
+        os.path.join(TEST_DATA, "cabin_multi", "Cabin-Italic[wdth,wght].ttf")
+    ]
+    return [TTFont(p) for p in paths]
+
+
+@pytest.fixture
 def static_fonts():
     return [TTFont(f) for f in glob(os.path.join("data", "test", "mavenpro", "*.ttf"))]
 
@@ -138,4 +147,14 @@ def test_gen_stat_roman_and_italic_and_condensed_family(var_fonts2):
     condensed_italic_wdth_axis_val = _get_axis_value(condensed_italic, "wdth", "Condensed", 75.0)
     assert condensed_italic_ital_axis_val != None
     assert condensed_italic_wdth_axis_val != None
+
+
+def test_gen_stat_family_with_uneven_axes(var_fonts3):
+    from fontTools.varLib.instancer import instantiateVariableFont
+    roman, italic = var_fonts3
+    # Drop the width axis from the roman font
+    roman = instantiateVariableFont(roman, {"wdth": None})
+    with pytest.raises(ValueError, match="fvar axes are not consistent across the family"):
+        gen_stat_tables([roman, italic], axis_order=["wdth", "wght", "ital"])
+
 

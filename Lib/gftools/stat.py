@@ -68,7 +68,9 @@ def _axes_in_family_namerecords(ttfonts):
     for ttfont in ttfonts:
         familyname = font_familyname(ttfont)
         stylename = font_stylename(ttfont)
-        results |= set(stylename_to_axes(familyname)) | set(stylename_to_axes(stylename))
+        results |= set(stylename_to_axes(familyname)) | set(
+            stylename_to_axes(stylename)
+        )
     return results
 
 
@@ -251,6 +253,7 @@ def gen_stat_tables(
     #    on the user arg elided_axis_values (optional)
     # 6. For each stat table, sort axes based on the arg axis_order
     # 7. Use fontTools to build each stat table for each font
+    validate_fvar_tables(ttfonts)
     stat_tables = [_gen_stat_from_fvar(f) for f in ttfonts]
     family_axes_in_namerecords = _axes_in_family_namerecords(ttfonts)
     stat_tables = [
@@ -273,17 +276,45 @@ def gen_stat_tables(
     axis_order = [a for a in axis_order if a in seen_axis_values.keys()]
     for stat_table, ttfont in zip(stat_tables, ttfonts):
         stat_table = [stat_table[axis] for axis in axis_order]
-        from pprint import pprint
         _update_fvar_nametable_records(ttfont, stat_table)
         buildStatTable(ttfont, stat_table)
+
+
+def validate_fvar_tables(ttfonts):
+    """Google Fonts requires all VFs within a family to have the same
+    amount of axes and each axis range should match"""
+    for ttfont in ttfonts:
+        if "fvar" not in ttfont:
+            raise ValueError(f"Font is missing fvar table")
+
+    failed = False
+    src_fvar = ttfonts[0]['fvar']
+    src_axes = {a.axisTag: a.__dict__ for a in src_fvar.axes}
+    for ttfont in ttfonts:
+        fvar = ttfont['fvar']
+        axes = {a.axisTag: a.__dict__ for a in fvar.axes}
+        if len(axes) != len(src_axes):
+            failed = True
+            break
+        for axis_tag in axes:
+            if axes[axis_tag]['minValue'] != src_axes[axis_tag]['minValue']:
+                failed = True
+            if axes[axis_tag]['maxValue'] != src_axes[axis_tag]['maxValue']:
+                failed = True
+            # TODO should this fail if default values are different?
+    if failed:
+        raise ValueError("fvar axes are not consistent across the family")
+
 
 
 def _update_fvar_nametable_records(ttfont, stat_table):
     nametable = ttfont["name"]
     fvar = ttfont["fvar"]
     family_name = font_familyname(ttfont)
-    axes_with_one_entry = [a['values'][0] for a in stat_table if len(a['values']) == 1]
-    tokens = [v["name"] for v in axes_with_one_entry]
+    axes_with_one_axis_value = [
+        a["values"][0] for a in stat_table if len(a["values"]) == 1
+    ]
+    tokens = [v["name"] for v in axes_with_one_axis_value]
     ps_tokens = "".join(t for t in tokens)
 
     # Variations PostScript Name Prefix
@@ -294,14 +325,13 @@ def _update_fvar_nametable_records(ttfont, stat_table):
     # Add or update fvar instance postscript names
     for instance in fvar.instances:
         subfamily_id = instance.subfamilyNameID
-        name = nametable.getName(subfamily_id, 3, 1, 0x409).toUnicode()
+        subfamily_name = nametable.getName(subfamily_id, 3, 1, 0x409).toUnicode()
         for token in tokens:
-            name = name.replace(token, "")
-            if name == "":
-                name = "Regular"
-        ps_name = f"{ps_prefix}-{name}".replace(" ", "")
+            subfamily_name = subfamily_name.replace(token, "")
+            if subfamily_name == "":
+                subfamily_name = "Regular"
+        ps_name = f"{ps_prefix}-{subfamily_name}".replace(" ", "")
         # Remove ps name records if they already exist
         if instance.postscriptNameID != 65535:
             nametable.removeNames(nameID=instance.postscriptNameID)
         instance.postscriptNameID = nametable.addName(ps_name)
-
