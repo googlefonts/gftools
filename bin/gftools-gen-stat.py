@@ -16,7 +16,7 @@ gftools gen-stat [fonts.ttf] --axis-order wdth wght --inplace
 gftools gen-stat [fonts.ttf] --elided-values wght=400
 """
 from fontTools.ttLib import TTFont
-from gftools.fix import gen_stat_tables
+from gftools.stat import gen_stat_tables
 from gftools.axisreg import axis_registry
 import argparse
 import os
