@@ -30,4 +30,5 @@ jobs:
         run: |
           pytest ./Lib/gftools/tests/test_usage.py
           pytest ./Lib/gftools/tests/test_fix.py
+          pytest ./Lib/gftools/tests/test_stat.py
           mypy ./Lib/gftools/packager.py
