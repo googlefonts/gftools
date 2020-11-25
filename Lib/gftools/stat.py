@@ -17,7 +17,7 @@ from gftools.axisreg import axis_registry
 import logging
 
 
-__all__ = ["gen_stat_tables"]
+__all__ = ["gen_stat_tables", "ELIDABLE_AXIS_VALUE_NAME"]
 
 
 log = logging.getLogger(__name__)

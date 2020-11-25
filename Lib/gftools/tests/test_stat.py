@@ -49,6 +49,25 @@ def var_fonts3():
     return [TTFont(p) for p in paths]
 
 
+def _get_axis_value(font, axis, name, value):
+    nametable = font["name"]
+    stat = font["STAT"].table
+    axis_indexes = {i: a.AxisTag for i,a in enumerate(stat.DesignAxisRecord.Axis)}
+    axis_values = stat.AxisValueArray.AxisValue 
+    for axis_value in axis_values:
+        axis_tag = axis_indexes[axis_value.AxisIndex]
+        if axis_tag != axis:
+            continue
+        nameID = axis_value.ValueNameID
+        name_string = nametable.getName(nameID, 3, 1, 0x409).toUnicode()
+        if name_string != name:
+            continue
+        if axis_value.Value != value:
+            continue
+        return axis_value
+    return None
+
+
 def test_gen_stat(var_font):
     del var_font["STAT"]
     gen_stat_tables([var_font], axis_order=["wdth", "wght"])
@@ -63,10 +82,8 @@ def test_gen_stat(var_font):
     # Check wght axis values
     wght_axis_values = [v for v in axis_values if axes[v.AxisIndex] == "wght"]
     # Inconsolata has a min fvar wght of 200 and a max of 900.
-    weight = 200
-    for axis_value in wght_axis_values:
-        assert axis_value.Value == weight
-        weight += 100
+    for axis_value, desired_weight in zip(wght_axis_values, range(200, 1000, 100)):
+        assert axis_value.Value == desired_weight
 
     # Check wdth axis values
     wdth_axis_values = [v for v in axis_values if axes[v.AxisIndex] == "wdth"]
@@ -75,7 +92,18 @@ def test_gen_stat(var_font):
     for axis_value, width in zip(wdth_axis_values, expected_wdths):
         assert axis_value.Value == width
 
-        
+    # Check Regular is linked to Bold
+    reg_axis_value = _get_axis_value(var_font, "wght", "Regular", 400)
+    assert reg_axis_value.LinkedValue == 700
+
+    # Check Regular is elided
+    assert reg_axis_value.Flags & ELIDABLE_AXIS_VALUE_NAME == ELIDABLE_AXIS_VALUE_NAME
+
+    # Check Normal width is elided
+    normal_axis_value = _get_axis_value(var_font, "wdth", "Normal", 100)
+    assert normal_axis_value.Flags & ELIDABLE_AXIS_VALUE_NAME == ELIDABLE_AXIS_VALUE_NAME
+
+
 def test_gen_stat_linked_values(var_font):
     del var_font["STAT"]
     gen_stat_tables([var_font], axis_order=["wdth", "wght"])
@@ -94,7 +122,6 @@ def test_gen_stat_linked_values_2(var_fonts2):
 
 
 def test_gen_stat_dflt_elided_values(var_fonts3):
-    from gftools.stat import ELIDABLE_AXIS_VALUE_NAME
     gen_stat_tables(var_fonts3, axis_order=["wdth", "wght", "ital"])
     for font in var_fonts3:
         stat = font["STAT"].table
@@ -108,7 +135,6 @@ def test_gen_stat_dflt_elided_values(var_fonts3):
 
 
 def test_gen_stat_user_elided_values(var_fonts3):
-    from gftools.stat import ELIDABLE_AXIS_VALUE_NAME
     gen_stat_tables(
         var_fonts3,
         axis_order=["wdth", "wght", "ital"],
@@ -130,25 +156,6 @@ def test_gen_stat_user_elided_values(var_fonts3):
 
         condensed_axis_value = _get_axis_value(font, "wdth", "Condensed", 75)
         assert condensed_axis_value.Flags & ELIDABLE_AXIS_VALUE_NAME == ELIDABLE_AXIS_VALUE_NAME
-
-
-def _get_axis_value(font, axis, name, value):
-    nametable = font["name"]
-    stat = font["STAT"].table
-    axis_indexes = {i: a.AxisTag for i,a in enumerate(stat.DesignAxisRecord.Axis)}
-    axis_values = stat.AxisValueArray.AxisValue 
-    for axis_value in axis_values:
-        axis_tag = axis_indexes[axis_value.AxisIndex]
-        if axis_tag != axis:
-            continue
-        nameID = axis_value.ValueNameID
-        name_string = nametable.getName(nameID, 3, 1, 0x409).toUnicode()
-        if name_string != name:
-            continue
-        if axis_value.Value != value:
-            continue
-        return axis_value
-    return None
 
 
 def test_gen_stat_roman_and_italic_family(var_fonts):
