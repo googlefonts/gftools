@@ -88,6 +88,74 @@ def test_gen_stat_linked_values(var_font):
     assert reg_axis_value.LinkedValue == 700
 
 
+def test_gen_stat_linked_values_2(var_fonts2):
+    gen_stat_tables(var_fonts2, axis_order=["wdth", "wght", "ital"])
+    for font in var_fonts2:
+        stat = font["STAT"].table
+        reg_axis_value = next(
+            (a for a in stat.AxisValueArray.AxisValue if a.Value == 400),
+            None
+        )
+        assert reg_axis_value.LinkedValue == 700
+
+
+def test_gen_stat_dflt_elided_values(var_fonts3):
+    from gftools.stat import ELIDABLE_AXIS_VALUE_NAME
+    gen_stat_tables(var_fonts3, axis_order=["wdth", "wght", "ital"])
+    for font in var_fonts3:
+        stat = font["STAT"].table
+        # Check regular axis value is elided
+        reg_wght_axis_value = next(
+            (a for a in stat.AxisValueArray.AxisValue if a.Value == 400),
+            None
+        )
+        assert reg_wght_axis_value.Flags & ELIDABLE_AXIS_VALUE_NAME == ELIDABLE_AXIS_VALUE_NAME
+
+        # Check normal (wdth) axis value is elided
+        norm_wdth_axis_value = next(
+            (a for a in stat.AxisValueArray.AxisValue if a.Value == 100),
+            None
+        )
+        assert norm_wdth_axis_value.Flags & ELIDABLE_AXIS_VALUE_NAME == ELIDABLE_AXIS_VALUE_NAME
+
+
+def test_gen_stat_user_elided_values(var_fonts3):
+    from gftools.stat import ELIDABLE_AXIS_VALUE_NAME
+    gen_stat_tables(
+        var_fonts3,
+        axis_order=["wdth", "wght", "ital"],
+        elided_axis_values={"wght": [700], "wdth": [75]}
+    )
+
+    for font in var_fonts3:
+        stat = font["STAT"].table
+        # First check that the dflt axis values are not elided!
+        reg_wght_axis_value = next(
+            (a for a in stat.AxisValueArray.AxisValue if a.Value == 400),
+            None
+        )
+        assert reg_wght_axis_value.Flags & ELIDABLE_AXIS_VALUE_NAME != ELIDABLE_AXIS_VALUE_NAME
+
+        norm_wdth_axis_value = next(
+            (a for a in stat.AxisValueArray.AxisValue if a.Value == 100),
+            None
+        )
+        assert norm_wdth_axis_value.Flags & ELIDABLE_AXIS_VALUE_NAME != ELIDABLE_AXIS_VALUE_NAME
+
+        # now check the user specified elided values are elided
+        bold_wght_axis_value = next(
+            (a for a in stat.AxisValueArray.AxisValue if a.Value == 700),
+            None
+        )
+        assert bold_wght_axis_value.Flags & ELIDABLE_AXIS_VALUE_NAME == ELIDABLE_AXIS_VALUE_NAME
+
+        norm_wdth_axis_value = next(
+            (a for a in stat.AxisValueArray.AxisValue if a.Value == 75),
+            None
+        )
+        assert norm_wdth_axis_value.Flags & ELIDABLE_AXIS_VALUE_NAME == ELIDABLE_AXIS_VALUE_NAME
+
+
 def _get_axis_value(font, axis, name, value):
     nametable = font["name"]
     stat = font["STAT"].table
