@@ -9,17 +9,15 @@ TEST_DATA = os.path.join("data", "test")
 
 
 @pytest.fixture
-def static_font():
-    return TTFont(os.path.join(TEST_DATA, "Lora-Regular.ttf"))
-
-
-@pytest.fixture
 def var_font():
+    """VF family consisting of a single font with two axes, wdth, wght"""
     return TTFont(os.path.join(TEST_DATA, "Inconsolata[wdth,wght].ttf"))
 
 
 @pytest.fixture
 def var_fonts():
+    """VF family consisting of two fonts, Roman, and Italic. Both have a
+    weight axis"""
     paths = [
         os.path.join(TEST_DATA, "Raleway[wght].ttf"),
         os.path.join(TEST_DATA, "Raleway-Italic[wght].ttf")
@@ -29,6 +27,8 @@ def var_fonts():
 
 @pytest.fixture
 def var_fonts2():
+    """VF family consisting of four fonts, Roman, Italic, Condensed Roman,
+    Condensed Italic. All only have a wght axis"""
     paths = [
         os.path.join(TEST_DATA, "cabin_split", "Cabin[wght].ttf"),
         os.path.join(TEST_DATA, "cabin_split", "Cabin-Italic[wght].ttf"),
@@ -40,16 +40,13 @@ def var_fonts2():
 
 @pytest.fixture
 def var_fonts3():
+    """VF family consisting of two fonts, Roman and Italic. Both have wdth and wght
+    axies."""
     paths = [
         os.path.join(TEST_DATA, "cabin_multi", "Cabin[wdth,wght].ttf"),
         os.path.join(TEST_DATA, "cabin_multi", "Cabin-Italic[wdth,wght].ttf")
     ]
     return [TTFont(p) for p in paths]
-
-
-@pytest.fixture
-def static_fonts():
-    return [TTFont(f) for f in glob(os.path.join("data", "test", "mavenpro", "*.ttf"))]
 
 
 def test_gen_stat(var_font):
@@ -154,6 +151,8 @@ def test_gen_stat_family_with_uneven_axes(var_fonts3):
     roman, italic = var_fonts3
     # Drop the width axis from the roman font
     roman = instantiateVariableFont(roman, {"wdth": None})
+    # We cannot add STAT tables to these families since the Google Fonts API
+    # doesn't support them
     with pytest.raises(ValueError, match="fvar axes are not consistent across the family"):
         gen_stat_tables([roman, italic], axis_order=["wdth", "wght", "ital"])
 
