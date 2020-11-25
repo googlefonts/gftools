@@ -63,13 +63,12 @@ def _gen_stat_from_fvar(ttfont, axis_reg=axis_registry):
     return results
 
 
-def _axes_in_family_stylenames(ttfonts):
+def _axes_in_family_namerecords(ttfonts):
     results = set()
     for ttfont in ttfonts:
         familyname = font_familyname(ttfont)
         stylename = font_stylename(ttfont)
-        results |= set(stylename_to_axes(familyname))
-        results |= set(stylename_to_axes(stylename))
+        results |= set(stylename_to_axes(familyname)) | set(stylename_to_axes(stylename))
     return results
 
 
@@ -85,26 +84,25 @@ def stylename_to_axes(font_style, axisreg=axis_registry):
     Returns: list(str,...)
     """
     axes = []
-    seen = set()
 
-    style_tokens = font_style.split()
-    for token in style_tokens:
-        for axis_tag, axis_object in axisreg.items():
-            if token in [f.name for f in axis_object.fallback]:
-                seen.add(token)
-                axes.append(axis_tag)
+    tokens = font_style.split()
+    for token in tokens:
+        axis = style_token_to_axis(token)
+        if axis:
+            axes.append(axis)
 
-    unparsed_tokens = set(style_tokens) - seen
+    unparsed_tokens = set(tokens) - set(axes)
     if unparsed_tokens:
         log.warning(
-            "Following style tokens were not found in Axis Registry "
-            "{list(unparsed_tokens)}. Axis Values will not be created "
-            "for these tokens"
+            f"Following style tokens were not found in Axis Registry "
+            f"{list(unparsed_tokens)}. Axis Values will not be created "
+            f"for these tokens"
         )
     return axes
 
 
-def style_to_axis(string, axis_reg=axis_registry):
+def style_token_to_axis(string, axis_reg=axis_registry):
+    # Condensed --> width
     for axis_tag, axis in axis_reg.items():
         for fallback in axis.fallback:
             if fallback.name == string:
@@ -113,17 +111,16 @@ def style_to_axis(string, axis_reg=axis_registry):
 
 
 def _append_non_fvar_axes_to_stat(
-    ttfont, stat_table, family_style_axes, axis_reg=axis_registry
+    ttfont, stat_table, family_axes_in_namerecords, axis_reg=axis_registry
 ):
     stylename = font_stylename(ttfont)
     familyname = font_familyname(ttfont)
     style = f"{familyname} {stylename}"
-    style_axes = stylename_to_axes(style)
     # {"wght": "Regular", "ital": "Roman", ...}
-    style_tokens = {style_to_axis(t): t for t in style.split()}
+    font_axes_in_namerecords = {style_token_to_axis(t): t for t in style.split()}
 
     # Add axes to ttfont which exist across the family but are not in the ttfont's fvar
-    axes_missing = family_style_axes - set(stat_table)
+    axes_missing = family_axes_in_namerecords - set(stat_table)
     for axis in axes_missing:
         axis_record = {
             "tag": axis,
@@ -131,12 +128,12 @@ def _append_non_fvar_axes_to_stat(
             "values": [],
         }
         # Add axis value for axis which isn't in the fvar or ttfont stylename/familyname
-        if axis not in style_tokens:
+        if axis not in font_axes_in_namerecords:
             axis_record["values"].append(_default_axis_value(axis, axis_reg))
         # Add axis value for axis which isn't in the fvar but does exist in
-        # the ttfont stylename
+        # the ttfont stylename/familyname
         else:
-            style_name = style_tokens[axis]
+            style_name = font_axes_in_namerecords[axis]
             value = next(
                 (i.value for i in axis_reg[axis].fallback if i.name == style_name),
                 None,
@@ -219,20 +216,45 @@ def gen_stat_tables(
         axis_reg: dict
     """
     # Heuristic:
-    # - Gen a STAT table for each font based on each font's fvar table
-    # - Find which axes exist in each font's nametable (not fvar!)
-    # - Append axis records to each stat table which are not part of each
-    #   font's fvar but exist across the family. This step allows us to
-    #   establish the relationship between fonts in a family.
-    # - Update Axis Values which should be linked in each stat table
-    # - Update Axis Values which should be elided based on the user arg
-    #   elided_axis_values (optional)
-    # - Sort axes in each stat table based on the arg axis_order
-    # - Use fontTools to build each stat table for each font
+    # 1. Gen a STAT table for each font using each font's fvar table
+    # 2. Collect all the axes which exist in every font's nametable records
+    # 3. Add further axis records to each font's stat table for the axes we
+    #    found in step 2. Only add them if the stat table doesn't contain them
+    #    already.
+    # 4. Add an AxisValue to each of the axes we added in step 3. For each axis
+    #    in each font, do the following:
+    #      a. If a font's nametable contains the axis and it is not in the
+    #         fvar, we will create a new AxisValue using the axis registry
+    #         fallbacks.
+    #      b. If a font's nametable doesn't contain the axis, we will create a
+    #         new AxisValue based the default values found in our axis registry
+    #
+    #         Example:
+    #
+    #            Test Case:
+    #            Axes in family names: ["wdth", "wght", "ital"]
+    #            Font StyleName = "Condensed Bold"
+    #            Axes in font fvar = ["wght"]
+    #
+    #            a result:
+    #            axisValue = {"name": "Condensed", "value": 75.0}
+    #            "Condensed" exists in our axis registry as a fallback in the
+    #            wdth axis
+    #
+    #            b result:
+    #            AxisValue = {"name": "Roman", "value": 0.0, flags=0x2}
+    #            Since there isn't an ital token in the Font StyleName, the
+    #            AxisValue will be based on the default values
+    #
+    # 4. For each stat table, update Axis Values which should be linked
+    # 5. For each stat table, update Axis Values which should be elided based
+    #    on the user arg elided_axis_values (optional)
+    # 6. For each stat table, sort axes based on the arg axis_order
+    # 7. Use fontTools to build each stat table for each font
     stat_tables = [_gen_stat_from_fvar(f) for f in ttfonts]
-    family_style_axes = _axes_in_family_stylenames(ttfonts)
+    family_axes_in_namerecords = _axes_in_family_namerecords(ttfonts)
     stat_tables = [
-        _append_non_fvar_axes_to_stat(f, s, family_style_axes)
+        _append_non_fvar_axes_to_stat(f, s, family_axes_in_namerecords)
         for f, s in zip(ttfonts, stat_tables)
     ]
     seen_axis_values = _seen_axis_values(stat_tables)
