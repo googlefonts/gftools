@@ -158,3 +158,127 @@ def test_gen_stat_family_with_uneven_axes(var_fonts3):
         gen_stat_tables([roman, italic], axis_order=["wdth", "wght", "ital"])
 
 
+def _check_ps_instance_names(ttfont, desired_names):
+    nametable = ttfont['name']
+    instances = ttfont['fvar'].instances
+    for instance, desired_name in zip(instances, desired_names):
+        ps_id = instance.postscriptNameID
+        name = nametable.getName(ps_id, 3, 1, 0x409).toUnicode()
+        assert name == desired_name
+
+
+def test_gen_stat_update_fvar_instances_1(var_fonts):
+    gen_stat_tables(var_fonts, axis_order=["wght", "ital"])
+    roman, italic = var_fonts
+
+    desired_roman_ps_names = [
+        "RalewayRoman-Thin",
+        "RalewayRoman-ExtraLight",
+        "RalewayRoman-Light",
+        "RalewayRoman-Regular",
+        "RalewayRoman-Medium",
+        "RalewayRoman-SemiBold",
+        "RalewayRoman-Bold",
+        "RalewayRoman-ExtraBold",
+        "RalewayRoman-Black",
+    ]
+    _check_ps_instance_names(roman, desired_roman_ps_names)
+
+    desired_italic_ps_names = [
+        "RalewayItalic-Thin",
+        "RalewayItalic-ExtraLight",
+        "RalewayItalic-Light",
+        "RalewayItalic-Regular",
+        "RalewayItalic-Medium",
+        "RalewayItalic-SemiBold",
+        "RalewayItalic-Bold",
+        "RalewayItalic-ExtraBold",
+        "RalewayItalic-Black",
+    ]
+    _check_ps_instance_names(italic, desired_italic_ps_names)
+
+
+def test_gen_stat_update_fvar_instances_2(var_fonts2):
+    gen_stat_tables(var_fonts2, axis_order=["wdth", "wght", "ital"])
+    roman, italic, condensed_roman, condensed_italic = var_fonts2
+
+    desired_roman_ps_names = [
+        "CabinNormalRoman-Regular",
+        "CabinNormalRoman-Medium",
+        "CabinNormalRoman-SemiBold",
+        "CabinNormalRoman-Bold",
+    ]
+    _check_ps_instance_names(roman, desired_roman_ps_names)
+
+    desired_italic_ps_names = [
+        "CabinNormalItalic-Regular",
+        "CabinNormalItalic-Medium",
+        "CabinNormalItalic-SemiBold",
+        "CabinNormalItalic-Bold",
+    ]
+    _check_ps_instance_names(italic, desired_italic_ps_names)
+
+    desired_condensed_roman_ps_names = [
+        "CabinCondensedRoman-Regular",
+        "CabinCondensedRoman-Medium",
+        "CabinCondensedRoman-SemiBold",
+        "CabinCondensedRoman-Bold",
+    ]
+    _check_ps_instance_names(condensed_roman, desired_condensed_roman_ps_names)
+
+    desired_condensed_italic_ps_names = [
+        "CabinCondensedItalic-Regular",
+        "CabinCondensedItalic-Medium",
+        "CabinCondensedItalic-SemiBold",
+        "CabinCondensedItalic-Bold",
+    ]
+    _check_ps_instance_names(condensed_italic, desired_condensed_italic_ps_names)
+
+
+def test_gen_stat_update_fvar_instances_3(var_fonts3):
+    gen_stat_tables(var_fonts3, axis_order=["wdth", "wght", "ital"])
+    roman, italic = var_fonts3
+
+    desired_roman_ps_names = [
+        "CabinRoman-Regular",
+        "CabinRoman-Medium",
+        "CabinRoman-SemiBold",
+        "CabinRoman-Bold",
+    ]
+    _check_ps_instance_names(roman, desired_roman_ps_names)
+
+    desired_italic_ps_names = [
+        "CabinItalic-Regular",
+        "CabinItalic-Medium",
+        "CabinItalic-SemiBold",
+        "CabinItalic-Bold",
+    ]
+    _check_ps_instance_names(italic, desired_italic_ps_names)
+
+
+def test_gen_stat_nameid_25_vf_postscript_name_1(var_font):
+    gen_stat_tables([var_font], axis_order=['wdth', 'wght'])
+    assert var_font['name'].getName(25, 3, 1, 0x409).toUnicode() == "Inconsolata"
+
+
+def test_gen_stat_nameid_25_vf_postscript_name_2(var_fonts):
+    gen_stat_tables(var_fonts, axis_order=['wght', 'ital'])
+    roman, italic = var_fonts
+    assert roman['name'].getName(25, 3, 1, 0x409).toUnicode() == "RalewayRoman"
+    assert italic['name'].getName(25, 3, 1, 0x409).toUnicode() == "RalewayItalic"
+
+
+def test_gen_stat_nameid_25_vf_postscript_name_3(var_fonts2):
+    gen_stat_tables(var_fonts2, axis_order=["wdth", "wght", "ital"])
+    roman, italic, condensed_roman, condensed_italic = var_fonts2
+    assert roman['name'].getName(25, 3, 1, 0x409).toUnicode() == "CabinNormalRoman"
+    assert italic['name'].getName(25, 3, 1, 0x409).toUnicode() == "CabinNormalItalic"
+    assert condensed_roman['name'].getName(25, 3, 1, 0x409).toUnicode() == "CabinCondensedRoman"
+    assert condensed_italic['name'].getName(25, 3, 1, 0x409).toUnicode() == "CabinCondensedItalic"
+
+ 
+def test_gen_stat_nameid_25_vf_postscript_name_4(var_fonts3):
+    gen_stat_tables(var_fonts3, axis_order=["wdth", "wght", "ital"])
+    roman, italic = var_fonts3
+    assert roman['name'].getName(25, 3, 1, 0x409).toUnicode() == "CabinRoman"
+    assert italic['name'].getName(25, 3, 1, 0x409).toUnicode() == "CabinItalic"

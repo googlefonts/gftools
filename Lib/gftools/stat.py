@@ -315,6 +315,7 @@ def _update_fvar_nametable_records(ttfont, stat_table):
         a["values"][0] for a in stat_table if len(a["values"]) == 1
     ]
     tokens = [v["name"] for v in axes_with_one_axis_value]
+    tokens = [t for t in tokens if t not in family_name.split()]
     ps_tokens = "".join(t for t in tokens)
 
     # Variations PostScript Name Prefix
