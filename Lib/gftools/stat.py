@@ -1,6 +1,13 @@
 from fontTools.otlLib.builder import buildStatTable
 from gftools.fix import font_stylename, font_familyname
 from gftools.axisreg import axis_registry
+import logging
+
+
+__all__ = ["gen_stat_tables"]
+
+
+log = logging.getLogger(__name__)
 
 
 ELIDABLE_AXIS_VALUE_NAME = 0x2
@@ -59,8 +66,10 @@ def _gen_stat_from_fvar(ttfont, axis_reg=axis_registry):
 def _axes_in_family_stylenames(ttfonts):
     results = set()
     for ttfont in ttfonts:
-        ttfont_style = font_stylename(ttfont)
-        results |= set(stylename_to_axes(ttfont_style))
+        familyname = font_familyname(ttfont)
+        stylename = font_stylename(ttfont)
+        results |= set(stylename_to_axes(familyname))
+        results |= set(stylename_to_axes(stylename))
     return results
 
 
@@ -95,15 +104,23 @@ def stylename_to_axes(font_style, axisreg=axis_registry):
     return axes
 
 
+def style_to_axis(string, axis_reg=axis_registry):
+    for axis_tag, axis in axis_reg.items():
+        for fallback in axis.fallback:
+            if fallback.name == string:
+                return axis_tag
+    return None
+
+
 def _append_non_fvar_axes_to_stat(
     ttfont, stat_table, family_style_axes, axis_reg=axis_registry
 ):
-    ttfont_style = font_stylename(ttfont)
-    ttfont_style_axes = stylename_to_axes(ttfont_style)
+    stylename = font_stylename(ttfont)
+    familyname = font_familyname(ttfont)
+    style = f"{familyname} {stylename}"
+    style_axes = stylename_to_axes(style)
     # {"wght": "Regular", "ital": "Roman", ...}
-    ttfont_style_tokens = {
-        k: v for k, v in zip(ttfont_style_axes, ttfont_style.split())
-    }
+    style_tokens = {style_to_axis(t): t for t in style.split()}
 
     # Add axes to ttfont which exist across the family but are not in the ttfont's fvar
     axes_missing = family_style_axes - set(stat_table)
@@ -113,13 +130,13 @@ def _append_non_fvar_axes_to_stat(
             "name": axis_reg[axis].display_name,
             "values": [],
         }
-        # Add axis value for axis which isn't in the fvar or ttfont stylename
-        if axis not in ttfont_style_tokens:
+        # Add axis value for axis which isn't in the fvar or ttfont stylename/familyname
+        if axis not in style_tokens:
             axis_record["values"].append(_default_axis_value(axis, axis_reg))
         # Add axis value for axis which isn't in the fvar but does exist in
         # the ttfont stylename
         else:
-            style_name = ttfont_style_tokens[axis]
+            style_name = style_tokens[axis]
             value = next(
                 (i.value for i in axis_reg[axis].fallback if i.name == style_name),
                 None,
@@ -234,6 +251,7 @@ def gen_stat_tables(
     axis_order = [a for a in axis_order if a in seen_axis_values.keys()]
     for stat_table, ttfont in zip(stat_tables, ttfonts):
         stat_table = [stat_table[axis] for axis in axis_order]
+        from pprint import pprint
         _update_fvar_nametable_records(ttfont, stat_table)
         buildStatTable(ttfont, stat_table)
 
