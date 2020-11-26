@@ -229,6 +229,9 @@ class TestGFToolsScripts(unittest.TestCase):
     def test_check_vtt_compile(self):
         self.check_script(['python', self.get_path('check-vtt-compile'), self.src_vtt_font])
 
+    def test_gen_stat(self):
+        self.check_script(['python', self.get_path('gen-stat'), self.example_vf_font])
+
 
 if __name__ == '__main__':
     unittest.main()

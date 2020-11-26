@@ -46,7 +46,17 @@ WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
 
 UNWANTED_TABLES = frozenset(
-    ["FFTM", "TTFA", "TSI0", "TSI1", "TSI2", "TSI3", "TSI5", "prop", "MVAR",]
+    [
+        "FFTM",
+        "TTFA",
+        "TSI0",
+        "TSI1",
+        "TSI2",
+        "TSI3",
+        "TSI5",
+        "prop",
+        "MVAR",
+    ]
 )
 
 
@@ -102,7 +112,7 @@ def fix_unhinted_font(ttFont):
         - Add a new GASP table with a newtable that has a single
           range which is set to smooth.
         - Add a new prep table which is optimized for unhinted fonts.
-    
+
     Args:
         ttFont: a TTFont instance
     """
@@ -161,8 +171,8 @@ def fix_weight_class(ttFont):
         return
     raise ValueError(
         f"Cannot determine usWeightClass because font style, '{stylename}' "
-        "doesn't have a weight token which is in our known "
-        "weights, '{WEIGHT_VALUES.keys()}'"
+        f"doesn't have a weight token which is in our known "
+        f"weights, '{WEIGHT_NAMES.keys()}'"
     )
 
 
@@ -469,11 +479,7 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
         family_name: Optional string which allows users to specify a
             different family to inherit from e.g "Maven Pro".
     """
-    family_name = (
-        font_familyname(ttFonts[0])
-        if not family_name
-        else family_name
-    )
+    family_name = font_familyname(ttFonts[0]) if not family_name else family_name
 
     gf_fonts = list(map(TTFont, download_family_from_Google_Fonts(family_name)))
     gf_fonts = {font_stylename(f): f for f in gf_fonts}

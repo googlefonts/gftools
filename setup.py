@@ -50,7 +50,8 @@ setup(
                   'gftools': [
                       "encodings/*.nam",
                       "encodings/GF Glyph Sets/*.nam",
-                      'template.upstream.yaml'
+                      'template.upstream.yaml',
+                      "axisregistry/*.textproto",
                   ]
                  },
     scripts=gftools_scripts(),

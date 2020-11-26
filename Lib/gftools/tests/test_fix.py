@@ -6,14 +6,26 @@ import os
 from copy import deepcopy
 
 
+TEST_DATA = os.path.join("data", "test")
+
+
 @pytest.fixture
 def static_font():
-    return TTFont(os.path.join("data", "test", "Lora-Regular.ttf"))
+    return TTFont(os.path.join(TEST_DATA, "Lora-Regular.ttf"))
 
 
 @pytest.fixture
 def var_font():
-    return TTFont(os.path.join("data", "test", "Inconsolata[wdth,wght].ttf"))
+    return TTFont(os.path.join(TEST_DATA, "Inconsolata[wdth,wght].ttf"))
+
+
+@pytest.fixture
+def var_fonts():
+    paths = [
+        os.path.join(TEST_DATA, "Raleway[wght].ttf"),
+        os.path.join(TEST_DATA, "Raleway-Italic[wght].ttf")
+    ]
+    return [TTFont(p) for p in paths]
 
 
 @pytest.fixture
@@ -332,4 +344,3 @@ def test_fix_vertical_metrics_typo_metrics_enabled(static_fonts):
         assert font["OS/2"].sTypoDescender == -300
         assert font["OS/2"].sTypoLineGap == 0
     _check_vertical_metrics(static_fonts)
-
