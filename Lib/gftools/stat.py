@@ -34,14 +34,14 @@ LINKED_VALUES = {
 }
 
 
-def _gen_stat_from_fvar(ttfont, axis_reg=axis_registry):
-    """Generate a STAT table using a ttfont's fvar and the GF axis registry.
+def _gen_stat_from_fvar(ttFont, axis_reg=axis_registry):
+    """Generate a STAT table using a ttFont's fvar and the GF axis registry.
 
     Args:
         axis_reg: gf axis registry
-        ttfont: TTFont instance
+        ttFont: a TTFont instance
     """
-    fvar = ttfont["fvar"]
+    fvar = ttFont["fvar"]
 
     axis_defaults = {a.axisTag: a.defaultValue for a in fvar.axes}
     results = {}
@@ -51,9 +51,10 @@ def _gen_stat_from_fvar(ttfont, axis_reg=axis_registry):
             log.warning(
                 f"'{axis_tag}' isn't in our axis registry. Please open an issue "
                 "to discuss the inclusion of this axis, "
-                "https://github.com/google/ttfonts/issues"
+                "https://github.com/google/fonts/issues"
             )
             continue
+        # Add Axis Record
         results[axis_tag] = {
             "tag": axis_tag,
             "name": axis_reg[axis_tag].display_name,
@@ -76,40 +77,42 @@ def _gen_stat_from_fvar(ttfont, axis_reg=axis_registry):
     return results
 
 
-def _axes_in_family_namerecords(ttfonts):
+def _axes_in_family_name_records(ttFonts):
     results = set()
-    for ttfont in ttfonts:
-        familyname = font_familyname(ttfont)
-        stylename = font_stylename(ttfont)
+    for ttFont in ttFonts:
+        familyname = font_familyname(ttFont)
+        stylename = font_stylename(ttFont)
         results |= set(stylename_to_axes(familyname)) | set(
             stylename_to_axes(stylename)
         )
     return results
 
 
-def stylename_to_axes(font_style, axisreg=axis_registry):
+def stylename_to_axes(font_style, axis_reg=axis_registry):
     """Get axis names for stylename particles using the axis registry e.g
 
     "Condensed Bold Italic" --> ["wdth", "wght", "ital"]
 
     Args:
-        axisreg: gf axis registry
+        axis_reg: gf axis registry
         font_style: str
 
     Returns: list(str,...)
     """
     axes = []
+    unparsed_tokens = []
 
     tokens = font_style.split()
     for token in tokens:
         axis = style_token_to_axis(token)
         if axis:
             axes.append(axis)
+        else:
+            unparsed_tokens.append(token)
 
-    unparsed_tokens = set(tokens) - set(axes)
     if unparsed_tokens:
-        log.warning(
-            f"Following style tokens were not found in Axis Registry "
+        log.debug(
+            f"Following tokens were not found in the Axis Registry "
             f"{list(unparsed_tokens)}. Axis Values will not be created "
             f"for these tokens"
         )
@@ -126,27 +129,29 @@ def style_token_to_axis(string, axis_reg=axis_registry):
 
 
 def _append_non_fvar_axes_to_stat(
-    ttfont, stat_table, family_axes_in_namerecords, axis_reg=axis_registry
+    ttFont, stat_table, axes_in_family_name_records, axis_reg=axis_registry
 ):
-    stylename = font_stylename(ttfont)
-    familyname = font_familyname(ttfont)
+    stylename = font_stylename(ttFont)
+    familyname = font_familyname(ttFont)
     style = f"{familyname} {stylename}"
     # {"wght": "Regular", "ital": "Roman", ...}
     font_axes_in_namerecords = {style_token_to_axis(t): t for t in style.split()}
 
-    # Add axes to ttfont which exist across the family but are not in the ttfont's fvar
-    axes_missing = family_axes_in_namerecords - set(stat_table)
+    # Add axes to ttFont which exist across the family but are not in the
+    # ttFont's fvar
+    axes_missing = axes_in_family_name_records - set(stat_table)
     for axis in axes_missing:
         axis_record = {
             "tag": axis,
             "name": axis_reg[axis].display_name,
             "values": [],
         }
-        # Add axis value for axis which isn't in the fvar or ttfont stylename/familyname
+        # Add Axis Value for axis which isn't in the fvar or ttFont style
+        # name/family name
         if axis not in font_axes_in_namerecords:
             axis_record["values"].append(_default_axis_value(axis, axis_reg))
-        # Add axis value for axis which isn't in the fvar but does exist in
-        # the ttfont stylename/familyname
+        # Add Axis Value for axis which isn't in the fvar but does exist in
+        # the ttFont style name/family name
         else:
             style_name = font_axes_in_namerecords[axis]
             value = next(
@@ -162,10 +167,10 @@ def _append_non_fvar_axes_to_stat(
 def _seen_axis_values(stat_tables):
     seen_axis_values = {}
     for stat_tbl in stat_tables:
-        for axis in stat_tbl:
-            if axis not in seen_axis_values:
-                seen_axis_values[axis] = set()
-            seen_axis_values[axis] |= set(i["value"] for i in stat_tbl[axis]["values"])
+        for axis_tag, axis in stat_tbl.items():
+            if axis_tag not in seen_axis_values:
+                seen_axis_values[axis_tag] = set()
+            seen_axis_values[axis_tag] |= set(i["value"] for i in axis["values"])
     return seen_axis_values
 
 
@@ -181,7 +186,7 @@ def _add_linked_axis_values_to_stat(stat_table, seen_axis_values):
 
 
 def _add_elided_axis_values_to_stat(stat_table, elided_values):
-    """Overwrite which axis values should be elided.
+    """Overwrite which Axis Values should be elided.
 
     Args:
         stat: a stat table
@@ -204,8 +209,8 @@ def _add_axis_value(style_name, value, flags=0x0, linked_value=None):
     return value
 
 
-def _default_axis_value(axis, axisreg=axis_registry):
-    axis_record = axisreg[axis]
+def _default_axis_value(axis, axis_reg=axis_registry):
+    axis_record = axis_reg[axis]
     default_value = axis_record.default_value
     default_name = next(
         (i.name for i in axis_record.fallback if i.value == default_value), None
@@ -213,42 +218,48 @@ def _default_axis_value(axis, axisreg=axis_registry):
     return _add_axis_value(default_name, default_value, flags=ELIDABLE_AXIS_VALUE_NAME)
 
 
-def _validate_axis_order(axis_order, seen_axes):
+def validate_axis_order(axis_order, seen_axes):
     axes_not_ordered = seen_axes - set(axis_order)
     if axes_not_ordered:
         raise ValueError(f"Axis order arg is missing {axes_not_ordered} axes.")
 
 
-def validate_family_fvar_tables(ttfonts):
-    """Google Fonts requires all VFs within a family to have the same
-    amount of axes and each axis range should match"""
-    for ttfont in ttfonts:
-        if "fvar" not in ttfont:
+def validate_family_fvar_tables(ttFonts):
+    """Google Fonts requires all VFs in a family to have the same
+    amount of fvar axes and each fvar axis should have the same range.
+
+    Args:
+        ttFonts: an iterable containing TTFont instances
+    """
+    for ttFont in ttFonts:
+        if "fvar" not in ttFont:
             raise ValueError(f"Font is missing fvar table")
 
     failed = False
-    src_fvar = ttfonts[0]['fvar']
+    src_fvar = ttFonts[0]["fvar"]
     src_axes = {a.axisTag: a.__dict__ for a in src_fvar.axes}
-    for ttfont in ttfonts:
-        fvar = ttfont['fvar']
+    for ttFont in ttFonts:
+        fvar = ttFont["fvar"]
         axes = {a.axisTag: a.__dict__ for a in fvar.axes}
         if len(axes) != len(src_axes):
             failed = True
             break
         for axis_tag in axes:
-            if axes[axis_tag]['minValue'] != src_axes[axis_tag]['minValue']:
+            if axes[axis_tag]["minValue"] != src_axes[axis_tag]["minValue"]:
                 failed = True
-            if axes[axis_tag]['maxValue'] != src_axes[axis_tag]['maxValue']:
+            if axes[axis_tag]["maxValue"] != src_axes[axis_tag]["maxValue"]:
                 failed = True
             # TODO should this fail if default values are different?
     if failed:
         raise ValueError("fvar axes are not consistent across the family")
 
 
-def _update_fvar_nametable_records(ttfont, stat_table):
-    nametable = ttfont["name"]
-    fvar = ttfont["fvar"]
-    family_name = font_familyname(ttfont)
+def _update_fvar_nametable_records(ttFont, stat_table):
+    """Add postscript names to fvar instances and add nameID 25 to a
+    font's nametable"""
+    nametable = ttFont["name"]
+    fvar = ttFont["fvar"]
+    family_name = font_familyname(ttFont)
     axes_with_one_axis_value = [
         a["values"][0] for a in stat_table if len(a["values"]) == 1
     ]
@@ -277,29 +288,33 @@ def _update_fvar_nametable_records(ttfont, stat_table):
 
 
 def gen_stat_tables(
-    ttfonts, axis_order, elided_axis_values=None, axis_reg=axis_registry
+    ttFonts, axis_order, elided_axis_values=None, axis_reg=axis_registry
 ):
     """
     Generate a stat table for each font in a family using the Google Fonts
     Axis Registry.
 
     Args:
-        fonts: [TTFont]
-        axis_reg: dict
+        ttFonts: an iterable containing ttFont instances
+        axis_order: a list containing the axis order
+        elided_axis_values: a dict containing axes and their values to elide
+        e.g {"wght": [400], "wdth": [100]}
+        axis_reg: Google Fonts axis registry
     """
     # Heuristic:
-    # 1. Gen a STAT table for each font using each font's fvar table
-    # 2. Collect all the axes which exist in every font's nametable records
-    # 3. Add further axis records to each font's stat table for the axes we
+    # 1. Gen a STAT table for each font using their fvar tables only
+    # 2. Collect all the axes which exist in every font's family name and
+    #    and style name
+    # 3. Add further Axis Records to each font's stat table for the axes we
     #    found in step 2. Only add them if the stat table doesn't contain them
     #    already.
-    # 4. Add an AxisValue to each of the axes we added in step 3. For each axis
-    #    in each font, do the following:
-    #      a. If a font's nametable contains the axis and it is not in the
-    #         fvar, we will create a new AxisValue using the axis registry
+    # 4. Add an AxisValue to each of the Axes Records we added in step 3.
+    #    For each axis in each font, do the following:
+    #      a. If a font's name table contains the axis and it is not in the
+    #         fvar, we will create a new Axis Value using the axis registry
     #         fallbacks.
-    #      b. If a font's nametable doesn't contain the axis, we will create a
-    #         new AxisValue based the default values found in our axis registry
+    #      b. If a font's name table doesn't contain the axis, we will create a
+    #         new Axis Value based the default values found in the axis registry
     #
     #         Example:
     #
@@ -315,20 +330,21 @@ def gen_stat_tables(
     #
     #            b result:
     #            AxisValue = {"name": "Roman", "value": 0.0, flags=0x2}
-    #            Since there isn't an ital token in the Font StyleName, the
-    #            AxisValue will be based on the default values
+    #            Since there isn't an ital token in the Font family name or
+    #            style name, the AxisValue will be based on the default values
+    #            for the axis in our axis registry
     #
     # 4. For each stat table, update Axis Values which should be linked
     # 5. For each stat table, update Axis Values which should be elided based
     #    on the user arg elided_axis_values (optional)
     # 6. For each stat table, sort axes based on the arg axis_order
     # 7. Use fontTools to build each stat table for each font
-    validate_family_fvar_tables(ttfonts)
-    stat_tables = [_gen_stat_from_fvar(f) for f in ttfonts]
-    family_axes_in_namerecords = _axes_in_family_namerecords(ttfonts)
+    validate_family_fvar_tables(ttFonts)
+    stat_tables = [_gen_stat_from_fvar(f) for f in ttFonts]
+    axes_in_family_name_records = _axes_in_family_name_records(ttFonts)
     stat_tables = [
-        _append_non_fvar_axes_to_stat(f, s, family_axes_in_namerecords)
-        for f, s in zip(ttfonts, stat_tables)
+        _append_non_fvar_axes_to_stat(ttFont, stat, axes_in_family_name_records)
+        for ttFont, stat in zip(ttFonts, stat_tables)
     ]
     seen_axis_values = _seen_axis_values(stat_tables)
     stat_tables = [
@@ -341,10 +357,10 @@ def gen_stat_tables(
 
     # TODO make axis_order an optional arg. We can only do this once we
     # have established an axis order in the axis registry
-    _validate_axis_order(axis_order, set(seen_axis_values.keys()))
-    assert len(stat_tables) == len(ttfonts)
+    validate_axis_order(axis_order, set(seen_axis_values.keys()))
+    assert len(stat_tables) == len(ttFonts)
     axis_order = [a for a in axis_order if a in seen_axis_values.keys()]
-    for stat_table, ttfont in zip(stat_tables, ttfonts):
+    for stat_table, ttFont in zip(stat_tables, ttFonts):
         stat_table = [stat_table[axis] for axis in axis_order]
-        _update_fvar_nametable_records(ttfont, stat_table)
-        buildStatTable(ttfont, stat_table)
+        _update_fvar_nametable_records(ttFont, stat_table)
+        buildStatTable(ttFont, stat_table)
