@@ -7,13 +7,18 @@ using the GF axis registry.
 
 Usage:
 
-gftools gen-stat [fonts.ttf] --axis-order wdth wght
+# Standard usage. Fonts will have ".fix" appended to their filenames
+gftools gen-stat font1.ttf --axis-order wdth wght
 
-# Overwrite existing fonts
-gftools gen-stat [fonts.ttf] --axis-order wdth wght --inplace
+# Output fonts to a dir
+gftools gen-stat font1.ttf font2.ttf --axis-order wdth wght --out ~/Desktop/out
+
+# Overwrite input fonts
+gftools gen-stat font1.ttf font2.ttf --axis-order wdth wght --inplace
 
 # Overide which axis values are elided
-gftools gen-stat [fonts.ttf] --elided-values wght=400
+gftools gen-stat font.ttf --elided-values wght=400 --axis-order wdth wght
+
 """
 from fontTools.ttLib import TTFont
 from gftools.stat import gen_stat_tables
@@ -40,12 +45,26 @@ def parse_elided_values(string):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("fonts", nargs="+")
     parser.add_argument(
-        "--axis-order", "-ao", nargs="+", required=True, choices=axis_registry.keys(),
-        help="Stat table axis order"
+        "fonts", nargs="+", help="Variable TTF files which make up a family"
     )
-    parser.add_argument("--elided-values", nargs="+", default=None)
+    parser.add_argument(
+        "--axis-order",
+        nargs="+",
+        required=True,
+        choices=axis_registry.keys(),
+        help="List of space seperated axis tags used to set the STAT table "
+        "axis order e.g --axis-order wdth wght ital",
+    )
+    parser.add_argument(
+        "--elided-values",
+        nargs="+",
+        default=None,
+        help="List of space seperated axis_values to elide. "
+        "Input must be structed as axis_tag=int,int..."
+        "e.g --elided-values wdth=100 wght=400",
+    )
+    parser.add_argument("--out", "-o", help="Output dir for fonts")
     parser.add_argument(
         "--inplace", action="store_true", default=False, help="Overwrite input files"
     )
@@ -57,9 +76,20 @@ def main():
     )
     gen_stat_tables(fonts, args.axis_order, elided_values)
 
+    if args.out:
+        if not os.path.isdir(args.out):
+            os.mkdir(args.out)
+
     for font in fonts:
-        print(f"Updated STAT for {font.reader.file.name}")
-        dst = font.reader.file.name if args.inplace else font.reader.file.name + ".fix"
+        if args.out:
+            dst = os.path.join(args.out, os.path.basename(font.reader.file.name))
+        elif args.inplace:
+            dst = font.reader.file.name
+        else:
+            dst = font.reader.file.name + ".fix"
+        if os.path.isfile(dst):
+            os.remove(dst)
+        print(f"Saving font to {dst}")
         font.save(dst)
 
 
