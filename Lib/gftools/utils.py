@@ -364,6 +364,7 @@ def partition_cmap(font, test, report=True):
   font['cmap'].tables = keep
   return keep, drop
 
+
 def _unicode_marks(string):
     unicodemap = [(u'©', '(c)'), (u'®', '(r)'), (u'™', '(tm)')]
     return filter(lambda char: char[0] in string, unicodemap)
@@ -389,4 +390,13 @@ def normalize_unicode_marks(string):
     if result != input_string:
         print("Fixed string: '{}'".format(result))
     return result
+
+
+def get_fsSelection_byte2(ttfont):
+    return ttfont['OS/2'].fsSelection >> 8
+
+
+def get_fsSelection_byte1(ttfont):
+    return ttfont['OS/2'].fsSelection & 255
+
 

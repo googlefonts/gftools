@@ -20,6 +20,8 @@ from gftools.utils import (
     validate_family,
     unique_name,
 )
+from gftools.util.styles import (get_stylename, is_regular, is_bold, is_italic)
+
 from copy import deepcopy
 import logging
 
@@ -44,6 +46,7 @@ __all__ = [
     "fix_ascii_fontmetadata",
     "drop_nonpid0_cmap",
     "drop_mac_cmap",
+    "fix_fsselection",
     "fix_font",
     "fix_family",
 ]
@@ -508,6 +511,34 @@ def fix_ascii_fontmetadata(font):
         title = normalize_unicode_marks(title)
         name.string = title.encode(name.getEncoding())
 
+
+def fix_fsselection(ttfont, filename, usetypometrics=False):
+    stylename = get_stylename(filename)
+
+    initial_value = ttfont['OS/2'].fsSelection
+
+    if is_regular(stylename):
+        ttfont['OS/2'].fsSelection |= 0b1000000
+    else:
+        ttfont['OS/2'].fsSelection &= ~0b1000000
+
+    if is_bold(stylename):
+        ttfont['OS/2'].fsSelection |= 0b100000
+    else:
+        ttfont['OS/2'].fsSelection &= ~0b100000
+
+    if is_italic(stylename):
+        ttfont['OS/2'].fsSelection |= 0b1
+    else:
+        ttfont['OS/2'].fsSelection &= ~0b1
+
+    if usetypometrics:
+        ttfont['OS/2'].version = 4
+        ttfont['OS/2'].fsSelection |= 0b10000000
+    else:
+        ttfont['OS/2'].fsSelection &= ~0b10000000
+
+    return ttfont['OS/2'].fsSelection != initial_value
 
 def convert_cmap_subtables_to_v4(font):
   """Converts all cmap subtables to format 4.
