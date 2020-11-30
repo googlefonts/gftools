@@ -400,3 +400,22 @@ def get_fsSelection_byte1(ttfont):
     return ttfont['OS/2'].fsSelection & 255
 
 
+def get_unencoded_glyphs(font):
+    """ Check if font has unencoded glyphs """
+    cmap = font['cmap']
+
+    new_cmap = cmap.getcmap(3, 10)
+    if not new_cmap:
+        for ucs2cmapid in ((3, 1), (0, 3), (3, 0)):
+            new_cmap = cmap.getcmap(ucs2cmapid[0], ucs2cmapid[1])
+            if new_cmap:
+                break
+
+    if not new_cmap:
+        return []
+
+    diff = list(set(font.getGlyphOrder()) -
+                set(new_cmap.cmap.values()) - {'.notdef'})
+    return [g for g in diff[:] if g != '.notdef']
+
+

@@ -3,7 +3,7 @@ Functions to fix fonts so they conform to the Google Fonts
 specification:
 https://github.com/googlefonts/gf-docs/tree/master/Spec
 """
-from fontTools.ttLib import TTFont, newTable
+from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
@@ -14,6 +14,7 @@ from gftools.utils import (
     font_stylename,
     font_familyname,
     family_bounding_box,
+    get_unencoded_glyphs,
     normalize_unicode_marks,
     partition_cmap,
     typo_metrics_enabled,
@@ -47,6 +48,7 @@ __all__ = [
     "drop_nonpid0_cmap",
     "drop_mac_cmap",
     "fix_fsselection",
+    "fix_pua",
     "fix_font",
     "fix_family",
 ]
@@ -570,6 +572,39 @@ def drop_mac_cmap(font, report=True):
   keep, drop = partition_cmap(font, lambda table: table.platformID != 1 or table.platEncID != 0, report)
   return drop
 
+def fix_pua(font):
+    unencoded_glyphs = get_unencoded_glyphs(font)
+    if not unencoded_glyphs:
+        return
+
+    ucs2cmap = None
+    cmap = font["cmap"]
+
+    # Check if an UCS-2 cmap exists
+    for ucs2cmapid in ((3, 1), (0, 3), (3, 0)):
+        ucs2cmap = cmap.getcmap(ucs2cmapid[0], ucs2cmapid[1])
+        if ucs2cmap:
+            break
+    # Create UCS-4 cmap and copy the contents of UCS-2 cmap
+    # unless UCS 4 cmap already exists
+    ucs4cmap = cmap.getcmap(3, 10)
+    if not ucs4cmap:
+        cmapModule = getTableModule('cmap')
+        ucs4cmap = cmapModule.cmap_format_12(12)
+        ucs4cmap.platformID = 3
+        ucs4cmap.platEncID = 10
+        ucs4cmap.language = 0
+        if ucs2cmap:
+            ucs4cmap.cmap = deepcopy(ucs2cmap.cmap)
+        cmap.tables.append(ucs4cmap)
+    # Map all glyphs to UCS-4 cmap Supplementary PUA-A codepoints
+    # by 0xF0000 + glyphID
+    ucs4cmap = cmap.getcmap(3, 10)
+    for glyphID, glyph in enumerate(font.getGlyphOrder()):
+        if glyph in unencoded_glyphs:
+            ucs4cmap.cmap[0xF0000 + glyphID] = glyph
+    font['cmap'] = cmap
+    return True
 
 def fix_font(font, include_source_fixes=False):
     font["OS/2"].version = 4
