@@ -187,17 +187,18 @@ def fix_weight_class(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    old_weight_class = font["OS/2"].usWeightClass
     stylename = font_stylename(ttFont)
     tokens = stylename.split()
     # Order WEIGHT_NAMES so longest names are first
     for style in sorted(WEIGHT_NAMES, key=lambda k: len(k), reverse=True):
         if style in tokens:
             ttFont["OS/2"].usWeightClass = WEIGHT_NAMES[style]
-            return
+            return ttFont["OS/2"].usWeightClass != old_weight_class
 
     if "Italic" in tokens:
         ttFont["OS/2"].usWeightClass = 400
-        return
+        return ttFont["OS/2"].usWeightClass != old_weight_class
     raise ValueError(
         f"Cannot determine usWeightClass because font style, '{stylename}' "
         f"doesn't have a weight token which is in our known "
