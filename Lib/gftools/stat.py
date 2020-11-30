@@ -12,7 +12,7 @@ following properties:
 - All fvar axes have the same ranges
 """
 from fontTools.otlLib.builder import buildStatTable
-from gftools.fix import font_stylename, font_familyname
+from gftools.utils import font_stylename, font_familyname
 from gftools.axisreg import axis_registry
 import logging
 

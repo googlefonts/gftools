@@ -7,7 +7,16 @@ from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
-from gftools.utils import download_family_from_Google_Fonts, Google_Fonts_has_family
+from gftools.utils import (
+    download_family_from_Google_Fonts,
+    Google_Fonts_has_family,
+    font_stylename,
+    font_familyname,
+    family_bounding_box,
+    typo_metrics_enabled,
+    validate_family,
+    unique_name,
+)
 from copy import deepcopy
 import logging
 
@@ -24,8 +33,6 @@ __all__ = [
     "fix_weight_class",
     "fix_fs_selection",
     "fix_mac_style",
-    "font_stylename",
-    "font_familyname",
     "fix_fvar_instances",
     "update_nametable",
     "fix_nametable",
@@ -219,49 +226,6 @@ def fix_mac_style(ttFont):
     ttFont["head"].macStyle = mac_style
 
 
-def font_stylename(ttFont):
-    """Get a font's stylename using the name table. Since our fonts use the
-    RIBBI naming model, use the Typographic SubFamily Name (NAmeID 17) if it
-    exists, otherwise use the SubFamily Name (NameID 2).
-
-    Args:
-        ttFont: a TTFont instance
-    """
-    return get_name_record(ttFont, 17, fallbackID=2)
-
-
-def font_familyname(ttFont):
-    """Get a font's familyname using the name table. since our fonts use the
-    RIBBI naming model, use the Typographic Family Name (NameID 16) if it
-    exists, otherwise use the Family Name (Name ID 1).
-
-    Args:
-        ttFont: a TTFont instance
-    """
-    return get_name_record(ttFont, 16, fallbackID=1)
-
-
-def get_name_record(ttFont, nameID, fallbackID=None, platform=(3, 1, 0x409)):
-    """Return a name table record which has the specified nameID.
-
-    Args:
-        ttFont: a TTFont instance
-        nameID: nameID of name record to return,
-        fallbackID: if nameID doesn't exist, use this nameID instead
-        platform: Platform of name record. Default is Win US English
-
-    Returns:
-        str
-    """
-    name = ttFont["name"]
-    record = name.getName(nameID, 3, 1, 0x409)
-    if not record and fallbackID:
-        record = name.getName(fallbackID, 3, 1, 0x409)
-    if not record:
-        raise ValueError(f"Cannot find record with nameID {nameID}")
-    return record.toUnicode()
-
-
 def fix_fvar_instances(ttFont):
     """Replace a variable font's fvar instances with a set of new instances
     that conform to the Google Fonts instance spec:
@@ -402,7 +366,7 @@ def update_nametable(ttFont, family_name=None, style_name=None):
     # create NameIDs 3, 4, 6
     nameids[4] = f"{family_name} {style_name}"
     nameids[6] = f"{family_name.replace(' ', '')}-{style_name.replace(' ', '')}"
-    nameids[3] = _unique_name(ttFont, nameids)
+    nameids[3] = unique_name(ttFont, nameids)
 
     # Pass through all records and replace occurences of the old family name
     # with the new family name
@@ -427,23 +391,6 @@ def update_nametable(ttFont, family_name=None, style_name=None):
         nametable.setName(string, nameID, 3, 1, 0x409)
 
 
-def _unique_name(ttFont, nameids):
-    font_version = _font_version(ttFont)
-    vendor = ttFont["OS/2"].achVendID.strip()
-    ps_name = nameids[6]
-    return f"{font_version};{vendor};{ps_name}"
-
-
-def _font_version(font, platEncLang=(3, 1, 0x409)):
-    nameRecord = font["name"].getName(5, *platEncLang)
-    if nameRecord is None:
-        return f'{font["head"].fontRevision:.3f}'
-    # "Version 1.101; ttfautohint (v1.8.1.43-b0c9)" --> "1.101"
-    # Also works fine with inputs "Version 1.101" or "1.101" etc
-    versionNumber = nameRecord.toUnicode().split(";")[0]
-    return versionNumber.lstrip("Version ").strip()
-
-
 def fix_nametable(ttFont):
     """Fix a static font's name table so it conforms to the Google Fonts
     supported styles table:
@@ -460,14 +407,6 @@ def fix_nametable(ttFont):
     family_name = font_familyname(ttFont)
     style_name = font_stylename(ttFont)
     update_nametable(ttFont, family_name, style_name)
-
-
-def _validate_family(ttFonts):
-    family_is_vf(ttFonts)
-    family_names = set(font_familyname(f) for f in ttFonts)
-    if len(family_names) != 1:
-        raise ValueError(f"Multiple families found {family_names}")
-    return True
 
 
 def inherit_vertical_metrics(ttFonts, family_name=None):
@@ -549,25 +488,6 @@ def copy_vertical_metrics(src_font, dst_font):
         setattr(dst_font[table], key, val)
 
 
-def family_bounding_box(ttFonts):
-    y_min = min(f["head"].yMin for f in ttFonts)
-    y_max = max(f["head"].yMax for f in ttFonts)
-    return y_min, y_max
-
-
-def typo_metrics_enabled(ttFont):
-    return True if ttFont["OS/2"].fsSelection & (1 << 7) else False
-
-
-def family_is_vf(ttFonts):
-    has_fvar = ["fvar" in ttFont for ttFont in ttFonts]
-    if any(has_fvar):
-        if all(has_fvar):
-            return True
-        raise ValueError("Families cannot contain both static and variable fonts")
-    return False
-
-
 def fix_italic_angle(ttFont):
     style_name = font_stylename(ttFont)
     if "Italic" not in style_name and ttFont["post"].italicAngle != 0:
@@ -609,7 +529,7 @@ def fix_font(font, include_source_fixes=False):
 
 def fix_family(fonts, include_source_fixes=False):
     """Fix all fonts in a family"""
-    _validate_family(fonts)
+    validate_family(fonts)
     family_name = font_familyname(fonts[0])
 
     for font in fonts:
