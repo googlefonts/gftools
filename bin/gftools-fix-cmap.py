@@ -45,6 +45,9 @@ def convert_cmap_subtables_to_v4(font):
 
 
 def remove_cmap_subtable(font, plat_id, enc_id):
+  """Drops all cmap tables with the given platform and encoding id.
+
+  Returns True if any tables were dropped, false otherwise."""
   to_be_removed = []
   for index, table in enumerate(font['cmap'].tables):
     if table.platformID == plat_id and table.platEncID == enc_id:
