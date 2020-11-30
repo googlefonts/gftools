@@ -61,28 +61,38 @@ def remove_cmap_subtable(font, plat_id, enc_id):
   return fixit
 
 
-def keep_only_specific_cmap(font, plat_id, enc_id=None):
-  to_be_removed = []
+def filter_cmap(font, plat_id, enc_id=None):
+  """Drops all cmap tables which do not match the given platform ID and
+  (if provided) encoding ID.
+
+  Returns two lists: a list of `fontTools.ttLib.tables._c_m_a_p.*` objects
+  which were kept in the font, and a list of those which were removed."""
+  keep = []
+  drop = []
+
   for index, table in enumerate(font['cmap'].tables):
     if table.platformID != plat_id and (enc_id==None or table.platEncID != enc_id):
-      to_be_removed.append(index)
+      drop.append(table)
     else:
+      keep.append(table)
+
+  font['cmap'].tables = keep
+  return keep, drop
+
+
+def drop_nonpid0_cmap(font):
+  keep, drop = filter_cmap(font, 0)
+  for table in keep:
       print(("Keeping format {} cmap subtable with Platform ID = {}"
              " and Encoding ID = {}").format(table.format,
                                              table.platformID,
                                              table.platEncID))
-
-  to_be_removed.reverse()
-  for index in to_be_removed:
-    table = font['cmap'].tables[index]
-    print(("--- Removed format {} cmap subtable with Platform ID = {}"
+  for table in drop:
+      print(("--- Removed format {} cmap subtable with Platform ID = {}"
            " and Encoding ID = {} ---").format(table.format,
                                                table.platformID,
                                                table.platEncID))
-    font['cmap'].tables.remove(table)
-
-  fixit = len(to_be_removed) > 0
-  return fixit
+  return drop
 
 
 def main():
@@ -117,7 +127,7 @@ def main():
     if args.keep_only_pid_0:
       print('\nDropping all Cmap subtables,'
             ' except the ones with PlatformId = 0...')
-      dropped = keep_only_specific_cmap(font, 0)
+      dropped = drop_nonpid0_cmap(font)
       fixit = fixit or dropped
     elif args.drop_mac_subtable:
       print('\nDropping any Cmap Mac subtable...')
