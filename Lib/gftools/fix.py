@@ -5,6 +5,7 @@ https://github.com/googlefonts/gf-docs/tree/master/Spec
 """
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import ttProgram
+from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
 from gftools.utils import (
@@ -14,6 +15,7 @@ from gftools.utils import (
     font_familyname,
     family_bounding_box,
     normalize_unicode_marks,
+    partition_cmap,
     typo_metrics_enabled,
     validate_family,
     unique_name,
@@ -502,6 +504,37 @@ def fix_ascii_fontmetadata(font):
         title = name.string.decode(name.getEncoding())
         title = normalize_unicode_marks(title)
         name.string = title.encode(name.getEncoding())
+
+
+def convert_cmap_subtables_to_v4(font):
+  """Converts all cmap subtables to format 4.
+
+  Returns a list of tuples (format, platformID, platEncID) of the tables
+  which needed conversion."""
+  cmap = font['cmap']
+  outtables = []
+  converted = []
+  for table in cmap.tables:
+    if table.format != 4:
+      converted.append((table.format, table.platformID, table.platEncID))
+    newtable = CmapSubtable.newSubtable(4)
+    newtable.platformID = table.platformID
+    newtable.platEncID = table.platEncID
+    newtable.language = table.language
+    newtable.cmap = table.cmap
+    outtables.append(newtable)
+  font['cmap'].tables = outtables
+  return converted
+
+
+def drop_nonpid0_cmap(font, report=True):
+  keep, drop = partition_cmap(font, lambda table: table.platformID == 0, report)
+  return drop
+
+
+def drop_mac_cmap(font, report=True):
+  keep, drop = partition_cmap(font, lambda table: table.platformID != 1 or table.platEncID != 0, report)
+  return drop
 
 
 def fix_font(font, include_source_fixes=False):

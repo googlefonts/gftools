@@ -329,6 +329,41 @@ def _font_version(font, platEncLang=(3, 1, 0x409)):
     return versionNumber.lstrip("Version ").strip()
 
 
+def partition_cmap(font, test, report=True):
+  """Drops all cmap tables from the font which do not pass the supplied test.
+
+  Arguments:
+    font: A ``TTFont`` instance
+    test: A function which takes a cmap table and returns True if it should
+      be kept or False if it should be removed from the font.
+    report: Reports to stdout which tables were dropped and which were kept.
+
+  Returns two lists: a list of `fontTools.ttLib.tables._c_m_a_p.*` objects
+  which were kept in the font, and a list of those which were removed."""
+  keep = []
+  drop = []
+
+  for index, table in enumerate(font['cmap'].tables):
+    if test(table):
+      keep.append(table)
+    else:
+      drop.append(table)
+
+  if report:
+    for table in keep:
+        print(("Keeping format {} cmap subtable with Platform ID = {}"
+               " and Encoding ID = {}").format(table.format,
+                                               table.platformID,
+                                               table.platEncID))
+    for table in drop:
+        print(("--- Removed format {} cmap subtable with Platform ID = {}"
+             " and Encoding ID = {} ---").format(table.format,
+                                                 table.platformID,
+                                                 table.platEncID))
+
+  font['cmap'].tables = keep
+  return keep, drop
+
 def _unicode_marks(string):
     unicodemap = [(u'©', '(c)'), (u'®', '(r)'), (u'™', '(tm)')]
     return filter(lambda char: char[0] in string, unicodemap)
