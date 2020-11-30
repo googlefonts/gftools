@@ -328,3 +328,30 @@ def _font_version(font, platEncLang=(3, 1, 0x409)):
     versionNumber = nameRecord.toUnicode().split(";")[0]
     return versionNumber.lstrip("Version ").strip()
 
+
+def _unicode_marks(string):
+    unicodemap = [(u'©', '(c)'), (u'®', '(r)'), (u'™', '(tm)')]
+    return filter(lambda char: char[0] in string, unicodemap)
+
+
+def normalize_unicode_marks(string):
+    """ Converts special characters like copyright,
+        trademark signs to ascii name """
+    # print("input: '{}'".format(string))
+    input_string = string
+    for mark, ascii_repl in _unicode_marks(string):
+        string = string.replace(mark, ascii_repl)
+
+    rv = []
+#    for c in unicodedata.normalize('NFKC', smart_text(string)):
+    for c in unicodedata.normalize('NFKC', string):
+        # cat = unicodedata.category(c)[0]
+        # if cat in 'LN' or c in ok:
+        rv.append(c)
+
+    new = ''.join(rv).strip()
+    result = unidecode(new)
+    if result != input_string:
+        print("Fixed string: '{}'".format(result))
+    return result
+

@@ -13,6 +13,7 @@ from gftools.utils import (
     font_stylename,
     font_familyname,
     family_bounding_box,
+    normalize_unicode_marks,
     typo_metrics_enabled,
     validate_family,
     unique_name,
@@ -493,6 +494,14 @@ def fix_italic_angle(ttFont):
     if "Italic" not in style_name and ttFont["post"].italicAngle != 0:
         ttFont["post"].italicAngle = 0
     # TODO (Marc F) implement for italic fonts
+
+
+def fix_ascii_fontmetadata(font):
+    """Fixes TTF 'name' table strings to be ascii only"""
+    for name in font['name'].names:
+        title = name.string.decode(name.getEncoding())
+        title = normalize_unicode_marks(title)
+        name.string = title.encode(name.getEncoding())
 
 
 def fix_font(font, include_source_fixes=False):
