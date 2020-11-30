@@ -44,26 +44,14 @@ def convert_cmap_subtables_to_v4(font):
   return converted
 
 
-def remove_cmap_subtable(font, plat_id, enc_id):
-  """Drops all cmap tables with the given platform and encoding id.
+def partition_cmap(font, test, report=True):
+  """Drops all cmap tables from the font which do not pass the supplied test.
 
-  Returns True if any tables were dropped, false otherwise."""
-  to_be_removed = []
-  for index, table in enumerate(font['cmap'].tables):
-    if table.platformID == plat_id and table.platEncID == enc_id:
-      to_be_removed.append(index)
-
-  to_be_removed.reverse()
-  for index in to_be_removed:
-    font['cmap'].tables.remove(table)
-
-  fixit = len(to_be_removed) > 0
-  return fixit
-
-
-def filter_cmap(font, plat_id, enc_id=None):
-  """Drops all cmap tables which do not match the given platform ID and
-  (if provided) encoding ID.
+  Arguments:
+    font: A ``TTFont`` instance
+    test: A function which takes a cmap table and returns True if it should
+      be kept or False if it should be removed from the font.
+    report: Reports to stdout which tables were dropped and which were kept.
 
   Returns two lists: a list of `fontTools.ttLib.tables._c_m_a_p.*` objects
   which were kept in the font, and a list of those which were removed."""
@@ -71,29 +59,34 @@ def filter_cmap(font, plat_id, enc_id=None):
   drop = []
 
   for index, table in enumerate(font['cmap'].tables):
-    if table.platformID != plat_id and (enc_id==None or table.platEncID != enc_id):
-      drop.append(table)
-    else:
+    if test(table):
       keep.append(table)
+    else:
+      drop.append(table)
+
+  if report:
+    for table in keep:
+        print(("Keeping format {} cmap subtable with Platform ID = {}"
+               " and Encoding ID = {}").format(table.format,
+                                               table.platformID,
+                                               table.platEncID))
+    for table in drop:
+        print(("--- Removed format {} cmap subtable with Platform ID = {}"
+             " and Encoding ID = {} ---").format(table.format,
+                                                 table.platformID,
+                                                 table.platEncID))
 
   font['cmap'].tables = keep
   return keep, drop
 
 
-def drop_nonpid0_cmap(font):
-  keep, drop = filter_cmap(font, 0)
-  for table in keep:
-      print(("Keeping format {} cmap subtable with Platform ID = {}"
-             " and Encoding ID = {}").format(table.format,
-                                             table.platformID,
-                                             table.platEncID))
-  for table in drop:
-      print(("--- Removed format {} cmap subtable with Platform ID = {}"
-           " and Encoding ID = {} ---").format(table.format,
-                                               table.platformID,
-                                               table.platEncID))
+def drop_nonpid0_cmap(font, report=True):
+  keep, drop = partition_cmap(font, lambda table: table.platformID == 0, report)
   return drop
 
+def drop_mac_cmap(font, report=True):
+  keep, drop = partition_cmap(font, lambda table: table.platformID != 1 or table.platEncID != 0, report)
+  return drop
 
 def main():
   parser = ArgumentParser(description=description)
@@ -131,7 +124,7 @@ def main():
       fixit = fixit or dropped
     elif args.drop_mac_subtable:
       print('\nDropping any Cmap Mac subtable...')
-      dropped = remove_cmap_subtable(font, 1, 0)
+      dropped = drop_mac_cmap(font)
       fixit = fixit or dropped
 
     if fixit:
