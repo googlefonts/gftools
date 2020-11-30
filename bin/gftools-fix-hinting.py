@@ -29,24 +29,14 @@ Bit 3 = Force ppem to integer values for all internal scaler math;
 from __future__ import print_function, unicode_literals
 import argparse
 from fontTools.ttLib import TTFont
-from gftools.fix import fix_hinted_font
-
-
-def font_has_hinting(font):
-    return 'fpgm' in font
-
+from gftools.fix import fix_hinted_font, FontFixer
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("font")
     args = parser.parse_args()
 
-    font = TTFont(args.font)
-    if font_has_hinting(font):
-        fix_hinted_font(font)
-    else:
-        print("Skipping. Font is not hinted")
-    font.save(args.font + ".fix")
+    FontFixer(args.font, fixes=[fix_hinted_font], verbose=True).fix()
 
 
 if __name__ == '__main__':

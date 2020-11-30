@@ -14,13 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from os.path import basename
 from argparse import ArgumentParser
-from fontTools.ttLib import TTFont
-from gftools.fix import convert_cmap_subtables_to_v4, drop_nonpid0_cmap, drop_mac_cmap
+from gftools.fix import convert_cmap_subtables_to_v4, drop_nonpid0_cmap, drop_mac_cmap, FontFixer
 
 description = "Manipulate a collection of fonts' cmap tables."
 
+
+def convert_cmap_subtables_to_v4_with_report(font):
+  converted = convert_cmap_subtables_to_v4(font)
+  for c in converted:
+    print(('Converted format {} cmap subtable'
+     ' with Platform ID = {} and Encoding ID = {}'
+     ' to format 4.').format(c))
+  return converted
 
 def main():
   parser = ArgumentParser(description=description)
@@ -38,35 +44,20 @@ def main():
   args = parser.parse_args()
 
   for path in args.fonts:
-    font = TTFont(path)
-    font_filename = basename(path)
-    fixit = False
-
+    fixer = FontFixer(path, verbose=True)
     if args.format_4_subtables:
       print('\nConverting Cmap subtables to format 4...')
-      converted = convert_cmap_subtables_to_v4(font)
-      for c in converted:
-        print(('Converted format {} cmap subtable'
-         ' with Platform ID = {} and Encoding ID = {}'
-         ' to format 4.').format(c))
-      fixit = fixit or converted
+      fixer.fixes.append(convert_cmap_subtables_to_v4_with_report)
 
     if args.keep_only_pid_0:
       print('\nDropping all Cmap subtables,'
             ' except the ones with PlatformId = 0...')
-      dropped = drop_nonpid0_cmap(font)
-      fixit = fixit or dropped
+      fixer.fixes.append(drop_nonpid0_cmap)
     elif args.drop_mac_subtable:
       print('\nDropping any Cmap Mac subtable...')
-      dropped = drop_mac_cmap(font)
-      fixit = fixit or dropped
+      fixer.fixes.append(drop_mac_cmap)
 
-    if fixit:
-      print('\n\nSaving %s to %s.fix' % (font_filename, path))
-      font.save(path + '.fix')
-    else:
-      print('\n\nThere were no changes needed on the font file!')
-
+    fixer.fix()
 
 if __name__ == '__main__':
   main()

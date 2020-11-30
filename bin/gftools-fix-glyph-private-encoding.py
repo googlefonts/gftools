@@ -19,7 +19,7 @@
 import argparse
 import os
 from fontTools import ttLib
-from gftools.fix import fix_pua
+from gftools.fix import fix_pua, FontFixer
 from gftools.utils import get_unencoded_glyphs
 
 
@@ -33,21 +33,6 @@ parser.add_argument('--autofix', action="store_true",
                          'Otherwise just check if there are unencoded glyphs')
 
 
-class AddSPUAByGlyphIDToCmap(object):
-
-    def __init__(self, path):
-        self.font = ttLib.TTFont(path)
-        self.path = path
-        self.saveit = False
-
-    def __del__(self):
-        if self.saveit:
-            self.font.save(self.path + ".fix")
-
-    def fix(self):
-        self.saveit = fix_pua(self.font)
-
-
 def main():
   args = parser.parse_args()
   for path in args.ttf_font:
@@ -55,7 +40,7 @@ def main():
       continue
 
     if args.autofix:
-      AddSPUAByGlyphIDToCmap(path).fix()
+      FontFixer(path, fixes=[fix_pua], verbose=True).fix()
     else:
       font = ttLib.TTFont(path, 0)
       print(("\nThese are the unencoded glyphs in font file '{0}':\n"

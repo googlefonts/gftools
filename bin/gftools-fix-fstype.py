@@ -26,8 +26,7 @@ https://www.microsoft.com/typography/otspec/os2.htm#fst
 from __future__ import print_function
 from argparse import (ArgumentParser,
                       RawTextHelpFormatter)
-from fontTools.ttLib import TTFont
-from gftools.fix import fix_fs_type
+from gftools.fix import fix_fs_type, FontFixer
 parser = ArgumentParser(description=__doc__,
                         formatter_class=RawTextHelpFormatter)
 parser.add_argument('fonts',
@@ -38,14 +37,7 @@ parser.add_argument('fonts',
 def main():
   args = parser.parse_args()
   for font_path in args.fonts:
-    font = TTFont(font_path)
-
-    if font['OS/2'].fsType != 0:
-      fix_fs_type(font)
-      font.save(font_path + '.fix')
-      print('font saved %s.fix' % font_path)
-    else:
-      print('SKIPPING: %s fsType is already 0' % font_path)
+    FontFixer(font_path, fixes=[fix_fs_type], verbose=True).fix()
 
 
 if __name__ == '__main__':

@@ -24,6 +24,7 @@ from gftools.utils import (
 )
 from gftools.util.styles import (get_stylename, is_regular, is_bold, is_italic)
 
+from os.path import basename
 from copy import deepcopy
 import logging
 
@@ -160,7 +161,11 @@ def fix_hinted_font(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    if not 'fpgm' in ttFont:
+        return False, ["Skipping. Font is not hinted."]
+    old = ttFont["head"].flags
     ttFont["head"].flags |= 1 << 3
+    return ttFont["head"].flags != old
 
 
 def fix_fs_type(ttFont):
@@ -169,7 +174,9 @@ def fix_fs_type(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    old = ttFont["OS/2"].fsType
     ttFont["OS/2"].fsType = 0
+    return old != 0
 
 
 def fix_weight_class(ttFont):
@@ -615,15 +622,18 @@ def fix_isFixedPitch(ttfont):
 
     same_width = set()
     glyph_metrics = ttfont['hmtx'].metrics
+    messages = []
+    changed = False
     for character in [chr(c) for c in range(65, 91)]:
         same_width.add(glyph_metrics[character][0])
 
     if len(same_width) == 1:
         if ttfont['post'].isFixedPitch == 1:
-            print("Skipping isFixedPitch is set correctly")
+            messages.append("Skipping isFixedPitch is set correctly")
         else:
-            print("Font is monospace. Updating isFixedPitch to 0")
+            messages.append("Font is monospace. Updating isFixedPitch to 0")
             ttfont['post'].isFixedPitch = 1
+            changed = True
 
         familyType = ttfont['OS/2'].panose.bFamilyType
         if familyType == 2:
@@ -631,43 +641,50 @@ def fix_isFixedPitch(ttfont):
         elif familyType == 3 or familyType == 5:
             expected = 3
         elif familyType == 0:
-            print("Font is monospace but panose fields seems to be not set."
+            messages.append("Font is monospace but panose fields seems to be not set."
                   " Setting values to defaults (FamilyType = 2, Proportion = 9).")
             ttfont['OS/2'].panose.bFamilyType = 2
             ttfont['OS/2'].panose.bProportion = 9
+            changed = True
             expected = None
         else:
             expected = None
 
         if expected:
             if ttfont['OS/2'].panose.bProportion == expected:
-                print("Skipping OS/2.panose.bProportion is set correctly")
+                messages.append("Skipping OS/2.panose.bProportion is set correctly")
             else:
-                print(("Font is monospace."
+                messages.append(("Font is monospace."
                        " Since OS/2.panose.bFamilyType is {}"
                        " we're updating OS/2.panose.bProportion"
                        " to {}").format(familyType, expected))
                 ttfont['OS/2'].panose.bProportion = expected
+                changed = True
 
         widths = [m[0] for m in ttfont['hmtx'].metrics.values() if m[0] > 0]
         width_max = max(widths)
         if ttfont['hhea'].advanceWidthMax == width_max:
-            print("Skipping hhea.advanceWidthMax is set correctly")
+            messages.append("Skipping hhea.advanceWidthMax is set correctly")
         else:
-            print("Font is monospace. Updating hhea.advanceWidthMax to %i" %
+            messsages.append("Font is monospace. Updating hhea.advanceWidthMax to %i" %
                   width_max)
             ttfont['hhea'].advanceWidthMax = width_max
+            changed = True
 
         avg_width = otRound(sum(widths) / len(widths))
         if avg_width == ttfont['OS/2'].xAvgCharWidth:
-            print("Skipping OS/2.xAvgCharWidth is set correctly")
+            messages.append("Skipping OS/2.xAvgCharWidth is set correctly")
         else:
-            print("Font is monospace. Updating OS/2.xAvgCharWidth to %i" %
+            messages.append("Font is monospace. Updating OS/2.xAvgCharWidth to %i" %
                   avg_width)
             ttfont['OS/2'].xAvgCharWidth = avg_width
+            changed = True
     else:
+        if ttfont['post'].isFixedPitch != 0 or ttfont['OS/2'].panose.bProportion != 0:
+            changed = True
         ttfont['post'].isFixedPitch = 0
         ttfont['OS/2'].panose.bProportion = 0
+    return changed, messages
 
 
 def drop_superfluous_mac_names(ttfont):
@@ -693,19 +710,25 @@ def drop_superfluous_mac_names(ttfont):
 
     https://www.microsoft.com/typography/otspec/name.htm"""
     keep_ids = [1, 2, 3, 4, 5, 6, 16, 17, 18, 20, 21, 22, 25]
+    changed = False
     for n in range(255):
         if n not in keep_ids:
             name = ttfont['name'].getName(n, 1, 0, 0)
             if name:
+                changed = True
                 ttfont['name'].names.remove(name)
+    return changed
 
 
 def drop_mac_names(ttfont):
     """Drop all mac names"""
+    changed = False
     for n in range(255):
         name = ttfont['name'].getName(n, 1, 0, 0)
         if name:
             ttfont['name'].names.remove(name)
+            changed = True
+    return changed
 
 
 def fix_font(font, include_source_fixes=False):
@@ -765,16 +788,46 @@ def fix_family(fonts, include_source_fixes=False):
         fix_vertical_metrics(fonts)
 
 
-class GaspFixer():
-
-    def __init__(self, path):
-        self.font = ttLib.TTFont(path)
+class FontFixer():
+    def __init__(self, path, report=True, verbose=False, **kwargs):
+        self.font = TTFont(path)
         self.path = path
+        self.font_filename = basename(path)
         self.saveit = False
+        self.report = report
+        self.verbose = verbose
+        self.messages = []
+        self.args = kwargs
+        self.fixes = []
+        if "fixes" in kwargs:
+            self.fixes = kwargs["fixes"]
 
     def __del__(self):
+        if self.report:
+            print("\n".join(self.messages))
         if self.saveit:
+            if self.verbose:
+                print('Saving %s to %s.fix' % (self.font_filename, self.path))
             self.font.save(self.path + ".fix")
+        elif self.verbose:
+            print('There were no changes needed on %s!' % self.font_filename)
+
+    def show(self):
+        pass
+
+    def fix(self):
+        for f in self.fixes:
+            rv = f(self.font)
+            if isinstance(rv, tuple) and len(rv) == 2:
+                changed, messages = rv
+                self.messages.extend(messages)
+            else:
+                changed = rv
+            if changed:
+                self.saveit = True
+
+
+class GaspFixer(FontFixer):
 
     def fix(self, value=15):
         try:

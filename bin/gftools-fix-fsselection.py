@@ -23,7 +23,7 @@ from fontTools import ttLib
 import tabulate
 from gftools.utils import get_fsSelection_byte1, get_fsSelection_byte2
 from gftools.util.styles import STYLE_NAMES, is_filename_canonical
-from gftools.fix import fix_fsselection
+from gftools.fix import fix_fsselection, FontFixer
 
 parser = argparse.ArgumentParser(description='Print out fsSelection'
                                              ' bitmask of the fonts')
@@ -61,7 +61,6 @@ def main():
   if args.autofix:
     fixed_fonts = []
     for font in args.font:
-      ttfont = ttLib.TTFont(font)
       filename = os.path.basename(font)
 
       if not is_filename_canonical(filename):
@@ -70,10 +69,11 @@ def main():
               f"the style must be any of the following {STYLE_NAMES}")
         exit(-1)
 
-      if fix_fsselection(ttfont, filename):
+      fixer = FontFixer(font)
+      fixer.fixes = [lambda f: fix_fsselection(f, filename)]
+      fixer.fix()
+      if fixer.saveit:
         fixed_fonts.append(font)
-        ttfont.save(font + '.fix')
-
 
     if len(fixed_fonts) > 0:
       printInfo([f + '.fix' for f in fixed_fonts], print_csv=args.csv)

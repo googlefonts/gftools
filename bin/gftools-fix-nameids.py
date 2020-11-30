@@ -19,7 +19,7 @@ import os
 import tabulate
 from fontTools import ttLib
 from gftools.utils import has_mac_names
-from gftools.fix import drop_mac_names, drop_superfluous_mac_names
+from gftools.fix import drop_mac_names, drop_superfluous_mac_names, FontFixer
 
 
 parser = argparse.ArgumentParser(description='Print out nameID'
@@ -39,6 +39,14 @@ parser.add_argument('--drop-mac-names', '-m', default=False,
                     action='store_true',
                     help='Drop all Mac name fields')
 
+
+def delete_non_platform1_names(font):
+    changed = False
+    for name in font['name'].names:
+        if name.platformID != 1:
+            del name
+            changed = True
+    return changed
 
 def main():
     args = parser.parse_args()
@@ -78,31 +86,22 @@ def main():
     print(tabulate.tabulate(rows, header, tablefmt="pipe"))
 
     for path in args.font:
-        font = ttLib.TTFont(path)
-        saveit = False
-
+        fixer = FontFixer(path, verbose=True)
         if args.autofix:
-            for name in font['name'].names:
-                if name.platformID != 1:
-                    saveit = True
-                    del name
-
+            fixer.fixes.append(delete_non_platform1_names)
         if args.drop_superfluous_mac_names:
-            if has_mac_names(font):
-                drop_superfluous_mac_names(font)
-                saveit = True
+            if has_mac_names(ttLib.TTFont(path)):
+                fixer.fixes.append(drop_superfluous_mac_names)
             else:
                 print('font %s has no mac nametable' % path)
 
         if args.drop_mac_names:
-            if has_mac_names(font):
-                drop_mac_names(font)
-                saveit = True
+            if has_mac_names(ttLib.TTFont(path)):
+                fixer.fixes.append(drop_mac_names)
             else:
                 print('font %s has no mac nametable' % path)
 
-        if saveit:
-                font.save(path + ".fix")
+        fixer.fix()
 
 
 if __name__ == '__main__':
