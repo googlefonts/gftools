@@ -24,17 +24,16 @@ description = "Manipulate a collection of fonts' cmap tables."
 
 
 def convert_cmap_subtables_to_v4(font):
+  """Converts all cmap subtables to format 4.
+
+  Returns a list of tuples (format, platformID, platEncID) of the tables
+  which needed conversion."""
   cmap = font['cmap']
   outtables = []
-  fixit = False
+  converted = []
   for table in cmap.tables:
     if table.format != 4:
-      print(('Converted format {} cmap subtable'
-             ' with Platform ID = {} and Encoding ID = {}'
-             ' to format 4.').format(table.format,
-                                     table.platformID,
-                                     table.platEncID))
-      fixit = True
+      converted.append((table.format, table.platformID, table.platEncID))
     newtable = CmapSubtable.newSubtable(4)
     newtable.platformID = table.platformID
     newtable.platEncID = table.platEncID
@@ -42,7 +41,7 @@ def convert_cmap_subtables_to_v4(font):
     newtable.cmap = table.cmap
     outtables.append(newtable)
   font['cmap'].tables = outtables
-  return fixit
+  return converted
 
 
 def remove_cmap_subtable(font, plat_id, enc_id):
@@ -105,7 +104,12 @@ def main():
 
     if args.format_4_subtables:
       print('\nConverting Cmap subtables to format 4...')
-      fixit = convert_cmap_subtables_to_v4(font)
+      converted = convert_cmap_subtables_to_v4(font)
+      for c in converted:
+        print(('Converted format {} cmap subtable'
+         ' with Platform ID = {} and Encoding ID = {}'
+         ' to format 4.').format(c))
+      fixit = fixit or converted
 
     if args.keep_only_pid_0:
       print('\nDropping all Cmap subtables,'
