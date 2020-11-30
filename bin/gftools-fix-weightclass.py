@@ -15,8 +15,8 @@
 #
 """
 A Python script to set a font's OS/2 usWeightClass value so it conforms to
-the Google Fonts specification. The font's filename is used to determine
-the correct value.
+the Google Fonts specification. The font's style name in the name record is
+used to determine the correct value.
 """
 from __future__ import print_function
 from gftools.fix import fix_weight_class, FontFixer
