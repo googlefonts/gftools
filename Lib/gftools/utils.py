@@ -419,3 +419,11 @@ def get_unencoded_glyphs(font):
     return [g for g in diff[:] if g != '.notdef']
 
 
+def has_mac_names(ttfont):
+    """Check if a font has Mac names. Mac names have the following
+    field values:
+    platformID: 1, encodingID: 0, LanguageID: 0"""
+    for i in range(255):
+        if ttfont['name'].getName(i, 1, 0, 0):
+            return True
+    return False

@@ -51,6 +51,8 @@ __all__ = [
     "fix_fsselection",
     "fix_pua",
     "fix_isFixedPitch",
+    "drop_mac_names",
+    "drop_superfluous_mac_names",
     "fix_font",
     "fix_family",
 ]
@@ -666,6 +668,44 @@ def fix_isFixedPitch(ttfont):
     else:
         ttfont['post'].isFixedPitch = 0
         ttfont['OS/2'].panose.bProportion = 0
+
+
+def drop_superfluous_mac_names(ttfont):
+    """Drop superfluous Mac nameIDs.
+
+    The following nameIDS are kept:
+    1: Font Family name,
+    2: Font Family Subfamily name,
+    3: Unique font identifier,
+    4: Full font name,
+    5: Version string,
+    6: Postscript name,
+    16: Typographic family name,
+    17: Typographic Subfamily name
+    18: Compatible full (Macintosh only),
+    20: PostScript CID,
+    21: WWS Family Name,
+    22: WWS Subfamily Name,
+    25: Variations PostScript Name Prefix.
+
+    We keep these IDs in order for certain application to still function
+    such as Word 2011. IDs 1-6 are very common, > 16 are edge cases.
+
+    https://www.microsoft.com/typography/otspec/name.htm"""
+    keep_ids = [1, 2, 3, 4, 5, 6, 16, 17, 18, 20, 21, 22, 25]
+    for n in range(255):
+        if n not in keep_ids:
+            name = ttfont['name'].getName(n, 1, 0, 0)
+            if name:
+                ttfont['name'].names.remove(name)
+
+
+def drop_mac_names(ttfont):
+    """Drop all mac names"""
+    for n in range(255):
+        name = ttfont['name'].getName(n, 1, 0, 0)
+        if name:
+            ttfont['name'].names.remove(name)
 
 
 def fix_font(font, include_source_fixes=False):
