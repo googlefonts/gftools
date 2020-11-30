@@ -41,6 +41,9 @@ __all__ = [
     "fix_nametable",
     "inherit_vertical_metrics",
     "fix_vertical_metrics",
+    "fix_ascii_fontmetadata",
+    "drop_nonpid0_cmap",
+    "drop_mac_cmap",
     "fix_font",
     "fix_family",
 ]
