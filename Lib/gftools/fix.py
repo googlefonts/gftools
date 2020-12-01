@@ -186,7 +186,7 @@ def fix_weight_class(ttFont):
     Args:
         ttFont: a TTFont instance
     """
-    old_weight_class = font["OS/2"].usWeightClass
+    old_weight_class = ttFont["OS/2"].usWeightClass
     stylename = font_stylename(ttFont)
     tokens = stylename.split()
     # Order WEIGHT_NAMES so longest names are first
