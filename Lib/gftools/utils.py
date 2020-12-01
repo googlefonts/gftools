@@ -25,6 +25,7 @@ import unicodedata
 from unidecode import unidecode
 from collections import namedtuple
 from github import Github
+from pkg_resources import resource_filename
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -430,7 +431,30 @@ def has_mac_names(ttfont):
             return True
     return False
 
+
 def font_is_italic(ttfont):
     """Check if the font has the word "Italic" in its stylename."""
     stylename = ttfont["name"].getName(2, 3, 1, 0x409).toUnicode()
     return True if "Italic" in stylename else False
+
+
+def udhr_font_words(ttFont):
+    """Collect words which exist in the Universal Declaration of Human Rights
+    that can be formed using the ttFont instance.
+
+    UDHR has been chosen due to the many languages it covers"""
+    with open(resource_filename("gftools", "udhr_all.txt")) as doc:
+        text = doc.read()
+
+    cmap = set(ttFont.getBestCmap())
+    words = []
+    seen_chars = set()
+    for word in text.split():
+        chars = set(ord(l) for l in word)
+        if not chars.issubset(cmap):
+            continue
+        if chars & seen_chars == chars:
+            continue
+        seen_chars |= chars
+        words.append(word)
+    return words
