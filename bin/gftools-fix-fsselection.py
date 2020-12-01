@@ -23,7 +23,7 @@ from fontTools import ttLib
 import tabulate
 from gftools.utils import get_fsSelection_byte1, get_fsSelection_byte2
 from gftools.util.styles import STYLE_NAMES, is_filename_canonical
-from gftools.fix import fix_fsselection, FontFixer
+from gftools.fix import fix_fs_selection, FontFixer
 
 parser = argparse.ArgumentParser(description='Print out fsSelection'
                                              ' bitmask of the fonts')
@@ -70,7 +70,7 @@ def main():
         exit(-1)
 
       fixer = FontFixer(font)
-      fixer.fixes = [lambda f: fix_fsselection(f, filename)]
+      fixer.fixes = [fix_fs_selection]
       fixer.fix()
       if fixer.saveit:
         fixed_fonts.append(font)

@@ -49,7 +49,6 @@ __all__ = [
     "fix_ascii_fontmetadata",
     "drop_nonpid0_cmap",
     "drop_mac_cmap",
-    "fix_fsselection",
     "fix_pua",
     "fix_isFixedPitch",
     "drop_mac_names",
@@ -216,7 +215,7 @@ def fix_fs_selection(ttFont):
     """
     stylename = font_stylename(ttFont)
     tokens = set(stylename.split())
-    fs_selection = ttFont["OS/2"].fsSelection
+    old_selection = fs_selection = ttFont["OS/2"].fsSelection
 
     # turn off all bits except for bit 7 (USE_TYPO_METRICS)
     fs_selection &= 1 << 7
@@ -229,6 +228,7 @@ def fix_fs_selection(ttFont):
     if not tokens & set(["Bold", "Italic"]):
         fs_selection |= 1 << 6
     ttFont["OS/2"].fsSelection = fs_selection
+    return old_selection != fs_selection
 
 
 def fix_mac_style(ttFont):
@@ -525,34 +525,6 @@ def fix_ascii_fontmetadata(font):
         title = normalize_unicode_marks(title)
         name.string = title.encode(name.getEncoding())
 
-
-def fix_fsselection(ttfont, filename, usetypometrics=False):
-    stylename = get_stylename(filename)
-
-    initial_value = ttfont['OS/2'].fsSelection
-
-    if is_regular(stylename):
-        ttfont['OS/2'].fsSelection |= 0b1000000
-    else:
-        ttfont['OS/2'].fsSelection &= ~0b1000000
-
-    if is_bold(stylename):
-        ttfont['OS/2'].fsSelection |= 0b100000
-    else:
-        ttfont['OS/2'].fsSelection &= ~0b100000
-
-    if is_italic(stylename):
-        ttfont['OS/2'].fsSelection |= 0b1
-    else:
-        ttfont['OS/2'].fsSelection &= ~0b1
-
-    if usetypometrics:
-        ttfont['OS/2'].version = 4
-        ttfont['OS/2'].fsSelection |= 0b10000000
-    else:
-        ttfont['OS/2'].fsSelection &= ~0b10000000
-
-    return ttfont['OS/2'].fsSelection != initial_value
 
 def convert_cmap_subtables_to_v4(font):
   """Converts all cmap subtables to format 4.
