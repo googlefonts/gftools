@@ -48,7 +48,7 @@ from gftools.fix import (
     fix_weight_class,
     fix_hinted_font,
 )
-from gftools.builder.gen_stat import gen_stat
+from gftools.stat import gen_stat_tables
 from babelfont import Babelfont
 import sys
 import os
@@ -157,7 +157,7 @@ class GFBuilder:
             newname = self.rename_variable(output_files[0])
             self.post_process_variable(newname)
             all_variables.append(newname)
-        gen_stat(all_variables, config=self.config)
+        self.gen_stat(all_variables)
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:
@@ -192,6 +192,12 @@ class GFBuilder:
         newname = fontfile.replace("-VF.ttf", "[%s].ttf" % axes)
         os.rename(fontfile, newname)
         return newname
+
+    def gen_stat(self, filenames):
+        ttFonts = [TTFont(x) for x in filenames]
+        gen_stat_tables(ttFonts, self.config["axisOrder"])
+        for filename, ttFont in zip(filenames, ttFonts):
+            ttFont.save(filename)
 
     def build_static(self):
         self.build_a_static_format("otf", self.config["otDir"], self.post_process_otf)
