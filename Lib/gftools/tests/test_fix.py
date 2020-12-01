@@ -59,6 +59,7 @@ def test_add_dummy_dsig(static_font):
 def test_fix_hinted_font(static_font):
     static_font["head"].flags &= ~(1 << 3)
     assert static_font["head"].flags & (1 << 3) != (1 << 3)
+    static_font['fpgm'] = newTable("fpgm")
     fix_hinted_font(static_font)
     assert static_font["head"].flags & (1 << 3) == (1 << 3)
 

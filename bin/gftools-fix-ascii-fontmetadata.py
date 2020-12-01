@@ -20,33 +20,8 @@ import argparse
 import unicodedata
 from unidecode import unidecode
 from fontTools import ttLib
+from gftools.fix import fix_ascii_fontmetadata
 
-
-def unicode_marks(string):
-    unicodemap = [(u'©', '(c)'), (u'®', '(r)'), (u'™', '(tm)')]
-    return filter(lambda char: char[0] in string, unicodemap)
-
-
-def normalizestr(string):
-    """ Converts special characters like copyright,
-        trademark signs to ascii name """
-    # print("input: '{}'".format(string))
-    input_string = string
-    for mark, ascii_repl in unicode_marks(string):
-        string = string.replace(mark, ascii_repl)
-
-    rv = []
-#    for c in unicodedata.normalize('NFKC', smart_text(string)):
-    for c in unicodedata.normalize('NFKC', string):
-        # cat = unicodedata.category(c)[0]
-        # if cat in 'LN' or c in ok:
-        rv.append(c)
-
-    new = ''.join(rv).strip()
-    result = unidecode(new)
-    if result != input_string:
-        print("Fixed string: '{}'".format(result))
-    return result
 
 description = 'Fixes TTF NAME table strings to be ascii only'
 parser = argparse.ArgumentParser(description=description)
@@ -56,11 +31,7 @@ parser.add_argument('ttf_font', nargs='+',
 def main():
   args = parser.parse_args()
   for path in args.ttf_font:
-      font = ttLib.TTFont(path)
-      for name in font['name'].names:
-          title = name.string.decode(name.getEncoding())
-          title = normalizestr(title)
-          name.string = title.encode(name.getEncoding())
+      fix_ascii_fontmetadata(ttLib.TTFont(path))
 
 if __name__ == "__main__":
   main()

@@ -15,27 +15,16 @@
 #
 """
 A Python script to set a font's OS/2 usWeightClass value so it conforms to
-the Google Fonts specification. The font's filename is used to determine
-the correct value.
+the Google Fonts specification. The font's style name in the name record is
+used to determine the correct value.
 """
 from __future__ import print_function
-from fontTools.ttLib import TTFont
-from fontbakery.parse import style_parse
-from gftools.fix import fix_weight_class
+from gftools.fix import fix_weight_class, FontFixer
 import sys
-import os
 
 
 def main(font_path):
-    filename = os.path.basename(font_path)
-    font = TTFont(font_path)
-    current_weight_class = font["OS/2"].usWeightClass
-    fix_weight_class(font)
-    if current_weight_class != font["OS/2"].usWeightClass:
-        font.save(font.reader.file.name + ".fix")
-    else:
-        print("{}: Skipping. Current WeightClass is correct".format(filename))
-
+    FontFixer(font_path, verbose=True, fixes=[fix_weight_class]).fix()
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

@@ -18,43 +18,7 @@
 #
 import argparse
 from fontTools import ttLib
-
-
-class GaspFixer():
-
-    def __init__(self, path):
-        self.font = ttLib.TTFont(path)
-        self.path = path
-        self.saveit = False
-
-    def __del__(self):
-        if self.saveit:
-            self.font.save(self.path + ".fix")
-
-    def fix(self, value=15):
-        try:
-            table = self.font.get('gasp')
-            table.gaspRange[65535] = value
-            self.saveit = True
-        except:
-            print(('ER: {}: no table gasp... '
-                  'Creating new table. ').format(self.path))
-            table = ttLib.newTable('gasp')
-            table.gaspRange = {65535: value}
-            self.font['gasp'] = table
-            self.saveit = True
-
-    def show(self):
-        try:
-            self.font.get('gasp')
-        except:
-            print('ER: {}: no table gasp'.format(self.path))
-            return
-
-        try:
-            print(self.font.get('gasp').gaspRange[65535])
-        except IndexError:
-            print('ER: {}: no index 65535'.format(self.path))
+from gftools.fix import GaspFixer
 
 description = 'Fixes TTF GASP table'
 parser = argparse.ArgumentParser(description=description)

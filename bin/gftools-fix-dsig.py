@@ -40,13 +40,6 @@ parser.add_argument('-d', '--delete',
                     action='store_true',
                     help='Delete DSIG table if present in font.')
 
-def set_empty_dsig(ttFont):
-  newDSIG = ttLib.newTable("DSIG")
-  newDSIG.ulVersion = 1
-  newDSIG.usFlag = 0
-  newDSIG.usNumSigs = 0
-  newDSIG.signatureRecords = []
-  ttFont.tables["DSIG"] = newDSIG
 
 def main():
   args = parser.parse_args()

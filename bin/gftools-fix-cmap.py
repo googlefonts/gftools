@@ -14,74 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from os.path import basename
 from argparse import ArgumentParser
-from fontTools.ttLib import TTFont
-from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
-
+from gftools.fix import convert_cmap_subtables_to_v4, drop_nonpid0_cmap, drop_mac_cmap, FontFixer
 
 description = "Manipulate a collection of fonts' cmap tables."
 
 
-def convert_cmap_subtables_to_v4(font):
-  cmap = font['cmap']
-  outtables = []
-  fixit = False
-  for table in cmap.tables:
-    if table.format != 4:
-      print(('Converted format {} cmap subtable'
-             ' with Platform ID = {} and Encoding ID = {}'
-             ' to format 4.').format(table.format,
-                                     table.platformID,
-                                     table.platEncID))
-      fixit = True
-    newtable = CmapSubtable.newSubtable(4)
-    newtable.platformID = table.platformID
-    newtable.platEncID = table.platEncID
-    newtable.language = table.language
-    newtable.cmap = table.cmap
-    outtables.append(newtable)
-  font['cmap'].tables = outtables
-  return fixit
-
-
-def remove_cmap_subtable(font, plat_id, enc_id):
-  to_be_removed = []
-  for index, table in enumerate(font['cmap'].tables):
-    if table.platformID == plat_id and table.platEncID == enc_id:
-      to_be_removed.append(index)
-
-  to_be_removed.reverse()
-  for index in to_be_removed:
-    font['cmap'].tables.remove(table)
-
-  fixit = len(to_be_removed) > 0
-  return fixit
-
-
-def keep_only_specific_cmap(font, plat_id, enc_id=None):
-  to_be_removed = []
-  for index, table in enumerate(font['cmap'].tables):
-    if table.platformID != plat_id and (enc_id==None or table.platEncID != enc_id):
-      to_be_removed.append(index)
-    else:
-      print(("Keeping format {} cmap subtable with Platform ID = {}"
-             " and Encoding ID = {}").format(table.format,
-                                             table.platformID,
-                                             table.platEncID))
-
-  to_be_removed.reverse()
-  for index in to_be_removed:
-    table = font['cmap'].tables[index]
-    print(("--- Removed format {} cmap subtable with Platform ID = {}"
-           " and Encoding ID = {} ---").format(table.format,
-                                               table.platformID,
-                                               table.platEncID))
-    font['cmap'].tables.remove(table)
-
-  fixit = len(to_be_removed) > 0
-  return fixit
-
+def convert_cmap_subtables_to_v4_with_report(font):
+  converted = convert_cmap_subtables_to_v4(font)
+  for c in converted:
+    print(('Converted format {} cmap subtable'
+     ' with Platform ID = {} and Encoding ID = {}'
+     ' to format 4.').format(c))
+  return converted
 
 def main():
   parser = ArgumentParser(description=description)
@@ -99,30 +44,20 @@ def main():
   args = parser.parse_args()
 
   for path in args.fonts:
-    font = TTFont(path)
-    font_filename = basename(path)
-    fixit = False
-
+    fixer = FontFixer(path, verbose=True)
     if args.format_4_subtables:
       print('\nConverting Cmap subtables to format 4...')
-      fixit = convert_cmap_subtables_to_v4(font)
+      fixer.fixes.append(convert_cmap_subtables_to_v4_with_report)
 
     if args.keep_only_pid_0:
       print('\nDropping all Cmap subtables,'
             ' except the ones with PlatformId = 0...')
-      dropped = keep_only_specific_cmap(font, 0)
-      fixit = fixit or dropped
+      fixer.fixes.append(drop_nonpid0_cmap)
     elif args.drop_mac_subtable:
       print('\nDropping any Cmap Mac subtable...')
-      dropped = remove_cmap_subtable(font, 1, 0)
-      fixit = fixit or dropped
+      fixer.fixes.append(drop_mac_cmap)
 
-    if fixit:
-      print('\n\nSaving %s to %s.fix' % (font_filename, path))
-      font.save(path + '.fix')
-    else:
-      print('\n\nThere were no changes needed on the font file!')
-
+    fixer.fix()
 
 if __name__ == '__main__':
   main()

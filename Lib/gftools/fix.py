@@ -3,11 +3,28 @@ Functions to fix fonts so they conform to the Google Fonts
 specification:
 https://github.com/googlefonts/gf-docs/tree/master/Spec
 """
-from fontTools.ttLib import TTFont, newTable
+from fontTools.misc.fixedTools import otRound
+from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
+from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
-from gftools.utils import download_family_from_Google_Fonts, Google_Fonts_has_family
+from gftools.utils import (
+    download_family_from_Google_Fonts,
+    Google_Fonts_has_family,
+    font_stylename,
+    font_familyname,
+    family_bounding_box,
+    get_unencoded_glyphs,
+    normalize_unicode_marks,
+    partition_cmap,
+    typo_metrics_enabled,
+    validate_family,
+    unique_name,
+)
+from gftools.util.styles import (get_stylename, is_regular, is_bold, is_italic)
+
+from os.path import basename
 from copy import deepcopy
 import logging
 
@@ -24,13 +41,18 @@ __all__ = [
     "fix_weight_class",
     "fix_fs_selection",
     "fix_mac_style",
-    "font_stylename",
-    "font_familyname",
     "fix_fvar_instances",
     "update_nametable",
     "fix_nametable",
     "inherit_vertical_metrics",
     "fix_vertical_metrics",
+    "fix_ascii_fontmetadata",
+    "drop_nonpid0_cmap",
+    "drop_mac_cmap",
+    "fix_pua",
+    "fix_isFixedPitch",
+    "drop_mac_names",
+    "drop_superfluous_mac_names",
     "fix_font",
     "fix_family",
 ]
@@ -138,7 +160,11 @@ def fix_hinted_font(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    if not 'fpgm' in ttFont:
+        return False, ["Skipping. Font is not hinted."]
+    old = ttFont["head"].flags
     ttFont["head"].flags |= 1 << 3
+    return ttFont["head"].flags != old
 
 
 def fix_fs_type(ttFont):
@@ -147,7 +173,9 @@ def fix_fs_type(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    old = ttFont["OS/2"].fsType
     ttFont["OS/2"].fsType = 0
+    return old != 0
 
 
 def fix_weight_class(ttFont):
@@ -158,17 +186,18 @@ def fix_weight_class(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    old_weight_class = ttFont["OS/2"].usWeightClass
     stylename = font_stylename(ttFont)
     tokens = stylename.split()
     # Order WEIGHT_NAMES so longest names are first
     for style in sorted(WEIGHT_NAMES, key=lambda k: len(k), reverse=True):
         if style in tokens:
             ttFont["OS/2"].usWeightClass = WEIGHT_NAMES[style]
-            return
+            return ttFont["OS/2"].usWeightClass != old_weight_class
 
     if "Italic" in tokens:
         ttFont["OS/2"].usWeightClass = 400
-        return
+        return ttFont["OS/2"].usWeightClass != old_weight_class
     raise ValueError(
         f"Cannot determine usWeightClass because font style, '{stylename}' "
         f"doesn't have a weight token which is in our known "
@@ -186,7 +215,7 @@ def fix_fs_selection(ttFont):
     """
     stylename = font_stylename(ttFont)
     tokens = set(stylename.split())
-    fs_selection = ttFont["OS/2"].fsSelection
+    old_selection = fs_selection = ttFont["OS/2"].fsSelection
 
     # turn off all bits except for bit 7 (USE_TYPO_METRICS)
     fs_selection &= 1 << 7
@@ -199,6 +228,7 @@ def fix_fs_selection(ttFont):
     if not tokens & set(["Bold", "Italic"]):
         fs_selection |= 1 << 6
     ttFont["OS/2"].fsSelection = fs_selection
+    return old_selection != fs_selection
 
 
 def fix_mac_style(ttFont):
@@ -217,49 +247,6 @@ def fix_mac_style(ttFont):
     if "Bold" in tokens:
         mac_style |= 1 << 0
     ttFont["head"].macStyle = mac_style
-
-
-def font_stylename(ttFont):
-    """Get a font's stylename using the name table. Since our fonts use the
-    RIBBI naming model, use the Typographic SubFamily Name (NAmeID 17) if it
-    exists, otherwise use the SubFamily Name (NameID 2).
-
-    Args:
-        ttFont: a TTFont instance
-    """
-    return get_name_record(ttFont, 17, fallbackID=2)
-
-
-def font_familyname(ttFont):
-    """Get a font's familyname using the name table. since our fonts use the
-    RIBBI naming model, use the Typographic Family Name (NameID 16) if it
-    exists, otherwise use the Family Name (Name ID 1).
-
-    Args:
-        ttFont: a TTFont instance
-    """
-    return get_name_record(ttFont, 16, fallbackID=1)
-
-
-def get_name_record(ttFont, nameID, fallbackID=None, platform=(3, 1, 0x409)):
-    """Return a name table record which has the specified nameID.
-
-    Args:
-        ttFont: a TTFont instance
-        nameID: nameID of name record to return,
-        fallbackID: if nameID doesn't exist, use this nameID instead
-        platform: Platform of name record. Default is Win US English
-
-    Returns:
-        str
-    """
-    name = ttFont["name"]
-    record = name.getName(nameID, 3, 1, 0x409)
-    if not record and fallbackID:
-        record = name.getName(fallbackID, 3, 1, 0x409)
-    if not record:
-        raise ValueError(f"Cannot find record with nameID {nameID}")
-    return record.toUnicode()
 
 
 def fix_fvar_instances(ttFont):
@@ -402,7 +389,7 @@ def update_nametable(ttFont, family_name=None, style_name=None):
     # create NameIDs 3, 4, 6
     nameids[4] = f"{family_name} {style_name}"
     nameids[6] = f"{family_name.replace(' ', '')}-{style_name.replace(' ', '')}"
-    nameids[3] = _unique_name(ttFont, nameids)
+    nameids[3] = unique_name(ttFont, nameids)
 
     # Pass through all records and replace occurences of the old family name
     # with the new family name
@@ -427,23 +414,6 @@ def update_nametable(ttFont, family_name=None, style_name=None):
         nametable.setName(string, nameID, 3, 1, 0x409)
 
 
-def _unique_name(ttFont, nameids):
-    font_version = _font_version(ttFont)
-    vendor = ttFont["OS/2"].achVendID.strip()
-    ps_name = nameids[6]
-    return f"{font_version};{vendor};{ps_name}"
-
-
-def _font_version(font, platEncLang=(3, 1, 0x409)):
-    nameRecord = font["name"].getName(5, *platEncLang)
-    if nameRecord is None:
-        return f'{font["head"].fontRevision:.3f}'
-    # "Version 1.101; ttfautohint (v1.8.1.43-b0c9)" --> "1.101"
-    # Also works fine with inputs "Version 1.101" or "1.101" etc
-    versionNumber = nameRecord.toUnicode().split(";")[0]
-    return versionNumber.lstrip("Version ").strip()
-
-
 def fix_nametable(ttFont):
     """Fix a static font's name table so it conforms to the Google Fonts
     supported styles table:
@@ -460,14 +430,6 @@ def fix_nametable(ttFont):
     family_name = font_familyname(ttFont)
     style_name = font_stylename(ttFont)
     update_nametable(ttFont, family_name, style_name)
-
-
-def _validate_family(ttFonts):
-    family_is_vf(ttFonts)
-    family_names = set(font_familyname(f) for f in ttFonts)
-    if len(family_names) != 1:
-        raise ValueError(f"Multiple families found {family_names}")
-    return True
 
 
 def inherit_vertical_metrics(ttFonts, family_name=None):
@@ -549,30 +511,197 @@ def copy_vertical_metrics(src_font, dst_font):
         setattr(dst_font[table], key, val)
 
 
-def family_bounding_box(ttFonts):
-    y_min = min(f["head"].yMin for f in ttFonts)
-    y_max = max(f["head"].yMax for f in ttFonts)
-    return y_min, y_max
-
-
-def typo_metrics_enabled(ttFont):
-    return True if ttFont["OS/2"].fsSelection & (1 << 7) else False
-
-
-def family_is_vf(ttFonts):
-    has_fvar = ["fvar" in ttFont for ttFont in ttFonts]
-    if any(has_fvar):
-        if all(has_fvar):
-            return True
-        raise ValueError("Families cannot contain both static and variable fonts")
-    return False
-
-
 def fix_italic_angle(ttFont):
     style_name = font_stylename(ttFont)
     if "Italic" not in style_name and ttFont["post"].italicAngle != 0:
         ttFont["post"].italicAngle = 0
     # TODO (Marc F) implement for italic fonts
+
+
+def fix_ascii_fontmetadata(font):
+    """Fixes TTF 'name' table strings to be ascii only"""
+    for name in font['name'].names:
+        title = name.string.decode(name.getEncoding())
+        title = normalize_unicode_marks(title)
+        name.string = title.encode(name.getEncoding())
+
+
+def convert_cmap_subtables_to_v4(font):
+  """Converts all cmap subtables to format 4.
+
+  Returns a list of tuples (format, platformID, platEncID) of the tables
+  which needed conversion."""
+  cmap = font['cmap']
+  outtables = []
+  converted = []
+  for table in cmap.tables:
+    if table.format != 4:
+      converted.append((table.format, table.platformID, table.platEncID))
+    newtable = CmapSubtable.newSubtable(4)
+    newtable.platformID = table.platformID
+    newtable.platEncID = table.platEncID
+    newtable.language = table.language
+    newtable.cmap = table.cmap
+    outtables.append(newtable)
+  font['cmap'].tables = outtables
+  return converted
+
+
+def drop_nonpid0_cmap(font, report=True):
+  keep, drop = partition_cmap(font, lambda table: table.platformID == 0, report)
+  return drop
+
+
+def drop_mac_cmap(font, report=True):
+  keep, drop = partition_cmap(font, lambda table: table.platformID != 1 or table.platEncID != 0, report)
+  return drop
+
+def fix_pua(font):
+    unencoded_glyphs = get_unencoded_glyphs(font)
+    if not unencoded_glyphs:
+        return
+
+    ucs2cmap = None
+    cmap = font["cmap"]
+
+    # Check if an UCS-2 cmap exists
+    for ucs2cmapid in ((3, 1), (0, 3), (3, 0)):
+        ucs2cmap = cmap.getcmap(ucs2cmapid[0], ucs2cmapid[1])
+        if ucs2cmap:
+            break
+    # Create UCS-4 cmap and copy the contents of UCS-2 cmap
+    # unless UCS 4 cmap already exists
+    ucs4cmap = cmap.getcmap(3, 10)
+    if not ucs4cmap:
+        cmapModule = getTableModule('cmap')
+        ucs4cmap = cmapModule.cmap_format_12(12)
+        ucs4cmap.platformID = 3
+        ucs4cmap.platEncID = 10
+        ucs4cmap.language = 0
+        if ucs2cmap:
+            ucs4cmap.cmap = deepcopy(ucs2cmap.cmap)
+        cmap.tables.append(ucs4cmap)
+    # Map all glyphs to UCS-4 cmap Supplementary PUA-A codepoints
+    # by 0xF0000 + glyphID
+    ucs4cmap = cmap.getcmap(3, 10)
+    for glyphID, glyph in enumerate(font.getGlyphOrder()):
+        if glyph in unencoded_glyphs:
+            ucs4cmap.cmap[0xF0000 + glyphID] = glyph
+    font['cmap'] = cmap
+    return True
+
+
+def fix_isFixedPitch(ttfont):
+
+    same_width = set()
+    glyph_metrics = ttfont['hmtx'].metrics
+    messages = []
+    changed = False
+    for character in [chr(c) for c in range(65, 91)]:
+        same_width.add(glyph_metrics[character][0])
+
+    if len(same_width) == 1:
+        if ttfont['post'].isFixedPitch == 1:
+            messages.append("Skipping isFixedPitch is set correctly")
+        else:
+            messages.append("Font is monospace. Updating isFixedPitch to 0")
+            ttfont['post'].isFixedPitch = 1
+            changed = True
+
+        familyType = ttfont['OS/2'].panose.bFamilyType
+        if familyType == 2:
+            expected = 9
+        elif familyType == 3 or familyType == 5:
+            expected = 3
+        elif familyType == 0:
+            messages.append("Font is monospace but panose fields seems to be not set."
+                  " Setting values to defaults (FamilyType = 2, Proportion = 9).")
+            ttfont['OS/2'].panose.bFamilyType = 2
+            ttfont['OS/2'].panose.bProportion = 9
+            changed = True
+            expected = None
+        else:
+            expected = None
+
+        if expected:
+            if ttfont['OS/2'].panose.bProportion == expected:
+                messages.append("Skipping OS/2.panose.bProportion is set correctly")
+            else:
+                messages.append(("Font is monospace."
+                       " Since OS/2.panose.bFamilyType is {}"
+                       " we're updating OS/2.panose.bProportion"
+                       " to {}").format(familyType, expected))
+                ttfont['OS/2'].panose.bProportion = expected
+                changed = True
+
+        widths = [m[0] for m in ttfont['hmtx'].metrics.values() if m[0] > 0]
+        width_max = max(widths)
+        if ttfont['hhea'].advanceWidthMax == width_max:
+            messages.append("Skipping hhea.advanceWidthMax is set correctly")
+        else:
+            messsages.append("Font is monospace. Updating hhea.advanceWidthMax to %i" %
+                  width_max)
+            ttfont['hhea'].advanceWidthMax = width_max
+            changed = True
+
+        avg_width = otRound(sum(widths) / len(widths))
+        if avg_width == ttfont['OS/2'].xAvgCharWidth:
+            messages.append("Skipping OS/2.xAvgCharWidth is set correctly")
+        else:
+            messages.append("Font is monospace. Updating OS/2.xAvgCharWidth to %i" %
+                  avg_width)
+            ttfont['OS/2'].xAvgCharWidth = avg_width
+            changed = True
+    else:
+        if ttfont['post'].isFixedPitch != 0 or ttfont['OS/2'].panose.bProportion != 0:
+            changed = True
+        ttfont['post'].isFixedPitch = 0
+        ttfont['OS/2'].panose.bProportion = 0
+    return changed, messages
+
+
+def drop_superfluous_mac_names(ttfont):
+    """Drop superfluous Mac nameIDs.
+
+    The following nameIDS are kept:
+    1: Font Family name,
+    2: Font Family Subfamily name,
+    3: Unique font identifier,
+    4: Full font name,
+    5: Version string,
+    6: Postscript name,
+    16: Typographic family name,
+    17: Typographic Subfamily name
+    18: Compatible full (Macintosh only),
+    20: PostScript CID,
+    21: WWS Family Name,
+    22: WWS Subfamily Name,
+    25: Variations PostScript Name Prefix.
+
+    We keep these IDs in order for certain application to still function
+    such as Word 2011. IDs 1-6 are very common, > 16 are edge cases.
+
+    https://www.microsoft.com/typography/otspec/name.htm"""
+    keep_ids = [1, 2, 3, 4, 5, 6, 16, 17, 18, 20, 21, 22, 25]
+    changed = False
+    for n in range(255):
+        if n not in keep_ids:
+            name = ttfont['name'].getName(n, 1, 0, 0)
+            if name:
+                changed = True
+                ttfont['name'].names.remove(name)
+    return changed
+
+
+def drop_mac_names(ttfont):
+    """Drop all mac names"""
+    changed = False
+    for n in range(255):
+        name = ttfont['name'].getName(n, 1, 0, 0)
+        if name:
+            ttfont['name'].names.remove(name)
+            changed = True
+    return changed
 
 
 def fix_font(font, include_source_fixes=False):
@@ -609,7 +738,7 @@ def fix_font(font, include_source_fixes=False):
 
 def fix_family(fonts, include_source_fixes=False):
     """Fix all fonts in a family"""
-    _validate_family(fonts)
+    validate_family(fonts)
     family_name = font_familyname(fonts[0])
 
     for font in fonts:
@@ -630,3 +759,71 @@ def fix_family(fonts, include_source_fixes=False):
                 "fix fonts. See Repo readme to add keys."
             )
         fix_vertical_metrics(fonts)
+
+
+class FontFixer():
+    def __init__(self, path, report=True, verbose=False, **kwargs):
+        self.font = TTFont(path)
+        self.path = path
+        self.font_filename = basename(path)
+        self.saveit = False
+        self.report = report
+        self.verbose = verbose
+        self.messages = []
+        self.args = kwargs
+        self.fixes = []
+        if "fixes" in kwargs:
+            self.fixes = kwargs["fixes"]
+
+    def __del__(self):
+        if self.report:
+            print("\n".join(self.messages))
+        if self.saveit:
+            if self.verbose:
+                print('Saving %s to %s.fix' % (self.font_filename, self.path))
+            self.font.save(self.path + ".fix")
+        elif self.verbose:
+            print('There were no changes needed on %s!' % self.font_filename)
+
+    def show(self):
+        pass
+
+    def fix(self):
+        for f in self.fixes:
+            rv = f(self.font)
+            if isinstance(rv, tuple) and len(rv) == 2:
+                changed, messages = rv
+                self.messages.extend(messages)
+            else:
+                changed = rv
+            if changed:
+                self.saveit = True
+
+
+class GaspFixer(FontFixer):
+
+    def fix(self, value=15):
+        try:
+            table = self.font.get('gasp')
+            table.gaspRange[65535] = value
+            self.saveit = True
+        except:
+            print(('ER: {}: no table gasp... '
+                  'Creating new table. ').format(self.path))
+            table = ttLib.newTable('gasp')
+            table.gaspRange = {65535: value}
+            self.font['gasp'] = table
+            self.saveit = True
+
+    def show(self):
+        try:
+            self.font.get('gasp')
+        except:
+            print('ER: {}: no table gasp'.format(self.path))
+            return
+
+        try:
+            print(self.font.get('gasp').gaspRange[65535])
+        except IndexError:
+            print('ER: {}: no index 65535'.format(self.path))
+
