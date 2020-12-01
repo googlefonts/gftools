@@ -21,7 +21,8 @@ import sys
 import os
 import re
 import shutil
-from unicodedata import unidecode
+import unicodedata
+import unidecode
 from collections import namedtuple
 from github import Github
 if sys.version_info[0] == 3:
