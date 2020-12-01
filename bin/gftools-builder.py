@@ -20,11 +20,11 @@ parser = argparse.ArgumentParser(description=("Build a font family"))
 parser.add_argument("--debug", action="store_true", default=False,
 	help="Show extra debugging information"
 )
-parser.add_argument('file', nargs='+', help="JSON build config file *or* source files")
+parser.add_argument('file', nargs='+', help="YAML build config file *or* source files")
 
 args = parser.parse_args()
 
-if len(args.file) == 1 and args.file[0].endswith(".json"):
+if len(args.file) == 1 and args.file[0].endswith(".yaml"):
 	builder = GFBuilder(configfile=args.file[0])
 else:
 	builder = GFBuilder(config={"sources": args.file})

@@ -4,20 +4,21 @@ This utility wraps fontmake and a number of post-processing fixes to
 build variable, static OTF, static TTF and webfonts from Glyphs,
 Designspace/UFO or UFO sources.
 
-It should be instantiated with a configuration file, typically ``config.json``,
+It should be instantiated with a configuration file, typically ``config.yaml``,
 which looks like this::
 
-        {
-            "sources": ["Texturina.glyphs", "Texturina-Italic.glyphs"],
-            "axisOrder": ["opsz", "wght"],
-            "outputDir": "../fonts",
-            "familyName": "Texturina",
-            "unwantedTables": ["MVAR"]
-        }
+    sources:
+      - Texturina.glyphs
+      - Texturina-Italic.glyphs
+    axisOrder:
+      - opsz
+      - wght
+    outputDir: "../fonts"
+    familyName: Texturina
 
 To build a font family from the command line, use:
 
-    gftools builder path/to/config.json
+    gftools builder path/to/config.yaml
 
 The config file may contain the following keys. The ``sources`` key is
 required, all others have sensible defaults:
@@ -47,19 +48,19 @@ from babelfont import Babelfont
 import sys
 import os
 import shutil
-import json
 import glyphsLib
 import tempfile
 from ttfautohint.options import parse_args as ttfautohint_parse_args
 from ttfautohint import ttfautohint
 from fontTools.ttLib.woff2 import main as woff2_main
 import logging
+import yaml
 
 
 class GFBuilder:
     def __init__(self, configfile=None, config=None):
         if configfile:
-            self.config = json.load(open(configfile))
+            self.config = yaml.load(open(configfile), Loader=yaml.SafeLoader)
             if os.path.dirname(configfile):
                 os.chdir(os.path.dirname(configfile))
         else:
