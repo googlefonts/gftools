@@ -20,6 +20,7 @@ import threading
 import sys
 import argparse
 from gftools.fix import font_familyname, font_stylename, WEIGHT_NAMES
+from gftools.utils import udhr_font_words
 import shutil
 
 
@@ -49,7 +50,7 @@ class CSSFontClass(object):
 def css_family_classes(ttFonts, position):
     results = []
     for ttFont in ttFonts:
-        font_name = font_familyname(ttFont)
+        font_name = f"{font_familyname(ttFont)}-{font_stylename(ttFont)}".replace(" ", "")
         if "fvar" in ttFont:
             raise NotImplementedError("TODO")
         else:
@@ -61,7 +62,7 @@ def css_family_classes(ttFonts, position):
 def css_family_font_faces(ttFonts, position):
     results = []
     for ttFont in ttFonts:
-        font_name = font_familyname(ttFont)
+        font_name = f"{font_familyname(ttFont)}-{font_stylename(ttFont)}".replace(" ", "")
         font_name = f"{font_name}-{position}"
         results.append(CSSFontFace(ttFont, font_name))
     return results
@@ -91,7 +92,7 @@ def create_server(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandle
     httpd.serve_forever()
 
 
-def start_server(loc):
+def start_daemon_server(loc):
     th = threading.Thread(target=create_server)
     th.daemon = True
     th.start()
@@ -174,6 +175,8 @@ def gen_html(fonts_before, fonts_after, out="diffbrowsers"):
         out,
     )
 
+    sample_words = " ".join(udhr_font_words(fonts_before[0]))
+    sample_text = sample_words.lower() + " " + sample_words.upper()
     text = _render_view(
         "text.html",
         font_faces_before,
@@ -182,7 +185,7 @@ def gen_html(fonts_before, fonts_after, out="diffbrowsers"):
         styles_after,
         out,
         pt_size="24",
-        text="This will be the text from the UDHR"
+        text=sample_text
     )
     return waterfall
 
@@ -196,7 +199,7 @@ def main():
     parser.add_argument("--fonts-before", "-fb", nargs="+", required=True)
     parser.add_argument("--fonts-after", "-fa", nargs="+", required=True)
     parser.add_argument("--views", nargs="+", choices=VIEWS, default=VIEWS)
-    parser.add_argument("--pt-size", "-pt", help="pt size of text", default=16)
+    parser.add_argument("--pt-size", "-pt", help="pt size of text", default=14)
     parser.add_argument(
         "--gifs", action='store_true', help="Output before and after gifs using Browserstack"
     )
@@ -209,7 +212,7 @@ def main():
 #        html_docs.gen_pages(view, args.pt_size)
 
 #    if args.gifs:
-#        start_simple_server(args.out)
+#        start_daemon_server(args.out)
 #        for view in html_docs.views:
 #            gen_gif(view)
 
