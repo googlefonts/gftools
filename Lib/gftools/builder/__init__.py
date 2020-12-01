@@ -41,13 +41,7 @@ required, all others have sensible defaults:
 from fontTools.ttLib import TTFont
 from fontmake.font_project import FontProject
 from ufo2ft import CFFOptimization
-from gftools.fix import (
-    add_dummy_dsig,
-    fix_unhinted_font,
-    remove_tables,
-    fix_weight_class,
-    fix_hinted_font,
-)
+from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables
 from babelfont import Babelfont
 import sys
@@ -155,7 +149,7 @@ class GFBuilder:
             )
             output_files = self.run_fontmake(source, args)
             newname = self.rename_variable(output_files[0])
-            self.post_process_variable(newname)
+            self.post_process(newname)
             all_variables.append(newname)
         self.gen_stat(all_variables)
 
@@ -228,50 +222,21 @@ class GFBuilder:
             shutil.rmtree(directory, ignore_errors=True)
         os.makedirs(directory)
 
-    def post_process_variable(self, filename):
-        self.logger.info("Postprocessing variable font %s" % filename)
+    def post_process(self, filename):
+        self.logger.info("Postprocessing font %s" % filename)
         font = TTFont(filename)
-        if "DSIG" not in font:
-            self.logger.debug("Adding dummy DSIG table")
-            add_dummy_dsig(font)
-        self.logger.debug("Fixing unhinted font")
-        fix_unhinted_font(font)
-        if "unwantedTables" in self.config:
-            self.logger.debug("Removing tables: %s" % self.config["unwantedTables"])
-            remove_tables(font, self.config["unwantedTables"])
+        fix_font(font)
         font.save(filename)
-        self.logger.debug("Done with %s" % filename)
 
     def post_process_ttf(self, filename):
-        self.logger.info("Postprocessing TTF %s" % filename)
-        font = TTFont(filename)
-        if "DSIG" not in font:
-            self.logger.debug("Adding dummy DSIG table")
-            add_dummy_dsig(font)
-        font.save(filename)
         if self.config["autohintTTF"]:
             self.logger.debug("Autohinting")
             self.autohint(filename)
-            font = TTFont(filename)
-            self.logger.debug("Fixing hinted font")
-            fix_hinted_font(font)
-            font.save(filename)
+        self.post_process(filename)
         if self.config["buildWebfont"]:
             self.logger.debug("Building webfont")
             woff2_main(["compress", filename])
             self.move_webfont(filename)
-        self.logger.debug("Done with %s" % filename)
-
-    def post_process_otf(self, filename):
-        self.logger.info("Postprocessing OTF %s" % filename)
-        font = TTFont(filename)
-        if "DSIG" not in font:
-            self.logger.debug("Adding dummy DSIG table")
-            add_dummy_dsig(font)
-        self.logger.debug("Fixing weight class")
-        fix_weight_class(font)
-        font.save(filename)
-        self.logger.debug("Done with %s" % filename)
 
     def autohint(self, filename):
         ttfautohint(**ttfautohint_parse_args([filename, filename]))
