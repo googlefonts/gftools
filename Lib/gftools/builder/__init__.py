@@ -195,12 +195,16 @@ class GFBuilder:
 
     def gen_stat(self, filenames):
         ttFonts = [TTFont(x) for x in filenames]
+        if len(filenames) > 1 and "ital" not in self.config["axisOrder"]:
+            # *Are* any italic? Presumably, but test
+            if any([ "italic" in x.lower() for x in filenames ]):
+                self.config["axisOrder"].append("ital")
         gen_stat_tables(ttFonts, self.config["axisOrder"])
         for filename, ttFont in zip(filenames, ttFonts):
             ttFont.save(filename)
 
     def build_static(self):
-        self.build_a_static_format("otf", self.config["otDir"], self.post_process_otf)
+        self.build_a_static_format("otf", self.config["otDir"], self.post_process)
         if self.config["buildWebfont"]:
             self.mkdir(self.config["woffDir"], clean=True)
         self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
