@@ -143,6 +143,8 @@ class GFBuilder:
         args = {"output": ["variable"], "family_name": self.config["familyName"]}
         all_variables = []
         for source in self.config["sources"]:
+            if not source.endswith(".designspace") and not source.endswith("glyphs"):
+                continue
             self.logger.info("Creating variable fonts from %s" % source)
             sourcebase = os.path.splitext(os.path.basename(source))[0]
             args["output_path"] = os.path.join(
@@ -152,7 +154,8 @@ class GFBuilder:
             newname = self.rename_variable(output_files[0])
             self.post_process(newname)
             all_variables.append(newname)
-        self.gen_stat(all_variables)
+        if all_variables:
+            self.gen_stat(all_variables)
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:
@@ -164,8 +167,10 @@ class GFBuilder:
             FontProject().run_from_glyphs(source, **args)
         elif source.endswith(".designspace"):
             FontProject().run_from_designspace(source, **args)
+        elif source.endswith(".ufo"):
+            FontProject().run_from_ufos([source], **args)
         else:
-            XXX
+            raise ValueError("Can't build from unknown source file: %s" % source)
         if "output_path" in args:
             return [args["output_path"]]
         else:
@@ -209,10 +214,14 @@ class GFBuilder:
         args = {
             "output": [format],
             "output_dir": directory,
-            "interpolate": True,
             "optimize_cff": CFFOptimization.SUBROUTINIZE,
         }
         for source in self.config["sources"]:
+            if source.endswith("ufo"):
+                if "interpolate" in args:
+                    del args["interpolate"]
+            else:
+                args["interpolate"] = True
             self.logger.info("Creating static fonts from %s" % source)
             for fontfile in self.run_fontmake(source, args):
                 self.logger.info("Created static font %s" % fontfile)
