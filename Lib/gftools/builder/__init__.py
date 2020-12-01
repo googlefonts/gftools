@@ -1,0 +1,278 @@
+"""Config-driven font project builder.
+
+This utility wraps fontmake and a number of post-processing fixes to
+build variable, static OTF, static TTF and webfonts from Glyphs,
+Designspace/UFO or UFO sources.
+
+It should be instantiated with a configuration file, typically ``config.json``,
+which looks like this::
+
+        {
+            "sources": ["Texturina.glyphs", "Texturina-Italic.glyphs"],
+            "axisOrder": ["opsz", "wght"],
+            "outputDir": "../fonts",
+            "familyName": "Texturina",
+            "unwantedTables": ["MVAR"]
+        }
+
+To build a font family from the command line, use:
+
+    gftools builder path/to/config.json
+
+The config file may contain the following keys. The ``sources`` key is
+required, all others have sensible defaults:
+
+* ``sources``: Required. An array of Glyphs, UFO or designspace source files.
+* ``logLevel``: Debugging log level. Defaults to ``INFO``.
+* ``buildVariable``: Build variable fonts. Defaults to true.
+* ``buildStatic``: Build static fonts. Defaults to true.
+* ``buildWebfont``: Build WOFF2 fonts. Defaults to ``$buildStatic``.
+* ``outputDir``: Where to put the fonts. Defaults to ``../fonts/``
+* ``vfDir``: Where to put variable fonts. Defaults to ``$outputDir/variable``.
+* ``ttDir``: Where to put TrueType static fonts. Defaults to ``$outputDir/ttf``.
+* ``otDir``: Where to put CFF static fonts. Defaults to ``$outputDir/otf``.
+* ``woffDir``: Where to put WOFF2 static fonts. Defaults to ``$outputDir/webfonts``.
+* ``autohintTTF`: Whether or not to autohint TTF files. Defaults to ``true``.
+* ``axisOrder``: STAT table axis order. Defaults to fvar order.
+* ``familyName``: Family name for variable fonts. Defaults to family name of first source file.
+
+"""
+
+from fontTools.ttLib import TTFont
+from fontmake.font_project import FontProject
+from ufo2ft import CFFOptimization
+from gftools.fix import (
+    add_dummy_dsig,
+    fix_unhinted_font,
+    remove_tables,
+    fix_weight_class,
+    fix_hinted_font,
+)
+from gftools.builder.gen_stat import gen_stat
+from babelfont import Babelfont
+import sys
+import os
+import shutil
+import json
+import glyphsLib
+import tempfile
+from ttfautohint.options import parse_args as ttfautohint_parse_args
+from ttfautohint import ttfautohint
+from fontTools.ttLib.woff2 import main as woff2_main
+import logging
+
+
+class GFBuilder:
+    def __init__(self, configfile=None, config=None):
+        if configfile:
+            self.config = json.load(open(configfile))
+            if os.path.dirname(configfile):
+                os.chdir(os.path.dirname(configfile))
+        else:
+            self.config = config
+        self.masters = {}
+        self.logger = logging.getLogger("GFBuilder")
+        self.fill_config_defaults()
+
+    def build(self):
+        loglevel = getattr(logging, self.config["logLevel"].upper())
+        self.logger.setLevel(loglevel)
+        # Shut up irrelevant loggers
+        if loglevel != logging.DEBUG:
+            for irrelevant in [
+                "glyphsLib.classes",
+                "glyphsLib.builder.components",
+                "ufo2ft",
+                "ufo2ft.filters",
+                "ufo2ft.postProcessor",
+                "fontTools.varLib",
+                "cu2qu.ufo",
+                "glyphsLib.builder.builders.UFOBuilder",
+            ]:
+                logging.getLogger(irrelevant).setLevel(logging.ERROR)
+        if self.config["buildVariable"]:
+            self.build_variable()
+        if self.config["buildStatic"]:
+            self.build_static()
+
+    def load_masters(self):
+        if self.masters:
+            return
+        for src in self.config["sources"]:
+            if src.endswith("glyphs"):
+                gsfont = glyphsLib.GSFont(src)
+                self.masters[src] = []
+                for master in gsfont.masters:
+                    self.masters[src].append(Babelfont.open(src, master=master.name))
+            elif src.endswith("designspace"):
+                # XXX
+                continue
+            else:
+                self.masters[src] = [Babelfont.open(src)]
+
+    def fill_config_defaults(self):
+        if "familyName" not in self.config:
+            self.logger.info("Deriving family name (this takes a while)")
+            self.load_masters()
+            familynames = set([x.info.familyName for x in self.masters.values()])
+            if len(familynames) > 1:
+                raise ValueError(
+                    "Inconsistent family names in sources (%s). Set familyName in config instead"
+                    % familynames
+                )
+            self.config["familyName"] = list(familynames)[0]
+        if "outputDir" not in self.config:
+            self.config["outputDir"] = "../fonts/"
+        if "vfDir" not in self.config:
+            self.config["vfDir"] = self.config["outputDir"] + "/variable/"
+        if "ttDir" not in self.config:
+            self.config["ttDir"] = self.config["outputDir"] + "/ttf/"
+        if "otDir" not in self.config:
+            self.config["otDir"] = self.config["outputDir"] + "/otf/"
+        if "woffDir" not in self.config:
+            self.config["woffDir"] = self.config["outputDir"] + "/webfonts/"
+
+        if "buildVariable" not in self.config:
+            self.config["buildVariable"] = True
+        if "buildStatic" not in self.config:
+            self.config["buildStatic"] = True
+        if "buildWebfont" not in self.config:
+            self.config["buildWebfont"] = self.config["buildStatic"]
+        if "autohintTTF" not in self.config:
+            self.config["autohintTTF"] = True
+        if "logLevel" not in self.config:
+            self.config["logLevel"] = "INFO"
+
+    def build_variable(self):
+        self.mkdir(self.config["vfDir"], clean=True)
+        args = {"output": ["variable"], "family_name": self.config["familyName"]}
+        all_variables = []
+        for source in self.config["sources"]:
+            self.logger.info("Creating variable fonts from %s" % source)
+            sourcebase = os.path.splitext(os.path.basename(source))[0]
+            args["output_path"] = os.path.join(
+                self.config["vfDir"], sourcebase + "-VF.ttf",
+            )
+            output_files = self.run_fontmake(source, args)
+            newname = self.rename_variable(output_files[0])
+            self.post_process_variable(newname)
+            all_variables.append(newname)
+        gen_stat(all_variables, config=self.config)
+
+    def run_fontmake(self, source, args):
+        if "output_dir" in args:
+            original_output_dir = args["output_dir"]
+            tmpdir = tempfile.TemporaryDirectory()
+            args["output_dir"] = tmpdir.name
+
+        if source.endswith(".glyphs"):
+            FontProject().run_from_glyphs(source, **args)
+        elif source.endswith(".designspace"):
+            FontProject().run_from_designspace(source, **args)
+        else:
+            XXX
+        if "output_path" in args:
+            return [args["output_path"]]
+        else:
+            # Move it to where it should be...
+            file_names = os.listdir(args["output_dir"])
+            for file_name in file_names:
+                shutil.move(
+                    os.path.join(args["output_dir"], file_name), original_output_dir
+                )
+            tmpdir.cleanup()
+            args["output_dir"] = original_output_dir
+            return [os.path.join(original_output_dir, x) for x in file_names]
+
+    def rename_variable(self, fontfile):
+        if "axisOrder" not in self.config:
+            font = TTFont(fontfile)
+            self.config["axisOrder"] = [ax.axisTag for ax in font["fvar"].axes]
+        axes = ",".join(self.config["axisOrder"])
+        newname = fontfile.replace("-VF.ttf", "[%s].ttf" % axes)
+        os.rename(fontfile, newname)
+        return newname
+
+    def build_static(self):
+        self.build_a_static_format("otf", self.config["otDir"], self.post_process_otf)
+        if self.config["buildWebfont"]:
+            self.mkdir(self.config["woffDir"], clean=True)
+        self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
+
+    def build_a_static_format(self, format, directory, postprocessor):
+        self.mkdir(directory, clean=True)
+        args = {
+            "output": [format],
+            "output_dir": directory,
+            "interpolate": True,
+            "optimize_cff": CFFOptimization.SUBROUTINIZE,
+        }
+        for source in self.config["sources"]:
+            self.logger.info("Creating static fonts from %s" % source)
+            for fontfile in self.run_fontmake(source, args):
+                self.logger.info("Created static font %s" % fontfile)
+                postprocessor(fontfile)
+
+    def mkdir(self, directory, clean=False):
+        if clean:
+            shutil.rmtree(directory, ignore_errors=True)
+        os.makedirs(directory)
+
+    def post_process_variable(self, filename):
+        self.logger.info("Postprocessing variable font %s" % filename)
+        font = TTFont(filename)
+        if "DSIG" not in font:
+            self.logger.debug("Adding dummy DSIG table")
+            add_dummy_dsig(font)
+        self.logger.debug("Fixing unhinted font")
+        fix_unhinted_font(font)
+        if "unwantedTables" in self.config:
+            self.logger.debug("Removing tables: %s" % self.config["unwantedTables"])
+            remove_tables(font, self.config["unwantedTables"])
+        font.save(filename)
+        self.logger.debug("Done with %s" % filename)
+
+    def post_process_ttf(self, filename):
+        self.logger.info("Postprocessing TTF %s" % filename)
+        font = TTFont(filename)
+        if "DSIG" not in font:
+            self.logger.debug("Adding dummy DSIG table")
+            add_dummy_dsig(font)
+        font.save(filename)
+        if self.config["autohintTTF"]:
+            self.logger.debug("Autohinting")
+            self.autohint(filename)
+            font = TTFont(filename)
+            self.logger.debug("Fixing hinted font")
+            fix_hinted_font(font)
+            font.save(filename)
+        if self.config["buildWebfont"]:
+            self.logger.debug("Building webfont")
+            woff2_main(["compress", filename])
+            self.move_webfont(filename)
+        self.logger.debug("Done with %s" % filename)
+
+    def post_process_otf(self, filename):
+        self.logger.info("Postprocessing OTF %s" % filename)
+        font = TTFont(filename)
+        if "DSIG" not in font:
+            self.logger.debug("Adding dummy DSIG table")
+            add_dummy_dsig(font)
+        self.logger.debug("Fixing weight class")
+        fix_weight_class(font)
+        font.save(filename)
+        self.logger.debug("Done with %s" % filename)
+
+    def autohint(self, filename):
+        ttfautohint(**ttfautohint_parse_args([filename, filename]))
+
+    def move_webfont(self, filename):
+        wf_filename = filename.replace(".ttf", ".woff2")
+        os.rename(
+            wf_filename,
+            wf_filename.replace(self.config["ttDir"], self.config["woffDir"]),
+        )
+
+
+if __name__ == "__main__":
+    GFBuilder(sys.argv[1]).build()
