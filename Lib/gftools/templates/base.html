@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css" />
+    {% block head %}
+    <title>GFR - {% block title %}{% endblock %}</title>
+    {% endblock %}
+    <style type="text/css">
+        html{
+	  font-family: sans-serif;
+	}
+	.box-title{
+	  font-size: 8pt;
+	  font-weight: 700;
+	  border-top: 1px solid black;
+	  padding-top: 5px;
+	  margin-bottom: 10pt;
+	  display: block;
+	}
+	.box{
+	  margin-bottom: 20pt;
+	}
+	#font-toggle{
+	  position: fixed;
+	  right: 20px;
+	  display: block;
+	  font-weight: 700;
+	  cursor: pointer;
+	  -webkit-user-select: none; /* Safari */        
+	  -moz-user-select: none; /* Firefox */
+          -ms-user-select: none; /* IE10+/Edge */
+	  user-select: none; /* Standard */
+	  text-align: center;
+	  color: white;
+	  background-color: black;
+	  width: 50px;
+	  display: block;
+	  padding: 10px;
+	}
+
+	{% block style %}
+	  {% for font_face in font_faces_before %}
+	    {{ font_face.render() }}
+	  {% endfor %}
+
+	  {% for font_face in font_faces %}
+	    {{ font_face.render() }}
+	  {% endfor %}
+
+	  {% for font_class in font_classes_before %}
+	    {{ font_class.render() }}
+	  {% endfor %}
+
+	  {% for font_class in font_classes %}
+	    {{ font_class.render() }}
+	  {% endfor %}
+	{% endblock %}
+    </style>
+</head>
+<body>
+    {% if include_ui %}
+        <div id="font-toggle">After</div>
+    {% endif %}
+    <div id="content">
+	<h2>{% block content_name %}{% endblock %}</h2>
+	{% block content %}
+	{% endblock %}
+    </div>
+</body>
+	<script>
+
+	POSITION = "after"
+	fontToggle = document.getElementById("font-toggle")
+	function switchFonts() {
+	  items = document.getElementsByClassName("box")
+	  
+	  if (POSITION === "before") {
+	  POSITION = "after"
+	  for (item of items) {
+	    item.firstElementChild.textContent = item.firstElementChild.textContent.replace("before", "after")
+            item.lastElementChild.className = item.lastElementChild.className.replace("before", "after")
+	    fontToggle.textContent = "After"
+	  }
+	  } else {
+	  POSITION = "before"
+	  for (item of items) {
+	    item.firstElementChild.textContent = item.firstElementChild.textContent.replace("after", "before")
+            item.lastElementChild.className = item.lastElementChild.className.replace("after", "before")
+	    fontToggle.textContent = "Before"
+	  }
+	}
+	}
+	fontToggle.addEventListener("click", switchFonts);
+	</script>
+</html>
+

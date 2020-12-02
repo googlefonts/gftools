@@ -6,9 +6,9 @@ Produce html test pages which compare two families of fonts.
 Optionally use diffbrowsers to produce gifs
 
 Examples:
-gftools html waterfall fonts_before fonts_after
-gftools html glyphs fonts_before fonts_after
-gftools html text fonts_before fonts_after
+gftools html waterfall fonts_before fonts
+gftools html glyphs fonts_before fonts
+gftools html text fonts_before fonts
 """
 from fontTools.ttLib import TTFont
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -25,6 +25,7 @@ import shutil
 
 
 VIEWS = ["waterfall", "text", "glyphs"]
+
 
 env = Environment(
     loader=PackageLoader("gftools", "templates"),
@@ -45,27 +46,6 @@ class CSSFontClass(object):
                 font-weight: {self.font_weight}
             }}
         """
-
-
-def css_family_classes(ttFonts, position):
-    results = []
-    for ttFont in ttFonts:
-        font_name = f"{font_familyname(ttFont)}-{font_stylename(ttFont)}".replace(" ", "")
-        if "fvar" in ttFont:
-            raise NotImplementedError("TODO")
-        else:
-            class_name = f"{font_name}-{position}"
-            results.append(CSSFontClass(ttFont, class_name, class_name))
-    return results
-
-
-def css_family_font_faces(ttFonts, position):
-    results = []
-    for ttFont in ttFonts:
-        font_name = f"{font_familyname(ttFont)}-{font_stylename(ttFont)}".replace(" ", "")
-        font_name = f"{font_name}-{position}"
-        results.append(CSSFontFace(ttFont, font_name))
-    return results
 
 
 class CSSFontFace(object):
@@ -98,123 +78,231 @@ def start_daemon_server(loc):
     th.start()
 
 
-def _render_view(
-    template,
-    font_faces_before,
-    font_faces_after,
-    styles_before,
-    styles_after,
-    out,
-    **kwargs,
-):
-    html_template = env.get_template(template)
+class HtmlTestPageBuilder(object):
 
-    before = html_template.render(
-        css_family_font_faces=font_faces_before,
-        css_family_classes=styles_before,
+    def __init__(self, fonts, out="out"):
+        self.fonts = fonts
+        self.input_font = self.fonts[0]
+        self.out = out
+
+        self.css_font_faces = self._css_font_faces(fonts)
+        self.css_font_classes = self._css_font_classes(fonts)
+
+        self.views = []
+
+    def _css_font_classes(self, ttFonts, position=None):
+        results = []
+        for ttFont in ttFonts:
+            font_name = f"{font_familyname(ttFont)}-{font_stylename(ttFont)}".replace(
+                " ", ""
+            )
+            if "fvar" in ttFont:
+                raise NotImplementedError("TODO")
+            else:
+                class_name = font_name if not position else f"{font_name}-{position}"
+                results.append(CSSFontClass(ttFont, class_name, class_name))
+        return results
+
+    def _css_font_faces(self, ttFonts, position=None):
+        results = []
+        for ttFont in ttFonts:
+            font_name = f"{font_familyname(ttFont)}-{font_stylename(ttFont)}".replace(
+                " ", ""
+            )
+            font_name = font_name if not position else f"{font_name}-{position}"
+            results.append(CSSFontFace(ttFont, font_name))
+        return results
+
+    def build_page(self, view, pt_size):
+        if view == "waterfall":
+            page = self._render_html(
+                "waterfall",
+                "waterfall.html",
+            )
+        elif view == "text":
+            sample_words = " ".join(udhr_font_words(self.input_font))
+            sample_text = sample_words.lower() + " " + sample_words.upper()
+            page = self._render_html(
+                "text", "text.html", pt_size=pt_size, text=sample_text
+            )
+        else:
+            raise NotImplementedError(f"'{view}' view not implemented")
+        self.views.append(page)
+
+    def _render_html(
+        self,
+        name,
+        template,
         **kwargs,
-    )
+    ):
+        html_template = env.get_template(template)
 
-    after = html_template.render(
-        css_family_font_faces=font_faces_after,
-        css_family_classes=styles_after,
+        html = html_template.render(
+            font_faces=self.css_font_faces,
+            font_classes=self.css_font_classes,
+            **kwargs,
+        )
+        page_filename = f"{name}.html"
+        path = os.path.join(self.out, page_filename)
+        with open(path, "w") as html_file:
+            html_file.write(html)
+
+
+class HtmlDiffPageBuilder(HtmlTestPageBuilder):
+
+    def __init__(self, fonts_before, fonts_after, out):
+        self.fonts_before = fonts_before
+        self.css_font_faces_before = self._css_font_faces(fonts_before, "before")
+        self.css_font_classes_before = self._css_font_classes(fonts_before, "before")
+
+        self.fonts_after = fonts_after
+        self.css_font_faces_after = self._css_font_faces(fonts_after, "after")
+        self.css_font_classes_after = self._css_font_classes(fonts_after, "after")
+
+        self.input_font = self.fonts_before[0]
+
+        self.out = out
+        self._match_css_font_classes()
+        self.views = []
+
+    def _match_css_font_classes(self):
+        if not self.fonts_before:
+            return
+        styles_after = set(s.font_weight for s in self.css_font_classes_after)
+        styles_before = set(s.font_weight for s in self.css_font_classes_before)
+        shared_styles = styles_before & styles_after
+
+        self.css_font_classes_before = sorted(
+            [s for s in self.css_font_classes_before if s.font_weight in shared_styles],
+            key=lambda k: k.font_weight,
+        )
+        self.css_font_classes_after = sorted(
+            [s for s in self.css_font_classes_after if s.font_weight in shared_styles],
+            key=lambda k: k.font_weight,
+        )
+
+        if not all([self.css_font_classes_before, self.css_font_classes_after]):
+            raise ValueError("No matching fonts found")
+
+    def _render_html(
+        self,
+        name,
+        template,
         **kwargs,
-    )
-    before_filename = f"{template[:-5]}-before.html"
-    before_path = os.path.join(out, before_filename)
-    with open(before_path, "w") as before_html:
-        before_html.write(before)
+    ):
+        html_template = env.get_template(template)
 
-    after_filename = f"{template[:-5]}-after.html"
-    after_path = os.path.join(out, after_filename)
-    with open(after_path, "w") as after_html:
-        after_html.write(after)
+        before = html_template.render(
+            font_faces=self.css_font_faces_before,
+            font_classes=self.css_font_classes_before,
+            **kwargs,
+        )
+        before_filename = f"{name}-before.html"
+        before_path = os.path.join(self.out, before_filename)
+        with open(before_path, "w") as before_html:
+            before_html.write(before)
 
-    return [before_path, after_path]
+        after = html_template.render(
+            font_faces=self.css_font_faces_after,
+            font_classes=self.css_font_classes_after,
+            **kwargs,
+        )
+        after_filename = f"{name}-after.html"
+        after_path = os.path.join(self.out, after_filename)
+        with open(after_path, "w") as after_html:
+            after_html.write(after)
+
+        combined = html_template.render(
+            font_faces_before=self.css_font_faces_before,
+            font_faces=self.css_font_faces_after,
+            font_classes_before=self.css_font_classes_before,
+            font_classes=self.css_font_classes_after,
+            include_ui=True,
+            **kwargs,
+        )
+        combined_filename = f"{name}.html"
+        combined_path = os.path.join(self.out, combined_filename)
+        with open(combined_path, "w") as combined_html:
+            combined_html.write(combined)
+
+        return [before_path, after_path]
 
 
-def _create_package(fonts_before, fonts_after, out):
+def _create_package(fonts, out="out"):
     if os.path.isdir(out):
         shutil.rmtree(out)
-    fonts_before_dir = os.path.join(out, "fonts_before")
-    fonts_after_dir = os.path.join(out, "fonts_after")
-    for d in (out, fonts_before_dir, fonts_after_dir):
+    fonts_dir = os.path.join(out, "fonts")
+    for d in (out, fonts_dir):
         os.mkdir(d)
-    # Copy source fonts into package
+    for f in fonts:
+        shutil.copy(f, fonts_dir)
+    return (glob(os.path.join(fonts_dir, "*.ttf")), out)
+
+
+def _create_diff_package(fonts, fonts_before, out="out"):
+    if os.path.isdir(out):
+        shutil.rmtree(out)
+    fonts_dir = os.path.join(out, "fonts")
+    fonts_before_dir = os.path.join(out, "fonts_before")
+    for d in (out, fonts_dir, fonts_before_dir):
+        os.mkdir(d)
+
+    for f in fonts:
+        shutil.copy(f, fonts_dir)
     for f in fonts_before:
         shutil.copy(f, fonts_before_dir)
-    for f in fonts_after:
-        shutil.copy(f, fonts_after_dir)
 
-    return [
+    return (
         glob(os.path.join(fonts_before_dir, "*.ttf")),
-        glob(os.path.join(fonts_after_dir, "*.ttf")),
-        out
-    ]
-
-
-def gen_html(fonts_before, fonts_after, out="diffbrowsers"):
-    # Assemble dirs and copy fonts
-    fonts_before, fonts_after, out = _create_package(fonts_before, fonts_after, out)
-
-    fonts_before = [TTFont(f) for f in fonts_before]
-    fonts_after = [TTFont(f) for f in fonts_after]
-
-    font_faces_before = css_family_font_faces(fonts_before, "before")
-    font_faces_after = css_family_font_faces(fonts_after, "after")
-
-    styles_before = css_family_classes(fonts_before, "before")
-    styles_after = css_family_classes(fonts_after, "after")
-
-    waterfall = _render_view(
-        "waterfall.html",
-        font_faces_before,
-        font_faces_after,
-        styles_before,
-        styles_after,
+        glob(os.path.join(fonts_dir, "*.ttf")),
         out,
     )
-
-    sample_words = " ".join(udhr_font_words(fonts_before[0]))
-    sample_text = sample_words.lower() + " " + sample_words.upper()
-    text = _render_view(
-        "text.html",
-        font_faces_before,
-        font_faces_after,
-        styles_before,
-        styles_after,
-        out,
-        pt_size="24",
-        text=sample_text
-    )
-    return waterfall
-
-
-def gen_gif(view):
-    pass
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fonts-before", "-fb", nargs="+", required=True)
-    parser.add_argument("--fonts-after", "-fa", nargs="+", required=True)
+    parser.add_argument("fonts", nargs="+")
+    parser.add_argument("--fonts-before", "-fb", nargs="+")
     parser.add_argument("--views", nargs="+", choices=VIEWS, default=VIEWS)
     parser.add_argument("--pt-size", "-pt", help="pt size of text", default=14)
     parser.add_argument(
-        "--gifs", action='store_true', help="Output before and after gifs using Browserstack"
+        "--imgs",
+        action="store_true",
+        help="Output images using Browserstack.",
     )
     parser.add_argument("--out", "-o", help="Output dir", default="diffbrowsers")
     args = parser.parse_args()
 
-    html_docs = gen_html(args.fonts_before, args.fonts_after, args.out)
-#    html_docs = HtmlTestPageBuilder(args.fonts_before, args.fonts_after, args.out)
-#    for view in args.views:
-#        html_docs.gen_pages(view, args.pt_size)
+    if args.fonts_before:
+        fonts_before, fonts_after, out = _create_diff_package(
+            args.fonts_before, args.fonts, args.out
+        )
+        ttFonts_before = [TTFont(f) for f in fonts_before]
+        ttFonts_after = [TTFont(f) for f in fonts_after]
+        html_builder = HtmlDiffPageBuilder(ttFonts_before, ttFonts_after, out)
+    else:
+        fonts, out = _create_package(args.fonts, args.out)
+        ttFonts = [TTFont(f) for f in fonts]
+        html_builder = HtmlTestPageBuilder(ttFonts, out)
 
-#    if args.gifs:
-#        start_daemon_server(args.out)
-#        for view in html_docs.views:
-#            gen_gif(view)
+    for view in args.views:
+        html_builder.build_page(view, args.pt_size)
+
+    if args.imgs:
+        start_daemon_server(args.out)
+        for view_before, view_after in html_builder.views:
+            gen_browserstack_gif(view_before, view_after)
+
+
+def gen_browserstack_gif(view_before, view_after):
+    import subprocess
+
+    url_before = f"http://0.0.0.0:8000/{view_before}"
+    subprocess.call(["curl", url_before])
+
+
+def gen_browsrstack_img(view):
+    pass
 
 
 if __name__ == "__main__":
