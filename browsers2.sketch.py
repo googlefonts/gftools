@@ -45,18 +45,15 @@ JINJA_ENV = Environment(
 
 class CSSFontClass(object):
 
-    def __init__(self, name, font_family=None, font_weight=None):
+    def __init__(self, name, **kwargs):
         self.name = name
-        self.font_family = font_family
-        self.font_weight = font_weight
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+        self.css_dict = {k.replace("_", "-"): v for k,v in kwargs.items()}
 
     def render(self):
-        return f"""
-            .{self.name}{{
-                font-family: {self.font_family};
-                font-weight: {self.font_weight}
-            }}
-        """
+        parsed = "\n".join(f"{k}: {v};" for k,v in self.css_dict.items())
+        return f".{self.name}{{ { parsed } }}"
 
 
 class CSSFontFace(object):
@@ -111,6 +108,7 @@ class HtmlTestPageBuilder(object):
             family_name = font_familyname(ttFont)
             path = pathlib.Path(ttFont.reader.file.name)
             path = pathlib.Path(*path.parts[1:])
+
             if "fvar" in ttFont:
                 fvar = ttFont["fvar"]
                 axes = {a.axisTag: a for a in fvar.axes}
@@ -141,7 +139,7 @@ class HtmlTestPageBuilder(object):
                 name = psname if not position else f"{psname}-{position}"
                 font_family = name
                 font_weight = ttFont["OS/2"].usWeightClass
-                font_class = CSSFontClass(name, font_family, font_weight)
+                font_class = CSSFontClass(name, font_family=font_family, font_weight=font_weight)
                 results.append(font_class)
         return results
 
@@ -159,10 +157,9 @@ class HtmlTestPageBuilder(object):
             name = name if not position else f"{name}-{position}"
             font_weight = instance.coordinates["wght"]
             font_family = family_name if not position else f"{family_name}-{position}"
-            font_class = CSSFontClass(name, font_family, font_weight)
+            font_class = CSSFontClass(name, font_family=font_family, font_weight=font_weight)
             results.append(font_class)
         return results
-
 
     def build_page(self, view, pt_size):
         if view == "waterfall":
@@ -220,6 +217,7 @@ class HtmlDiffPageBuilder(HtmlTestPageBuilder):
     def _match_css_font_classes(self):
         if not self.fonts_before:
             return
+        # TODO drop weight, use stylename
         styles_after = set(s.font_weight for s in self.css_font_classes_after)
         styles_before = set(s.font_weight for s in self.css_font_classes_before)
         shared_styles = styles_before & styles_after
@@ -290,18 +288,20 @@ def _create_package(fonts, out="out"):
     return (glob(os.path.join(fonts_dir, "*.ttf")), out)
 
 
-def _create_diff_package(fonts, fonts_before, out="out"):
+def _create_diff_package(fonts_before, fonts_after, out="out"):
     if os.path.isdir(out):
         shutil.rmtree(out)
-    fonts_after_dir = os.path.join(out, "fonts_after")
+
     fonts_before_dir = os.path.join(out, "fonts_before")
+    fonts_after_dir = os.path.join(out, "fonts_after")
     for d in (out, fonts_after_dir, fonts_before_dir):
         os.mkdir(d)
 
-    for f in fonts:
-        shutil.copy(f, fonts_after_dir)
     for f in fonts_before:
         shutil.copy(f, fonts_before_dir)
+
+    for f in fonts_after:
+        shutil.copy(f, fonts_after_dir)
 
     return (
         glob(os.path.join(fonts_before_dir, "*.ttf")),
