@@ -438,7 +438,7 @@ def font_is_italic(ttfont):
     return True if "Italic" in stylename else False
 
 
-def udhr_font_words(ttFont):
+def font_sample_text(ttFont):
     """Collect words which exist in the Universal Declaration of Human Rights
     that can be formed using the ttFont instance.
 

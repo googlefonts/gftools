@@ -1,15 +1,27 @@
 """
 gftools html aka diffbrowsers2.
 
-Produce html test pages which compare two families of fonts.
-
-Optionally use diffbrowsers to produce gifs
+Generate html test pages for a family or test pages which compares two families.
 
 Examples:
-gftools html waterfall fonts_before fonts
-gftools html glyphs fonts_before fonts
-gftools html text fonts_before fonts
+# Generate test pages for a single font
+gftools html font1.ttf
+
+# Generate test pages for a family of fonts
+gftools html font1.ttf font2.ttf font3.ttf
+
+# Output test pages to a dir
+gftools html font1.ttf -o ~/Desktop/myFamily
+
+# Generate test pages and output images using Browserstack
+# (a subscription is required)
+gftools html font1.ttf --imgs
+
+# Generate diff comparison (font stylenames/fvar instance names must match!)
+gftools html ./fonts_after/font1.ttf -fb ./fonts_before/font1.ttf
 """
+from gftools.fix import font_familyname, font_stylename, WEIGHT_NAMES, get_name_record
+from gftools.utils import font_sample_text
 from fontTools.ttLib import TTFont
 from jinja2 import Environment, PackageLoader, select_autoescape
 from http.server import *
@@ -19,61 +31,63 @@ import os
 import threading
 import sys
 import argparse
-from gftools.fix import font_familyname, font_stylename, WEIGHT_NAMES
-from gftools.utils import udhr_font_words
 import shutil
 
 
-VIEWS = ["waterfall", "text", "glyphs"]
+VIEWS = ["waterfall", "text"]
 
 
-env = Environment(
+JINJA_ENV = Environment(
     loader=PackageLoader("gftools", "templates"),
     autoescape=select_autoescape(["html", "xml"]),
 )
 
 
 class CSSFontClass(object):
-    def __init__(self, ttFont, class_name=None, font_name=None, font_weight=None):
-        self.name = class_name or f"{font_name}{style_name}".replace(" ", "")
-        self.font_name = font_name or font_familyname(ttFont)
-        self.font_weight = font_weight or WEIGHT_NAMES[font_stylename(ttFont)]
+
+    def __init__(self, name, font_family=None, font_weight=None):
+        self.name = name
+        self.font_family = font_family
+        self.font_weight = font_weight
 
     def render(self):
         return f"""
             .{self.name}{{
-                font-family: {self.font_name};
+                font-family: {self.font_family};
                 font-weight: {self.font_weight}
             }}
         """
 
 
 class CSSFontFace(object):
-    def __init__(self, ttFont, font_name=None, font_weight=None):
-        stylename = font_stylename(ttFont)
-        self.path = pathlib.Path(ttFont.reader.file.name)
-        self.path = pathlib.Path(*self.path.parts[1:])
-        self.font_name = font_name or font_familyname(ttFont)
-        self.font_weight = font_weight or WEIGHT_NAMES[stylename]
+
+    def __init__(self, path, family_name=None, font_weight=None, font_stretch=None):
+        self.path = path
+        self.family_name = family_name
+        self.font_weight = font_weight
+        self.font_stretch = font_stretch
 
     def render(self):
-        return f"""
+        string = f"""
             @font-face {{
                 src: url({self.path});
-                font-family: {self.font_name};
+                font-family: {self.family_name};
                 font-weight: {self.font_weight};
-            }}
         """
+        if self.font_stretch:
+            string += f"font-stretch: {self.font_stretch}"
+            string += "}"
+        return string
 
 
-def create_server(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler):
+def create_simple_server(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler):
     server_address = ("", 8000)
     httpd = server_class(server_address, handler_class)
     httpd.serve_forever()
 
 
-def start_daemon_server(loc):
-    th = threading.Thread(target=create_server)
+def start_daemon_server():
+    th = threading.Thread(target=create_simple_server)
     th.daemon = True
     th.start()
 
@@ -82,36 +96,73 @@ class HtmlTestPageBuilder(object):
 
     def __init__(self, fonts, out="out"):
         self.fonts = fonts
+        # Font used to generate sample text, glyphs all etc
         self.input_font = self.fonts[0]
         self.out = out
 
-        self.css_font_faces = self._css_font_faces(fonts)
-        self.css_font_classes = self._css_font_classes(fonts)
+        self.css_font_faces = self.css_font_faces(fonts)
+        self.css_font_classes = self.css_font_classes(fonts)
 
         self.views = []
 
-    def _css_font_classes(self, ttFonts, position=None):
+    def css_font_faces(self, ttFonts, position=None):
         results = []
         for ttFont in ttFonts:
-            font_name = f"{font_familyname(ttFont)}-{font_stylename(ttFont)}".replace(
-                " ", ""
-            )
+            family_name = font_familyname(ttFont)
+            path = pathlib.Path(ttFont.reader.file.name)
+            path = pathlib.Path(*path.parts[1:])
             if "fvar" in ttFont:
-                raise NotImplementedError("TODO")
+                fvar = ttFont["fvar"]
+                axes = {a.axisTag: a for a in fvar.axes}
+                family_name = family_name if not position else f"{family_name}-{position}"
+                if "wght" in axes:
+                    min_weight = int(axes["wght"].minValue)
+                    max_weight = int(axes["wght"].maxValue)
+                    font_weight = f"{min_weight} {max_weight}"
+                if "wdth" in axes:
+                    min_width = int(axes["wdth"].minValue)
+                    max_width = int(axes["wdth"].maxValue)
+                    font_stretch = f"{min_width}% {max_width}%"
             else:
-                class_name = font_name if not position else f"{font_name}-{position}"
-                results.append(CSSFontClass(ttFont, class_name, class_name))
+                psname = get_name_record(ttFont, 6)
+                family_name = psname if not position else f"{psname}-{position}"
+                font_weight = ttFont["OS/2"].usWeightClass
+                font_stretch = "100%"
+            results.append(CSSFontFace(path, family_name, font_weight, font_stretch))
         return results
 
-    def _css_font_faces(self, ttFonts, position=None):
+    def css_font_classes(self, ttFonts, position=None):
         results = []
         for ttFont in ttFonts:
-            font_name = f"{font_familyname(ttFont)}-{font_stylename(ttFont)}".replace(
-                " ", ""
-            )
-            font_name = font_name if not position else f"{font_name}-{position}"
-            results.append(CSSFontFace(ttFont, font_name))
+            if "fvar" in ttFont:
+                results += self._css_font_classes_from_instances(ttFont, position=position)
+            else:
+                psname = get_name_record(ttFont, 6)  # poscript name
+                name = psname if not position else f"{psname}-{position}"
+                font_family = name
+                font_weight = ttFont["OS/2"].usWeightClass
+                font_class = CSSFontClass(name, font_family, font_weight)
+                results.append(font_class)
         return results
+
+    def _css_font_classes_from_instances(self, ttFont, position=None):
+        assert 'fvar' in ttFont
+        instances = ttFont["fvar"].instances
+        nametable = ttFont["name"]
+        family_name = font_familyname(ttFont)
+        results = []
+        for instance in instances:
+            nameid = instance.subfamilyNameID
+            inst_style = nametable.getName(nameid, 3, 1, 0x409).toUnicode()
+            
+            name = f"{family_name}-{inst_style}".replace(" ", "")
+            name = name if not position else f"{name}-{position}"
+            font_weight = instance.coordinates["wght"]
+            font_family = family_name if not position else f"{family_name}-{position}"
+            font_class = CSSFontClass(name, font_family, font_weight)
+            results.append(font_class)
+        return results
+
 
     def build_page(self, view, pt_size):
         if view == "waterfall":
@@ -120,7 +171,7 @@ class HtmlTestPageBuilder(object):
                 "waterfall.html",
             )
         elif view == "text":
-            sample_words = " ".join(udhr_font_words(self.input_font))
+            sample_words = " ".join(font_sample_text(self.input_font))
             sample_text = sample_words.lower() + " " + sample_words.upper()
             page = self._render_html(
                 "text", "text.html", pt_size=pt_size, text=sample_text
@@ -135,7 +186,7 @@ class HtmlTestPageBuilder(object):
         template,
         **kwargs,
     ):
-        html_template = env.get_template(template)
+        html_template = JINJA_ENV.get_template(template)
 
         html = html_template.render(
             font_faces=self.css_font_faces,
@@ -152,14 +203,15 @@ class HtmlDiffPageBuilder(HtmlTestPageBuilder):
 
     def __init__(self, fonts_before, fonts_after, out):
         self.fonts_before = fonts_before
-        self.css_font_faces_before = self._css_font_faces(fonts_before, "before")
-        self.css_font_classes_before = self._css_font_classes(fonts_before, "before")
-
         self.fonts_after = fonts_after
-        self.css_font_faces_after = self._css_font_faces(fonts_after, "after")
-        self.css_font_classes_after = self._css_font_classes(fonts_after, "after")
-
+        # Font used to generate sample text, glyphs all etc
         self.input_font = self.fonts_before[0]
+
+        self.css_font_faces_before = self.css_font_faces(fonts_before, "before")
+        self.css_font_faces_after = self.css_font_faces(fonts_after, "after")
+
+        self.css_font_classes_before = self.css_font_classes(fonts_before, "before")
+        self.css_font_classes_after = self.css_font_classes(fonts_after, "after")
 
         self.out = out
         self._match_css_font_classes()
@@ -190,7 +242,7 @@ class HtmlDiffPageBuilder(HtmlTestPageBuilder):
         template,
         **kwargs,
     ):
-        html_template = env.get_template(template)
+        html_template = JINJA_ENV.get_template(template)
 
         before = html_template.render(
             font_faces=self.css_font_faces_before,
@@ -224,7 +276,6 @@ class HtmlDiffPageBuilder(HtmlTestPageBuilder):
         combined_path = os.path.join(self.out, combined_filename)
         with open(combined_path, "w") as combined_html:
             combined_html.write(combined)
-
         return [before_path, after_path]
 
 
@@ -242,21 +293,32 @@ def _create_package(fonts, out="out"):
 def _create_diff_package(fonts, fonts_before, out="out"):
     if os.path.isdir(out):
         shutil.rmtree(out)
-    fonts_dir = os.path.join(out, "fonts")
+    fonts_after_dir = os.path.join(out, "fonts_after")
     fonts_before_dir = os.path.join(out, "fonts_before")
-    for d in (out, fonts_dir, fonts_before_dir):
+    for d in (out, fonts_after_dir, fonts_before_dir):
         os.mkdir(d)
 
     for f in fonts:
-        shutil.copy(f, fonts_dir)
+        shutil.copy(f, fonts_after_dir)
     for f in fonts_before:
         shutil.copy(f, fonts_before_dir)
 
     return (
         glob(os.path.join(fonts_before_dir, "*.ttf")),
-        glob(os.path.join(fonts_dir, "*.ttf")),
+        glob(os.path.join(fonts_after_dir, "*.ttf")),
         out,
     )
+
+
+def gen_browserstack_gif(view_before, view_after):
+    import subprocess
+
+    url_before = f"http://0.0.0.0:8000/{view_before}"
+    subprocess.call(["curl", url_before])
+
+
+def gen_browsrstack_img(view):
+    pass
 
 
 def main():
@@ -289,20 +351,9 @@ def main():
         html_builder.build_page(view, args.pt_size)
 
     if args.imgs:
-        start_daemon_server(args.out)
+        start_daemon_server()
         for view_before, view_after in html_builder.views:
             gen_browserstack_gif(view_before, view_after)
-
-
-def gen_browserstack_gif(view_before, view_after):
-    import subprocess
-
-    url_before = f"http://0.0.0.0:8000/{view_before}"
-    subprocess.call(["curl", url_before])
-
-
-def gen_browsrstack_img(view):
-    pass
 
 
 if __name__ == "__main__":
