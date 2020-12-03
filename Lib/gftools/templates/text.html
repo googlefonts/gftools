@@ -7,8 +7,8 @@
 {% block content %}
   {% for font_class in font_classes %}
       <div class="box">
-	<div class="box-title">{{ font_class.name }} {{ pt_size }}pt</div>
-	<span class="{{ font_class.name }}" style="font-size: {{ pt_size }}pt">
+	<div class="box-title">{{ font_class.selector }} {{ pt_size }}pt</div>
+	<span class="{{ font_class.selector }}" style="font-size: {{ pt_size }}pt">
 	  {{ text }}
           </span>
        </div>

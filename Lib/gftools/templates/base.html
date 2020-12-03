@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="style.css" />
     {% block head %}
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>GFR - {% block title %}{% endblock %}</title>
     {% endblock %}
     <style type="text/css">
@@ -48,11 +48,11 @@
 	  {% endfor %}
 
 	  {% for font_class in font_classes_before %}
-	    {{ font_class.render() }}
+	    .{{ font_class.render() }}
 	  {% endfor %}
 
 	  {% for font_class in font_classes %}
-	    {{ font_class.render() }}
+	    .{{ font_class.render() }}
 	  {% endfor %}
 	{% endblock %}
     </style>

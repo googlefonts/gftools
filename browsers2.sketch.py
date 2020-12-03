@@ -1,40 +1,37 @@
 """
-gftools html aka diffbrowsers2.
+gftools gen-html aka diffbrowsers2.
 
-Generate html test pages for a family or test pages which compares two families.
+Generate html proofing pages for a family or diff pages which compares
+two families.
 
 Examples:
 # Generate test pages for a single font
-gftools html font1.ttf
+gftools gen-html proof font1.ttf
 
 # Generate test pages for a family of fonts
-gftools html font1.ttf font2.ttf font3.ttf
+gftools gen-html proof font1.ttf font2.ttf font3.ttf
 
 # Output test pages to a dir
-gftools html font1.ttf -o ~/Desktop/myFamily
+gftools gen-html proof font1.ttf -o ~/Desktop/myFamily
 
 # Generate test pages and output images using Browserstack
 # (a subscription is required)
-gftools html font1.ttf --imgs
+gftools gen-html proof font1.ttf --imgs
 
 # Generate diff comparison (font stylenames/fvar instance names must match!)
-gftools html ./fonts_after/font1.ttf -fb ./fonts_before/font1.ttf
+gftools gen-html diff ./fonts_after/font1.ttf -fb ./fonts_before/font1.ttf
 """
 from gftools.fix import font_familyname, font_stylename, WEIGHT_NAMES, get_name_record
-from gftools.utils import font_sample_text
+from gftools.utils import font_sample_text, start_daemon_server
+from diffbrowsers.screenshot import ScreenShot
 from fontTools.ttLib import TTFont
 from jinja2 import Environment, PackageLoader, select_autoescape
-from http.server import *
 import pathlib
 from glob import glob
 import os
-import threading
 import sys
 import argparse
 import shutil
-
-
-VIEWS = ["waterfall", "text"]
 
 
 JINJA_ENV = Environment(
@@ -43,53 +40,23 @@ JINJA_ENV = Environment(
 )
 
 
-class CSSFontClass(object):
-
-    def __init__(self, name, **kwargs):
-        self.name = name
+class CSSElement(object):
+    def __init__(self, selector, **kwargs):
+        self.selector = selector
         for k, v in kwargs.items():
             setattr(self, k, v)
-        self.css_dict = {k.replace("_", "-"): v for k,v in kwargs.items()}
+        self.declerations = {k.replace("_", "-"): v for k, v in kwargs.items()}
 
     def render(self):
-        parsed = "\n".join(f"{k}: {v};" for k,v in self.css_dict.items())
-        return f".{self.name}{{ { parsed } }}"
+        decleration_strings = "\n".join(
+            f"{k}: {v};" for k, v in self.declerations.items()
+        )
+        return f"{self.selector} {{ { decleration_strings } }}"
 
 
-class CSSFontFace(object):
+class HtmlProofPageBuilder(object):
 
-    def __init__(self, path, family_name=None, font_weight=None, font_stretch=None):
-        self.path = path
-        self.family_name = family_name
-        self.font_weight = font_weight
-        self.font_stretch = font_stretch
-
-    def render(self):
-        string = f"""
-            @font-face {{
-                src: url({self.path});
-                font-family: {self.family_name};
-                font-weight: {self.font_weight};
-        """
-        if self.font_stretch:
-            string += f"font-stretch: {self.font_stretch}"
-            string += "}"
-        return string
-
-
-def create_simple_server(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler):
-    server_address = ("", 8000)
-    httpd = server_class(server_address, handler_class)
-    httpd.serve_forever()
-
-
-def start_daemon_server():
-    th = threading.Thread(target=create_simple_server)
-    th.daemon = True
-    th.start()
-
-
-class HtmlTestPageBuilder(object):
+    VIEWS = frozenset(["waterfall", "text"])
 
     def __init__(self, fonts, out="out"):
         self.fonts = fonts
@@ -100,19 +67,23 @@ class HtmlTestPageBuilder(object):
         self.css_font_faces = self.css_font_faces(fonts)
         self.css_font_classes = self.css_font_classes(fonts)
 
-        self.views = []
+        self.views = {}
 
     def css_font_faces(self, ttFonts, position=None):
         results = []
         for ttFont in ttFonts:
             family_name = font_familyname(ttFont)
+            style_name = font_stylename(ttFont)
             path = pathlib.Path(ttFont.reader.file.name)
             path = pathlib.Path(*path.parts[1:])
+            src = f"url({path})"
 
             if "fvar" in ttFont:
                 fvar = ttFont["fvar"]
                 axes = {a.axisTag: a for a in fvar.axes}
-                family_name = family_name if not position else f"{family_name}-{position}"
+                font_family = (
+                    family_name if not position else f"{family_name}-{position}"
+                )
                 if "wght" in axes:
                     min_weight = int(axes["wght"].minValue)
                     max_weight = int(axes["wght"].maxValue)
@@ -121,30 +92,46 @@ class HtmlTestPageBuilder(object):
                     min_width = int(axes["wdth"].minValue)
                     max_width = int(axes["wdth"].maxValue)
                     font_stretch = f"{min_width}% {max_width}%"
+                # TODO ital, slnt
             else:
                 psname = get_name_record(ttFont, 6)
-                family_name = psname if not position else f"{psname}-{position}"
+                font_family = psname if not position else f"{psname}-{position}"
                 font_weight = ttFont["OS/2"].usWeightClass
                 font_stretch = "100%"
-            results.append(CSSFontFace(path, family_name, font_weight, font_stretch))
+            font_style = "italic" if "Italic" in style_name else "normal"
+            font_face = CSSElement(
+                "@font-face",
+                src=src,
+                font_family=font_family,
+                font_weight=font_weight,
+                font_stretch=font_stretch,
+                font_style=font_style,
+            )
+            results.append(font_face)
         return results
 
     def css_font_classes(self, ttFonts, position=None):
         results = []
         for ttFont in ttFonts:
             if "fvar" in ttFont:
-                results += self._css_font_classes_from_instances(ttFont, position=position)
+                results += self._css_font_classes_from_vf(ttFont, position=position)
             else:
                 psname = get_name_record(ttFont, 6)  # poscript name
                 name = psname if not position else f"{psname}-{position}"
                 font_family = name
                 font_weight = ttFont["OS/2"].usWeightClass
-                font_class = CSSFontClass(name, font_family=font_family, font_weight=font_weight)
+                font_style = "italic" if "Italic" in psname else "normal"
+                font_class = CSSElement(
+                    name,
+                    font_family=font_family,
+                    font_weight=font_weight,
+                    font_style=font_style,
+                )
                 results.append(font_class)
         return results
 
-    def _css_font_classes_from_instances(self, ttFont, position=None):
-        assert 'fvar' in ttFont
+    def _css_font_classes_from_vf(self, ttFont, position=None):
+        assert "fvar" in ttFont
         instances = ttFont["fvar"].instances
         nametable = ttFont["name"]
         family_name = font_familyname(ttFont)
@@ -152,12 +139,18 @@ class HtmlTestPageBuilder(object):
         for instance in instances:
             nameid = instance.subfamilyNameID
             inst_style = nametable.getName(nameid, 3, 1, 0x409).toUnicode()
-            
+
             name = f"{family_name}-{inst_style}".replace(" ", "")
             name = name if not position else f"{name}-{position}"
             font_weight = instance.coordinates["wght"]
             font_family = family_name if not position else f"{family_name}-{position}"
-            font_class = CSSFontClass(name, font_family=font_family, font_weight=font_weight)
+            font_style = "italic" if "Italic" in inst_style else "normal"
+            font_class = CSSElement(
+                name,
+                font_family=font_family,
+                font_weight=font_weight,
+                font_style=font_style,
+            )
             results.append(font_class)
         return results
 
@@ -175,7 +168,7 @@ class HtmlTestPageBuilder(object):
             )
         else:
             raise NotImplementedError(f"'{view}' view not implemented")
-        self.views.append(page)
+        self.views[view] = page
 
     def _render_html(
         self,
@@ -194,10 +187,31 @@ class HtmlTestPageBuilder(object):
         path = os.path.join(self.out, page_filename)
         with open(path, "w") as html_file:
             html_file.write(html)
+        return (path,)
+
+    def _mkdir(self, path):
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        return path
+
+    def save_img(self, server_url, view):
+        img_dir = self._mkdir(os.path.join(self.out, "img"))
+        dst = self._mkdir(os.path.join(img_dir, view))
+
+        if view not in self.views:
+            raise ValueError(f"{view} not in {self.views}")
+
+        # Don't use os.path on this since urls are always forward slashed
+        url = f"{server_url}/{self.views[view][0]}"
+
+        auth = (os.environ["BSTACK_USERNAME"], os.environ["BSTACK_ACCESS_KEY"])
+        config = ScreenShot.DEFAULT_CONFIG
+        config["local"] = True
+        screenshot = ScreenShot(auth=auth, config=config)
+        screenshot.take(url, dst)
 
 
-class HtmlDiffPageBuilder(HtmlTestPageBuilder):
-
+class HtmlDiffPageBuilder(HtmlProofPageBuilder):
     def __init__(self, fonts_before, fonts_after, out):
         self.fonts_before = fonts_before
         self.fonts_after = fonts_after
@@ -212,7 +226,7 @@ class HtmlDiffPageBuilder(HtmlTestPageBuilder):
 
         self.out = out
         self._match_css_font_classes()
-        self.views = []
+        self.views = {}
 
     def _match_css_font_classes(self):
         if not self.fonts_before:
@@ -274,34 +288,31 @@ class HtmlDiffPageBuilder(HtmlTestPageBuilder):
         combined_path = os.path.join(self.out, combined_filename)
         with open(combined_path, "w") as combined_html:
             combined_html.write(combined)
-        return [before_path, after_path]
+        return (before_path, after_path)
 
 
-def _create_package(fonts, out="out"):
+def create_package(fonts, out="out"):
     if os.path.isdir(out):
         shutil.rmtree(out)
+
     fonts_dir = os.path.join(out, "fonts")
-    for d in (out, fonts_dir):
-        os.mkdir(d)
-    for f in fonts:
-        shutil.copy(f, fonts_dir)
+
+    [os.mkdir(d) for d in (out, fonts_dir)]
+    [shutil.copy(f, fonts_dir) for f in fonts]
+
     return (glob(os.path.join(fonts_dir, "*.ttf")), out)
 
 
-def _create_diff_package(fonts_before, fonts_after, out="out"):
+def create_diff_package(fonts_before, fonts_after, out="out"):
     if os.path.isdir(out):
         shutil.rmtree(out)
 
     fonts_before_dir = os.path.join(out, "fonts_before")
     fonts_after_dir = os.path.join(out, "fonts_after")
-    for d in (out, fonts_after_dir, fonts_before_dir):
-        os.mkdir(d)
 
-    for f in fonts_before:
-        shutil.copy(f, fonts_before_dir)
-
-    for f in fonts_after:
-        shutil.copy(f, fonts_after_dir)
+    [os.mkdir(d) for d in (out, fonts_after_dir, fonts_before_dir)]
+    [shutil.copy(f, fonts_before_dir) for f in fonts_before]
+    [shutil.copy(f, fonts_after_dir) for f in fonts_after]
 
     return (
         glob(os.path.join(fonts_before_dir, "*.ttf")),
@@ -310,50 +321,76 @@ def _create_diff_package(fonts_before, fonts_after, out="out"):
     )
 
 
-def gen_browserstack_gif(view_before, view_after):
-    import subprocess
-
-    url_before = f"http://0.0.0.0:8000/{view_before}"
-    subprocess.call(["curl", url_before])
-
-
-def gen_browsrstack_img(view):
-    pass
-
-
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("fonts", nargs="+")
-    parser.add_argument("--fonts-before", "-fb", nargs="+")
-    parser.add_argument("--views", nargs="+", choices=VIEWS, default=VIEWS)
-    parser.add_argument("--pt-size", "-pt", help="pt size of text", default=14)
-    parser.add_argument(
+    subparsers = parser.add_subparsers(
+        dest="command", required=True, metavar='"proof" or "diff"'
+    )
+
+    # Optional args which can be used in all subparsers
+    universal_options_parser = argparse.ArgumentParser(add_help=False)
+    universal_options_parser.add_argument(
+        "--views",
+        nargs="+",
+        choices=HtmlProofPageBuilder.VIEWS,
+        default=HtmlProofPageBuilder.VIEWS,
+    )
+    universal_options_parser.add_argument(
+        "--pt-size", "-pt", help="pt size of text", default=14
+    )
+    universal_options_parser.add_argument(
         "--imgs",
         action="store_true",
         help="Output images using Browserstack.",
     )
-    parser.add_argument("--out", "-o", help="Output dir", default="diffbrowsers")
+    universal_options_parser.add_argument(
+        "--out", "-o", help="Output dir", default="diffbrowsers"
+    )
+
+    proof_parser = subparsers.add_parser(
+        "proof",
+        parents=[universal_options_parser],
+        help="produce html proofing pages for a single set of fonts",
+    )
+    proof_parser.add_argument("fonts", nargs="+")
+
+    diff_parser = subparsers.add_parser(
+        "diff",
+        parents=[universal_options_parser],
+        help="produce html diff pages which compare two sets of fonts. "
+        "Fonts are matched by style name or instance style name",
+    )
+    diff_parser.add_argument("--fonts-before", "-fa", nargs="+", required=True)
+    diff_parser.add_argument("--fonts-after", "-fb", nargs="+", required=True)
+
     args = parser.parse_args()
 
-    if args.fonts_before:
-        fonts_before, fonts_after, out = _create_diff_package(
-            args.fonts_before, args.fonts, args.out
+    if args.command == "proof":
+        fonts, out = create_package(args.fonts, args.out)
+        ttFonts = [TTFont(f) for f in fonts]
+        html_builder = HtmlProofPageBuilder(ttFonts, out)
+
+    elif args.command == "diff":
+        fonts_before, fonts_after, out = create_diff_package(
+            args.fonts_before, args.fonts_after, args.out
         )
         ttFonts_before = [TTFont(f) for f in fonts_before]
         ttFonts_after = [TTFont(f) for f in fonts_after]
         html_builder = HtmlDiffPageBuilder(ttFonts_before, ttFonts_after, out)
-    else:
-        fonts, out = _create_package(args.fonts, args.out)
-        ttFonts = [TTFont(f) for f in fonts]
-        html_builder = HtmlTestPageBuilder(ttFonts, out)
 
     for view in args.views:
         html_builder.build_page(view, args.pt_size)
 
     if args.imgs:
+        import subprocess
+        subprocess.call(["./BrowserStackLocal", "--key", os.environ["BSTACK_ACCESS_KEY"], "--daemon", "start"])
+        import time
+        time.sleep(5)
         start_daemon_server()
-        for view_before, view_after in html_builder.views:
-            gen_browserstack_gif(view_before, view_after)
+
+        for view in args.views:
+            html_builder.save_img("http://0.0.0.0:8000", view)
+        subprocess.call(["./BrowserStackLocal", "--daemon", "stop"])
 
 
 if __name__ == "__main__":
