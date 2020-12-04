@@ -22,7 +22,7 @@ gftools gen-html proof font1.ttf --imgs
 gftools gen-html diff ./fonts_after/font1.ttf -fb ./fonts_before/font1.ttf
 """
 from gftools.fix import font_familyname, font_stylename, WEIGHT_NAMES, get_name_record
-from gftools.utils import font_sample_text, start_daemon_server
+from gftools.utils import font_sample_text, start_daemon_server, browserstack_local
 from diffbrowsers.screenshot import ScreenShot
 from fontTools.ttLib import TTFont
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -32,7 +32,7 @@ import os
 import sys
 import argparse
 import shutil
-
+from browserstack.local import Local
 
 JINJA_ENV = Environment(
     loader=PackageLoader("gftools", "templates"),
@@ -54,7 +54,7 @@ class CSSElement(object):
         return f"{self.selector} {{ { decleration_strings } }}"
 
 
-class HtmlProofPageBuilder(object):
+class HtmlProof(object):
 
     VIEWS = frozenset(["waterfall", "text"])
 
@@ -91,20 +91,20 @@ class HtmlProofPageBuilder(object):
                 if "wdth" in axes:
                     min_width = int(axes["wdth"].minValue)
                     max_width = int(axes["wdth"].maxValue)
-                    font_stretch = f"{min_width}% {max_width}%"
+#                    font_stretch = f"{min_width}% {max_width}%"
                 # TODO ital, slnt
             else:
                 psname = get_name_record(ttFont, 6)
                 font_family = psname if not position else f"{psname}-{position}"
                 font_weight = ttFont["OS/2"].usWeightClass
-                font_stretch = "100%"
+ #               font_stretch = "100%"
             font_style = "italic" if "Italic" in style_name else "normal"
             font_face = CSSElement(
                 "@font-face",
                 src=src,
                 font_family=font_family,
                 font_weight=font_weight,
-                font_stretch=font_stretch,
+  #              font_stretch=font_stretch,
                 font_style=font_style,
             )
             results.append(font_face)
@@ -162,7 +162,7 @@ class HtmlProofPageBuilder(object):
             )
         elif view == "text":
             sample_words = " ".join(font_sample_text(self.input_font))
-            sample_text = sample_words.lower() + " " + sample_words.upper()
+            sample_text = f"{sample_words.lower()} {sample_words.upper()}"
             page = self._render_html(
                 "text", "text.html", pt_size=pt_size, text=sample_text
             )
@@ -194,16 +194,18 @@ class HtmlProofPageBuilder(object):
             os.mkdir(path)
         return path
 
-    def save_img(self, server_url, view):
+    def save_imgs(self):
         img_dir = self._mkdir(os.path.join(self.out, "img"))
-        dst = self._mkdir(os.path.join(img_dir, view))
 
-        if view not in self.views:
-            raise ValueError(f"{view} not in {self.views}")
+        start_daemon_server()
+        with browserstack_local():
+            for view in self.views:
+                dst = self._mkdir(os.path.join(img_dir, view))
+                self.save_img(view, dst)
 
+    def save_img(self, view, dst):
         # Don't use os.path on this since urls are always forward slashed
-        url = f"{server_url}/{self.views[view][0]}"
-
+        url = f"http://0.0.0.0:8000/{self.views[view][0]}"
         auth = (os.environ["BSTACK_USERNAME"], os.environ["BSTACK_ACCESS_KEY"])
         config = ScreenShot.DEFAULT_CONFIG
         config["local"] = True
@@ -211,7 +213,8 @@ class HtmlProofPageBuilder(object):
         screenshot.take(url, dst)
 
 
-class HtmlDiffPageBuilder(HtmlProofPageBuilder):
+
+class HtmlDiff(HtmlProof):
     def __init__(self, fonts_before, fonts_after, out):
         self.fonts_before = fonts_before
         self.fonts_after = fonts_after
@@ -290,6 +293,16 @@ class HtmlDiffPageBuilder(HtmlProofPageBuilder):
             combined_html.write(combined)
         return (before_path, after_path)
 
+    def save_img(self, view, dst):
+        before_url = f"http://0.0.0.0:8000/{self.views[view][0]}"
+        after_url = f"http://0.0.0.0:8000/{self.views[view][1]}"
+        auth = (os.environ["BSTACK_USERNAME"], os.environ["BSTACK_ACCESS_KEY"])
+        config = ScreenShot.DEFAULT_CONFIG
+        config["local"] = True
+        screenshot = ScreenShot(auth=auth, config=config)
+        before_img = screenshot.take(before_url, dst)
+        after_img = screenshot.take(after_url, dst)
+
 
 def create_package(fonts, out="out"):
     if os.path.isdir(out):
@@ -332,8 +345,8 @@ def main():
     universal_options_parser.add_argument(
         "--views",
         nargs="+",
-        choices=HtmlProofPageBuilder.VIEWS,
-        default=HtmlProofPageBuilder.VIEWS,
+        choices=HtmlProof.VIEWS,
+        default=HtmlProof.VIEWS,
     )
     universal_options_parser.add_argument(
         "--pt-size", "-pt", help="pt size of text", default=14
@@ -368,7 +381,7 @@ def main():
     if args.command == "proof":
         fonts, out = create_package(args.fonts, args.out)
         ttFonts = [TTFont(f) for f in fonts]
-        html_builder = HtmlProofPageBuilder(ttFonts, out)
+        html = HtmlProof(ttFonts, out)
 
     elif args.command == "diff":
         fonts_before, fonts_after, out = create_diff_package(
@@ -376,21 +389,13 @@ def main():
         )
         ttFonts_before = [TTFont(f) for f in fonts_before]
         ttFonts_after = [TTFont(f) for f in fonts_after]
-        html_builder = HtmlDiffPageBuilder(ttFonts_before, ttFonts_after, out)
+        html = HtmlDiff(ttFonts_before, ttFonts_after, out)
 
     for view in args.views:
-        html_builder.build_page(view, args.pt_size)
+        html.build_page(view, args.pt_size)
 
     if args.imgs:
-        import subprocess
-        subprocess.call(["./BrowserStackLocal", "--key", os.environ["BSTACK_ACCESS_KEY"], "--daemon", "start"])
-        import time
-        time.sleep(5)
-        start_daemon_server()
-
-        for view in args.views:
-            html_builder.save_img("http://0.0.0.0:8000", view)
-        subprocess.call(["./BrowserStackLocal", "--daemon", "stop"])
+        html.save_imgs()
 
 
 if __name__ == "__main__":

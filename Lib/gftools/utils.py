@@ -31,7 +31,9 @@ import logging
 import time
 import json
 import threading
+from contextlib import contextmanager
 from http.server import *
+from browserstack.local import Local
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -482,6 +484,19 @@ def start_daemon_server():
     th = threading.Thread(target=create_simple_server)
     th.daemon = True
     th.start()
+
+
+@contextmanager
+def browserstack_local():
+    # TODO This can be deprecated once
+    # https://github.com/browserstack/browserstack-local-python/pull/28 is
+    # merged (it may not be merged because it's a relatively inactive repo)
+    local = Local(key=os.environ["BSTACK_ACCESS_KEY"])
+    try:
+        local.start()
+        yield local
+    finally:
+        local.stop()
 
 
 class ScreenShot(browserstack_screenshots.Screenshots):
