@@ -22,7 +22,12 @@ gftools gen-html proof font1.ttf --imgs
 gftools gen-html diff ./fonts_after/font1.ttf -fb ./fonts_before/font1.ttf
 """
 from gftools.fix import font_familyname, font_stylename, WEIGHT_NAMES, get_name_record
-from gftools.utils import font_sample_text, start_daemon_server, browserstack_local
+from gftools.utils import (
+    font_sample_text,
+    start_daemon_server,
+    browserstack_local,
+    gen_gifs,
+)
 from diffbrowsers.screenshot import ScreenShot
 from fontTools.ttLib import TTFont
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -33,6 +38,8 @@ import sys
 import argparse
 import shutil
 from browserstack.local import Local
+import tempfile
+
 
 JINJA_ENV = Environment(
     loader=PackageLoader("gftools", "templates"),
@@ -91,20 +98,17 @@ class HtmlProof(object):
                 if "wdth" in axes:
                     min_width = int(axes["wdth"].minValue)
                     max_width = int(axes["wdth"].maxValue)
-#                    font_stretch = f"{min_width}% {max_width}%"
-                # TODO ital, slnt
+                # TODO ital, slnt, stretch
             else:
                 psname = get_name_record(ttFont, 6)
                 font_family = psname if not position else f"{psname}-{position}"
                 font_weight = ttFont["OS/2"].usWeightClass
- #               font_stretch = "100%"
             font_style = "italic" if "Italic" in style_name else "normal"
             font_face = CSSElement(
                 "@font-face",
                 src=src,
                 font_family=font_family,
                 font_weight=font_weight,
-  #              font_stretch=font_stretch,
                 font_style=font_style,
             )
             results.append(font_face)
@@ -213,7 +217,6 @@ class HtmlProof(object):
         screenshot.take(url, dst)
 
 
-
 class HtmlDiff(HtmlProof):
     def __init__(self, fonts_before, fonts_after, out):
         self.fonts_before = fonts_before
@@ -298,10 +301,22 @@ class HtmlDiff(HtmlProof):
         after_url = f"http://0.0.0.0:8000/{self.views[view][1]}"
         auth = (os.environ["BSTACK_USERNAME"], os.environ["BSTACK_ACCESS_KEY"])
         config = ScreenShot.DEFAULT_CONFIG
+        config["browsers"] = [
+            {
+                "os": "Windows",
+                "os_version": "10",
+                "browser": "chrome",
+                "device": None,
+                "browser_version": "71.0",
+                "real_mobile": None,
+            }
+        ]
         config["local"] = True
         screenshot = ScreenShot(auth=auth, config=config)
-        before_img = screenshot.take(before_url, dst)
-        after_img = screenshot.take(after_url, dst)
+        with tempfile.TemporaryDirectory() as before_dst, tempfile.TemporaryDirectory() as after_dst:
+            screenshot.take(before_url, before_dst)
+            screenshot.take(after_url, after_dst)
+            gen_gifs(before_dst, after_dst, dst)
 
 
 def create_package(fonts, out="out"):
