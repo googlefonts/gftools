@@ -30,9 +30,6 @@ from pkg_resources import resource_filename
 import logging
 import time
 import json
-import threading
-from contextlib import contextmanager
-from http.server import *
 from browserstack.local import Local
 from PIL import Image
 if sys.version_info[0] == 3:
@@ -467,78 +464,6 @@ def font_sample_text(ttFont):
         seen_chars |= chars
         words.append(word)
     return words
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-
-def create_simple_server(
-    server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler
-):
-    server_address = ("", 8000)
-    httpd = server_class(server_address, handler_class)
-    httpd.serve_forever()
-
-
-def start_daemon_server():
-    th = threading.Thread(target=create_simple_server)
-    th.daemon = True
-    th.start()
-
-
-@contextmanager
-def browserstack_local():
-    # TODO This can be deprecated once
-    # https://github.com/browserstack/browserstack-local-python/pull/28 is
-    # merged (it may not be merged because it's a relatively inactive repo)
-    local = Local(key=os.environ["BSTACK_ACCESS_KEY"])
-    try:
-        local.start()
-        yield local
-    finally:
-        local.stop()
-
-
-class ScreenShot(browserstack_screenshots.Screenshots):
-    """Expansion for browserstack screenshots Lib. Adds ability to
-    download files"""
-
-    def take(self, url, dst_dir):
-        """take a screenshot from a url and save it to the dst_dir"""
-        self.config['url'] = url
-        logger.info('Taking screenshot for url: %s' % url)
-        generate_resp_json = self.generate_screenshots()
-        job_id = generate_resp_json['job_id']
-
-        logger.info('Browserstack is processing: '
-                    'http://www.browserstack.com/screenshots/%s' % job_id)
-        screenshots_json = self.get_screenshots(job_id)
-        while screenshots_json == False: # keep refreshing until browerstack is done
-            time.sleep(3)
-            screenshots_json = self.get_screenshots(job_id)
-        for screenshot in screenshots_json['screenshots']:
-            filename = self._build_filename_from_browserstack_json(screenshot)
-            base_image = os.path.join(dst_dir, filename)
-            try:
-                download_file(screenshot['image_url'], base_image)
-            except:
-                logger.info('Skipping {} BrowserStack timed out'.format(
-                    screenshot['image_url'])
-                )
-
-    def _build_filename_from_browserstack_json(self, j):
-        """Build useful filename for an image from the screenshot json
-        metadata"""
-        filename = ''
-        device = j['device'] if j['device'] else 'Desktop'
-        if j['state'] == 'done' and j['image_url']:
-            detail = [device, j['os'], j['os_version'],
-                      j['browser'], j['browser_version'], '.png']
-            filename = '_'.join(item.replace(" ", "_") for item in detail if item)
-        else:
-            logger.info('screenshot timed out, ignoring this result')
-        return filename
 
 
 def gen_gifs(dir1, dir2, dst_dir):
