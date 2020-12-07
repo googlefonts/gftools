@@ -1,16 +1,19 @@
 from gftools.fix import font_familyname, font_stylename, WEIGHT_NAMES, get_name_record
-from gftools.utils import font_sample_text
+from gftools.utils import font_sample_text, download_file, gen_gifs
 import browserstack_screenshots
 from pkg_resources import resource_filename
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 import pathlib
 from browserstack.local import Local
+import tempfile
 import sys
 import os
 import threading
 from contextlib import contextmanager
 from http.server import *
 import logging
+import time
+from copy import copy
 
 
 __all__ = [
@@ -134,11 +137,17 @@ def _css_font_classes_from_vf(ttFont, position=None):
 
 class HtmlTemplater(object):
 
-    # XXX
     BROWSERSTACK_CONFIG = {
-        "browsers": [],
+	"url":"http://www.google.com",
         "local": True,
-        "url": None,
+	"browsers":[
+	  {
+		"os":"Windows",
+		"browser_version":"8.0",
+		"browser":"ie",
+		"os_version":"7"
+	  }
+	]
     }
 
     def __init__(
@@ -155,7 +164,7 @@ class HtmlTemplater(object):
             autoescape=select_autoescape(["html", "xml"]),
         )
         self.out = out
-        self.documents = []
+        self.documents = {}
         self.has_browserstack = (
             True
             if any([browserstack_access_key, os.environ["BSTACK_ACCESS_KEY"]])
@@ -182,6 +191,8 @@ class HtmlTemplater(object):
             raise ValueError(f"'{filename}' not in dir '{self.template_dir}'")
         jinja_kwargs = {**self.__dict__, **kwargs}
         page = self._render_html(filename, dst=dst, **jinja_kwargs)
+        page_name = filename[:-5]
+        self.documents[page_name] = page
 
     def _render_html(self, filename, dst=None, **kwargs):
         html_template = self.jinja.get_template(filename)
@@ -192,7 +203,7 @@ class HtmlTemplater(object):
         dst = dst if dst else os.path.join(self.out, filename)
         with open(dst, "w") as html_file:
             html_file.write(html)
-        self.documents.append(dst)
+        return dst
 
     def _mkdir(self, path):
         if not os.path.isdir(path):
@@ -204,16 +215,16 @@ class HtmlTemplater(object):
 
         start_daemon_server()
         with browserstack_local():
-            for path in self.documents:
-                out = os.path.join(img_dir, os.path.basename(path)[:-5])
-                out = self._mkdir(os.path.join(img_dir, dst))
-                self._save_img(path, out)
+            for name, paths in self.documents.items():
+                out = os.path.join(img_dir, name)
+                self._mkdir(out)
+                self._save_img(paths, out)
 
     def _save_img(self, path, dst):
         assert hasattr(self, "screenshot")
         # Don't use os.path on this since urls are always forward slashed
-        url = f"http://0.0.0.0:8000/{self.documents[document][0]}"
-        screenshot.take(url, dst)
+        url = f"http://0.0.0.0:8000/{path}"
+        self.screenshot.take(url, dst)
 
 
 class HtmlProof(HtmlTemplater):
@@ -274,22 +285,6 @@ class HtmlDiff(HtmlTemplater):
     ):
         html_template = self.jinja.get_template(filename)
 
-        before = html_template.render(
-            **kwargs,
-        )
-        before_filename = f"{filename[:-5]}-before.html"
-        before_path = os.path.join(self.out, before_filename)
-        with open(before_path, "w") as before_html:
-            before_html.write(before)
-
-        after = html_template.render(
-            **kwargs,
-        )
-        after_filename = f"{filename[:-5]}-after.html"
-        after_path = os.path.join(self.out, after_filename)
-        with open(after_path, "w") as after_html:
-            after_html.write(after)
-
         combined = html_template.render(
             include_ui=True,
             **kwargs,
@@ -297,13 +292,36 @@ class HtmlDiff(HtmlTemplater):
         combined_path = os.path.join(self.out, filename)
         with open(combined_path, "w") as combined_html:
             combined_html.write(combined)
+
+        before_kwargs = copy(kwargs)
+        before_kwargs.pop("css_font_classes_after")
+        before = html_template.render(
+            **before_kwargs,
+        )
+        before_filename = f"{filename[:-5]}-before.html"
+        before_path = os.path.join(self.out, before_filename)
+        with open(before_path, "w") as before_html:
+            before_html.write(before)
+
+        after_kwargs = copy(kwargs)
+        after_kwargs.pop("css_font_classes_before")
+        after = html_template.render(
+            **after_kwargs,
+        )
+        after_filename = f"{filename[:-5]}-after.html"
+        after_path = os.path.join(self.out, after_filename)
+        with open(after_path, "w") as after_html:
+            after_html.write(after)
+
         return (before_path, after_path)
 
-    def save_img(self, document, dst):
-        before_url = f"http://0.0.0.0:8000/{self.documents[document][0]}"
-        after_url = f"http://0.0.0.0:8000/{self.documents[document][1]}"
-        before_img = screenshot.take(before_url, dst)
-        after_img = screenshot.take(after_url, dst)
+    def _save_img(self, document, dst):
+        before_url = f"http://0.0.0.0:8000/{document[0]}"
+        after_url = f"http://0.0.0.0:8000/{document[1]}"
+        with tempfile.TemporaryDirectory() as before_dst, tempfile.TemporaryDirectory() as after_dst:
+            self.screenshot.take(before_url, before_dst)
+            self.screenshot.take(after_url, after_dst)
+            gen_gifs(before_dst, after_dst, dst)
 
 
 def simple_server(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler):
