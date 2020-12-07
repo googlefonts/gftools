@@ -20,9 +20,12 @@
 	.box{
 	  margin-bottom: 20pt;
 	}
-	#font-toggle{
+	
+	#nav{
 	  position: fixed;
 	  right: 20px;
+	}
+	#font-toggle{
 	  display: block;
 	  font-weight: 700;
 	  cursor: pointer;
@@ -39,19 +42,27 @@
 	}
 
 	{% block style %}
-	  {% for font_face in font_faces_before %}
+	  {% for font_face in css_font_faces_before %}
 	    {{ font_face.render() }}
 	  {% endfor %}
 
-	  {% for font_face in font_faces %}
+	  {% for font_face in css_font_faces_after %}
 	    {{ font_face.render() }}
 	  {% endfor %}
 
-	  {% for font_class in font_classes_before %}
+	  {% for font_face in css_font_faces %}
+	    {{ font_face.render() }}
+	  {% endfor %}
+
+	  {% for font_class in css_font_classes_before %}
 	    .{{ font_class.render() }}
 	  {% endfor %}
 
-	  {% for font_class in font_classes %}
+	  {% for font_class in css_font_classes_after %}
+	    .{{ font_class.render() }}
+	  {% endfor %}
+
+	  {% for font_class in css_font_classes %}
 	    .{{ font_class.render() }}
 	  {% endfor %}
 	{% endblock %}
@@ -59,7 +70,18 @@
 </head>
 <body>
     {% if include_ui %}
+    <div id="nav">
         <div id="font-toggle">After</div>
+	{% for view in views %}
+	    {{ view }}  giffi
+	{% endfor %}
+	<select>
+	  <option value="volvo">Volvo</option>
+	  <option value="saab">Saab</option>
+	  <option value="opel">Opel</option>
+	  <option value="audi">Audi</option>
+	</select>
+     </div>
     {% endif %}
     <div id="content">
 	<h2>{% block content_name %}{% endblock %}</h2>
