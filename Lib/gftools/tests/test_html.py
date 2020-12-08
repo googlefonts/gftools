@@ -113,6 +113,94 @@ def test_CSSElement_private_attribs():
     assert "Foobar" not in class_with_private_variables.render()
 
 
+def _select_class(string, classes):
+    return next((s for s in classes if string in s.selector), None)
+
+def _select_font_face(string, classes):
+    return next((s for s in classes if string in s.font_family), None)
+
+
+def test_font_classes_from_static(static_fonts):
+    css_classes = css_font_classes(static_fonts)
+    assert len(css_classes) == len(static_fonts)
+
+    regular = _select_class("Maven-Pro-Regular", css_classes)
+    black = _select_class("Maven-Pro-Black", css_classes)
+
+    assert regular.render() == (
+        "Maven-Pro-Regular { font-family: Maven-Pro-Regular; font-weight: 400; "
+        "font-style: normal; font-stretch: 100%; }"
+    )
+    assert black.render() == (
+        "Maven-Pro-Black { font-family: Maven-Pro-Black; font-weight: 900; "
+        "font-style: normal; font-stretch: 100%; }"
+    )
+
+
+def test_font_classes_from_vf(var_font):
+    css_classes = css_font_classes([var_font])
+    assert len(css_classes) == len(var_font['fvar'].instances)
+
+    l = [s.font_family for s in css_classes]
+    semiexpanded_medium = _select_class("Inconsolata-SemiExpanded-Medium", css_classes)
+    assert semiexpanded_medium.render() == (
+        "Inconsolata-SemiExpanded-Medium { font-family: Inconsolata-Regular; "
+        "font-weight: 500; font-style: normal; font-stretch: 112%; }"
+    )
+    extracondensed_black = _select_class("Inconsolata-ExtraCondensed-Black", css_classes)
+    assert extracondensed_black.render() == (
+        "Inconsolata-ExtraCondensed-Black { font-family: Inconsolata-Regular; "
+        "font-weight: 900; font-style: normal; font-stretch: 62%; }"
+    )
+
+
+def test_font_faces_from_static(static_fonts):
+    font_faces = css_font_faces(static_fonts)
+    assert len(font_faces) == len(static_fonts)
+
+    medium = _select_font_face("Maven-Pro-Medium", font_faces)
+    assert medium.render() == (
+        "@font-face { src: url(data/test/mavenpro/MavenPro-Medium.ttf); "
+        "font-family: Maven-Pro-Medium; font-weight: 500; font-stretch: 100%; "
+        "font-style: normal; }"
+    )
+
+    bold = _select_font_face("Maven-Pro-Bold", font_faces)
+    assert bold.render() == (
+        "@font-face { src: url(data/test/mavenpro/MavenPro-Bold.ttf); "
+        "font-family: Maven-Pro-Bold; font-weight: 700; font-stretch: 100%; "
+        "font-style: normal; }"
+    )
+
+
+def test_font_faces_from_vf(var_font):
+    font_faces = css_font_faces([var_font])
+    font_faces[0].render == (
+        "@font-face { src: url(data/test/Inconsolata[wdth,wght].ttf); "
+        "font-family: Inconsolata; font-weight: 200 900; font-stretch: 50% 200%; "
+        "font-style: normal; }"
+    )
+
+
+def _font_faces_and_font_classes_linked(font_faces, css_classes):
+    # font classes and font-faces are linked via the font-family property
+    font_face_names = set(f.font_family for f in font_faces)
+    css_class_names = set(c.font_family for c in css_classes)
+    assert font_face_names == css_class_names
+
+
+def test_font_faces_match_font_classes_static(static_fonts):
+    font_faces = css_font_faces(static_fonts)
+    css_classes = css_font_classes(static_fonts)
+    _font_faces_and_font_classes_linked(font_faces, css_classes)
+
+
+def test_font_faces_match_font_classes_vf(var_font):
+    font_faces = css_font_faces([var_font])
+    css_classes = css_font_classes([var_font])
+    _font_faces_and_font_classes_linked(font_faces, css_classes)
+
+
 def _test_waterfall(waterfall_result, html):
     # Check pangram strings have been added.
     assert "quick wafting zephyrs vex bold jim." in waterfall_result

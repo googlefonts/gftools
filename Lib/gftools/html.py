@@ -24,6 +24,8 @@ from gftools.utils import (
 
 __all__ = [
     "CSSElement",
+    "css_font_class_from_static",
+    "css_font_classes_from_vf",
     "css_font_faces",
     "css_font_classes",
     "HtmlTemplater",
@@ -82,7 +84,8 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
         if "fvar" in ttFont:
             fvar = ttFont["fvar"]
             axes = {a.axisTag: a for a in fvar.axes}
-            font_family = family_name if not position else f"{family_name}-{position}"
+            font_family = f"{family_name}-{style_name}".replace(" ", "-")
+            font_family = font_family if not position else f"{font_family}-{position}"
             if "wght" in axes:
                 min_weight = int(axes["wght"].minValue)
                 max_weight = int(axes["wght"].maxValue)
@@ -119,42 +122,48 @@ def css_font_classes(ttFonts, position=None):
     results = []
     for ttFont in ttFonts:
         if "fvar" in ttFont:
-            results += _css_font_classes_from_vf(ttFont, position=position)
+            results += css_font_classes_from_vf(ttFont, position)
         else:
-            family_name = font_familyname(ttFont)
-            style_name = font_stylename(ttFont)
-            name = f"{family_name}-{style_name}".replace(" ", "-")
-            name = name if not position else f"{name}-{position}"
-            font_family = name
-            font_weight = ttFont["OS/2"].usWeightClass
-            font_style = "italic" if "Italic" in name else "normal"
-            font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
-            font_class = CSSElement(
-                name,
-                _style=f"{family_name} {style_name}",
-                font_family=font_family,
-                font_weight=font_weight,
-                font_style=font_style,
-                font_stretch=font_stretch,
-            )
-            results.append(font_class)
+            results.append(css_font_class_from_static(ttFont, position))
     return results
 
 
-def _css_font_classes_from_vf(ttFont, position=None):
+def css_font_class_from_static(ttFont, position=None):
+    family_name = font_familyname(ttFont)
+    style_name = font_stylename(ttFont)
+
+    class_name = f"{family_name}-{style_name}".replace(" ", "-")
+    class_name = class_name if not position else f"{class_name}-{position}"
+    font_family = class_name
+    font_weight = ttFont["OS/2"].usWeightClass
+    font_style = "normal" if "Italic" not in style_name else "italic"
+    font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
+    return CSSElement(
+        class_name,
+        _style=f"{family_name} {style_name}",
+        font_family=font_family,
+        font_weight=font_weight,
+        font_style=font_style,
+        font_stretch=font_stretch,
+    )
+
+
+def css_font_classes_from_vf(ttFont, position=None):
     instances = ttFont["fvar"].instances
     nametable = ttFont["name"]
     family_name = font_familyname(ttFont)
-    stylename = font_stylename(ttFont)
+    style_name = font_stylename(ttFont)
+
     results = []
     for instance in instances:
         nameid = instance.subfamilyNameID
         inst_style = nametable.getName(nameid, 3, 1, 0x409).toUnicode()
 
-        name = f"{family_name}-{inst_style}".replace(" ", "-")
-        name = name if not position else f"{name}-{position}"
-        font_weight = instance.coordinates["wght"]
-        font_family = family_name if not position else f"{family_name}-{position}"
+        class_name = f"{family_name}-{inst_style}".replace(" ", "-")
+        class_name = class_name if not position else f"{class_name}-{position}"
+        font_family = f"{family_name}-{style_name}".replace(" ", "-")
+        font_family = font_family if not position else f"{font_family}-{position}"
+        font_weight = int(instance.coordinates["wght"])
         font_style = "italic" if "Italic" in inst_style else "normal"
         font_stretch = (
             "100%"
@@ -162,7 +171,7 @@ def _css_font_classes_from_vf(ttFont, position=None):
             else f"{int(instance.coordinates['wdth'])}%"
         )
         font_class = CSSElement(
-            name,
+            class_name,
             _style=f"{family_name} {inst_style}",
             font_family=font_family,
             font_weight=font_weight,
@@ -278,7 +287,7 @@ class HtmlProof(HtmlTemplater):
 
 
 class HtmlDiff(HtmlTemplater):
-    def __init__(self, fonts_before, fonts_after, out="out", match_by_names=False):
+    def __init__(self, fonts_before, fonts_after, out="out", match_by_names=True):
         """Compare two families"""
         super().__init__(out=out)
         self.fonts_before = fonts_before
