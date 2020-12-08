@@ -49,7 +49,6 @@ import gftools.fonts_public_pb2 as fonts_pb2
 from fontTools import ttLib
 from absl import flags
 from gftools.util import py_subsets
-from absl import app
 from google.protobuf import text_format
 
 
@@ -984,4 +983,5 @@ def main(argv):
 
 
 if __name__ == '__main__':
+  from absl import app
   app.run(main)
