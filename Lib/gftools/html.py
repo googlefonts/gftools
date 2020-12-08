@@ -20,6 +20,7 @@ __all__ = [
     "CSSElement",
     "css_font_faces",
     "css_font_classes",
+    "HtmlTemplater",
     "HtmlProof",
     "HtmlDiff",
     "simple_server",
