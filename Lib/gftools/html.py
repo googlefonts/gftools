@@ -1,5 +1,3 @@
-from gftools.fix import font_familyname, font_stylename, WEIGHT_NAMES, get_name_record
-from gftools.utils import font_sample_text, download_file, gen_gifs
 import browserstack_screenshots
 from pkg_resources import resource_filename
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -14,6 +12,14 @@ from http.server import *
 import logging
 import time
 from copy import copy
+from gftools.utils import (
+    font_sample_text,
+    download_file,
+    gen_gifs,
+    font_familyname,
+    font_stylename,
+    get_name_record,
+)
 
 
 __all__ = [
@@ -47,7 +53,6 @@ WIDTH_CLASS_TO_CSS = {
 
 
 class CSSElement(object):
-
     def __init__(self, selector, **kwargs):
         self.selector = selector
         for k, v in kwargs.items():
@@ -89,8 +94,8 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
             if "ital" in axes:
                 pass
             if "slnt" in axes:
-                min_angle = int(axes['slnt'].minValue)
-                max_angle = int(sex['slnt'].maxValue)
+                min_angle = int(axes["slnt"].minValue)
+                max_angle = int(sex["slnt"].maxValue)
                 font_style = f"oblique {min_angle}deg {max_angle}deg"
         else:
             name = f"{family_name}-{style_name}".replace(" ", "-")
@@ -328,7 +333,7 @@ class HtmlDiff(HtmlTemplater):
         )
 
     def _match_by_names(self):
-        """Match css font classes by full names for static fonts and 
+        """Match css font classes by full names for static fonts and
         family + instance names for fvar instances"""
         styles_before = {s._style: s for s in self.css_font_classes_before}
         styles_after = {s._style: s for s in self.css_font_classes_after}
