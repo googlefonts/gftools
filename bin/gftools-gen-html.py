@@ -49,7 +49,7 @@ def create_diff_package(fonts_before, fonts_after, out="out"):
     fonts_before_dir = os.path.join(out, "fonts_before")
     fonts_after_dir = os.path.join(out, "fonts_after")
 
-    [os.mkdir(d) for d in (out, fonts_after_dir, fonts_before_dir)]
+    [os.mkdir(d) for d in (out, fonts_before_dir, fonts_after_dir)]
     [shutil.copy(f, fonts_before_dir) for f in fonts_before]
     [shutil.copy(f, fonts_after_dir) for f in fonts_after]
 
@@ -99,6 +99,7 @@ def main():
     )
     diff_parser.add_argument("--fonts-before", "-fa", nargs="+", required=True)
     diff_parser.add_argument("--fonts-after", "-fb", nargs="+", required=True)
+    diff_parser.add_argument("--match-names", default=False)
 
     args = parser.parse_args()
 

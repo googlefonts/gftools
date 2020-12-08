@@ -32,7 +32,21 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+WIDTH_CLASS_TO_CSS = {
+    1: "50%",
+    2: "62.5%",
+    3: "75%",
+    4: "87.5%",
+    5: "100%",
+    6: "112.5%",
+    7: "125%",
+    8: "150%",
+    9: "200%",
+}
+
+
 class CSSElement(object):
+
     def __init__(self, selector, **kwargs):
         self.selector = selector
         for k, v in kwargs.items():
@@ -40,8 +54,8 @@ class CSSElement(object):
         self.declerations = {k.replace("_", "-"): v for k, v in kwargs.items()}
 
     def render(self):
-        decleration_strings = "\n".join(
-            f"{k}: {v};" for k, v in self.declerations.items()
+        decleration_strings = " ".join(
+            f"{k}: {v};" for k, v in self.declerations.items() if not k.startswith("-")
         )
         return f"{self.selector} {{ { decleration_strings } }}"
 
@@ -70,20 +84,25 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
             if "wdth" in axes:
                 min_width = int(axes["wdth"].minValue)
                 max_width = int(axes["wdth"].maxValue)
-        #                    font_stretch = f"{min_width}% {max_width}%"
-        # TODO ital, slnt
+                font_stretch = f"{min_width}% {max_width}%"
+            if "ital" in axes:
+                pass
+            if "slnt" in axes:
+                min_angle = int(axes['slnt'].minValue)
+                max_angle = int(sex['slnt'].maxValue)
+                font_style = f"oblique {min_angle}deg {max_angle}deg"
         else:
-            psname = get_name_record(ttFont, 6)
-            font_family = psname if not position else f"{psname}-{position}"
+            name = f"{family_name}-{style_name}".replace(" ", "-")
+            font_family = name if not position else f"{name}-{position}"
             font_weight = ttFont["OS/2"].usWeightClass
-        #               font_stretch = "100%"
+            font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
         font_style = "italic" if "Italic" in style_name else "normal"
         font_face = CSSElement(
             "@font-face",
             src=src,
             font_family=font_family,
             font_weight=font_weight,
-            #              font_stretch=font_stretch,
+            font_stretch=font_stretch,
             font_style=font_style,
         )
         results.append(font_face)
@@ -96,16 +115,21 @@ def css_font_classes(ttFonts, position=None):
         if "fvar" in ttFont:
             results += _css_font_classes_from_vf(ttFont, position=position)
         else:
-            psname = get_name_record(ttFont, 6)  # poscript name
-            name = psname if not position else f"{psname}-{position}"
+            family_name = font_familyname(ttFont)
+            style_name = font_stylename(ttFont)
+            name = f"{family_name}-{style_name}".replace(" ", "-")
+            name = name if not position else f"{name}-{position}"
             font_family = name
             font_weight = ttFont["OS/2"].usWeightClass
-            font_style = "italic" if "Italic" in psname else "normal"
+            font_style = "italic" if "Italic" in name else "normal"
+            font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
             font_class = CSSElement(
                 name,
+                _style=f"{family_name} {style_name}",
                 font_family=font_family,
                 font_weight=font_weight,
                 font_style=font_style,
+                font_stretch=font_stretch,
             )
             results.append(font_class)
     return results
@@ -115,21 +139,29 @@ def _css_font_classes_from_vf(ttFont, position=None):
     instances = ttFont["fvar"].instances
     nametable = ttFont["name"]
     family_name = font_familyname(ttFont)
+    stylename = font_stylename(ttFont)
     results = []
     for instance in instances:
         nameid = instance.subfamilyNameID
         inst_style = nametable.getName(nameid, 3, 1, 0x409).toUnicode()
 
-        name = f"{family_name}-{inst_style}".replace(" ", "")
+        name = f"{family_name}-{inst_style}".replace(" ", "-")
         name = name if not position else f"{name}-{position}"
         font_weight = instance.coordinates["wght"]
         font_family = family_name if not position else f"{family_name}-{position}"
         font_style = "italic" if "Italic" in inst_style else "normal"
+        font_stretch = (
+            "100%"
+            if not "wdth" in instance.coordinates
+            else f"{int(instance.coordinates['wdth'])}%"
+        )
         font_class = CSSElement(
             name,
+            _style=f"{family_name} {inst_style}",
             font_family=font_family,
             font_weight=font_weight,
             font_style=font_style,
+            font_stretch=font_stretch,
         )
         results.append(font_class)
     return results
@@ -138,24 +170,24 @@ def _css_font_classes_from_vf(ttFont, position=None):
 class HtmlTemplater(object):
 
     BROWSERSTACK_CONFIG = {
-	"url":"http://www.google.com",
+        "url": None,
         "local": True,
-	"browsers":[
-	  {
-		"os":"Windows",
-		"browser_version":"8.0",
-		"browser":"ie",
-		"os_version":"7"
-	  }
-	]
+        "browsers": [
+            {
+                "os": "Windows",
+                "browser_version": "71.0",
+                "browser": "chrome",
+                "os_version": "10",
+            }
+        ],
     }
 
     def __init__(
         self,
         out="out",
+        template_dir=resource_filename("gftools", "templates"),
         browserstack_username=None,
         browserstack_access_key=None,
-        template_dir=resource_filename("gftools", "templates"),
         browserstack_config=None,
     ):
         self.template_dir = template_dir
@@ -182,7 +214,6 @@ class HtmlTemplater(object):
             self.screenshot = ScreenShot(auth=auth, config=self.browserstack_config)
 
     def build_pages(self, pages, dst=None, **kwargs):
-        # XXX add nav functionatality
         for page in pages:
             self.build_page(page, dst=dst, **kwargs)
 
@@ -213,7 +244,7 @@ class HtmlTemplater(object):
     def save_imgs(self):
         img_dir = self._mkdir(os.path.join(self.out, "img"))
 
-        start_daemon_server()
+        start_daemon_server(directory=self.out)
         with browserstack_local():
             for name, paths in self.documents.items():
                 out = os.path.join(img_dir, name)
@@ -223,7 +254,8 @@ class HtmlTemplater(object):
     def _save_img(self, path, dst):
         assert hasattr(self, "screenshot")
         # Don't use os.path on this since urls are always forward slashed
-        url = f"http://0.0.0.0:8000/{path}"
+        page = os.path.relpath(path, start=self.out)
+        url = f"http://0.0.0.0:8000/{page}"
         self.screenshot.take(url, dst)
 
 
@@ -240,7 +272,7 @@ class HtmlProof(HtmlTemplater):
 
 
 class HtmlDiff(HtmlTemplater):
-    def __init__(self, fonts_before, fonts_after, out="out"):
+    def __init__(self, fonts_before, fonts_after, out="out", match_by_names=False):
         """Compare two families"""
         super().__init__(out=out)
         self.fonts_before = fonts_before
@@ -256,25 +288,59 @@ class HtmlDiff(HtmlTemplater):
         self.css_font_classes_before = css_font_classes(fonts_before, "before")
         self.css_font_classes_after = css_font_classes(fonts_after, "after")
 
-        self._match_css_font_classes()
+        if match_by_names:
+            self._match_by_names()
+        else:
+            self._match_by_css_font_classes()
 
         self.sample_text = " ".join(font_sample_text(self.fonts_before[0]))
 
-    def _match_css_font_classes(self):
-        # TODO drop weight, use stylename
-        styles_after = set(s.font_weight for s in self.css_font_classes_after)
-        styles_before = set(s.font_weight for s in self.css_font_classes_before)
+    def _match_by_css_font_classes(self):
+        styles_after = set(self._match_key(s) for s in self.css_font_classes_after)
+        styles_before = set(self._match_key(s) for s in self.css_font_classes_before)
         shared_styles = styles_before & styles_after
 
         self.css_font_classes_before = sorted(
-            [s for s in self.css_font_classes_before if s.font_weight in shared_styles],
+            [
+                s
+                for s in self.css_font_classes_before
+                if self._match_key(s) in shared_styles
+            ],
             key=lambda k: k.font_weight,
         )
         self.css_font_classes_after = sorted(
-            [s for s in self.css_font_classes_after if s.font_weight in shared_styles],
+            [
+                s
+                for s in self.css_font_classes_after
+                if self._match_key(s) in shared_styles
+            ],
             key=lambda k: k.font_weight,
         )
 
+        if not all([self.css_font_classes_before, self.css_font_classes_after]):
+            raise ValueError("No matching fonts found")
+
+    def _match_key(self, css_font_class):
+        return tuple(
+            getattr(css_font_class, i)
+            for i in ("font_stretch", "font_weight", "font_style")
+        )
+
+    def _match_by_names(self):
+        """Match css font classes by full names for static fonts and 
+        family + instance names for fvar instances"""
+        styles_before = {s._style: s for s in self.css_font_classes_before}
+        styles_after = {s._style: s for s in self.css_font_classes_after}
+        shared_styles = set(styles_before) & set(styles_after)
+
+        self.css_font_classes_before = sorted(
+            [s for k, s in styles_before.items() if k in shared_styles],
+            key=lambda s: s.font_weight,
+        )
+        self.css_font_classes_after = sorted(
+            [s for k, s in styles_after.items() if k in shared_styles],
+            key=lambda s: s.font_weight,
+        )
         if not all([self.css_font_classes_before, self.css_font_classes_after]):
             raise ValueError("No matching fonts found")
 
@@ -316,28 +382,41 @@ class HtmlDiff(HtmlTemplater):
         return (before_path, after_path)
 
     def _save_img(self, document, dst):
-        before_url = f"http://0.0.0.0:8000/{document[0]}"
-        after_url = f"http://0.0.0.0:8000/{document[1]}"
+        before_page = os.path.relpath(document[0], start=self.out)
+        after_page = os.path.relpath(document[1], start=self.out)
+        before_url = f"http://0.0.0.0:8000/{before_page}"
+        after_url = f"http://0.0.0.0:8000/{after_page}"
         with tempfile.TemporaryDirectory() as before_dst, tempfile.TemporaryDirectory() as after_dst:
             self.screenshot.take(before_url, before_dst)
             self.screenshot.take(after_url, after_dst)
             gen_gifs(before_dst, after_dst, dst)
 
 
-def simple_server(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler):
+def simple_server(directory="."):
+    class Handler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=directory, **kwargs)
+
     server_address = ("", 8000)
-    httpd = server_class(server_address, handler_class)
+    httpd = HTTPServer(server_address, Handler)
     httpd.serve_forever()
 
 
-def start_daemon_server():
-    th = threading.Thread(target=simple_server)
+def start_daemon_server(directory="."):
+    """Start a simple_server in a new thread, running in the background.
+    Server will be stopped once a script has finished.
+
+    Args:
+      directory: start the server from a specified directory. Default is '.'
+    """
+    th = threading.Thread(target=simple_server, args=[directory])
     th.daemon = True
     th.start()
 
 
 @contextmanager
 def browserstack_local():
+    """Start browserstack local tool as a background process"""
     # TODO This can be deprecated once
     # https://github.com/browserstack/browserstack-local-python/pull/28 is
     # merged (it may not be merged because it's a relatively inactive repo)
