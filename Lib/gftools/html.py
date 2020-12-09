@@ -80,12 +80,12 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
             else os.path.relpath(font_path, start=server_dir)
         )
         src = f"url({path})"
+        font_family = _class_name(family_name, style_name, position)
+        font_style = "italic" if "Italic" in style_name else "normal"
 
         if "fvar" in ttFont:
             fvar = ttFont["fvar"]
             axes = {a.axisTag: a for a in fvar.axes}
-            font_family = f"{family_name}-{style_name}".replace(" ", "-")
-            font_family = font_family if not position else f"{font_family}-{position}"
             if "wght" in axes:
                 min_weight = int(axes["wght"].minValue)
                 max_weight = int(axes["wght"].maxValue)
@@ -101,11 +101,8 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
                 max_angle = int(sex["slnt"].maxValue)
                 font_style = f"oblique {min_angle}deg {max_angle}deg"
         else:
-            name = f"{family_name}-{style_name}".replace(" ", "-")
-            font_family = name if not position else f"{name}-{position}"
             font_weight = ttFont["OS/2"].usWeightClass
             font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
-        font_style = "italic" if "Italic" in style_name else "normal"
         font_face = CSSElement(
             "@font-face",
             src=src,
@@ -128,12 +125,16 @@ def css_font_classes(ttFonts, position=None):
     return results
 
 
+def _class_name(family_name, style_name, position=None):
+    string = f"{family_name}-{style_name}".replace(" ", "-")
+    return string if not position else f"{string}-{position}"
+
+
 def css_font_class_from_static(ttFont, position=None):
     family_name = font_familyname(ttFont)
     style_name = font_stylename(ttFont)
 
-    class_name = f"{family_name}-{style_name}".replace(" ", "-")
-    class_name = class_name if not position else f"{class_name}-{position}"
+    class_name = _class_name(family_name, style_name, position)
     font_family = class_name
     font_weight = ttFont["OS/2"].usWeightClass
     font_style = "normal" if "Italic" not in style_name else "italic"
@@ -159,10 +160,8 @@ def css_font_classes_from_vf(ttFont, position=None):
         nameid = instance.subfamilyNameID
         inst_style = nametable.getName(nameid, 3, 1, 0x409).toUnicode()
 
-        class_name = f"{family_name}-{inst_style}".replace(" ", "-")
-        class_name = class_name if not position else f"{class_name}-{position}"
-        font_family = f"{family_name}-{style_name}".replace(" ", "-")
-        font_family = font_family if not position else f"{font_family}-{position}"
+        class_name = _class_name(family_name, inst_style, position)
+        font_family = _class_name(family_name, style_name, position)
         font_weight = int(instance.coordinates["wght"])
         font_style = "italic" if "Italic" in inst_style else "normal"
         font_stretch = (
@@ -280,14 +279,14 @@ class HtmlProof(HtmlTemplater):
         super().__init__(out)
         self.fonts = fonts
 
-        self.css_font_faces = css_font_faces(fonts, self.out)
+        self.css_font_faces = css_font_faces(fonts, os.path.join(self.out, "index.html"))
         self.css_font_classes = css_font_classes(fonts)
 
         self.sample_text = " ".join(font_sample_text(self.fonts[0]))
 
 
 class HtmlDiff(HtmlTemplater):
-    def __init__(self, fonts_before, fonts_after, out="out", match_by_names=True):
+    def __init__(self, fonts_before, fonts_after, out="out"):
         """Compare two families"""
         super().__init__(out=out)
         self.fonts_before = fonts_before
@@ -302,48 +301,13 @@ class HtmlDiff(HtmlTemplater):
 
         self.css_font_classes_before = css_font_classes(fonts_before, "before")
         self.css_font_classes_after = css_font_classes(fonts_after, "after")
-
-        if match_by_names:
-            self._match_by_names()
-        else:
-            self._match_by_css_font_classes()
+        self._match_css_font_classes()
 
         self.sample_text = " ".join(font_sample_text(self.fonts_before[0]))
 
-    def _match_by_css_font_classes(self):
-        styles_after = set(self._match_key(s) for s in self.css_font_classes_after)
-        styles_before = set(self._match_key(s) for s in self.css_font_classes_before)
-        shared_styles = styles_before & styles_after
-
-        self.css_font_classes_before = sorted(
-            [
-                s
-                for s in self.css_font_classes_before
-                if self._match_key(s) in shared_styles
-            ],
-            key=lambda k: k.font_weight,
-        )
-        self.css_font_classes_after = sorted(
-            [
-                s
-                for s in self.css_font_classes_after
-                if self._match_key(s) in shared_styles
-            ],
-            key=lambda k: k.font_weight,
-        )
-
-        if not all([self.css_font_classes_before, self.css_font_classes_after]):
-            raise ValueError("No matching fonts found")
-
-    def _match_key(self, css_font_class):
-        return tuple(
-            getattr(css_font_class, i)
-            for i in ("font_stretch", "font_weight", "font_style")
-        )
-
-    def _match_by_names(self):
+    def _match_css_font_classes(self):
         """Match css font classes by full names for static fonts and
-        family + instance names for fvar instances"""
+        family name + instance name for fvar instances"""
         styles_before = {s._style: s for s in self.css_font_classes_before}
         styles_after = {s._style: s for s in self.css_font_classes_after}
         shared_styles = set(styles_before) & set(styles_after)

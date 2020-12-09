@@ -5,6 +5,7 @@ import tempfile
 import os
 from gftools.html import *
 import re
+from copy import deepcopy
 
 
 TEST_DATA = os.path.join("data", "test")
@@ -240,3 +241,48 @@ def test_HtmlProof_with_vf(var_font):
         waterfall_result = _file_to_string(html.documents["waterfall"])
         _test_waterfall(waterfall_result, html)
 
+
+def test_HtmlDiff_match_css_classes_different_families(static_fonts):
+    from gftools.fix import update_nametable
+    family_before = static_fonts
+    family_after = deepcopy(static_fonts)
+    [update_nametable(f, "New Family") for f in family_after]
+
+    with tempfile.TemporaryDirectory() as project_dir:
+        with pytest.raises(ValueError, match="No matching fonts found"):
+            html = HtmlDiff(family_before, family_after, project_dir)
+
+
+def test_HtmlDiff_match_css_classes_different_styles(static_fonts):
+    from gftools.fix import update_nametable
+    family_before = static_fonts
+    family_after = deepcopy(static_fonts)
+
+    reg_after = next((f for f in family_after if "Regular.ttf" in f.reader.file.name), None)
+    update_nametable(reg_after, style_name="Foobar")
+
+    bold_after = next((f for f in family_after if "Bold.ttf" in f.reader.file.name), None)
+    update_nametable(bold_after, style_name="Foobar2")
+
+    with tempfile.TemporaryDirectory() as project_dir:
+        html = HtmlDiff(family_before, family_after, project_dir)
+        # Check css classes do not contain
+        for subfamily in ("Regular", "Bold", "Foobar", "Foobar2"):
+            assert not any(subfamily in c._style for c in html.css_font_classes_before)
+            assert not any(subfamily in c._style for c in html.css_font_classes_after)
+
+        # Check css classes do contain
+        for subfamily in ("Medium", "Black"):
+            assert any(subfamily in c._style for c in html.css_font_classes_before)
+            assert any(subfamily in c._style for c in html.css_font_classes_after)
+
+        # Check css classes have same order
+        before_properties = [
+            (s.font_weight, s.font_stretch, s.font_style)
+            for s in html.css_font_classes_before
+        ]
+        after_properties = [
+            (s.font_weight, s.font_stretch, s.font_style)
+            for s in html.css_font_classes_after
+        ]
+        assert before_properties == after_properties
