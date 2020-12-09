@@ -28,6 +28,10 @@ def static_fonts():
 def var_font():
     return TTFont(os.path.join(TEST_DATA, "Inconsolata[wdth,wght].ttf"))
 
+@pytest.fixture
+def var_font2():
+    return TTFont(os.path.join(TEST_DATA, "MavenPro[wght].ttf"))
+
 
 def _string_to_file(string, dst):
     with open(dst, "w") as doc:
@@ -117,6 +121,7 @@ def test_CSSElement_private_attribs():
 def _select_class(string, classes):
     return next((s for s in classes if string in s.selector), None)
 
+
 def _select_font_face(string, classes):
     return next((s for s in classes if string in s.font_family), None)
 
@@ -142,7 +147,6 @@ def test_font_classes_from_vf(var_font):
     css_classes = css_font_classes([var_font])
     assert len(css_classes) == len(var_font['fvar'].instances)
 
-    l = [s.font_family for s in css_classes]
     semiexpanded_medium = _select_class("Inconsolata-SemiExpanded-Medium", css_classes)
     assert semiexpanded_medium.render() == (
         "Inconsolata-SemiExpanded-Medium { font-family: Inconsolata-Regular; "
@@ -253,6 +257,19 @@ def test_HtmlDiff_match_css_classes_different_families(static_fonts):
             html = HtmlDiff(family_before, family_after, project_dir)
 
 
+def _check_css_classes_match(classes_before, classes_after):
+    # Check css classes have same order
+    before_properties = [
+        (s.font_weight, s.font_stretch, s.font_style)
+        for s in classes_before
+    ]
+    after_properties = [
+        (s.font_weight, s.font_stretch, s.font_style)
+        for s in classes_after
+    ]
+    assert before_properties == after_properties
+
+
 def test_HtmlDiff_match_css_classes_different_styles(static_fonts):
     from gftools.fix import update_nametable
     family_before = static_fonts
@@ -271,18 +288,19 @@ def test_HtmlDiff_match_css_classes_different_styles(static_fonts):
             assert not any(subfamily in c._style for c in html.css_font_classes_before)
             assert not any(subfamily in c._style for c in html.css_font_classes_after)
 
-        # Check css classes do contain
+        # Check css classes contain
         for subfamily in ("Medium", "Black"):
             assert any(subfamily in c._style for c in html.css_font_classes_before)
             assert any(subfamily in c._style for c in html.css_font_classes_after)
 
-        # Check css classes have same order
-        before_properties = [
-            (s.font_weight, s.font_stretch, s.font_style)
-            for s in html.css_font_classes_before
-        ]
-        after_properties = [
-            (s.font_weight, s.font_stretch, s.font_style)
-            for s in html.css_font_classes_after
-        ]
-        assert before_properties == after_properties
+        _check_css_classes_match(html.css_font_classes_before, html.css_font_classes_after)
+
+
+def test_HtmlDiff_match_css_classes_static_vs_vf(static_fonts, var_font2):
+    # MavenPro VF has an fvar instance for each static font.
+    # Every font in the static family should match an instance in Maven Pro VF
+    with tempfile.TemporaryDirectory() as project_dir:
+        html = HtmlDiff(static_fonts, [var_font2], project_dir)
+        assert len(html.css_font_classes_before) == len(html.css_font_classes_after)
+        _check_css_classes_match(html.css_font_classes_before, html.css_font_classes_after)
+

@@ -12,6 +12,7 @@ from http.server import *
 import logging
 import time
 from copy import copy
+import pathlib
 from gftools.utils import (
     font_sample_text,
     download_file,
@@ -82,6 +83,7 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
         src = f"url({path})"
         font_family = _class_name(family_name, style_name, position)
         font_style = "italic" if "Italic" in style_name else "normal"
+        font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
 
         if "fvar" in ttFont:
             fvar = ttFont["fvar"]
@@ -102,7 +104,6 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
                 font_style = f"oblique {min_angle}deg {max_angle}deg"
         else:
             font_weight = ttFont["OS/2"].usWeightClass
-            font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
         font_face = CSSElement(
             "@font-face",
             src=src,
@@ -210,6 +211,7 @@ class HtmlTemplater(object):
             autoescape=select_autoescape(["html", "xml"]),
         )
         self.out = out
+        self.server_dir = "/" #self._server_dir()
         self.documents = {}
         self.has_browserstack = (
             True
@@ -226,6 +228,21 @@ class HtmlTemplater(object):
                 browserstack_config if browserstack_config else self.BROWSERSTACK_CONFIG
             )
             self.screenshot = ScreenShot(auth=auth, config=self.browserstack_config)
+
+    def _server_dir(self, paths=None):
+        if not paths:
+            return self.out
+        
+        paths = [pathlib.Path(p).parts for p in paths]
+        root = pathlib.Path("")
+
+        start = min(paths)
+        for i in range(len(start)):
+            for path in paths:
+                if path[i] != start[i]:
+                    return root
+            root = root / start[i]
+        return root
 
     def build_pages(self, pages, dst=None, **kwargs):
         for page in pages:
@@ -256,9 +273,10 @@ class HtmlTemplater(object):
         return path
 
     def save_imgs(self):
+        assert hasattr(self, "screenshot")
         img_dir = self._mkdir(os.path.join(self.out, "img"))
 
-        start_daemon_server(directory=self.out)
+        start_daemon_server(directory=self.server_dir)
         with browserstack_local():
             for name, paths in self.documents.items():
                 out = os.path.join(img_dir, name)
@@ -266,9 +284,8 @@ class HtmlTemplater(object):
                 self._save_img(paths, out)
 
     def _save_img(self, path, dst):
-        assert hasattr(self, "screenshot")
         # Don't use os.path on this since urls are always forward slashed
-        page = os.path.relpath(path, start=self.out)
+        page = os.path.relpath(path, start=self.server_dir)
         url = f"http://0.0.0.0:8000/{page}"
         self.screenshot.take(url, dst)
 
@@ -279,7 +296,9 @@ class HtmlProof(HtmlTemplater):
         super().__init__(out)
         self.fonts = fonts
 
-        self.css_font_faces = css_font_faces(fonts, os.path.join(self.out, "index.html"))
+        self.server_dir = self._server_dir([f.reader.file.name for f in self.fonts]+[self.out])
+
+        self.css_font_faces = css_font_faces(fonts, self.server_dir)
         self.css_font_classes = css_font_classes(fonts)
 
         self.sample_text = " ".join(font_sample_text(self.fonts[0]))
@@ -292,11 +311,18 @@ class HtmlDiff(HtmlTemplater):
         self.fonts_before = fonts_before
         self.fonts_after = fonts_after
 
+        self.server_dir = self._server_dir(
+            [f.reader.file.name for f in self.fonts_before] + \
+            [f.reader.file.name for f in self.fonts_after] + \
+            [self.out]
+        )
+        print(self.server_dir)
+
         self.css_font_faces_before = css_font_faces(
-            fonts_before, self.out, position="before"
+            fonts_before, self.server_dir, position="before"
         )
         self.css_font_faces_after = css_font_faces(
-            fonts_after, self.out, position="after"
+            fonts_after, self.server_dir, position="after"
         )
 
         self.css_font_classes_before = css_font_classes(fonts_before, "before")
@@ -361,8 +387,8 @@ class HtmlDiff(HtmlTemplater):
         return (before_path, after_path)
 
     def _save_img(self, document, dst):
-        before_page = os.path.relpath(document[0], start=self.out)
-        after_page = os.path.relpath(document[1], start=self.out)
+        before_page = os.path.relpath(document[0], start=self.server_dir)
+        after_page = os.path.relpath(document[1], start=self.server_dir)
         before_url = f"http://0.0.0.0:8000/{before_page}"
         after_url = f"http://0.0.0.0:8000/{after_page}"
         with tempfile.TemporaryDirectory() as before_dst, tempfile.TemporaryDirectory() as after_dst:
