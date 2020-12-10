@@ -41,7 +41,9 @@ required, all others have sensible defaults:
 * ``sources``: Required. An array of Glyphs, UFO or designspace source files.
 * ``logLevel``: Debugging log level. Defaults to ``INFO``.
 * ``stylespaceFile``: A statmake ``.stylespace`` file. Defaults to none (Use ``gftools.stat``)
-* ``stat``: A STAT table configuration, as shown above.
+* ``stat``: A STAT table configuration. This may be either a list of axes and
+    values as demonstrated above, or a dictionary mapping each source file to a
+    per-source list.
 * ``buildVariable``: Build variable fonts. Defaults to true.
 * ``buildStatic``: Build static fonts. Defaults to true.
 * ``buildWebfont``: Build WOFF2 fonts. Defaults to ``$buildStatic``.
@@ -161,7 +163,7 @@ class GFBuilder:
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
         args = {"output": ["variable"], "family_name": self.config["familyName"]}
-        all_variables = []
+        all_variables = {}
         for source in self.config["sources"]:
             if not source.endswith(".designspace") and not source.endswith("glyphs"):
                 continue
@@ -173,7 +175,7 @@ class GFBuilder:
             output_files = self.run_fontmake(source, args)
             newname = self.rename_variable(output_files[0])
             self.post_process(newname)
-            all_variables.append(newname)
+            all_variables[source] = newname
         if all_variables:
             self.gen_stat(all_variables)
 
@@ -213,7 +215,8 @@ class GFBuilder:
         os.rename(fontfile, newname)
         return newname
 
-    def gen_stat(self, filenames):
+    def gen_stat(self, varfonts):
+        filenames = varfonts.values()
         if len(filenames) > 1 and "ital" not in self.config["axisOrder"]:
             # *Are* any italic? Presumably, but test
             if any([ "italic" in x.lower() for x in filenames ]):
@@ -222,36 +225,44 @@ class GFBuilder:
         if "stylespaceFile" in self.config and self.config["stylespaceFile"]:
             self.gen_stat_stylespace(self.config["stylespaceFile"], filenames)
         elif "stat" in self.config:
-            self.gen_stat_config(self.config["stat"], filenames)
+            self.gen_stat_config(self.config["stat"], varfonts)
         else:
             ttFonts = [TTFont(x) for x in filenames]
             gen_stat_tables(ttFonts, self.config["axisOrder"])
             for filename, ttFont in zip(filenames, ttFonts):
                 ttFont.save(filename)
 
-    def gen_stat_config(self, stat, filenames):
+    def gen_stat_config(self, stat, varfonts):
         # Check we have no italic
-        if "ital" in self.config["axisOrder"]:
-            for ax in stat:
-                if ax["name"] == "ital":
-                    raise ValueError("ital axis should not appear in stat config")
-        ital_stat_for_roman = {
-            "name": "Italic", "tag": "ital",
-            "values": [dict(value=0, name="Roman", flags=0x2, linkedValue=1)]
-        }
-        ital_stat_for_italic = {
-            "name": "Italic", "tag": "ital",
-            "values": [dict(value=1, name="Italic")]
-        }
+        if isinstance(stat, list):
+            if "ital" in self.config["axisOrder"]:
+                for ax in stat:
+                    if ax["name"] == "ital":
+                        raise ValueError("ital axis should not appear in stat config")
+            ital_stat_for_roman = {
+                "name": "Italic", "tag": "ital",
+                "values": [dict(value=0, name="Roman", flags=0x2, linkedValue=1)]
+            }
+            ital_stat_for_italic = {
+                "name": "Italic", "tag": "ital",
+                "values": [dict(value=1, name="Italic")]
+            }
 
-        stat.append({}) # We will switch this entry between Roman and Italic
-        for f in filenames:
+            stat.append({}) # We will switch this entry between Roman and Italic
+
+        for source, f in varfonts.items():
             ttFont = TTFont(f)
-            if "italic" in f.lower():
-                stat[-1] = ital_stat_for_italic
+            if isinstance(stat, dict):
+                if source not in stat:
+                    raise ValueError("Source %s not found in stat dictionary" % source)
+                this_stat = stat[source]
             else:
-                stat[-1] = ital_stat_for_roman
-            buildStatTable(ttFont, stat)
+                if "italic" in f.lower():
+                    stat[-1] = ital_stat_for_italic
+                else:
+                    stat[-1] = ital_stat_for_roman
+                this_stat = stat
+            buildStatTable(ttFont, this_stat)
             ttFont.save(f)
 
     def gen_stat_stylespace(self, stylespaceFile, filenames):
