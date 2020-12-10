@@ -1,3 +1,4 @@
+from fontTools.ttLib import TTFont
 import browserstack_screenshots
 from pkg_resources import resource_filename
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -8,11 +9,13 @@ import sys
 import os
 import threading
 from contextlib import contextmanager
+import http.server
 from http.server import *
 import logging
 import time
 from copy import copy
 import pathlib
+import shutil
 from gftools.utils import (
     font_sample_text,
     download_file,
@@ -205,14 +208,66 @@ class HtmlTemplater(object):
         browserstack_access_key=None,
         browserstack_config=None,
     ):
+        """
+        Generate html documents from Jinja2 templates and optionally
+        screenshot the results on different browsers, using the
+        Browserstack Screenshot api.
+
+        When saving images, two brackground processes occur. A local
+        server is started which serves the populated html documents
+        and browserstack local is run as background process. This
+        will allow Browserstack to take local screenshots.
+
+        The main purpose of this class is to allow developers to
+        write their own template generators by using inheritance e.g
+
+        ```
+        class MyTemplate(HtmlTemplater):
+            def __init__(self, forename, surname, out):
+                super().__init__(self, out)
+                self.forename = forename
+                self.surname = surname
+
+        html = MyTemplate("Joe", "Doe")
+        html.build_pages()
+        ```
+
+        template:
+        <p>Hello {{ forename }} {{ surname }}.</p>
+
+        result:
+        <p>Hello Joe Doe.</p>
+
+        For more complex examples, see HtmlProof and HtmlDiff in this
+        module.
+
+        All html docs and assets are saved into the specified out
+        directory. Packaging the assets together makes it easier to share
+        and we don't have to worry about absolute vs relative paths. This
+        can be problematic for some assets such as webfonts where the path
+        must be related to the local server, not the user's system.
+
+        Args:
+          out: output dir for generated html documents
+          template_dir: the directory containing the html templates
+          browserstack_username: optional. Browserstack username
+          browserstack_access_key: optional. Browserstack access key
+          browserstack_config: optional. Browserstack config file. See
+            api docs for more info:
+            https://www.browserstack.com/screenshots/api
+        """
         self.template_dir = template_dir
+        self.templates = []
+        # TODO we may want to make this an arg
+        self.server_url="http://0.0.0.0:8000"
         self.jinja = Environment(
             loader=FileSystemLoader(self.template_dir),
             autoescape=select_autoescape(["html", "xml"]),
         )
-        self.out = out
-        self.server_dir = "/" #self._server_dir()
+
+        self.out = self.mkdir(out)
         self.documents = {}
+
         self.has_browserstack = (
             True
             if any([browserstack_access_key, os.environ["BSTACK_ACCESS_KEY"]])
@@ -229,107 +284,99 @@ class HtmlTemplater(object):
             )
             self.screenshot = ScreenShot(auth=auth, config=self.browserstack_config)
 
-    def _server_dir(self, paths=None):
-        if not paths:
-            return self.out
-        
-        paths = [pathlib.Path(p).parts for p in paths]
-        root = pathlib.Path("")
-
-        start = min(paths)
-        for i in range(len(start)):
-            for path in paths:
-                if path[i] != start[i]:
-                    return root
-            root = root / start[i]
-        return root
-
-    def build_pages(self, pages, dst=None, **kwargs):
+    def build_pages(self, pages=None, dst=None, **kwargs):
+        if not pages:
+            pages = [f for f in self.templates_dir if f.endswith(".html")]
         for page in pages:
             self.build_page(page, dst=dst, **kwargs)
 
     def build_page(self, filename, dst=None, **kwargs):
         if filename not in os.listdir(self.template_dir):
             raise ValueError(f"'{filename}' not in dir '{self.template_dir}'")
+        # Combine self.__dict__ attributes with function kwargs. This allows Jinja
+        # templates to access the class attributes
         jinja_kwargs = {**self.__dict__, **kwargs}
-        page = self._render_html(filename, dst=dst, **jinja_kwargs)
         page_name = filename[:-5]
+        page = self._render_html(filename, dst=dst, **jinja_kwargs)
         self.documents[page_name] = page
 
     def _render_html(self, filename, dst=None, **kwargs):
         html_template = self.jinja.get_template(filename)
-
-        html = html_template.render(
-            **kwargs,
-        )
+        html = html_template.render(**kwargs)
         dst = dst if dst else os.path.join(self.out, filename)
         with open(dst, "w") as html_file:
             html_file.write(html)
         return dst
 
-    def _mkdir(self, path):
+    def mkdir(self, path):
         if not os.path.isdir(path):
             os.mkdir(path)
         return path
 
+    def copy_files(self, srcs, dst):
+        [shutil.copy(f, dst) for f in srcs]
+        return [os.path.join(dst, os.path.basename(f)) for f in srcs]
+
     def save_imgs(self):
         assert hasattr(self, "screenshot")
-        img_dir = self._mkdir(os.path.join(self.out, "img"))
+        img_dir = self.mkdir(os.path.join(self.out, "img"))
 
-        start_daemon_server(directory=self.server_dir)
+        start_daemon_server(directory=self.out)
         with browserstack_local():
             for name, paths in self.documents.items():
                 out = os.path.join(img_dir, name)
-                self._mkdir(out)
+                self.mkdir(out)
                 self._save_img(paths, out)
 
     def _save_img(self, path, dst):
-        # Don't use os.path on this since urls are always forward slashed
-        page = os.path.relpath(path, start=self.server_dir)
-        url = f"http://0.0.0.0:8000/{page}"
+        page = os.path.relpath(path, start=self.out)
+        url = f"{self.server_url}/{page}"
         self.screenshot.take(url, dst)
 
 
 class HtmlProof(HtmlTemplater):
     def __init__(self, fonts, out="out"):
-        """Proof a single family"""
+        """Proof a single family."""
         super().__init__(out)
-        self.fonts = fonts
+        fonts_dir = os.path.join(out, "fonts")
+        self.mkdir(fonts_dir)
 
-        self.server_dir = self._server_dir([f.reader.file.name for f in self.fonts]+[self.out])
+        self.fonts = self.copy_files(fonts, fonts_dir)
+        self.ttFonts = [TTFont(f) for f in self.fonts]
 
-        self.css_font_faces = css_font_faces(fonts, self.server_dir)
-        self.css_font_classes = css_font_classes(fonts)
+        self.css_font_faces = css_font_faces(self.ttFonts, self.out)
+        self.css_font_classes = css_font_classes(self.ttFonts)
 
-        self.sample_text = " ".join(font_sample_text(self.fonts[0]))
+        self.sample_text = " ".join(font_sample_text(self.ttFonts[0]))
 
 
 class HtmlDiff(HtmlTemplater):
     def __init__(self, fonts_before, fonts_after, out="out"):
         """Compare two families"""
         super().__init__(out=out)
-        self.fonts_before = fonts_before
-        self.fonts_after = fonts_after
+        fonts_before_dir = os.path.join(out, "fonts_before")
+        fonts_after_dir = os.path.join(out, "fonts_after")
+        self.mkdir(fonts_before_dir)
+        self.mkdir(fonts_after_dir)
 
-        self.server_dir = self._server_dir(
-            [f.reader.file.name for f in self.fonts_before] + \
-            [f.reader.file.name for f in self.fonts_after] + \
-            [self.out]
-        )
-        print(self.server_dir)
+        self.fonts_before = self.copy_files(fonts_before, fonts_before_dir)
+        self.ttFonts_before = [TTFont(f) for f in self.fonts_before]
+
+        self.fonts_after = self.copy_files(fonts_after, fonts_after_dir)
+        self.ttFonts_after = [TTFont(f) for f in self.fonts_after]
 
         self.css_font_faces_before = css_font_faces(
-            fonts_before, self.server_dir, position="before"
+            self.ttFonts_before, self.out, position="before"
         )
         self.css_font_faces_after = css_font_faces(
-            fonts_after, self.server_dir, position="after"
+            self.ttFonts_after, self.out, position="after"
         )
 
-        self.css_font_classes_before = css_font_classes(fonts_before, "before")
-        self.css_font_classes_after = css_font_classes(fonts_after, "after")
+        self.css_font_classes_before = css_font_classes(self.ttFonts_before, "before")
+        self.css_font_classes_after = css_font_classes(self.ttFonts_after, "after")
         self._match_css_font_classes()
 
-        self.sample_text = " ".join(font_sample_text(self.fonts_before[0]))
+        self.sample_text = " ".join(font_sample_text(self.ttFonts_before[0]))
 
     def _match_css_font_classes(self):
         """Match css font classes by full names for static fonts and
@@ -356,29 +403,28 @@ class HtmlDiff(HtmlTemplater):
     ):
         html_template = self.jinja.get_template(filename)
 
-        combined = html_template.render(
-            include_ui=True,
-            **kwargs,
-        )
+        # This document is intended for humans. It includes a button
+        # to toggle which set of fonts is visible.
+        combined = html_template.render(include_ui=True, **kwargs)
         combined_path = os.path.join(self.out, filename)
         with open(combined_path, "w") as combined_html:
             combined_html.write(combined)
 
+        # This document contains fonts_before. It solely exists for
+        # screenshot generation purposes
         before_kwargs = copy(kwargs)
         before_kwargs.pop("css_font_classes_after")
-        before = html_template.render(
-            **before_kwargs,
-        )
+        before = html_template.render(**before_kwargs)
         before_filename = f"{filename[:-5]}-before.html"
         before_path = os.path.join(self.out, before_filename)
         with open(before_path, "w") as before_html:
             before_html.write(before)
 
+        # This document contains fonts_after. It solely exists for
+        # screenshot generation purposes
         after_kwargs = copy(kwargs)
         after_kwargs.pop("css_font_classes_before")
-        after = html_template.render(
-            **after_kwargs,
-        )
+        after = html_template.render(**after_kwargs)
         after_filename = f"{filename[:-5]}-after.html"
         after_path = os.path.join(self.out, after_filename)
         with open(after_path, "w") as after_html:
@@ -387,10 +433,11 @@ class HtmlDiff(HtmlTemplater):
         return (before_path, after_path)
 
     def _save_img(self, document, dst):
-        before_page = os.path.relpath(document[0], start=self.server_dir)
-        after_page = os.path.relpath(document[1], start=self.server_dir)
-        before_url = f"http://0.0.0.0:8000/{before_page}"
-        after_url = f"http://0.0.0.0:8000/{after_page}"
+        # Output results as a gif
+        before_page = os.path.relpath(document[0], start=self.out)
+        after_page = os.path.relpath(document[1], start=self.out)
+        before_url = f"{self.server_url}/{before_page}"
+        after_url = f"{self.server_url}/{after_page}"
         with tempfile.TemporaryDirectory() as before_dst, tempfile.TemporaryDirectory() as after_dst:
             self.screenshot.take(before_url, before_dst)
             self.screenshot.take(after_url, after_dst)
@@ -398,6 +445,13 @@ class HtmlDiff(HtmlTemplater):
 
 
 def simple_server(directory="."):
+    """A simple python web server which can be served from a specific
+    directory
+
+    Args:
+      directory: start the server from a specified directory. Default is '.'
+    """
+
     class Handler(SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=directory, **kwargs)
@@ -408,7 +462,7 @@ def simple_server(directory="."):
 
 
 def start_daemon_server(directory="."):
-    """Start a simple_server in a new thread, running in the background.
+    """Start a simple_server in a new background thread.
     Server will be stopped once a script has finished.
 
     Args:
@@ -435,7 +489,11 @@ def browserstack_local():
 
 class ScreenShot(browserstack_screenshots.Screenshots):
     """Expansion for browserstack screenshots Lib. Adds ability to
-    download files"""
+    download files."""
+
+    # TODO it may be better to write our own wrapper
+    # since this tool isn't being developed. Code migrated from
+    # https://github.com/googlefonts/diffbrowsers
 
     def take(self, url, dst_dir):
         """take a screenshot from a url and save it to the dst_dir"""

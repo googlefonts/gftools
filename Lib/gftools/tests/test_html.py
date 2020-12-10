@@ -21,16 +21,27 @@ def SimpleTemplate():
 
 @pytest.fixture
 def static_fonts():
+    return [f for f in glob(os.path.join("data", "test", "mavenpro", "*.ttf"))]
+
+
+@pytest.fixture
+def static_ttfonts():
     return [TTFont(f) for f in glob(os.path.join("data", "test", "mavenpro", "*.ttf"))]
 
 
 @pytest.fixture
 def var_font():
+    return os.path.join(TEST_DATA, "Inconsolata[wdth,wght].ttf")
+
+
+@pytest.fixture
+def var_ttfont():
     return TTFont(os.path.join(TEST_DATA, "Inconsolata[wdth,wght].ttf"))
+
 
 @pytest.fixture
 def var_font2():
-    return TTFont(os.path.join(TEST_DATA, "MavenPro[wght].ttf"))
+    return os.path.join(TEST_DATA, "MavenPro[wght].ttf")
 
 
 def _string_to_file(string, dst):
@@ -126,9 +137,9 @@ def _select_font_face(string, classes):
     return next((s for s in classes if string in s.font_family), None)
 
 
-def test_font_classes_from_static(static_fonts):
-    css_classes = css_font_classes(static_fonts)
-    assert len(css_classes) == len(static_fonts)
+def test_font_classes_from_static(static_ttfonts):
+    css_classes = css_font_classes(static_ttfonts)
+    assert len(css_classes) == len(static_ttfonts)
 
     regular = _select_class("Maven-Pro-Regular", css_classes)
     black = _select_class("Maven-Pro-Black", css_classes)
@@ -143,9 +154,9 @@ def test_font_classes_from_static(static_fonts):
     )
 
 
-def test_font_classes_from_vf(var_font):
-    css_classes = css_font_classes([var_font])
-    assert len(css_classes) == len(var_font['fvar'].instances)
+def test_font_classes_from_vf(var_ttfont):
+    css_classes = css_font_classes([var_ttfont])
+    assert len(css_classes) == len(var_ttfont['fvar'].instances)
 
     semiexpanded_medium = _select_class("Inconsolata-SemiExpanded-Medium", css_classes)
     assert semiexpanded_medium.render() == (
@@ -159,9 +170,9 @@ def test_font_classes_from_vf(var_font):
     )
 
 
-def test_font_faces_from_static(static_fonts):
-    font_faces = css_font_faces(static_fonts)
-    assert len(font_faces) == len(static_fonts)
+def test_font_faces_from_static(static_ttfonts):
+    font_faces = css_font_faces(static_ttfonts)
+    assert len(font_faces) == len(static_ttfonts)
 
     medium = _select_font_face("Maven-Pro-Medium", font_faces)
     assert medium.render() == (
@@ -178,8 +189,8 @@ def test_font_faces_from_static(static_fonts):
     )
 
 
-def test_font_faces_from_vf(var_font):
-    font_faces = css_font_faces([var_font])
+def test_font_faces_from_vf(var_ttfont):
+    font_faces = css_font_faces([var_ttfont])
     font_faces[0].render == (
         "@font-face { src: url(data/test/Inconsolata[wdth,wght].ttf); "
         "font-family: Inconsolata; font-weight: 200 900; font-stretch: 50% 200%; "
@@ -194,15 +205,15 @@ def _font_faces_and_font_classes_linked(font_faces, css_classes):
     assert font_face_names == css_class_names
 
 
-def test_font_faces_match_font_classes_static(static_fonts):
-    font_faces = css_font_faces(static_fonts)
-    css_classes = css_font_classes(static_fonts)
+def test_font_faces_match_font_classes_static(static_ttfonts):
+    font_faces = css_font_faces(static_ttfonts)
+    css_classes = css_font_classes(static_ttfonts)
     _font_faces_and_font_classes_linked(font_faces, css_classes)
 
 
-def test_font_faces_match_font_classes_vf(var_font):
-    font_faces = css_font_faces([var_font])
-    css_classes = css_font_classes([var_font])
+def test_font_faces_match_font_classes_vf(var_ttfont):
+    font_faces = css_font_faces([var_ttfont])
+    css_classes = css_font_classes([var_ttfont])
     _font_faces_and_font_classes_linked(font_faces, css_classes)
 
 
@@ -246,15 +257,10 @@ def test_HtmlProof_with_vf(var_font):
         _test_waterfall(waterfall_result, html)
 
 
-def test_HtmlDiff_match_css_classes_different_families(static_fonts):
-    from gftools.fix import update_nametable
-    family_before = static_fonts
-    family_after = deepcopy(static_fonts)
-    [update_nametable(f, "New Family") for f in family_after]
-
+def test_HtmlDiff_match_css_classes_different_families(static_fonts, var_font):
     with tempfile.TemporaryDirectory() as project_dir:
         with pytest.raises(ValueError, match="No matching fonts found"):
-            html = HtmlDiff(family_before, family_after, project_dir)
+            html = HtmlDiff(static_fonts, [var_font], project_dir)
 
 
 def _check_css_classes_match(classes_before, classes_after):
@@ -270,10 +276,10 @@ def _check_css_classes_match(classes_before, classes_after):
     assert before_properties == after_properties
 
 
-def test_HtmlDiff_match_css_classes_different_styles(static_fonts):
+def test_HtmlDiff_match_css_classes_different_styles(static_ttfonts):
     from gftools.fix import update_nametable
-    family_before = static_fonts
-    family_after = deepcopy(static_fonts)
+    family_before = static_ttfonts
+    family_after = deepcopy(static_ttfonts)
 
     reg_after = next((f for f in family_after if "Regular.ttf" in f.reader.file.name), None)
     update_nametable(reg_after, style_name="Foobar")
@@ -281,7 +287,12 @@ def test_HtmlDiff_match_css_classes_different_styles(static_fonts):
     bold_after = next((f for f in family_after if "Bold.ttf" in f.reader.file.name), None)
     update_nametable(bold_after, style_name="Foobar2")
 
-    with tempfile.TemporaryDirectory() as project_dir:
+    with tempfile.TemporaryDirectory() as project_dir, tempfile.TemporaryDirectory() as mod_fonts:
+        # save modified ttfonts to a tempdir and load them
+        [f.save(os.path.join(mod_fonts, os.path.basename(f.reader.file.name))) for f in family_after]
+        family_after = glob(os.path.join(mod_fonts, "*.ttf"))
+        family_before = [f.reader.file.name for f in family_before]
+
         html = HtmlDiff(family_before, family_after, project_dir)
         # Check css classes do not contain
         for subfamily in ("Regular", "Bold", "Foobar", "Foobar2"):
@@ -299,6 +310,7 @@ def test_HtmlDiff_match_css_classes_different_styles(static_fonts):
 def test_HtmlDiff_match_css_classes_static_vs_vf(static_fonts, var_font2):
     # MavenPro VF has an fvar instance for each static font.
     # Every font in the static family should match an instance in Maven Pro VF
+
     with tempfile.TemporaryDirectory() as project_dir:
         html = HtmlDiff(static_fonts, [var_font2], project_dir)
         assert len(html.css_font_classes_before) == len(html.css_font_classes_after)
