@@ -270,7 +270,7 @@ class HtmlTemplater(object):
 
         self.has_browserstack = (
             True
-            if any([browserstack_access_key, os.environ["BSTACK_ACCESS_KEY"]])
+            if any([browserstack_access_key, "BSTACK_ACCESS_KEY" in os.environ])
             else False
         )
 
@@ -283,6 +283,8 @@ class HtmlTemplater(object):
                 browserstack_config if browserstack_config else self.BROWSERSTACK_CONFIG
             )
             self.screenshot = ScreenShot(auth=auth, config=self.browserstack_config)
+        else:
+            logger.warning("No Browserstack credentials found. Image output disabled")
 
     def build_pages(self, pages=None, dst=None, **kwargs):
         if not pages:
