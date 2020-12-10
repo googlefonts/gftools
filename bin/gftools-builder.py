@@ -24,14 +24,18 @@ parser.add_argument("--family-name",
 	help="Font family name"
 )
 
+parser.add_argument("--stylespace",
+	help="Path to a statmake stylespace file"
+)
+
 parser.add_argument('file', nargs='+', help="YAML build config file *or* source files")
 
 args = parser.parse_args()
 
-if len(args.file) == 1 and args.file[0].endswith(".yaml"):
+if len(args.file) == 1 and (args.file[0].endswith(".yaml") or args.file[0].endswith(".yml")):
 	builder = GFBuilder(configfile=args.file[0])
 else:
-	builder = GFBuilder(config={"sources": args.file, "familyName": args.family_name})
+	builder = GFBuilder(config={"sources": args.file, "familyName": args.family_name, "stylespaceFile": args.stylespace})
 
 if args.debug:
 	builder.config["logLevel"] = "DEBUG"
