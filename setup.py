@@ -53,7 +53,8 @@ setup(
                       "encodings/GF Glyph Sets/*.nam",
                       'template.upstream.yaml',
                       "axisregistry/*.textproto",
-                      "udhr_all.txt"
+                      "udhr_all.txt",
+                      "templates/*.html"
                   ]
                  },
     scripts=gftools_scripts(),
