@@ -23,7 +23,9 @@ parser.add_argument("--debug", action="store_true", default=False,
 parser.add_argument("--family-name",
 	help="Font family name"
 )
-
+parser.add_argument("--no-autohint", action="store_true", default=False,
+	help="Don't run ttfautohint on static TTFs"
+)
 parser.add_argument("--stylespace",
 	help="Path to a statmake stylespace file"
 )
@@ -36,6 +38,9 @@ if len(args.file) == 1 and (args.file[0].endswith(".yaml") or args.file[0].endsw
 	builder = GFBuilder(configfile=args.file[0])
 else:
 	builder = GFBuilder(config={"sources": args.file, "familyName": args.family_name, "stylespaceFile": args.stylespace})
+
+if args.no_autohint:
+	builder.config["autohintTTF"] = False
 
 if args.debug:
 	builder.config["logLevel"] = "DEBUG"
