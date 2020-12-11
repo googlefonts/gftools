@@ -234,6 +234,9 @@ class GFBuilder:
                 ttFont.save(filename)
 
     def gen_stat_stylespace(self, stylespaceFile, filenames):
+        import warnings
+        warnings.warn(".stylespace files are supported for compatibility but"
+            "you are encouraged to specify your STAT table axes in the config file")
         stylespace = statmake.classes.Stylespace.from_file(stylespaceFile)
         for filename in filenames:
             ttFont = TTFont(filename)
