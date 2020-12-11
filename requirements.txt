@@ -4,3 +4,4 @@ absl-py
 protobuf
 PyGithub
 vttLib
+statmake
