@@ -26,6 +26,7 @@ gftools fix-vf-meta FontFamily[wght].ttf FontFamily-Italic[wght].ttf
 """
 from fontTools.otlLib.builder import buildStatTable
 from fontTools.ttLib import TTFont
+from gftools.utils import font_is_italic
 import argparse
 
 
@@ -41,11 +42,6 @@ WGHT = {
     900: "Black",
     1000: "ExtraBlack",
 }
-
-
-def font_is_italic(ttfont):
-    stylename = ttfont["name"].getName(2, 3, 1, 0x409).toUnicode()
-    return True if "Italic" in stylename else False
 
 
 def font_has_mac_names(ttfont):
