@@ -122,7 +122,6 @@ class GFBuilder:
                 for master in gsfont.masters:
                     self.masters[src].append(Babelfont.open(src, master=master.name))
             elif src.endswith("designspace"):
-                # XXX
                 continue
             else:
                 self.masters[src] = [Babelfont.open(src)]
@@ -132,7 +131,7 @@ class GFBuilder:
             self.logger.info("Deriving family name (this takes a while)")
             self.load_masters()
             familynames = set([x.info.familyName for x in self.masters.values()])
-            if len(familynames) > 1:
+            if len(familynames) != 1:
                 raise ValueError(
                     "Inconsistent family names in sources (%s). Set familyName in config instead"
                     % familynames
