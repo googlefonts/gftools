@@ -63,6 +63,7 @@ from fontmake.font_project import FontProject
 from ufo2ft import CFFOptimization
 from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
+from gftools.utils import font_is_italic
 from fontTools.otlLib.builder import buildStatTable
 import statmake.classes
 import statmake.lib
@@ -236,7 +237,7 @@ class GFBuilder:
         for filename in filenames:
             ttFont = TTFont(filename)
             if "ital" in self.config["axisOrder"]:
-                if "Italic" in filename:
+                if font_is_italic(ttFont):
                     additional_locations = {"Italic": 1}
                 else:
                     additional_locations = {"Italic": 0}
