@@ -59,6 +59,19 @@ WIDTH_CLASS_TO_CSS = {
 
 
 class CSSElement(object):
+    """Create a CSSElement. CSSElements include a render method which
+    renders the class as a string so it can be used in html templates.
+
+    Args:
+      selector: The css selector e.g h1, h2, class-name, @font0face
+      **kwargs: css properties and their property values e.g
+        font_family="MyFamily"
+
+    Example:
+      | >>> bold = CSSElement("bold", font_weight=700, font_style="normal")
+      | >>> bold.render()
+      | >>> 'bold { font-weight: 700; font-style: normal; }'
+    """
     def __init__(self, selector, **kwargs):
         self.selector = selector
         for k, v in kwargs.items():
@@ -73,6 +86,17 @@ class CSSElement(object):
 
 
 def css_font_faces(ttFonts, server_dir=None, position=None):
+    """Generate @font-face CSSElements for a collection of fonts
+
+    Args:
+      ttFonts: a list containing ttFont instances
+      server_dir: optional. A path to the root directory of the server.
+        @font-face src urls are relative to the server's root dir.
+      position: optional. Adds a suffix to the font-family name
+
+    Returns:
+      A list of @font-face CSSElements
+    """
     results = []
     for ttFont in ttFonts:
         family_name = font_familyname(ttFont)
@@ -120,6 +144,15 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
 
 
 def css_font_classes(ttFonts, position=None):
+    """Generate class CSSElements for a collection of fonts
+
+    Args:
+      ttFonts: a list containing ttFont instances
+      position: optional. Adds a suffix to the font-family name
+
+    Returns:
+      A list of class CSSElements
+    """
     results = []
     for ttFont in ttFonts:
         if "fvar" in ttFont:
@@ -213,10 +246,10 @@ class HtmlTemplater(object):
         screenshot the results on different browsers, using the
         Browserstack Screenshot api.
 
-        When saving images, two brackground processes occur. A local
-        server is started which serves the populated html documents
-        and browserstack local is run as background process. This
-        will allow Browserstack to take local screenshots.
+        When saving images, two brackground processes are started. A local
+        server which serves the populated html documents
+        and browserstack local. This allows Browserstack to take local
+        screenshots.
 
         The main purpose of this class is to allow developers to
         write their own template generators by using inheritance e.g
