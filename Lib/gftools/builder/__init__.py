@@ -40,10 +40,11 @@ required, all others have sensible defaults:
 
 * ``sources``: Required. An array of Glyphs, UFO or designspace source files.
 * ``logLevel``: Debugging log level. Defaults to ``INFO``.
-* ``stylespaceFile``: A statmake ``.stylespace`` file. Defaults to none (Use ``gftools.stat``)
+* ``stylespaceFile``: A statmake ``.stylespace`` file.
 * ``stat``: A STAT table configuration. This may be either a list of axes and
     values as demonstrated above, or a dictionary mapping each source file to a
-    per-source list.
+    per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
+    STAT table is generated automatically using ``gftools.stat``.
 * ``buildVariable``: Build variable fonts. Defaults to true.
 * ``buildStatic``: Build static fonts. Defaults to true.
 * ``buildWebfont``: Build WOFF2 fonts. Defaults to ``$buildStatic``.
