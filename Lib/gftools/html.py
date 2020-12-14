@@ -23,6 +23,7 @@ from gftools.utils import (
     font_familyname,
     font_stylename,
     get_name_record,
+    font_is_italic,
 )
 
 
@@ -110,7 +111,7 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
         )
         src = f"url({path})"
         font_family = _class_name(family_name, style_name, position)
-        font_style = "italic" if "Italic" in style_name else "normal"
+        font_style = "italic" if font_is_italic(ttFont) else "normal"
         font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
 
         if "fvar" in ttFont:
@@ -175,7 +176,7 @@ def css_font_class_from_static(ttFont, position=None):
     class_name = _class_name(family_name, style_name, position)
     font_family = class_name
     font_weight = ttFont["OS/2"].usWeightClass
-    font_style = "normal" if "Italic" not in style_name else "italic"
+    font_style = "italic" if font_is_italic(ttFont) else "normal"
     font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
     return CSSElement(
         class_name,
