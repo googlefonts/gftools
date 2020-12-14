@@ -324,11 +324,11 @@ class HtmlTemplater(object):
             log.warning("No Browserstack credentials found. Image output disabled")
 
     def build_pages(self, pages=None, dst=None, **kwargs):
-        log.info(f"Building pages {pages}")
         if not pages:
             if not self.TEMPLATES:
                 raise ValueError("No templates specified")
             pages = self.TEMPLATES
+        log.info(f"Building pages {pages}")
         for page in pages:
             self.build_page(page, dst=dst, **kwargs)
 
