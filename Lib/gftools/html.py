@@ -42,8 +42,8 @@ __all__ = [
 ]
 
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+log = logging.getLogger("gftools.html")
+log.setLevel(logging.INFO)
 
 
 WIDTH_CLASS_TO_CSS = {
@@ -321,9 +321,10 @@ class HtmlTemplater(object):
             )
             self.screenshot = ScreenShot(auth=auth, config=self.browserstack_config)
         else:
-            logger.warning("No Browserstack credentials found. Image output disabled")
+            log.warning("No Browserstack credentials found. Image output disabled")
 
     def build_pages(self, pages=None, dst=None, **kwargs):
+        log.info(f"Building pages {pages}")
         if not pages:
             if not self.TEMPLATES:
                 raise ValueError("No templates specified")
@@ -359,10 +360,13 @@ class HtmlTemplater(object):
 
     def save_imgs(self):
         assert hasattr(self, "screenshot")
+        log.warning("Generating images with Browserstack. This may take a while")
         img_dir = self.mkdir(os.path.join(self.out, "img"))
 
         start_daemon_server(directory=self.out)
+        log.info("Daemon server has started")
         with browserstack_local():
+            log.info("Browserstack local has started")
             for name, paths in self.documents.items():
                 out = os.path.join(img_dir, name)
                 self.mkdir(out)
@@ -505,6 +509,10 @@ def simple_server(directory="."):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=directory, **kwargs)
 
+        def log_message(self, *args, **kwargs):
+            # Remove all logging
+            return None
+
     server_address = ("", 8000)
     httpd = HTTPServer(server_address, Handler)
     httpd.serve_forever()
@@ -547,11 +555,11 @@ class ScreenShot(browserstack_screenshots.Screenshots):
     def take(self, url, dst_dir):
         """take a screenshot from a url and save it to the dst_dir"""
         self.config["url"] = url
-        logger.info("Taking screenshot for url: %s" % url)
+        log.info("Taking screenshot for url: %s" % url)
         generate_resp_json = self.generate_screenshots()
         job_id = generate_resp_json["job_id"]
 
-        logger.info(
+        log.info(
             "Browserstack is processing: "
             "http://www.browserstack.com/screenshots/%s" % job_id
         )
@@ -565,7 +573,8 @@ class ScreenShot(browserstack_screenshots.Screenshots):
             try:
                 download_file(screenshot["image_url"], base_image)
             except:
-                logger.info(
+                # TODO these are too greedy
+                log.warning(
                     "Skipping {} BrowserStack timed out".format(screenshot["image_url"])
                 )
 
@@ -585,5 +594,5 @@ class ScreenShot(browserstack_screenshots.Screenshots):
             ]
             filename = "_".join(item.replace(" ", "_") for item in detail if item)
         else:
-            logger.info("screenshot timed out, ignoring this result")
+            log.warning("screenshot timed out, ignoring this result")
         return filename

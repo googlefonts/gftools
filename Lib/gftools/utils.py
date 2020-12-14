@@ -27,7 +27,6 @@ import browserstack_screenshots
 from collections import namedtuple
 from github import Github
 from pkg_resources import resource_filename
-import logging
 import time
 import json
 from browserstack.local import Local
