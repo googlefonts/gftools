@@ -72,6 +72,7 @@ class CSSElement(object):
       | >>> bold.render()
       | >>> 'bold { font-weight: 700; font-style: normal; }'
     """
+
     def __init__(self, selector, **kwargs):
         self.selector = selector
         for k, v in kwargs.items():
@@ -233,6 +234,8 @@ class HtmlTemplater(object):
         ],
     }
 
+    TEMPLATES = None
+
     def __init__(
         self,
         out="out",
@@ -292,7 +295,7 @@ class HtmlTemplater(object):
         self.template_dir = template_dir
         self.templates = []
         # TODO we may want to make this an arg
-        self.server_url="http://0.0.0.0:8000"
+        self.server_url = "http://0.0.0.0:8000"
         self.jinja = Environment(
             loader=FileSystemLoader(self.template_dir),
             autoescape=select_autoescape(["html", "xml"]),
@@ -321,7 +324,9 @@ class HtmlTemplater(object):
 
     def build_pages(self, pages=None, dst=None, **kwargs):
         if not pages:
-            pages = [f for f in self.templates_dir if f.endswith(".html")]
+            if not self.TEMPLATES:
+                raise ValueError("No templates specified")
+            pages = self.TEMPLATES
         for page in pages:
             self.build_page(page, dst=dst, **kwargs)
 
@@ -331,9 +336,8 @@ class HtmlTemplater(object):
         # Combine self.__dict__ attributes with function kwargs. This allows Jinja
         # templates to access the class attributes
         jinja_kwargs = {**self.__dict__, **kwargs}
-        page_name = filename[:-5]
         page = self._render_html(filename, dst=dst, **jinja_kwargs)
-        self.documents[page_name] = page
+        self.documents[filename] = page
 
     def _render_html(self, filename, dst=None, **kwargs):
         html_template = self.jinja.get_template(filename)
@@ -369,7 +373,13 @@ class HtmlTemplater(object):
         self.screenshot.take(url, dst)
 
 
+GF_TEMPLATES = ["waterfall.html", "text.html"]
+
+
 class HtmlProof(HtmlTemplater):
+
+    TEMPLATES = GF_TEMPLATES
+
     def __init__(self, fonts, out="out"):
         """Proof a single family."""
         super().__init__(out)
@@ -386,6 +396,9 @@ class HtmlProof(HtmlTemplater):
 
 
 class HtmlDiff(HtmlTemplater):
+
+    TEMPLATES = GF_TEMPLATES
+
     def __init__(self, fonts_before, fonts_after, out="out"):
         """Compare two families"""
         super().__init__(out=out)
@@ -422,11 +435,11 @@ class HtmlDiff(HtmlTemplater):
 
         self.css_font_classes_before = sorted(
             [s for k, s in styles_before.items() if k in shared_styles],
-            key=lambda s: s.font_weight,
+            key=lambda s: (s.font_weight, s._style),
         )
         self.css_font_classes_after = sorted(
             [s for k, s in styles_after.items() if k in shared_styles],
-            key=lambda s: s.font_weight,
+            key=lambda s: (s.font_weight, s._style),
         )
         if not all([self.css_font_classes_before, self.css_font_classes_after]):
             raise ValueError("No matching fonts found")

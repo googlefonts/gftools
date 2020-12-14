@@ -64,7 +64,7 @@ def test_templating_basic(SimpleTemplate):
         templater = SimpleTemplate(out=project_dir, template_dir=template_dir)
         templater.text = "Hello World"
         templater.build_pages(["index.html"])
-        result = _file_to_string(templater.documents["index"])
+        result = _file_to_string(templater.documents["index.html"])
         assert result == "<b>Hello World</b>"
 
 
@@ -77,7 +77,7 @@ def test_templating_with_multiple_variables(SimpleTemplate):
         templater.text = "Hello you"
         templater.url = "https://www.google.com"
         templater.build_pages(["contact.html"])
-        result = _file_to_string(templater.documents["contact"])
+        result = _file_to_string(templater.documents["contact.html"])
         assert result == "<b>Hello you</b><p>https://www.google.com</p>"
 
 
@@ -95,10 +95,10 @@ def test_templating_populating_multiple_pages(SimpleTemplate):
 
         assert len(templater.documents) == 2
         
-        index_result = _file_to_string(templater.documents["index"])
+        index_result = _file_to_string(templater.documents["index.html"]) 
         assert index_result == "<b>Hello World</b>"
 
-        contact_result = _file_to_string(templater.documents["contact"])
+        contact_result = _file_to_string(templater.documents["contact.html"])
         assert contact_result == "<b>Hello World</b><p>https://www.google.com</p>"
 
 
@@ -228,6 +228,10 @@ def _test_waterfall(waterfall_result, html):
     assert len(font_styles) == len(html.css_font_classes)
 
 
+def _test_text(text_result, html):
+    assert "Resolution" in text_result
+
+
 def test_HtmlProof_with_static_fonts(static_fonts):
     with tempfile.TemporaryDirectory() as project_dir:
         html = HtmlProof(
@@ -236,10 +240,13 @@ def test_HtmlProof_with_static_fonts(static_fonts):
         )
         # Each font must have an @font-face and font_class
         assert len(html.fonts) == len(html.css_font_faces) == len(html.css_font_classes)
-        html.build_pages(["waterfall.html"])
+        html.build_pages(["waterfall.html", "text.html"])
 
-        waterfall_result = _file_to_string(html.documents["waterfall"])
+        waterfall_result = _file_to_string(html.documents["waterfall.html"])
         _test_waterfall(waterfall_result, html)
+
+        text_result = _file_to_string(html.documents["text.html"])
+        _test_text(text_result, html)
 
 
 def test_HtmlProof_with_vf(var_font):
@@ -250,10 +257,10 @@ def test_HtmlProof_with_vf(var_font):
         )
         assert len(html.fonts) == len(html.css_font_faces)
         # VFs can contain multiple styles in a single font
-        assert len(html.css_font_faces) != len(html.css_font_classes)
+        assert len(html.css_font_faces) < len(html.css_font_classes)
         html.build_pages(["waterfall.html"])
 
-        waterfall_result = _file_to_string(html.documents["waterfall"])
+        waterfall_result = _file_to_string(html.documents["waterfall.html"])
         _test_waterfall(waterfall_result, html)
 
 

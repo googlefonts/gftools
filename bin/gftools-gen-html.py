@@ -33,7 +33,6 @@ import shutil
 
 def main():
     html_templates_dir = resource_filename("gftools", "templates")
-    html_templates = ["waterfall.html", "text.html"]
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(
@@ -45,8 +44,8 @@ def main():
     universal_options_parser.add_argument(
         "--pages",
         nargs="+",
-        choices=html_templates,
-        default=html_templates,
+        choices=HtmlProof.TEMPLATES,
+        default=HtmlProof.TEMPLATES,
         help="Choose which templates to populate. By default, all templates "
         "are populated.",
     )
