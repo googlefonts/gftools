@@ -38,7 +38,7 @@ __all__ = [
     "HtmlProof",
     "HtmlDiff",
     "simple_server",
-    "start_daemon_server",
+    "daemon_server",
     "browserstack_local",
 ]
 
