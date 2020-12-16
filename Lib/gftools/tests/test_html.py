@@ -56,7 +56,6 @@ def _file_to_string(fp):
 
 
 def test_templating_basic(SimpleTemplate):
-
     with tempfile.TemporaryDirectory() as project_dir, tempfile.TemporaryDirectory() as template_dir:
         template_out = os.path.join(template_dir, "index.html")
         _string_to_file("<b>{{ text }}</b>", template_out)
@@ -317,7 +316,6 @@ def test_HtmlDiff_match_css_classes_different_styles(static_ttfonts):
 def test_HtmlDiff_match_css_classes_static_vs_vf(static_fonts, var_font2):
     # MavenPro VF has an fvar instance for each static font.
     # Every font in the static family should match an instance in Maven Pro VF
-
     with tempfile.TemporaryDirectory() as project_dir:
         html = HtmlDiff(static_fonts, [var_font2], project_dir)
         assert len(html.css_font_classes_before) == len(html.css_font_classes_after)

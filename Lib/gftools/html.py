@@ -7,7 +7,7 @@ from browserstack.local import Local
 import tempfile
 import sys
 import os
-import threading
+from multiprocessing import Process
 from contextlib import contextmanager
 import http.server
 from http.server import *
@@ -432,8 +432,7 @@ class HtmlTemplater(object):
         else:
             log.warning("Generating images with Browserstack. This may take a while")
             img_dir = self.mkdir(os.path.join(self.out, "img"))
-            start_daemon_server(directory=self.out)
-            with browserstack_local():
+            with browserstack_local(), daemon_server(directory=self.out):
                 for name, paths in self.documents.items():
                     out = os.path.join(img_dir, name)
                     self.mkdir(out)
@@ -626,19 +625,20 @@ def simple_server(directory="."):
     httpd.serve_forever()
 
 
-def start_daemon_server(directory="."):
-    """Start a simple_server in a new background thread.
+@contextmanager
+def daemon_server(directory="."):
+    """Start a simple_server in a background process.
     Server will be stopped once a script has finished.
 
     Args:
       directory: start the server from a specified directory. Default is '.'
     """
+    p = Process(target=simple_server, args=[directory], daemon=True)
     try:
-        th = threading.Thread(target=simple_server, args=[directory])
-        th.daemon = True
-        th.start()
-    except OSError:
-        log.debug("Already running")
+        p.start()
+        yield p
+    finally:
+        p.terminate()
 
 
 @contextmanager
