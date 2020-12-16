@@ -482,7 +482,7 @@ class HtmlProof(HtmlTemplater):
                 src_imgs = os.path.join(temp_html.out, "img")
                 dir_name = "-".join(s._style.replace(" ", "") for s in group)
                 dst_imgs = os.path.join(self.out, "img", dir_name)
-                shutil.copytree(src_imgs, dst_imgs)
+                shutil.copytree(src_imgs, dst_imgs, dirs_exist_ok=True)
 
 
 class HtmlDiff(HtmlTemplater):
@@ -602,7 +602,7 @@ class HtmlDiff(HtmlTemplater):
                 src_imgs = os.path.join(temp_html.out, "img")
                 dir_name = "-".join(s._style.replace(" ", "") for s in group)
                 dst_imgs = os.path.join(self.out, "img", dir_name)
-                shutil.copytree(src_imgs, dst_imgs)
+                shutil.copytree(src_imgs, dst_imgs, dirs_exist_ok=True)
 
 
 # Local server functions
