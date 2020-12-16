@@ -24,6 +24,7 @@ from gftools.utils import (
     font_stylename,
     get_name_record,
     font_is_italic,
+    partition,
 )
 
 
@@ -57,6 +58,76 @@ WIDTH_CLASS_TO_CSS = {
     8: "150%",
     9: "200%",
 }
+
+
+# Browserstack configurations
+# Browser list: https://www.browserstack.com/screenshots/browsers
+
+# Latest working browsers offered by Browserstack. All of them support
+# variable fonts.
+# Note: As of (2020-12-15), these browsers are very
+# old and differ when compared to their latest releases. Chrome
+# 71 uses FreeType for VFs, this means that the hhea metrics
+# will be used instead of the typo/win.
+BSTACK_CONFIG_LATEST_BROWSERS = {
+    "url": None,
+    "local": True,
+    "browsers": [
+        {
+            "os": "Windows",
+            "browser_version": "71.0",
+            "browser": "chrome",
+            "os_version": "10",
+        },
+        # Catalina 13.0 and Mohave 12.0 don't produce a full size screenshot
+        {
+            "os":"OS X",
+            "os_version":"High Sierra",
+            "browser":"safari",
+            "browser_version":"11.1",
+        },
+        # Browserstack doesn't have a version of Firefox that works correctly with
+        # VFs. Support for VFs arrived in v62, however v62 and v63 on
+        # Browserstack don't work.
+        {
+            "os":"Windows",
+            "os_version":"10",
+            "browser":"edge",
+            "browser_version":"18.0",
+        }
+    ],
+}
+
+# Old browsers which use GDI ClearType. Only test on these browsers
+# for more popular families (weekly views > 1 billion).
+# Note: These browsers do not support variable fonts. As a safeguard,
+# an exception will be raised if users attempt to use these browsers
+# with variable fonts.
+BSTACK_CONFIG_GDI_BROWSERS = {
+    "url": None,
+    "local": True,
+    "browsers": [
+        {
+            "os": "Windows",
+            "browser_version": "34.0",
+            "browser": "chrome",
+            "os_version": "7",
+        },
+        {
+            "os":"Windows",
+            "os_version":"7",
+            "browser":"firefox",
+            "browser_version":"50.0",
+        },
+        # Versions of IE on Win7 all use DW which look ok for unhinted
+        # fonts.
+    ],
+}
+
+
+# Templates which are human viewable. Lib/gftools/templates contains more
+# html files but these are used as helpers
+GF_TEMPLATES = ["waterfall.html", "text.html"]
 
 
 class CSSElement(object):
@@ -129,7 +200,7 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
                 pass
             if "slnt" in axes:
                 min_angle = int(axes["slnt"].minValue)
-                max_angle = int(sex["slnt"].maxValue)
+                max_angle = int(axes["slnt"].maxValue)
                 font_style = f"oblique {min_angle}deg {max_angle}deg"
         else:
             font_weight = ttFont["OS/2"].usWeightClass
@@ -180,7 +251,9 @@ def css_font_class_from_static(ttFont, position=None):
     font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
     return CSSElement(
         class_name,
-        _style=f"{family_name} {style_name}",
+        _full_name=f"{family_name} {style_name}",
+        _style=style_name,
+        _font_path=ttFont.reader.file.name,
         font_family=font_family,
         font_weight=font_weight,
         font_style=font_style,
@@ -210,7 +283,9 @@ def css_font_classes_from_vf(ttFont, position=None):
         )
         font_class = CSSElement(
             class_name,
-            _style=f"{family_name} {inst_style}",
+            _full_name=f"{family_name} {inst_style}",
+            _style=inst_style,
+            _font_path=ttFont.reader.file.name,
             font_family=font_family,
             font_weight=font_weight,
             font_style=font_style,
@@ -222,19 +297,7 @@ def css_font_classes_from_vf(ttFont, position=None):
 
 class HtmlTemplater(object):
 
-    BROWSERSTACK_CONFIG = {
-        "url": None,
-        "local": True,
-        "browsers": [
-            {
-                "os": "Windows",
-                "browser_version": "71.0",
-                "browser": "chrome",
-                "os_version": "10",
-            }
-        ],
-    }
-
+    BROWSERSTACK_CONFIG = BSTACK_CONFIG_LATEST_BROWSERS
     TEMPLATES = None
 
     def __init__(
@@ -294,9 +357,9 @@ class HtmlTemplater(object):
             https://www.browserstack.com/screenshots/api
         """
         self.template_dir = template_dir
-        self.templates = []
         # TODO we may want to make this an arg
         self.server_url = "http://0.0.0.0:8000"
+        self.server_running = False
         self.jinja = Environment(
             loader=FileSystemLoader(self.template_dir),
             autoescape=select_autoescape(["html", "xml"]),
@@ -304,6 +367,8 @@ class HtmlTemplater(object):
 
         self.out = self.mkdir(out)
         self.documents = {}
+        # Set to true if html pages are going to be large
+        self.big_output = False
 
         self.has_browserstack = (
             True
@@ -320,6 +385,7 @@ class HtmlTemplater(object):
                 browserstack_config if browserstack_config else self.BROWSERSTACK_CONFIG
             )
             self.screenshot = ScreenShot(auth=auth, config=self.browserstack_config)
+            self.browserstack = Local(key=os.environ["BSTACK_ACCESS_KEY"])
         else:
             log.warning("No Browserstack credentials found. Image output disabled")
 
@@ -360,25 +426,29 @@ class HtmlTemplater(object):
 
     def save_imgs(self):
         assert hasattr(self, "screenshot")
-        log.warning("Generating images with Browserstack. This may take a while")
-        img_dir = self.mkdir(os.path.join(self.out, "img"))
 
-        start_daemon_server(directory=self.out)
-        log.info("Daemon server has started")
-        with browserstack_local():
-            log.info("Browserstack local has started")
-            for name, paths in self.documents.items():
-                out = os.path.join(img_dir, name)
-                self.mkdir(out)
-                self._save_img(paths, out)
+        if self.big_output:
+            self.save_split_imgs()
+        else:
+            log.warning("Generating images with Browserstack. This may take a while")
+            img_dir = self.mkdir(os.path.join(self.out, "img"))
+            start_daemon_server(directory=self.out)
+            with browserstack_local():
+                for name, paths in self.documents.items():
+                    out = os.path.join(img_dir, name)
+                    self.mkdir(out)
+                    self._save_img(paths, out)
 
     def _save_img(self, path, dst):
         page = os.path.relpath(path, start=self.out)
         url = f"{self.server_url}/{page}"
         self.screenshot.take(url, dst)
 
-
-GF_TEMPLATES = ["waterfall.html", "text.html"]
+    def save_split_imgs(self):
+        # Browserstack limits screenshots so they are less than 10000px tall.
+        # To work around this limitation, we can patition the class into smaller
+        # subclasses and then screenshot these instead
+        raise NotImplementedError
 
 
 class HtmlProof(HtmlTemplater):
@@ -397,7 +467,23 @@ class HtmlProof(HtmlTemplater):
         self.css_font_faces = css_font_faces(self.ttFonts, self.out)
         self.css_font_classes = css_font_classes(self.ttFonts)
 
+        self.big_output = len(self.css_font_classes) > 4
         self.sample_text = " ".join(font_sample_text(self.ttFonts[0]))
+
+    def save_split_imgs(self):
+        with tempfile.TemporaryDirectory() as tmp_out:
+            temp_html = HtmlProof(fonts=self.fonts, out=tmp_out)
+            # disable big_output for subclasses otherwise we'll infinte loop
+            temp_html.big_output = False
+            css_class_groups = partition(self.css_font_classes, 4)
+            for idx, group in enumerate(css_class_groups):
+                temp_html.css_font_classes = group
+                temp_html.build_pages(self.documents.keys())
+                temp_html.save_imgs()
+                src_imgs = os.path.join(temp_html.out, "img")
+                dir_name = "-".join(s._style.replace(" ", "") for s in group)
+                dst_imgs = os.path.join(self.out, "img", dir_name)
+                shutil.copytree(src_imgs, dst_imgs)
 
 
 class HtmlDiff(HtmlTemplater):
@@ -429,22 +515,23 @@ class HtmlDiff(HtmlTemplater):
         self.css_font_classes_after = css_font_classes(self.ttFonts_after, "after")
         self._match_css_font_classes()
 
+        self.big_output = len(self.css_font_classes_before) > 4
         self.sample_text = " ".join(font_sample_text(self.ttFonts_before[0]))
 
     def _match_css_font_classes(self):
         """Match css font classes by full names for static fonts and
         family name + instance name for fvar instances"""
-        styles_before = {s._style: s for s in self.css_font_classes_before}
-        styles_after = {s._style: s for s in self.css_font_classes_after}
+        styles_before = {s._full_name: s for s in self.css_font_classes_before}
+        styles_after = {s._full_name: s for s in self.css_font_classes_after}
         shared_styles = set(styles_before) & set(styles_after)
 
         self.css_font_classes_before = sorted(
             [s for k, s in styles_before.items() if k in shared_styles],
-            key=lambda s: (s.font_weight, s._style),
+            key=lambda s: (s.font_weight, s._full_name),
         )
         self.css_font_classes_after = sorted(
             [s for k, s in styles_after.items() if k in shared_styles],
-            key=lambda s: (s.font_weight, s._style),
+            key=lambda s: (s.font_weight, s._full_name),
         )
         if not all([self.css_font_classes_before, self.css_font_classes_after]):
             raise ValueError("No matching fonts found")
@@ -496,22 +583,43 @@ class HtmlDiff(HtmlTemplater):
             self.screenshot.take(after_url, after_dst)
             gen_gifs(before_dst, after_dst, dst)
 
+    def save_split_imgs(self):
+        with tempfile.TemporaryDirectory() as tmp_out:
+            temp_html = HtmlDiff(
+                fonts_before=self.fonts_before,
+                fonts_after=self.fonts_after,
+                out=tmp_out
+            )
+            # disable big_output for subclasses otherwise we'll infinte loop
+            temp_html.big_output = False
+            css_class_groups_before = partition(self.css_font_classes_before, 4)
+            css_class_groups_after = partition(self.css_font_classes_after, 4)
+            assert len(css_class_groups_before) == len(css_class_groups_after)
+            for idx, group in enumerate(css_class_groups_before):
+                temp_html.css_font_classes_before = css_class_groups_before[idx]
+                temp_html.css_font_classes_after = css_class_groups_after[idx]
+                temp_html.build_pages(self.documents.keys())
+                temp_html.save_imgs()
+                src_imgs = os.path.join(temp_html.out, "img")
+                dir_name = "-".join(s._style.replace(" ", "") for s in group)
+                dst_imgs = os.path.join(self.out, "img", dir_name)
+                shutil.copytree(src_imgs, dst_imgs)
+
+
+# Local server functions
+
 
 def simple_server(directory="."):
     """A simple python web server which can be served from a specific
     directory
 
     Args:
-      directory: start the server from a specified directory. Default is '.'
+      directory: start the server from a specified directory. Default is cwd
     """
 
     class Handler(SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=directory, **kwargs)
-
-        def log_message(self, *args, **kwargs):
-            # Remove all logging
-            return None
 
     server_address = ("", 8000)
     httpd = HTTPServer(server_address, Handler)
@@ -525,9 +633,12 @@ def start_daemon_server(directory="."):
     Args:
       directory: start the server from a specified directory. Default is '.'
     """
-    th = threading.Thread(target=simple_server, args=[directory])
-    th.daemon = True
-    th.start()
+    try:
+        th = threading.Thread(target=simple_server, args=[directory])
+        th.daemon = True
+        th.start()
+    except OSError:
+        log.debug("Already running")
 
 
 @contextmanager

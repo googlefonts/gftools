@@ -486,3 +486,8 @@ def gen_gif(img_a_path, img_b_path, dst):
             loop=10000,
             duration=1000
         )
+
+
+def partition(items, size):
+    """partition([1,2,3,4,5,6], 2) --> [[1,2],[3,4],[5,6]]"""
+    return [items[i : i + size] for i in range(0, len(items), size)]
