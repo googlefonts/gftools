@@ -88,5 +88,9 @@ setup(
         'vttlib',
         'pygit2',
         'strictyaml',
+        'statmake',
+        'PyYAML',
+        'babelfont',
+        'ttfautohint-py'
     ]
     )
