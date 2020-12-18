@@ -88,9 +88,11 @@ setup(
         'vttlib',
         'pygit2',
         'strictyaml',
+        'fontmake',
         'statmake',
         'PyYAML',
         'babelfont',
-        'ttfautohint-py'
+        'ttfautohint-py',
+        'brotli',
     ]
     )

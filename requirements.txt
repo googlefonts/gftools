@@ -8,3 +8,5 @@ statmake
 PyYAML
 babelfont
 ttfautohint-py
+fontmake
+brotli
