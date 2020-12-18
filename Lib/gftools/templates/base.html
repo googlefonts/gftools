@@ -6,6 +6,7 @@
     <title>GFR - {% block title %}{% endblock %}</title>
     {% endblock %}
     <style type="text/css">
+    {% block style %}
         html{
 	  font-family: sans-serif;
 	}
@@ -41,7 +42,6 @@
 	  padding: 10px;
 	}
 
-	{% block style %}
 	  {% for font_face in css_font_faces_before %}
 	    {{ font_face.render() }}
 	  {% endfor %}

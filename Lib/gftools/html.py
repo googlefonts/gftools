@@ -25,6 +25,7 @@ from gftools.utils import (
     get_name_record,
     font_is_italic,
     partition,
+    get_encoded_glyphs
 )
 
 
@@ -127,7 +128,7 @@ BSTACK_CONFIG_GDI_BROWSERS = {
 
 # Templates which are human viewable. Lib/gftools/templates contains more
 # html files but these are used as helpers
-GF_TEMPLATES = ["waterfall.html", "text.html"]
+GF_TEMPLATES = ["waterfall.html", "text.html", "glyphs.html"]
 
 
 class CSSElement(object):
@@ -359,7 +360,6 @@ class HtmlTemplater(object):
         self.template_dir = template_dir
         # TODO we may want to make this an arg
         self.server_url = "http://0.0.0.0:8000"
-        self.server_running = False
         self.jinja = Environment(
             loader=FileSystemLoader(self.template_dir),
             autoescape=select_autoescape(["html", "xml"]),
@@ -367,7 +367,7 @@ class HtmlTemplater(object):
 
         self.out = self.mkdir(out)
         self.documents = {}
-        # Set to true if html pages are going to be large
+        # Set to true if html pages are going get cropped in Browserstack
         self.big_output = False
 
         self.has_browserstack = (
@@ -403,6 +403,8 @@ class HtmlTemplater(object):
             raise ValueError(f"'{filename}' not in dir '{self.template_dir}'")
         # Combine self.__dict__ attributes with function kwargs. This allows Jinja
         # templates to access the class attributes
+        if not "pt_size" in kwargs:
+            kwargs["pt_size"] = 14
         jinja_kwargs = {**self.__dict__, **kwargs}
         page = self._render_html(filename, dst=dst, **jinja_kwargs)
         self.documents[filename] = page
@@ -467,7 +469,11 @@ class HtmlProof(HtmlTemplater):
         self.css_font_classes = css_font_classes(self.ttFonts)
 
         self.big_output = len(self.css_font_classes) > 4
+
         self.sample_text = " ".join(font_sample_text(self.ttFonts[0]))
+        # TODO to collect unencoded glyphs, we need to make a better version
+        # of hbinput
+        self.glyphs = get_encoded_glyphs(self.ttFonts[0])
 
     def save_split_imgs(self):
         with tempfile.TemporaryDirectory() as tmp_out:
@@ -515,7 +521,9 @@ class HtmlDiff(HtmlTemplater):
         self._match_css_font_classes()
 
         self.big_output = len(self.css_font_classes_before) > 4
+
         self.sample_text = " ".join(font_sample_text(self.ttFonts_before[0]))
+        self.glyphs = get_encoded_glyphs(self.ttFonts_before[0])
 
     def _match_css_font_classes(self):
         """Match css font classes by full names for static fonts and
@@ -627,8 +635,7 @@ def simple_server(directory="."):
 
 @contextmanager
 def daemon_server(directory="."):
-    """Start a simple_server in a background process.
-    Server will be stopped once a script has finished.
+    """Start a simple_server as a background process.
 
     Args:
       directory: start the server from a specified directory. Default is '.'

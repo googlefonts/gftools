@@ -408,6 +408,11 @@ def get_fsSelection_byte1(ttfont):
     return ttfont['OS/2'].fsSelection & 255
 
 
+def get_encoded_glyphs(ttFont):
+    """Collect all encoded glyphs"""
+    return list(map(chr, ttFont.getBestCmap().keys()))
+
+
 def get_unencoded_glyphs(font):
     """ Check if font has unencoded glyphs """
     cmap = font['cmap']
