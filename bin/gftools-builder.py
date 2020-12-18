@@ -17,32 +17,42 @@ import argparse
 from gftools.builder import GFBuilder
 
 parser = argparse.ArgumentParser(description=("Build a font family"))
-parser.add_argument("--debug", action="store_true", default=False,
-	help="Show extra debugging information"
+parser.add_argument(
+    "--debug",
+    action="store_true",
+    default=False,
+    help="Show extra debugging information",
 )
-parser.add_argument("--family-name",
-	help="Font family name"
+parser.add_argument("--family-name", help="Font family name")
+parser.add_argument(
+    "--no-autohint",
+    action="store_true",
+    default=False,
+    help="Don't run ttfautohint on static TTFs",
 )
-parser.add_argument("--no-autohint", action="store_true", default=False,
-	help="Don't run ttfautohint on static TTFs"
-)
-parser.add_argument("--stylespace",
-	help="Path to a statmake stylespace file"
-)
+parser.add_argument("--stylespace", help="Path to a statmake stylespace file")
 
-parser.add_argument('file', nargs='+', help="YAML build config file *or* source files")
+parser.add_argument("file", nargs="+", help="YAML build config file *or* source files")
 
 args = parser.parse_args()
 
-if len(args.file) == 1 and (args.file[0].endswith(".yaml") or args.file[0].endswith(".yml")):
-	builder = GFBuilder(configfile=args.file[0])
+if len(args.file) == 1 and (
+    args.file[0].endswith(".yaml") or args.file[0].endswith(".yml")
+):
+    builder = GFBuilder(configfile=args.file[0])
 else:
-	builder = GFBuilder(config={"sources": args.file, "familyName": args.family_name, "stylespaceFile": args.stylespace})
+    builder = GFBuilder(
+        config={
+            "sources": args.file,
+            "familyName": args.family_name,
+            "stylespaceFile": args.stylespace,
+        }
+    )
 
 if args.no_autohint:
-	builder.config["autohintTTF"] = False
+    builder.config["autohintTTF"] = False
 
 if args.debug:
-	builder.config["logLevel"] = "DEBUG"
+    builder.config["logLevel"] = "DEBUG"
 
 builder.build()
