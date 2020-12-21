@@ -164,7 +164,7 @@ class GFBuilder:
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
         args = {"output": ["variable"], "family_name": self.config["familyName"]}
-        all_variables = {}
+        ttFonts = []
         for source in self.config["sources"]:
             if not source.endswith(".designspace") and not source.endswith("glyphs"):
                 continue
@@ -176,9 +176,9 @@ class GFBuilder:
             output_files = self.run_fontmake(source, args)
             newname = self.rename_variable(output_files[0])
             self.post_process(newname)
-            all_variables[source] = newname
-        if all_variables:
-            self.gen_stat(all_variables)
+            ttFont = TTFont(newname)
+            ttFonts.append(ttFont)
+        self.gen_stat(ttFonts)
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:
@@ -217,29 +217,27 @@ class GFBuilder:
         return newname
 
     def gen_stat(self, varfonts):
-        filenames = varfonts.values()
-        if len(filenames) > 1 and "ital" not in self.config["axisOrder"]:
+        if len(varfonts) > 1 and "ital" not in self.config["axisOrder"]:
             # *Are* any italic? Presumably, but test
-            if any([ "italic" in x.lower() for x in filenames ]):
+            if any(font_is_italic(f) for f in varfonts):
                 self.config["axisOrder"].append("ital")
 
         if "stylespaceFile" in self.config and self.config["stylespaceFile"]:
-            self.gen_stat_stylespace(self.config["stylespaceFile"], filenames)
+            self.gen_stat_stylespace(self.config["stylespaceFile"], varfonts)
         elif "stat" in self.config:
             gen_stat_tables_from_config(self.config["stat"], varfonts)
         else:
-            ttFonts = [TTFont(x) for x in filenames]
-            gen_stat_tables(ttFonts, self.config["axisOrder"])
-            for filename, ttFont in zip(filenames, ttFonts):
-                ttFont.save(filename)
+            gen_stat_tables(varfonts, self.config["axisOrder"])
 
-    def gen_stat_stylespace(self, stylespaceFile, filenames):
+        for ttFont in varfonts:
+            ttFont.save(ttFont.reader.file.name)
+
+    def gen_stat_stylespace(self, stylespaceFile, varfonts):
         import warnings
         warnings.warn(".stylespace files are supported for compatibility but"
             "you are encouraged to specify your STAT table axes in the config file")
         stylespace = statmake.classes.Stylespace.from_file(stylespaceFile)
-        for filename in filenames:
-            ttFont = TTFont(filename)
+        for ttFont in varfonts:
             if "ital" in self.config["axisOrder"]:
                 if font_is_italic(ttFont):
                     additional_locations = {"Italic": 1}
@@ -250,7 +248,6 @@ class GFBuilder:
             statmake.lib.apply_stylespace_to_variable_font(
                 stylespace, ttFont, additional_locations
             )
-            ttFont.save(filename)
 
     def build_static(self):
         self.build_a_static_format("otf", self.config["otDir"], self.post_process)
