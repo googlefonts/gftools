@@ -183,7 +183,8 @@ class FontQA:
             fonts_before=[f.reader.file.name for f in self.fonts_before],
             fonts_after=[f.reader.file.name for f in self.fonts],
         )
-        html.build_pages()
+        html.build_pages(["waterfall.html", "text.html"])
+        html.build_pages(["glyphs.html"], pt_size=16)
         html.save_imgs()
 
     def fontbakery(self):
@@ -241,7 +242,8 @@ class FontQA:
             out=out,
             fonts=[f.reader.file.name for f in self.fonts]
         )
-        html.build_pages()
+        html.build_pages(["waterfall.html", "text.html"])
+        html.build_pages(["glyphs.html"], pt_size=16)
         html.save_imgs()
 
     def googlefonts_upgrade(self):
