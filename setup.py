@@ -45,7 +45,8 @@ setup(
     author_email='dave@lab6.com',
     package_dir={'': 'Lib'},
     packages=['gftools',
-              'gftools.util'],
+              'gftools.util',
+              'gftools.builder'],
     package_data={'gftools.util': ["GlyphsInfo/*.xml"],
                   'gftools': [
                       "encodings/*.nam",
@@ -87,5 +88,11 @@ setup(
         'vttlib',
         'pygit2',
         'strictyaml',
+        'fontmake',
+        'statmake',
+        'PyYAML',
+        'babelfont',
+        'ttfautohint-py',
+        'brotli',
     ]
     )

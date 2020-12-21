@@ -429,3 +429,8 @@ def has_mac_names(ttfont):
         if ttfont['name'].getName(i, 1, 0, 0):
             return True
     return False
+
+def font_is_italic(ttfont):
+    """Check if the font has the word "Italic" in its stylename."""
+    stylename = ttfont["name"].getName(2, 3, 1, 0x409).toUnicode()
+    return True if "Italic" in stylename else False

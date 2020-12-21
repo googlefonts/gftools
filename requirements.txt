@@ -4,3 +4,9 @@ absl-py
 protobuf
 PyGithub
 vttLib
+statmake
+PyYAML
+babelfont
+ttfautohint-py
+fontmake
+brotli

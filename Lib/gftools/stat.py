@@ -1,6 +1,7 @@
 """Generate STAT tables for a Variable Font Family
 
-This module exports the function "gen_stat_tables" which can be used to
+This module exports the functions "gen_stat_tables" and
+"gen_stat_tables_from_config" which can be used to
 generate a STAT table for each font in a Variable Font Family.
 
 The STAT AxisValues are constructed using the Google Font's Axis Registry,
@@ -11,13 +12,14 @@ following properties:
 - All fonts contain the same amount of fvar axes
 - All fvar axes have the same ranges
 """
+from fontTools.ttLib import TTFont
 from fontTools.otlLib.builder import buildStatTable
-from gftools.utils import font_stylename, font_familyname
+from gftools.utils import font_stylename, font_familyname, font_is_italic
 from gftools.axisreg import axis_registry
 import logging
 
 
-__all__ = ["gen_stat_tables", "ELIDABLE_AXIS_VALUE_NAME"]
+__all__ = ["gen_stat_tables", "gen_stat_tables_from_config", "ELIDABLE_AXIS_VALUE_NAME"]
 
 
 log = logging.getLogger(__name__)
@@ -364,3 +366,87 @@ def gen_stat_tables(
         stat_table = [stat_table[axis] for axis in axis_order]
         _update_fvar_nametable_records(ttFont, stat_table)
         buildStatTable(ttFont, stat_table)
+
+def gen_stat_tables_from_config(stat, varfonts, has_italic=None):
+    """
+    Generate a stat table for each font in a family from a Python configuration.
+
+    Args:
+        stat: either a dictionary or list as described below
+        varfonts: a dict containing a mapping between source IDs and filenames
+        has_italic: a boolean indicating whether the family contains an italic.
+            If not provided, the stylename of the font files are inspected to
+            determine if any of them contain the word ``Italic``.
+
+    The ``stat`` parameter should normally be a list of axis dictionaries in the
+    format used by ``buildStatTable``. This list should *not* contain an entry
+    for the ``ital`` axis, as this entry will be generated as appropriate for
+    each font if ``has_italic`` is True.
+
+    For example::
+
+        varfonts = {
+            "Source-Regular.glyphs": "Source-Regular-VF[wdth].ttf",
+            "Source-Italic.glyphs": "Source-Italic-VF[wdth].ttf"
+        }
+        stat = [
+                { "tag":"wdth", "name": "Width", "values": [ ... ] }
+        ]
+
+    Alternately, to allow different STAT table entries for each font, the ``stat``
+    parameter may be a dictionary, whose keys are source IDs (usually source
+    filenames) corresponding to the appropriate entry in the ``varfonts``
+    dictionary and whose values are the list of axis dictionaries for the font.
+    Note that in this case, the axes list is passed to ``buildStatTable`` with
+    no further manipulation, meaning that if you want an ``ital`` axis, you
+    should specify it manually as part of the dictionary.
+
+    For example::
+
+        stat = {
+            "Source-Regular.glyphs": [
+                { "tag":"wdth", "name": "Width", "values": [ ... ] },
+                { "tag":"ital", "name": "Italic", "values": [ ... ] }
+            ],
+            "Source-Italic.glyphs": [
+                { "tag":"wdth", "name": "Width", "values": [ ... ] },
+                { "tag":"ital", "name": "Italic", "values": [ ... ] }
+            ]
+        }
+
+    The STAT tables are added to the font files and saved in-place.
+    """
+    # Check we have no italic
+    if isinstance(stat, list):
+        if has_italic is None:
+            has_italic = any(font_is_italic(TTFont(f)) for f in varfonts.values())
+        if has_italic:
+            for ax in stat:
+                if ax["name"] == "ital":
+                    raise ValueError("ital axis should not appear in stat config")
+            ital_stat_for_roman = {
+                "name": "Italic", "tag": "ital",
+                "values": [dict(value=0, name="Roman", flags=0x2, linkedValue=1)]
+            }
+            ital_stat_for_italic = {
+                "name": "Italic", "tag": "ital",
+                "values": [dict(value=1, name="Italic")]
+            }
+
+            stat.append({})  # We will switch this entry between Roman and Italic
+
+    for source, f in varfonts.items():
+        ttFont = TTFont(f)
+        if isinstance(stat, dict):
+            if source not in stat:
+                raise ValueError("Source %s not found in stat dictionary" % source)
+            this_stat = stat[source]
+        else:
+            if has_italic:
+                if font_is_italic(ttFont):
+                    stat[-1] = ital_stat_for_italic
+                else:
+                    stat[-1] = ital_stat_for_roman
+            this_stat = stat
+        buildStatTable(ttFont, this_stat)
+        ttFont.save(f)
