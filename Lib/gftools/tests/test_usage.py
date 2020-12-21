@@ -231,7 +231,7 @@ class TestGFToolsScripts(unittest.TestCase):
         self.check_script(['python', self.get_path('check-vtt-compile'), self.src_vtt_font])
 
     def test_gen_stat(self):
-        self.check_script(['python', self.get_path('gen-stat'), self.example_vf_font])
+        self.check_script(['python', self.get_path('gen-stat'), self.example_vf_font, "--axis-order", "wght"])
 
     def test_builder(self):
         self.check_script(['python', self.get_path('builder'), self.example_builder_config])
