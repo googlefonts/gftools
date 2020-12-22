@@ -128,6 +128,14 @@ def test_CSSElement_private_attribs():
     assert "Foobar" not in class_with_private_variables.render()
 
 
+def test_css_font_weight(var_ttfont):
+    var_ttfont["OS/2"].usWeightClass = 400
+    assert css_font_weight(var_ttfont) == 400
+
+    var_ttfont["OS/2"].usWeightClass = 250
+    assert css_font_weight(var_ttfont) == 100
+
+
 def _select_class(string, classes):
     return next((s for s in classes if string in s.selector), None)
 

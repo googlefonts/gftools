@@ -41,6 +41,7 @@ __all__ = [
     "simple_server",
     "daemon_server",
     "browserstack_local",
+    "css_font_weight",
 ]
 
 
@@ -204,7 +205,7 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
                 max_angle = int(axes["slnt"].maxValue)
                 font_style = f"oblique {min_angle}deg {max_angle}deg"
         else:
-            font_weight = ttFont["OS/2"].usWeightClass
+            font_weight = css_font_weight(ttFont)
         font_face = CSSElement(
             "@font-face",
             src=src,
@@ -240,6 +241,12 @@ def _class_name(family_name, style_name, position=None):
     string = f"{family_name}-{style_name}".replace(" ", "-")
     return string if not position else f"{string}-{position}"
 
+def css_font_weight(ttFont):
+    # At Google Fonts, we released many Thin families with a weight class of
+    # 250. This was implemented to fix older GDI browsers
+    weight = ttFont["OS/2"].usWeightClass
+    return weight if weight != 250 else 100
+
 
 def css_font_class_from_static(ttFont, position=None):
     family_name = font_familyname(ttFont)
@@ -247,7 +254,7 @@ def css_font_class_from_static(ttFont, position=None):
 
     class_name = _class_name(family_name, style_name, position)
     font_family = class_name
-    font_weight = ttFont["OS/2"].usWeightClass
+    font_weight = css_font_weight(ttFont)
     font_style = "italic" if font_is_italic(ttFont) else "normal"
     font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
     return CSSElement(
