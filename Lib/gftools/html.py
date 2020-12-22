@@ -241,6 +241,7 @@ def _class_name(family_name, style_name, position=None):
     string = f"{family_name}-{style_name}".replace(" ", "-")
     return string if not position else f"{string}-{position}"
 
+
 def css_font_weight(ttFont):
     # At Google Fonts, we released many Thin families with a weight class of
     # 250. This was implemented to fix older GDI browsers
@@ -439,6 +440,7 @@ class HtmlTemplater(object):
         assert hasattr(self, "screenshot")
 
         if self.too_big_for_browserstack:
+            log.info("Images will be too big for Browserstack. Partitioning pages")
             self.partition()
         else:
             pages = pages if pages else self.documents.keys()
