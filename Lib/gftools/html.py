@@ -25,7 +25,7 @@ from gftools.utils import (
     get_name_record,
     font_is_italic,
     partition,
-    get_encoded_glyphs
+    get_encoded_glyphs,
 )
 
 
@@ -82,20 +82,20 @@ BSTACK_CONFIG_LATEST_BROWSERS = {
         },
         # Catalina 13.0 and Mohave 12.0 don't produce a full size screenshot
         {
-            "os":"OS X",
-            "os_version":"High Sierra",
-            "browser":"safari",
-            "browser_version":"11.1",
+            "os": "OS X",
+            "os_version": "High Sierra",
+            "browser": "safari",
+            "browser_version": "11.1",
         },
         # Browserstack doesn't have a version of Firefox that works correctly with
         # VFs. Support for VFs arrived in v62, however v62 and v63 on
         # Browserstack don't work.
         {
-            "os":"Windows",
-            "os_version":"10",
-            "browser":"edge",
-            "browser_version":"18.0",
-        }
+            "os": "Windows",
+            "os_version": "10",
+            "browser": "edge",
+            "browser_version": "18.0",
+        },
     ],
 }
 
@@ -115,10 +115,10 @@ BSTACK_CONFIG_GDI_BROWSERS = {
             "os_version": "7",
         },
         {
-            "os":"Windows",
-            "os_version":"7",
-            "browser":"firefox",
-            "browser_version":"50.0",
+            "os": "Windows",
+            "os_version": "7",
+            "browser": "firefox",
+            "browser_version": "50.0",
         },
         # Versions of IE on Win7 all use DW which look ok for unhinted
         # fonts.
@@ -368,7 +368,7 @@ class HtmlTemplater(object):
         self.out = self.mkdir(out)
         self.documents = {}
         # Set to true if html pages are going get cropped in Browserstack
-        self.big_output = False
+        self.too_big_for_browserstack = False
 
         self.has_browserstack = (
             True
@@ -377,15 +377,17 @@ class HtmlTemplater(object):
         )
 
         if self.has_browserstack:
-            auth = (
-                browserstack_username or os.environ["BSTACK_USERNAME"],
-                browserstack_access_key or os.environ["BSTACK_ACCESS_KEY"],
+            self.browserstack_username = (
+                browserstack_username or os.environ["BSTACK_USERNAME"]
+            )
+            self.browserstack_access_key = (
+                browserstack_access_key or os.environ["BSTACK_ACCESS_KEY"]
             )
             self.browserstack_config = (
                 browserstack_config if browserstack_config else self.BROWSERSTACK_CONFIG
             )
+            auth = (self.browserstack_username, self.browserstack_access_key)
             self.screenshot = ScreenShot(auth=auth, config=self.browserstack_config)
-            self.browserstack = Local(key=os.environ["BSTACK_ACCESS_KEY"])
         else:
             log.warning("No Browserstack credentials found. Image output disabled")
 
@@ -426,17 +428,25 @@ class HtmlTemplater(object):
         [shutil.copy(f, dst) for f in srcs]
         return [os.path.join(dst, os.path.basename(f)) for f in srcs]
 
-    def save_imgs(self):
+    def save_imgs(self, pages=None, dst=None):
         assert hasattr(self, "screenshot")
 
-        if self.big_output:
-            self.save_split_imgs()
+        if self.too_big_for_browserstack:
+            self.partition()
         else:
+            pages = pages if pages else self.documents.keys()
             log.warning("Generating images with Browserstack. This may take a while")
-            img_dir = self.mkdir(os.path.join(self.out, "img"))
-            with browserstack_local(), daemon_server(directory=self.out):
-                for name, paths in self.documents.items():
-                    out = os.path.join(img_dir, name)
+            img_dir = dst if dst else self.mkdir(os.path.join(self.out, "img"))
+            with browserstack_local(self.browserstack_access_key), daemon_server(
+                directory=self.out
+            ):
+                for page in pages:
+                    if page not in self.documents:
+                        raise ValueError(
+                            f"{page} doesn't exist in self.doccuments, {self.documents}"
+                        )
+                    paths = self.documents[page]
+                    out = os.path.join(img_dir, page)
                     self.mkdir(out)
                     self._save_img(paths, out)
 
@@ -445,7 +455,7 @@ class HtmlTemplater(object):
         url = f"{self.server_url}/{page}"
         self.screenshot.take(url, dst)
 
-    def save_split_imgs(self):
+    def partition(self):
         # Browserstack limits screenshots so they are less than 10000px tall.
         # To work around this limitation, we can patition the class into smaller
         # subclasses and then screenshot these instead
@@ -468,18 +478,18 @@ class HtmlProof(HtmlTemplater):
         self.css_font_faces = css_font_faces(self.ttFonts, self.out)
         self.css_font_classes = css_font_classes(self.ttFonts)
 
-        self.big_output = len(self.css_font_classes) > 4
+        self.too_big_for_browserstack = len(self.css_font_classes) > 4
 
         self.sample_text = " ".join(font_sample_text(self.ttFonts[0]))
         # TODO to collect unencoded glyphs, we need to make a better version
         # of hbinput
         self.glyphs = get_encoded_glyphs(self.ttFonts[0])
 
-    def save_split_imgs(self):
+    def partition(self):
         with tempfile.TemporaryDirectory() as tmp_out:
             temp_html = HtmlProof(fonts=self.fonts, out=tmp_out)
-            # disable big_output for subclasses otherwise we'll infinte loop
-            temp_html.big_output = False
+            # disable too_big_for_browserstack for subclasses otherwise we'll infinte loop
+            temp_html.too_big_for_browserstack = False
             css_class_groups = partition(self.css_font_classes, 4)
             for idx, group in enumerate(css_class_groups):
                 temp_html.css_font_classes = group
@@ -520,7 +530,7 @@ class HtmlDiff(HtmlTemplater):
         self.css_font_classes_after = css_font_classes(self.ttFonts_after, "after")
         self._match_css_font_classes()
 
-        self.big_output = len(self.css_font_classes_before) > 4
+        self.too_big_for_browserstack = len(self.css_font_classes_before) > 4
 
         self.sample_text = " ".join(font_sample_text(self.ttFonts_before[0]))
         self.glyphs = get_encoded_glyphs(self.ttFonts_before[0])
@@ -590,15 +600,15 @@ class HtmlDiff(HtmlTemplater):
             self.screenshot.take(after_url, after_dst)
             gen_gifs(before_dst, after_dst, dst)
 
-    def save_split_imgs(self):
+    def partition(self):
         with tempfile.TemporaryDirectory() as tmp_out:
             temp_html = HtmlDiff(
                 fonts_before=self.fonts_before,
                 fonts_after=self.fonts_after,
-                out=tmp_out
+                out=tmp_out,
             )
-            # disable big_output for subclasses otherwise we'll infinte loop
-            temp_html.big_output = False
+            # disable too_big_for_browserstack for subclasses otherwise we'll infinte loop
+            temp_html.too_big_for_browserstack = False
             css_class_groups_before = partition(self.css_font_classes_before, 4)
             css_class_groups_after = partition(self.css_font_classes_after, 4)
             assert len(css_class_groups_before) == len(css_class_groups_after)
@@ -649,12 +659,12 @@ def daemon_server(directory="."):
 
 
 @contextmanager
-def browserstack_local():
+def browserstack_local(access_key):
     """Start browserstack local tool as a background process"""
     # TODO This can be deprecated once
     # https://github.com/browserstack/browserstack-local-python/pull/28 is
     # merged (it may not be merged because it's a relatively inactive repo)
-    local = Local(key=os.environ["BSTACK_ACCESS_KEY"])
+    local = Local(key=access_key)
     try:
         local.start()
         yield local
