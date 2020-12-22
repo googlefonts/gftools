@@ -3,7 +3,25 @@
 gftools gen-stat
 
 Generate a STAT table for each font in a variable font family
-using the GF axis registry.
+using the GF axis registry. Alternatively, users can generate
+STAT tables from a yaml file which has the following structure:
+
+```
+Lora[wght].ttf:
+- name: Weight
+  tag: wght
+  values:
+  - name: Regular
+    value: 400
+    ...
+- name: Width
+  tag: wdth
+  values:
+  ...
+
+Lora-Italic[wght].ttf
+...
+```
 
 Usage:
 
@@ -19,11 +37,15 @@ gftools gen-stat font1.ttf font2.ttf --axis-order wdth wght --inplace
 # Overide which axis values are elided
 gftools gen-stat font.ttf --elided-values wght=400 --axis-order wdth wght
 
+# Generate stats from a file
+gftools gen-stat font.ttf --src my_stat.yaml
+
 """
 from fontTools.ttLib import TTFont
-from gftools.stat import gen_stat_tables
+from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.axisreg import axis_registry
 import argparse
+import yaml
 import os
 
 
@@ -48,10 +70,11 @@ def main():
     parser.add_argument(
         "fonts", nargs="+", help="Variable TTF files which make up a family"
     )
+    parser.add_argument("--src", help="use yaml file to build STAT", default=None)
     parser.add_argument(
         "--axis-order",
         nargs="+",
-        required=True,
+        required=False,
         choices=axis_registry.keys(),
         help="List of space seperated axis tags used to set the STAT table "
         "axis order e.g --axis-order wdth wght ital",
@@ -71,10 +94,17 @@ def main():
     args = parser.parse_args()
 
     fonts = [TTFont(f) for f in args.fonts]
-    elided_values = (
-        parse_elided_values(args.elided_values) if args.elided_values else None
-    )
-    gen_stat_tables(fonts, args.axis_order, elided_values)
+
+    if args.src:
+        config = yaml.load(open(args.src), Loader=yaml.SafeLoader)
+        gen_stat_tables_from_config(config, fonts)
+    else:
+        if not args.axis_order:
+            raise ValueError("axis-order arg is missing")
+        elided_values = (
+            parse_elided_values(args.elided_values) if args.elided_values else None
+        )
+        gen_stat_tables(fonts, args.axis_order, elided_values)
 
     if args.out:
         if not os.path.isdir(args.out):

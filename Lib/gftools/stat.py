@@ -16,6 +16,7 @@ from fontTools.ttLib import TTFont
 from fontTools.otlLib.builder import buildStatTable
 from gftools.utils import font_stylename, font_familyname, font_is_italic
 from gftools.axisreg import axis_registry
+import os
 import logging
 
 
@@ -373,7 +374,7 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None):
 
     Args:
         stat: either a dictionary or list as described below
-        varfonts: a dict containing a mapping between source IDs and filenames
+        varfonts: a list of variable TTFont instances
         has_italic: a boolean indicating whether the family contains an italic.
             If not provided, the stylename of the font files are inspected to
             determine if any of them contain the word ``Italic``.
@@ -385,10 +386,10 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None):
 
     For example::
 
-        varfonts = {
-            "Source-Regular.glyphs": "Source-Regular-VF[wdth].ttf",
-            "Source-Italic.glyphs": "Source-Italic-VF[wdth].ttf"
-        }
+        varfonts = [
+            "Source-Regular-VF[wdth].ttf",
+            "Source-Italic-VF[wdth].ttf"
+        ]
         stat = [
                 { "tag":"wdth", "name": "Width", "values": [ ... ] }
         ]
@@ -404,22 +405,21 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None):
     For example::
 
         stat = {
-            "Source-Regular.glyphs": [
+            "Font[wght].ttf": [
                 { "tag":"wdth", "name": "Width", "values": [ ... ] },
                 { "tag":"ital", "name": "Italic", "values": [ ... ] }
             ],
-            "Source-Italic.glyphs": [
+            "Font-Italic[wght].ttf": [
                 { "tag":"wdth", "name": "Width", "values": [ ... ] },
                 { "tag":"ital", "name": "Italic", "values": [ ... ] }
             ]
         }
-
-    The STAT tables are added to the font files and saved in-place.
     """
+    assert all("fvar" in f for f in varfonts)
     # Check we have no italic
     if isinstance(stat, list):
         if has_italic is None:
-            has_italic = any(font_is_italic(TTFont(f)) for f in varfonts.values())
+            has_italic = any(font_is_italic(f) for f in varfonts)
         if has_italic:
             for ax in stat:
                 if ax["name"] == "ital":
@@ -435,12 +435,12 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None):
 
             stat.append({})  # We will switch this entry between Roman and Italic
 
-    for source, f in varfonts.items():
-        ttFont = TTFont(f)
+    for ttFont in varfonts:
+        filename = os.path.basename(ttFont.reader.file.name)
         if isinstance(stat, dict):
-            if source not in stat:
-                raise ValueError("Source %s not found in stat dictionary" % source)
-            this_stat = stat[source]
+            if filename not in stat:
+                raise ValueError("Filename %s not found in stat dictionary" % filename)
+            this_stat = stat[filename]
         else:
             if has_italic:
                 if font_is_italic(ttFont):
@@ -449,4 +449,3 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None):
                     stat[-1] = ital_stat_for_roman
             this_stat = stat
         buildStatTable(ttFont, this_stat)
-        ttFont.save(f)

@@ -1,0 +1,10 @@
+Lora-Roman-VF.ttf:
+- name: Weight
+  tag: wght
+  values:
+  - name: Regular
+    value: 400
+  - name: Bold
+    value: 700
+  - name: SemiBold
+    value: 600

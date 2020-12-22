@@ -3,6 +3,7 @@ import os
 from glob import glob
 from gftools.stat import *
 from fontTools.ttLib import TTFont
+import yaml
 
 
 TEST_DATA = os.path.join("data", "test")
@@ -332,3 +333,64 @@ def test_gen_stat_nameid_25_vf_postscript_name_4(var_fonts3):
     roman, italic = var_fonts3
     assert roman['name'].getName(25, 3, 1, 0x409).toUnicode() == "CabinRoman"
     assert italic['name'].getName(25, 3, 1, 0x409).toUnicode() == "CabinItalic"
+
+
+def test_gen_stat_tables_from_config(var_fonts):
+    config_text = """
+      Raleway[wght].ttf:
+      - name: Weight
+        tag: wght
+        values:
+        - name: Regular
+          value: 400
+          flags: 2
+        - name: Bold
+          value: 700
+        - name: SemiBold
+          value: 600
+      - name: Italic
+        tag: ital
+        values:
+        - name: Roman
+          value: 0
+          linkedValue: 1
+          flags: 2
+
+      Raleway-Italic[wght].ttf:
+      - name: Weight
+        tag: wght
+        values:
+        - name: Regular
+          value: 400
+          flags: 2
+        - name: Bold
+          value: 700
+        - name: SemiBold
+          value: 600
+      - name: Italic
+        tag: ital
+        values:
+        - name: Italic
+          value: 1
+    """
+    config = yaml.load(config_text)
+    gen_stat_tables_from_config(config, var_fonts)
+    roman, italic = var_fonts
+
+    roman_axis_val = _get_axis_value(roman, "ital", "Roman", 0.0)
+    assert roman_axis_val != None
+    assert roman_axis_val.LinkedValue == 1.0
+
+    italic_axis_val = _get_axis_value(italic, "ital", "Italic", 1.0)
+    assert italic_axis_val != None
+
+    roman_reg_val = _get_axis_value(roman, "wght", "Regular", 400)
+    assert roman_reg_val != None
+    assert roman_reg_val.Flags == 0x2
+
+    ital_reg_val = _get_axis_value(italic, "wght", "Regular", 400)
+    assert roman_reg_val != None
+    assert roman_reg_val.Flags == 0x2
+
+    assert _get_axis_value(roman, "wght", "Light", 300) == None
+    assert _get_axis_value(italic, "wght", "Light", 300) == None
