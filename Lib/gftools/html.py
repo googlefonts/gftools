@@ -16,6 +16,7 @@ import time
 from copy import copy
 import pathlib
 import shutil
+from collections import namedtuple
 from gftools.utils import (
     font_sample_text,
     download_file,
@@ -304,6 +305,9 @@ def css_font_classes_from_vf(ttFont, position=None):
     return results
 
 
+Document = namedtuple("Document", ["filename", "path", "options"])
+
+
 class HtmlTemplater(object):
 
     BROWSERSTACK_CONFIG = BSTACK_CONFIG_LATEST_BROWSERS
@@ -416,8 +420,8 @@ class HtmlTemplater(object):
         if not "pt_size" in kwargs:
             kwargs["pt_size"] = 14
         jinja_kwargs = {**self.__dict__, **kwargs}
-        page = self._render_html(filename, dst=dst, **jinja_kwargs)
-        self.documents[filename] = page
+        out = self._render_html(filename, dst=dst, **jinja_kwargs)
+        self.documents[filename] = Document(filename, out, kwargs)
 
     def _render_html(self, filename, dst=None, **kwargs):
         html_template = self.jinja.get_template(filename)
@@ -452,9 +456,9 @@ class HtmlTemplater(object):
                 for page in pages:
                     if page not in self.documents:
                         raise ValueError(
-                            f"{page} doesn't exist in self.doccuments, {self.documents}"
+                            f"{page} doesn't exist in documents, '{self.documents}'"
                         )
-                    paths = self.documents[page]
+                    paths = self.documents[page].path
                     out = os.path.join(img_dir, page)
                     self.mkdir(out)
                     self._save_img(paths, out)
@@ -502,7 +506,8 @@ class HtmlProof(HtmlTemplater):
             css_class_groups = partition(self.css_font_classes, 4)
             for idx, group in enumerate(css_class_groups):
                 temp_html.css_font_classes = group
-                temp_html.build_pages(self.documents.keys())
+                for page, doc in self.documents.items():
+                    temp_html.build_page(page, **doc.options)
                 temp_html.save_imgs()
                 src_imgs = os.path.join(temp_html.out, "img")
                 dir_name = "-".join(s._style.replace(" ", "") for s in group)
@@ -624,7 +629,8 @@ class HtmlDiff(HtmlTemplater):
             for idx, group in enumerate(css_class_groups_before):
                 temp_html.css_font_classes_before = css_class_groups_before[idx]
                 temp_html.css_font_classes_after = css_class_groups_after[idx]
-                temp_html.build_pages(self.documents.keys())
+                for page, doc in self.documents.items():
+                    temp_html.build_page(page, **doc.options)
                 temp_html.save_imgs()
                 src_imgs = os.path.join(temp_html.out, "img")
                 dir_name = "-".join(s._style.replace(" ", "") for s in group)
