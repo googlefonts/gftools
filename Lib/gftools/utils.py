@@ -27,6 +27,7 @@ import browserstack_screenshots
 from collections import namedtuple
 from github import Github
 from pkg_resources import resource_filename
+from google.protobuf import text_format
 import time
 import json
 from browserstack.local import Local
@@ -496,3 +497,10 @@ def gen_gif(img_a_path, img_b_path, dst):
 def partition(items, size):
     """partition([1,2,3,4,5,6], 2) --> [[1,2],[3,4],[5,6]]"""
     return [items[i : i + size] for i in range(0, len(items), size)]
+
+
+def read_proto(fp, schema):
+    with open(fp, "rb") as f:
+        data = text_format.Parse(f.read(), schema)
+    return data
+

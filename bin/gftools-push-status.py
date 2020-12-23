@@ -13,157 +13,135 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Check push status of families on Dev, Sandbox and Production servers.
-
-This script will determine whether the families listed in
-to_production.txt and to_sandbox.txt in the google/fonts dir have been
-pushed to their respective servers from a specific date.
-
-If the files are empty, you can always use git checkout to view past
-states.
-
+"""Check the status of families being pushed to Google Fonts
 
 Usage:
-
-Check push status for the past month:
-gftools push-status path/to/google/fonts
-
-Check push status for specified date:
-gftools push-status path/to/google/fonts -pd 2020-07-01
+gftools push-status /path/to/google/fonts/repo
+# Check server push files are valid
+gftools push-status /path/to/google/fonts/repo --lint
 """
-import argparse
-from argparse import RawDescriptionHelpFormatter
-import os
-from pathlib import Path
-import gftools.fonts_public_pb2 as fonts_pb2
-from google.protobuf import text_format
-from datetime import datetime, timedelta
 import json
 import requests
+import os
+from pathlib import Path
+import argparse
+from gftools.utils import read_proto
+import gftools.fonts_public_pb2 as fonts_pb2
 
 
-# If no push date is added we can assume that the push has probably
-# happened in the past month
-ONE_MONTH_AGO = datetime.now() - timedelta(days=31)
+SANDBOX_URL = "https://fonts.sandbox.google.com/metadata/fonts"
+PRODUCTION_URL = "https://fonts.google.com/metadata/fonts"
+
+PUSH_STATUS_TEMPLATE = """
+***{} Status***
+New families:
+{}
+
+Existing families, last pushed:
+{}
+"""
 
 
-def get_family_metadata(url):
-    """Get family json data from a Google Fonts metadata url"""
-    # can't do requests.get("url").json() since request text starts with ")]}'"
-    info = json.loads(requests.get(url).text[5:])
-    return {i['family']: i for i in info["familyMetadataList"]}
-
-
-def read_proto(fp, schema):
-    with open(fp, "rb") as f:
-        data = text_format.Parse(f.read(), schema)
-    return data
-
-
-def families_from_file(fp):
-    """Convert to_sandbox.txt and to_production.txt files to a list of
-    family names."""
-    results = set()
+def parse_server_file(fp):
+    """Skip comments in server files"""
+    results = []
     with open(fp) as doc:
-        family_dirs = [p for p in doc.read().split() if p.startswith(("ofl", "ufl", "apache"))]
-    metadata_files = [Path(fp).parent / d / 'METADATA.pb' for d in family_dirs]
-    missing_files = [str(f) for f in metadata_files if not f.is_file()]
-    if missing_files:
-        raise FileNotFoundError(
-            "Following METADATA.pbs files are missing:\n{}".format(
-                "\n".join(missing_files)
-            )
-        )
-    return [read_proto(f, fonts_pb2.FamilyProto()).name for f in metadata_files]
-
-
-def families_status(info, push_date, filter_families=set()):
-    """Determine which families have been pushed or not pushed from a
-    specific date. If a filter_families set is provided, remove
-    families from the results which are not included in this set."""
-    results = {"pushed": set(), "not_pushed": set()}
-    if filter_families:
-        info = {k: v for k,v in info.items() if k in filter_families}
-    for family in info:
-        last_push = info[family]['lastModified']
-        last_push = iso_8601_to_date(last_push)
-        if last_push >= push_date:
-            results['pushed'].add(family)
-        if last_push < push_date:
-            results["not_pushed"].add(family)
+        lines = doc.read().split("\n")
+        for line in lines:
+            if line.startswith("#") or not line:
+                continue
+            if "#" in line:
+                line = line.split("#")[0].strip()
+            results.append(Path(line))
     return results
 
 
-def status_reporter(server_name, status):
-    """Produce a report for a server status dict"""
-    report = []
-    report.append(f"***{server_name}***")
-    for k, v in status.items():
-        report.append(f"{k}: {sorted(v)}")
-    report.append("\n")
-    return "\n".join(report)
+def is_family_dir(path):
+    return any(t for t in ("ofl", "apache", "ufl") if t in path.parts)
 
 
-def specimen_reporter(server_name, url_base, families):
-    """Produce a report containing urls for a list of families"""
-    report = []
-    report.append(f"***{server_name} specimens to inspect***")
-    for family in sorted(families):
-        family_url = url_base.format(family.replace(" ", "+"))
-        report.append(family_url)
-    if len(report) == 1:
-        report.append("No urls to inspect")
-    report.append("\n")
-    return "\n".join(report)
+def family_dir_name(path):
+    metadata_file = path / "METADATA.pb"
+    assert metadata_file.exists()
+    return read_proto(metadata_file, fonts_pb2.FamilyProto()).name
 
 
-def iso_8601_to_date(string):
-    """YYYY-MM-DD --> datetime"""
-    if ":" in string or len(string.split("-")) != 3:
-        raise ValueError(f"Date format should be 'YYYY-MM-DD' got '{string}'")
-    return datetime.strptime(string, "%Y-%m-%d")
+def gf_server_metadata(url):
+    """Get family json data from a Google Fonts metadata url"""
+    # can't do requests.get("url").json() since request text starts with ")]}'"
+    info = json.loads(requests.get(url).text[5:])
+    return {i["family"]: i for i in info["familyMetadataList"]}
 
 
-def gf_repo(path):
-    """Check if path is a Google Fonts repo"""
-    path = Path(path)
-    if not path.is_dir() or list(path.glob("to_production`.txt")):
-        raise OSError(f"{path} is not a Google/Fonts dir")
-    return path
+def server_push_status(fp, url):
+    dirs = [fp.parent / p for p in parse_server_file(fp)]
+    family_dirs = [d for d in dirs if is_family_dir(d)]
+    family_names = [family_dir_name(d) for d in family_dirs]
+
+    gf_meta = gf_server_metadata(url)
+
+    new_families = [f for f in family_names if f not in gf_meta]
+    existing_families = [f for f in family_names if f in gf_meta]
+
+    gf_families = sorted(
+        [gf_meta[f] for f in existing_families], key=lambda k: k["lastModified"]
+    )
+    existing_families = [f"{f['family']}: {f['lastModified']}" for f in gf_families]
+    return new_families, existing_families
+
+
+def server_push_report(name, fp, server_url):
+    new_families, existing_families = server_push_status(fp, server_url)
+    new = "\n".join(new_families) if new_families else "N/A"
+    existing = "\n".join(existing_families) if existing_families else "N/A"
+    print(PUSH_STATUS_TEMPLATE.format(name, new, existing))
+
+
+def push_report(fp):
+    prod_path = fp / "to_production.txt"
+    server_push_report("Production", prod_path, PRODUCTION_URL)
+
+    sandbox_path = fp / "to_sandbox.txt"
+    server_push_report("Sandbox", sandbox_path, SANDBOX_URL)
+
+
+def missing_paths(fp):
+    dirs = [fp.parent / p for p in parse_server_file(fp)]
+    return [p for p in dirs if not p.is_dir()]
+
+
+def lint_report(fp):
+    template = "{}: Following paths are not valid dirs:\n{}\n\n"
+    prod_path = fp / "to_production.txt"
+    prod_missing = "\n".join(map(str, missing_paths(prod_path)))
+    prod_msg = template.format("to_production.txt", prod_missing)
+
+    sandbox_path = fp / "to_sandbox.txt"
+    sandbox_missing = "\n".join(map(str, missing_paths(sandbox_path)))
+    sandbox_msg = template.format("to_sandbox.txt", sandbox_missing)
+
+    if prod_missing and sandbox_missing:
+        raise ValueError(prod_msg + sandbox_msg)
+    elif prod_missing:
+        raise ValueError(prod_msg)
+    elif sandbox_missing:
+        raise ValueError(sandbox_msg)
+    else:
+        print("Server files have valid paths")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=RawDescriptionHelpFormatter
-    )
-    parser.add_argument("gf_path", type=gf_repo, help="path to google/fonts dir")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path", type=Path, help="Path to google/fonts repo")
     parser.add_argument(
-        "--push_date", "-pd", type=iso_8601_to_date, default=ONE_MONTH_AGO,
-        help="Date when last push occurred"
+        "--lint", action="store_true", help="Check server files have correct paths"
     )
     args = parser.parse_args()
-
-    dev_meta = get_family_metadata("https://fonts-dev.sandbox.google.com/metadata/fonts")
-    sandbox_meta = get_family_metadata(f"https://fonts.sandbox.google.com/metadata/fonts")
-    prod_meta = get_family_metadata(f"https://fonts.google.com/metadata/fonts")
-
-    dev_status = families_status(dev_meta, args.push_date)
-
-    to_sandbox_file = Path(f"{args.gf_path}/to_sandbox.txt")
-    requested_sandbox_families = families_from_file(to_sandbox_file)
-    sandbox_status = families_status(sandbox_meta, args.push_date, requested_sandbox_families)
-
-    to_production_file = Path(f"{args.gf_path}/to_production.txt")
-    requested_prod_families = families_from_file(to_production_file)
-    prod_status = families_status(prod_meta, args.push_date, requested_prod_families)
-
-    specimen_url = "https://fonts-dev.sandbox.google.com/specimen/{}"
-    print(specimen_reporter("Dev Server", specimen_url, dev_status["pushed"]))
-    print(status_reporter("Sandbox Server", sandbox_status))
-    print(status_reporter("Production Server", prod_status))
+    if args.lint:
+        lint_report(args.path)
+    else:
+        push_report(args.path)
 
 
 if __name__ == "__main__":
     main()
-
