@@ -42,6 +42,7 @@ from gftools.utils import (
     load_Google_Fonts_api_key,
     mkdir,
 )
+from gftools.html import HtmlProof, HtmlDiff
 try:
     from diffenator.diff import DiffFonts
     from diffenator.font import DFont
@@ -71,8 +72,6 @@ def load_browserstack_credentials():
 
 
 class FontQA:
-
-    GFR_URL = "http://35.238.63.0/"
 
     def __init__(self, fonts, fonts_before=None, out="out"):
         self.fonts = fonts
@@ -167,10 +166,6 @@ class FontQA:
             diff.to_md(20, os.path.join(out, "report.md"))
             diff.to_html(20, os.path.join(out, "report.html"), image_dir=".")
 
-    @staticmethod
-    def chunkify(items, size):
-        return [items[i : i + size] for i in range(0, len(items), size)]
-
     def diffbrowsers(self, **kwargs):
         """Test fonts on GFR regression and take screenshots using
         diffbrowsers. A browserstack account is required."""
@@ -182,27 +177,15 @@ class FontQA:
             return
         dst = os.path.join(self.out, "Diffbrowsers")
         mkdir(dst)
-        browsers_to_test = test_browsers["vf_browsers"]
-        fonts = [(k, self.instances_before[k]['filename'],
-                     self.instances[k]['filename']) for k in self.matching_instances]
-        font_groups = self.chunkify(sorted(fonts), 4)
-        for group in font_groups:
-            styles = [i[0] for i in group]
-            dir_name = "_".join(styles)
-            fonts_before = [i[1] for i in group]
-            fonts_after = [i[2] for i in group]
-            out = os.path.join(dst, dir_name)
-            diff_browsers = DiffBrowsers(
-                auth=self._bstack_auth,
-                gfr_instance_url=self.GFR_URL,
-                dst_dir=out,
-                browsers=browsers_to_test,
-            )
-            diff_browsers.new_session(set(fonts_before), set(fonts_after))
-            diff_browsers.diff_view("waterfall", styles=styles)
-            info = os.path.join(out, "info.json")
-            json.dump(diff_browsers.stats, open(info, "w"))
-            diff_browsers.diff_view("glyphs_all", pt=16, styles=styles)
+
+        html = HtmlDiff(
+            out=dst,
+            fonts_before=[f.reader.file.name for f in self.fonts_before],
+            fonts_after=[f.reader.file.name for f in self.fonts],
+        )
+        html.build_pages(["waterfall.html", "text.html"])
+        html.build_pages(["glyphs.html"], pt_size=16)
+        html.save_imgs()
 
     def fontbakery(self):
         logger.info("Running Fontbakery")
@@ -255,21 +238,13 @@ class FontQA:
             return
         out = os.path.join(self.out, "browser_previews")
         mkdir(out)
-        browsers_to_test = test_browsers["vf_browsers"]
-        font_groups = self.chunkify(list([i['filename'] for i in self.instances.values()]), 4)
-        name_groups = self.chunkify(list(self.instances.keys()), 4)
-        for name_group, font_group in zip(name_groups, font_groups):
-            name = "_".join(sorted(name_group))
-            diff_browsers = DiffBrowsers(
-                auth=self._bstack_auth,
-                gfr_instance_url=FontQA.GFR_URL,
-                dst_dir=os.path.join(out, name),
-                browsers=browsers_to_test,
-                gfr_is_local=False,
-            )
-            diff_browsers.new_session(font_group, font_group)
-            diff_browsers.diff_view("waterfall", styles=name_group)
-            diff_browsers.diff_view("glyphs_all", styles=name_group, pt=15)
+        html = HtmlProof(
+            out=out,
+            fonts=[f.reader.file.name for f in self.fonts]
+        )
+        html.build_pages(["waterfall.html", "text.html"])
+        html.build_pages(["glyphs.html"], pt_size=16)
+        html.save_imgs()
 
     def googlefonts_upgrade(self):
         self.fontbakery()

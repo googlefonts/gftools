@@ -53,6 +53,8 @@ setup(
                       "encodings/GF Glyph Sets/*.nam",
                       'template.upstream.yaml',
                       "axisregistry/*.textproto",
+                      "udhr_all.txt",
+                      "templates/*.html"
                   ]
                  },
     scripts=gftools_scripts(),
@@ -94,5 +96,7 @@ setup(
         'babelfont',
         'ttfautohint-py',
         'brotli',
+        'browserstack-local==1.2.2',
+        'pybrowserstack-screenshots==0.1',
     ]
     )

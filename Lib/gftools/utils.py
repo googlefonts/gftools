@@ -23,8 +23,14 @@ import re
 import shutil
 import unicodedata
 from unidecode import unidecode
+import browserstack_screenshots
 from collections import namedtuple
 from github import Github
+from pkg_resources import resource_filename
+import time
+import json
+from browserstack.local import Local
+from PIL import Image
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -402,6 +408,11 @@ def get_fsSelection_byte1(ttfont):
     return ttfont['OS/2'].fsSelection & 255
 
 
+def get_encoded_glyphs(ttFont):
+    """Collect all encoded glyphs"""
+    return list(map(chr, ttFont.getBestCmap().keys()))
+
+
 def get_unencoded_glyphs(font):
     """ Check if font has unencoded glyphs """
     cmap = font['cmap']
@@ -430,7 +441,58 @@ def has_mac_names(ttfont):
             return True
     return False
 
+
 def font_is_italic(ttfont):
     """Check if the font has the word "Italic" in its stylename."""
     stylename = ttfont["name"].getName(2, 3, 1, 0x409).toUnicode()
     return True if "Italic" in stylename else False
+
+
+def font_sample_text(ttFont):
+    """Collect words which exist in the Universal Declaration of Human Rights
+    that can be formed using the ttFont instance.
+
+    UDHR has been chosen due to the many languages it covers"""
+    with open(resource_filename("gftools", "udhr_all.txt")) as doc:
+        text = doc.read()
+
+    cmap = set(ttFont.getBestCmap())
+    words = []
+    seen_chars = set()
+    for word in text.split():
+        chars = set(ord(l) for l in word)
+        if not chars.issubset(cmap):
+            continue
+        if chars & seen_chars == chars:
+            continue
+        seen_chars |= chars
+        words.append(word)
+    return words
+
+
+def gen_gifs(dir1, dir2, dst_dir):
+    dir1_imgs = set(f for f in os.listdir(dir1) if f.endswith(("jpg", "png")))
+    dir2_imgs = set(f for f in os.listdir(dir2) if f.endswith(("jpg", "png")))
+    shared_imgs = dir1_imgs & dir2_imgs
+    for img in shared_imgs:
+        gif_filename = img[:-4] + '.gif'
+        img_a_path = os.path.join(dir1, img)
+        img_b_path = os.path.join(dir2, img)
+        dst = os.path.join(dst_dir, gif_filename)
+        gen_gif(img_a_path, img_b_path, dst)
+
+
+def gen_gif(img_a_path, img_b_path, dst):
+    with Image.open(img_a_path) as img_a, Image.open(img_b_path) as img_b:
+        img_a.save(
+            dst, 
+            save_all=True,
+            append_images=[img_b],
+            loop=10000,
+            duration=1000
+        )
+
+
+def partition(items, size):
+    """partition([1,2,3,4,5,6], 2) --> [[1,2],[3,4],[5,6]]"""
+    return [items[i : i + size] for i in range(0, len(items), size)]
