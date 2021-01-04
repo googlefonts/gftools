@@ -13,7 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Check the status of families being pushed to Google Fonts
+"""Check the status of families being pushed to Google Fonts.
+
+Families are pushed to a sandbox server and inspected before
+they are sent to the production server. The files "to_sandbox.txt" and
+"to_production.txt" in the google/fonts repo list which families need
+pushing to their respective servers.
+
+This script will check whether the families listed in the text files
+have been pushed. A lint command is also provided to ensure they list
+valid directory paths.
 
 Usage:
 gftools push-status /path/to/google/fonts/repo
@@ -110,7 +119,7 @@ def missing_paths(fp):
     return [p for p in dirs if not p.is_dir()]
 
 
-def lint_report(fp):
+def lint_server_files(fp):
     template = "{}: Following paths are not valid dirs:\n{}\n\n"
     prod_path = fp / "to_production.txt"
     prod_missing = "\n".join(map(str, missing_paths(prod_path)))
@@ -138,7 +147,7 @@ def main():
     )
     args = parser.parse_args()
     if args.lint:
-        lint_report(args.path)
+        lint_server_files(args.path)
     else:
         push_report(args.path)
 
