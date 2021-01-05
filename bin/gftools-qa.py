@@ -53,6 +53,10 @@ except ModuleNotFoundError:
     raise ModuleNotFoundError(("gftools was installed without the QA "
         "dependencies. To install the dependencies, see the ReadMe, "
         "https://github.com/googlefonts/gftools#installation"))
+from gftools.packager import (
+    create_github_issue_comment,
+    create_github_issue
+)
 
 __version__ = "2.1.3"
 logger = logging.getLogger(__name__)
@@ -257,57 +261,31 @@ class FontQA:
         self.browser_previews()
 
     def post_to_github(self, url):
-        """Zip and post the check results as a comment to the github
-        issue or pr."""
-        report_zip = shutil.make_archive(self.out, "zip", self.out)
-        uuid = str(uuid4())
-        zip_url = self._post_media_to_gfr([report_zip], uuid)
-
+        """Post Fontbakery report as a new issue or as a comment to an open
+        PR"""
+        # Parse url tokens
         url_split = url.split("/")
-        repo_slug = "{}/{}".format(url_split[3], url_split[4])
-        pull = url_split[-1] if "pull" in url else None
+        repo_owner = url_split[3]
+        repo_name = url_split[4]
+        issue_number = url_split[-1] if "pull" in url else None
 
         fontbakery_report = os.path.join(self.out, "Fontbakery", "report.md")
-        if os.path.isfile(fontbakery_report):
-            with open(fontbakery_report, "r") as fb:
-                msg = "{}\n\n## Diff images: [{}]({})".format(
-                    fb.read(), os.path.basename(zip_url[0]), zip_url[0]
+        if not os.path.isfile(fontbakery_report):
+            logger.warning(
+                "Cannot Post Github message because no Fontbakery report exists"
+            )
+            return
+
+        with open(fontbakery_report) as doc:
+            msg = doc.read()
+            if issue_number:
+                create_github_issue_comment(
+                    repo_owner, repo_name, issue_number, msg
                 )
-        else:
-            msg = "## Diff images: [{}]({})".format(
-                os.path.basename(zip_url[0]), zip_url[0]
-            )
-        self._post_gh_msg(msg, repo_slug, pull)
-
-    def _post_media_to_gfr(self, paths, uuid):
-        """Post images to GF Regression"""
-        url_endpoint = self.GFR_URL + "/api/upload-media"
-        payload = [("files", open(path, "rb")) for path in paths]
-        r = requests.post(
-            url_endpoint,
-            data={"uuid": uuid},
-            files=payload,
-            headers={"Access-Token": os.environ["GFR_TOKEN"]},
-        )
-        return [os.path.join(self.GFR_URL, i) for i in r.json()["items"]]
-
-    def _post_gh_msg(self, msg, repo_slug=None, pull_id=None):
-        if pull_id:
-            url = "https://api.github.com/repos/{}/issues/{}/comments".format(
-                repo_slug, pull_id
-            )
-            r = requests.post(
-                url,
-                data=json.dumps({"body": msg}),
-                headers={"Authorization": "token {}".format(os.environ["GH_TOKEN"])},
-            )
-        else:
-            url = "https://api.github.com/repos/{}/issues".format(repo_slug)
-            r = requests.post(
-                url,
-                data=json.dumps({"title": "Google Fonts QA report", "body": msg}),
-                headers={"Authorization": "token {}".format(os.environ["GH_TOKEN"])},
-            )
+            else:
+                create_github_issue(
+                    repo_owner, repo_name, "Google Font QA report", msg
+                )
 
 
 def family_name_from_fonts(fonts):
