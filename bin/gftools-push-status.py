@@ -115,12 +115,17 @@ def push_report(fp):
 
 
 def missing_paths(fp):
-    dirs = [fp.parent / p for p in parse_server_file(fp)]
-    return [p for p in dirs if not p.is_dir()]
+    paths = [fp.parent / p for p in parse_server_file(fp)]
+    axis_files = [p for p in paths if p.name.endswith("textproto")]
+    dirs = [p for p in paths if p not in axis_files]
+
+    missing_dirs = [p for p in dirs if not p.is_dir()]
+    missing_axis_files = [p for p in axis_files if not p.is_file()]
+    return missing_dirs + missing_axis_files
 
 
 def lint_server_files(fp):
-    template = "{}: Following paths are not valid dirs:\n{}\n\n"
+    template = "{}: Following paths are not valid:\n{}\n\n"
     prod_path = fp / "to_production.txt"
     prod_missing = "\n".join(map(str, missing_paths(prod_path)))
     prod_msg = template.format("to_production.txt", prod_missing)
