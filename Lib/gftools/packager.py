@@ -1244,6 +1244,15 @@ def create_github_issue_comment(repo_owner: str, repo_name: str,
   }
   return _post_github(url, payload)
 
+def create_github_issue(repo_owner: str, repo_name: str,
+                        pr_title: str, pr_body: str):
+  url = (f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/issues')
+  payload = {
+    'title': pr_title,
+    'body': pr_body
+  }
+  return _post_github(url, payload)
+
 def _make_pr(repo: pygit2.Repository, local_branch_name: str,
                                   pr_upstream: str, push_upstream: str,
                                   pr_title: str, pr_message_body: str):
