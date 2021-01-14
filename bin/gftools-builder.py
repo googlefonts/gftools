@@ -41,13 +41,12 @@ if len(args.file) == 1 and (
 ):
     builder = GFBuilder(configfile=args.file[0])
 else:
-    builder = GFBuilder(
-        config={
-            "sources": args.file,
-            "familyName": args.family_name,
-            "stylespaceFile": args.stylespace,
-        }
-    )
+    config={"sources": args.file}
+    if args.stylespace:
+        config["stylespaceFile"] = args.stylespace
+    if args.family_name:
+        config["familyName"] = args.family_name
+    builder = GFBuilder(config=config)
 
 if args.no_autohint:
     builder.config["autohintTTF"] = False
