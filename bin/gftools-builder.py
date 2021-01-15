@@ -15,8 +15,14 @@
 #
 import argparse
 from gftools.builder import GFBuilder
+from gftools.builder import __doc__ as GFBuilder_doc
 
-parser = argparse.ArgumentParser(description=("Build a font family"))
+
+parser = argparse.ArgumentParser(
+    description=("Build a font family"),
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog="#"*79 + "\n" + GFBuilder_doc,
+)
 parser.add_argument(
     "--debug",
     action="store_true",
