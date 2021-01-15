@@ -34,6 +34,8 @@ parser.add_argument("--stylespace", help="Path to a statmake stylespace file")
 
 parser.add_argument("file", nargs="+", help="YAML build config file *or* source files")
 
+parser.add_argument("--dump-config", type=str, help="Config file to generate")
+
 args = parser.parse_args()
 
 if len(args.file) == 1 and (
@@ -53,5 +55,14 @@ if args.no_autohint:
 
 if args.debug:
     builder.config["logLevel"] = "DEBUG"
+
+if args.dump_config:
+    import sys
+    import yaml
+
+    with open(args.dump_config, "w") as fp:
+        config= {k: v for (k, v) in builder.config.items() if v is not None}
+        fp.write(yaml.dump(config, Dumper=yaml.SafeDumper))
+    sys.exit()
 
 builder.build()
