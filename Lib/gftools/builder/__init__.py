@@ -59,6 +59,7 @@ required, all others have sensible defaults:
 
 """
 
+from fontTools import designspaceLib
 from fontTools.ttLib import TTFont
 from fontmake.font_project import FontProject
 from ufo2ft import CFFOptimization
@@ -131,14 +132,18 @@ class GFBuilder:
     def fill_config_defaults(self):
         if "familyName" not in self.config:
             self.logger.info("Deriving family name (this takes a while)")
-            self.load_masters()
-            familynames = set([x.info.familyName for x in self.masters.values()])
-            if len(familynames) != 1:
-                raise ValueError(
-                    "Inconsistent family names in sources (%s). Set familyName in config instead"
-                    % familynames
-                )
-            self.config["familyName"] = list(familynames)[0]
+            if  self.config["sources"][0].endswith("designspace"):
+                designspace = designspaceLib.DesignSpaceDocument.fromfile(self.config["sources"][0])
+                self.config["familyName"] = designspace.sources[0].familyName
+            else:
+                self.load_masters()
+                familynames = set([x.info.familyName for x in self.masters.values()])
+                if len(familynames) != 1:
+                    raise ValueError(
+                        "Inconsistent family names in sources (%s). Set familyName in config instead"
+                        % familynames
+                    )
+                self.config["familyName"] = list(familynames)[0]
         if "outputDir" not in self.config:
             self.config["outputDir"] = "../fonts"
         if "vfDir" not in self.config:
