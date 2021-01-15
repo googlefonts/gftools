@@ -140,15 +140,15 @@ class GFBuilder:
                 )
             self.config["familyName"] = list(familynames)[0]
         if "outputDir" not in self.config:
-            self.config["outputDir"] = "../fonts/"
+            self.config["outputDir"] = "../fonts"
         if "vfDir" not in self.config:
-            self.config["vfDir"] = self.config["outputDir"] + "/variable/"
+            self.config["vfDir"] = self.config["outputDir"] + "/variable"
         if "ttDir" not in self.config:
-            self.config["ttDir"] = self.config["outputDir"] + "/ttf/"
+            self.config["ttDir"] = self.config["outputDir"] + "/ttf"
         if "otDir" not in self.config:
-            self.config["otDir"] = self.config["outputDir"] + "/otf/"
+            self.config["otDir"] = self.config["outputDir"] + "/otf"
         if "woffDir" not in self.config:
-            self.config["woffDir"] = self.config["outputDir"] + "/webfonts/"
+            self.config["woffDir"] = self.config["outputDir"] + "/webfonts"
 
         if "buildVariable" not in self.config:
             self.config["buildVariable"] = True
