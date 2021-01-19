@@ -15,8 +15,14 @@
 #
 import argparse
 from gftools.builder import GFBuilder
+from gftools.builder import __doc__ as GFBuilder_doc
 
-parser = argparse.ArgumentParser(description=("Build a font family"))
+
+parser = argparse.ArgumentParser(
+    description=("Build a font family"),
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog="#"*79 + "\n" + GFBuilder_doc,
+)
 parser.add_argument(
     "--debug",
     action="store_true",
@@ -34,6 +40,8 @@ parser.add_argument("--stylespace", help="Path to a statmake stylespace file")
 
 parser.add_argument("file", nargs="+", help="YAML build config file *or* source files")
 
+parser.add_argument("--dump-config", type=str, help="Config file to generate")
+
 args = parser.parse_args()
 
 if len(args.file) == 1 and (
@@ -41,18 +49,26 @@ if len(args.file) == 1 and (
 ):
     builder = GFBuilder(configfile=args.file[0])
 else:
-    builder = GFBuilder(
-        config={
-            "sources": args.file,
-            "familyName": args.family_name,
-            "stylespaceFile": args.stylespace,
-        }
-    )
+    config={"sources": args.file}
+    if args.stylespace:
+        config["stylespaceFile"] = args.stylespace
+    if args.family_name:
+        config["familyName"] = args.family_name
+    builder = GFBuilder(config=config)
 
 if args.no_autohint:
     builder.config["autohintTTF"] = False
 
 if args.debug:
     builder.config["logLevel"] = "DEBUG"
+
+if args.dump_config:
+    import sys
+    import yaml
+
+    with open(args.dump_config, "w") as fp:
+        config= {k: v for (k, v) in builder.config.items() if v is not None}
+        fp.write(yaml.dump(config, Dumper=yaml.SafeDumper))
+    sys.exit()
 
 builder.build()
