@@ -44,8 +44,6 @@ def main():
     universal_options_parser.add_argument(
         "--pages",
         nargs="+",
-        choices=HtmlProof.TEMPLATES,
-        default=HtmlProof.TEMPLATES,
         help="Choose which templates to populate. By default, all templates "
         "are populated.",
     )
@@ -59,6 +57,12 @@ def main():
     )
     universal_options_parser.add_argument(
         "--out", "-o", help="Output dir", default="diffbrowsers"
+    )
+    universal_options_parser.add_argument(
+        "--template-dir",
+        "-td",
+        help="HTML template directory. By default, gftools/templates is used.",
+        default=resource_filename("gftools", "templates"),
     )
 
     proof_parser = subparsers.add_parser(
@@ -84,10 +88,15 @@ def main():
     args = parser.parse_args()
 
     if args.command == "proof":
-        html = HtmlProof(args.fonts, args.out)
+        html = HtmlProof(args.fonts, args.out, template_dir=args.template_dir)
 
     elif args.command == "diff":
-        html = HtmlDiff(args.fonts_before, args.fonts_after, args.out)
+        html = HtmlDiff(
+            args.fonts_before,
+            args.fonts_after,
+            args.out,
+            template_dir=args.template_dir,
+        )
 
     html.build_pages(args.pages, pt_size=args.pt_size)
 

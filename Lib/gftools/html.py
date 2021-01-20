@@ -128,11 +128,6 @@ BSTACK_CONFIG_GDI_BROWSERS = {
 }
 
 
-# Templates which are human viewable. Lib/gftools/templates contains more
-# html files but these are used as helpers
-GF_TEMPLATES = ["waterfall.html", "text.html", "glyphs.html"]
-
-
 class CSSElement(object):
     """Create a CSSElement. CSSElements include a render method which
     renders the class as a string so it can be used in html templates.
@@ -311,7 +306,6 @@ Document = namedtuple("Document", ["filename", "path", "options"])
 class HtmlTemplater(object):
 
     BROWSERSTACK_CONFIG = BSTACK_CONFIG_LATEST_BROWSERS
-    TEMPLATES = None
 
     def __init__(
         self,
@@ -360,6 +354,11 @@ class HtmlTemplater(object):
         can be problematic for some assets such as webfonts where the path
         must be related to the local server, not the user's system.
 
+        Note: Templates whose filename's start with an "_" are non
+        renderable. This functionality exists so css classes etc
+        can be defined in a _base.html file which other templates can
+        inherit from.
+
         Args:
           out: output dir for generated html documents
           template_dir: the directory containing the html templates
@@ -370,6 +369,11 @@ class HtmlTemplater(object):
             https://www.browserstack.com/screenshots/api
         """
         self.template_dir = template_dir
+        self.templates = [
+            f
+            for f in os.listdir(self.template_dir)
+            if all([not f.startswith("_"), f.endswith("html")])
+        ]
         # TODO we may want to make this an arg
         self.server_url = "http://0.0.0.0:8000"
         self.jinja = Environment(
@@ -405,20 +409,18 @@ class HtmlTemplater(object):
 
     def build_pages(self, pages=None, dst=None, **kwargs):
         if not pages:
-            if not self.TEMPLATES:
-                raise ValueError("No templates specified")
-            pages = self.TEMPLATES
+            pages = self.templates
         log.info(f"Building pages {pages}")
         for page in pages:
             self.build_page(page, dst=dst, **kwargs)
 
     def build_page(self, filename, dst=None, **kwargs):
-        if filename not in os.listdir(self.template_dir):
-            raise ValueError(f"'{filename}' not in dir '{self.template_dir}'")
-        # Combine self.__dict__ attributes with function kwargs. This allows Jinja
-        # templates to access the class attributes
+        if filename not in self.templates:
+            raise ValueError(f"'{filename}' not in dir '{self.templates}'")
         if not "pt_size" in kwargs:
             kwargs["pt_size"] = 14
+        # Combine self.__dict__ attributes with function kwargs. This allows Jinja
+        # templates to access the class attributes
         jinja_kwargs = {**self.__dict__, **kwargs}
         out = self._render_html(filename, dst=dst, **jinja_kwargs)
         self.documents[filename] = Document(filename, out, kwargs)
@@ -476,12 +478,11 @@ class HtmlTemplater(object):
 
 
 class HtmlProof(HtmlTemplater):
-
-    TEMPLATES = GF_TEMPLATES
-
-    def __init__(self, fonts, out="out"):
+    def __init__(
+        self, fonts, out="out", template_dir=resource_filename("gftools", "templates")
+    ):
         """Proof a single family."""
-        super().__init__(out)
+        super().__init__(out, template_dir=template_dir)
         fonts_dir = os.path.join(out, "fonts")
         self.mkdir(fonts_dir)
 
@@ -516,12 +517,15 @@ class HtmlProof(HtmlTemplater):
 
 
 class HtmlDiff(HtmlTemplater):
-
-    TEMPLATES = GF_TEMPLATES
-
-    def __init__(self, fonts_before, fonts_after, out="out"):
+    def __init__(
+        self,
+        fonts_before,
+        fonts_after,
+        out="out",
+        template_dir=resource_filename("gftools", "templates"),
+    ):
         """Compare two families"""
-        super().__init__(out=out)
+        super().__init__(out=out, template_dir=template_dir)
         fonts_before_dir = os.path.join(out, "fonts_before")
         fonts_after_dir = os.path.join(out, "fonts_after")
         self.mkdir(fonts_before_dir)
