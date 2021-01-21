@@ -165,6 +165,8 @@ class GFBuilder:
             self.config["autohintTTF"] = True
         if "logLevel" not in self.config:
             self.config["logLevel"] = "INFO"
+        if "includeSourceFixes" not in self.config:
+            self.config["includeSourceFixes"] = False
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
@@ -286,7 +288,7 @@ class GFBuilder:
     def post_process(self, filename):
         self.logger.info("Postprocessing font %s" % filename)
         font = TTFont(filename)
-        fix_font(font)
+        fix_font(font, include_source_fixes=self.config["includeSourceFixes"])
         font.save(filename)
 
     def post_process_ttf(self, filename):
