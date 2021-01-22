@@ -53,6 +53,7 @@ required, all others have sensible defaults:
 * ``ttDir``: Where to put TrueType static fonts. Defaults to ``$outputDir/ttf``.
 * ``otDir``: Where to put CFF static fonts. Defaults to ``$outputDir/otf``.
 * ``woffDir``: Where to put WOFF2 static fonts. Defaults to ``$outputDir/webfonts``.
+* ``cleanUp`: Whether or not to remove temporary files. Defaults to ``true``.
 * ``autohintTTF`: Whether or not to autohint TTF files. Defaults to ``true``.
 * ``axisOrder``: STAT table axis order. Defaults to fvar order.
 * ``familyName``: Family name for variable fonts. Defaults to family name of first source file.
@@ -175,6 +176,8 @@ class GFBuilder:
             self.config["autohintTTF"] = True
         if "logLevel" not in self.config:
             self.config["logLevel"] = "INFO"
+        if "cleanUp" not in self.config:
+            self.config["cleanUp"] = True
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
@@ -269,6 +272,8 @@ class GFBuilder:
         if self.config["buildWebfont"]:
             self.mkdir(self.config["woffDir"], clean=True)
         self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
+        if self.config["cleanUp"]:
+            self.rmdir("instance_ufos")
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
@@ -288,9 +293,12 @@ class GFBuilder:
                 self.logger.info("Created static font %s" % fontfile)
                 postprocessor(fontfile)
 
+    def rmdir(self, directory):
+        shutil.rmtree(directory, ignore_errors=True)
+
     def mkdir(self, directory, clean=False):
         if clean:
-            shutil.rmtree(directory, ignore_errors=True)
+            self.rmdir(directory)
         os.makedirs(directory)
 
     def post_process(self, filename):
