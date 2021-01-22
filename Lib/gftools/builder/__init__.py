@@ -76,8 +76,6 @@ import os
 import shutil
 import glyphsLib
 import tempfile
-from ttfautohint.options import parse_args as ttfautohint_parse_args
-from ttfautohint import ttfautohint
 from fontTools.ttLib.woff2 import main as woff2_main
 import logging
 import yaml
@@ -318,6 +316,9 @@ class GFBuilder:
             self.move_webfont(filename)
 
     def autohint(self, filename):
+        from ttfautohint.options import parse_args as ttfautohint_parse_args
+        from ttfautohint import ttfautohint
+
         ttfautohint(**ttfautohint_parse_args([filename, filename]))
 
     def move_webfont(self, filename):
