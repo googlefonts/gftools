@@ -38,6 +38,12 @@ parser.add_argument(
 )
 parser.add_argument("--stylespace", help="Path to a statmake stylespace file")
 
+parser.add_argument(
+    "--no-clean-up",
+    action="store_true",
+    default=False,
+    help="Do not remove temporary files (instance_ufos/)")
+
 parser.add_argument("file", nargs="+", help="YAML build config file *or* source files")
 
 parser.add_argument("--dump-config", type=str, help="Config file to generate")
@@ -58,6 +64,9 @@ else:
 
 if args.no_autohint:
     builder.config["autohintTTF"] = False
+
+if args.no_clean_up:
+    builder.config["cleanUp"] = False
 
 if args.debug:
     builder.config["logLevel"] = "DEBUG"
