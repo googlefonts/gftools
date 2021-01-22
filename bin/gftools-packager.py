@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(
     prog='gftools packager',
     description='Package upstream font families for Google Fonts.',
     epilog=f'{_ansi_bold("Documentation:")} '
-           'https://github.com/googlefonts/gftools/tree/master/docs/gftools-packager'
+           'https://github.com/googlefonts/gftools/tree/main/docs/gftools-packager'
            '\n'
            f'{_ansi_bold("Issues:")} '
            'https://github.com/googlefonts/gftools/issues'
@@ -68,7 +68,7 @@ parser.add_argument(
             dest='is_gf_git',
             action='store_true',
             help='Try to use target as a git repository clone of GitHub google/fonts and '
-                 'create or override a branch from upstream master using a generated '
+                 'create or override a branch from upstream main using a generated '
                  'default branch name or a branch name specified with -b/--branch')
 parser.add_argument(
             '-b', '--branch',
@@ -122,13 +122,13 @@ parser.add_argument(
                  'Use -y/--no-confirm to skip interactive mode.'
                  'Use -f/--force to override existing target.')
 parser.add_argument(
-            '--no-whitelist',
+            '--no-allowlist',
             action='store_true',
-            help='Don\'t use the whitelist of allowed files to copy from '
+            help='Don\'t use the list of allowed files to copy from '
                  'TARGET in upstream-conf "files". This is meant to enable '
                  'forward compatibility with new files and should not '
                  'be used regularly. Instead file an issue to add new '
-                 'files to the whitelist.')
+                 'files to the allowlist.')
 parser.add_argument(
             '--no-source',
             action='store_true',
