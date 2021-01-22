@@ -114,6 +114,16 @@ class GFBuilder:
             self.build_variable()
         if self.config["buildStatic"]:
             self.build_static()
+        # All done
+        self.logger.info(
+            "Building %s completed. All done!" % (
+                ", ".join([
+                    b.lstrip("build").lower()
+                    for b in ["buildVariable", "buildStatic", "buildWebfont"]
+                    if self.config[b]
+                ])
+            )
+        )
 
     def load_masters(self):
         if self.masters:
