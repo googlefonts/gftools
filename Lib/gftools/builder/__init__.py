@@ -146,7 +146,12 @@ class GFBuilder:
                 self.config["familyName"] = designspace.sources[0].familyName
             else:
                 self.load_masters()
-                familynames = set([x.info.familyName for x in self.masters.values()])
+
+                familynames = set()
+                for masters in self.masters.values():
+                    for master in masters:
+                        familynames.add(master.info.familyName)
+
                 if len(familynames) != 1:
                     raise ValueError(
                         "Inconsistent family names in sources (%s). Set familyName in config instead"
