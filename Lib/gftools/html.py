@@ -501,7 +501,9 @@ class HtmlProof(HtmlTemplater):
 
     def partition(self):
         with tempfile.TemporaryDirectory() as tmp_out:
-            temp_html = HtmlProof(fonts=self.fonts, out=tmp_out)
+            temp_html = HtmlProof(
+                fonts=self.fonts, out=tmp_out, template_dir=self.template_dir
+            )
             # disable too_big_for_browserstack for subclasses otherwise we'll infinte loop
             temp_html.too_big_for_browserstack = False
             css_class_groups = partition(self.css_font_classes, 4)
@@ -625,6 +627,7 @@ class HtmlDiff(HtmlTemplater):
                 fonts_before=self.fonts_before,
                 fonts_after=self.fonts_after,
                 out=tmp_out,
+                template_dir=self.template_dir,
             )
             # disable too_big_for_browserstack for subclasses otherwise we'll infinte loop
             temp_html.too_big_for_browserstack = False
