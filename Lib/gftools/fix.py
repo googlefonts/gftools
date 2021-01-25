@@ -283,7 +283,7 @@ def fix_fvar_instances(ttFont):
             )
             name = name.replace("Regular Italic", "Italic")
 
-            coordinates = default_axis_vals
+            coordinates = deepcopy(default_axis_vals)
             coordinates["wght"] = wght_val
 
             inst = NamedInstance()
