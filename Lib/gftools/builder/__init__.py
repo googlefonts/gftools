@@ -278,7 +278,8 @@ class GFBuilder:
             self.mkdir(self.config["woffDir"], clean=True)
         self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
         if self.config["cleanUp"]:
-            self.rmdir("instance_ufos")
+            for d in ("instance_ufo", "master_ufo"):
+                self.rmdir(d)
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
