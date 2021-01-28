@@ -181,6 +181,7 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
         src = f"url({path})"
         font_family = _class_name(family_name, style_name, position)
         font_style = "italic" if font_is_italic(ttFont) else "normal"
+        font_weight = css_font_weight(ttFont)
         font_stretch = WIDTH_CLASS_TO_CSS[ttFont["OS/2"].usWidthClass]
 
         if "fvar" in ttFont:
@@ -200,8 +201,7 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
                 min_angle = int(axes["slnt"].minValue)
                 max_angle = int(axes["slnt"].maxValue)
                 font_style = f"oblique {min_angle}deg {max_angle}deg"
-        else:
-            font_weight = css_font_weight(ttFont)
+
         font_face = CSSElement(
             "@font-face",
             src=src,
@@ -279,7 +279,11 @@ def css_font_classes_from_vf(ttFont, position=None):
 
         class_name = _class_name(family_name, inst_style, position)
         font_family = _class_name(family_name, style_name, position)
-        font_weight = int(instance.coordinates["wght"])
+        font_weight = (
+            css_font_weight(ttFont)
+            if not "wght" in instance.coordinates
+            else int(instance.coordinates["wght"])
+        )
         font_style = "italic" if "Italic" in inst_style else "normal"
         font_stretch = (
             "100%"
