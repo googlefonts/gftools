@@ -79,7 +79,7 @@ If generate this template, we should end up with the following for Maven Pro.
 
 `gftools gen-html proof google/fonts/ofl/mavenpro/*.ttf -o ~/Desktop/mavenPro_qa --template-dir templates/`
 
-[result]: genned_result.png "Generated result"
+![](genned_result.png)
 
 
 
