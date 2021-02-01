@@ -75,7 +75,7 @@ The quickest way to start writing your own templates is to copy the existing [te
 {% endblock %}
 ```
 
-If generate this template, we should end up with the following for Maven Pro.
+Once generated, we should end up with the following for Maven Pro.
 
 `gftools gen-html proof google/fonts/ofl/mavenpro/*.ttf -o ~/Desktop/mavenPro_qa --template-dir templates/`
 
