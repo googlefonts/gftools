@@ -109,6 +109,13 @@ class GFBuilder:
                 "glyphsLib.builder.builders.UFOBuilder",
             ]:
                 logging.getLogger(irrelevant).setLevel(logging.ERROR)
+
+        # Store the current files/dirs listed in the source dir. Using
+        # self.config['cleanUp'] will delete the auxiliary dirs/files which
+        # are created whilst building so we need know the original
+        # dir state in order to do this.
+        source_files = os.listdir()
+
         if self.config["buildVariable"]:
             self.build_variable()
         if self.config["buildStatic"]:
@@ -123,6 +130,15 @@ class GFBuilder:
                 ])
             )
         )
+        if self.config["cleanUp"]:
+            files_added_during_build = set(os.listdir()) - set(source_files)
+            if not files_added_during_build:
+                return
+            self.logger.info(
+                f"Removing auxiliary dirs/files {files_added_during_build}"
+            )
+            for file_ in files_added_during_build:
+                self.rm(file_)
 
     def load_masters(self):
         if self.masters:
@@ -277,8 +293,6 @@ class GFBuilder:
         if self.config["buildWebfont"]:
             self.mkdir(self.config["woffDir"], clean=True)
         self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
-        if self.config["cleanUp"]:
-            self.rmdir("instance_ufos")
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
@@ -298,12 +312,15 @@ class GFBuilder:
                 self.logger.info("Created static font %s" % fontfile)
                 postprocessor(fontfile)
 
-    def rmdir(self, directory):
-        shutil.rmtree(directory, ignore_errors=True)
+    def rm(self, fp):
+        if os.path.isdir(fp):
+            shutil.rmtree(fp, ignore_errors=True)
+        else:
+            os.remove(fp)
 
     def mkdir(self, directory, clean=False):
         if clean:
-            self.rmdir(directory)
+            self.rm(directory)
         os.makedirs(directory)
 
     def post_process(self, filename):
