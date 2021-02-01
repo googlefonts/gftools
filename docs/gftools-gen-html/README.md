@@ -1,11 +1,11 @@
 # gftools gen-html
 
-Generate html test documents for font families from custom templates.
+Generate html test documents for font families using custom templates.
 
 
 ## Quick start
 
-By default, `gftools gen-html` comes with a few built-in templates. To generate test pages using the default templates run:
+By default, `gftools gen-html` provides a few built-in templates. To generate these, run:
 
 `gftools gen-html proof path/to/fonts/*.ttf -o out`
 
@@ -61,7 +61,7 @@ The quickest way to start writing your own templates is to copy the existing [te
       <!-- Class "box" is a content container -->
       <div class="box"> 
 
-	<!-- Class box-title should contain the name of each container e.g "MyFont-regular 32pt"  -->
+	<!-- Class box-title is the visible name of each container e.g "MyFont-regular 32pt"  -->
 	<div class="box-title">{{ font_class.selector }} {{ pt_size }}pt</div>
 
 	<!-- Class font_class.selector applies the currently iterated font style to child elements -->
@@ -74,6 +74,13 @@ The quickest way to start writing your own templates is to copy the existing [te
     {% endfor %}
 {% endblock %}
 ```
+
+If generate this template, we should end up with the following for Maven Pro.
+
+`gftools gen-html proof google/fonts/ofl/mavenpro/*.ttf -o ~/Desktop/mavenPro_qa --template-dir templates/`
+
+[result]: genned_result.png "Generated result"
+
 
 
 ### Defining your own template generation classes
