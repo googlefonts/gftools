@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 # Parts of this file where initially taken from
-# https://github.com/googlei18n/glyphsLib/blob/master/MetaTools/generate_glyphdata.py
+# https://github.com/googlefonts/glyphsLib/blob/9c86d6cfe2817d043dadb8912181492869657e8b/MetaTools/generate_glyphdata.py
 
 
 from __future__ import (print_function,
