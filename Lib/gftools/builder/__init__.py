@@ -57,6 +57,7 @@ required, all others have sensible defaults:
 * ``autohintTTF`: Whether or not to autohint TTF files. Defaults to ``true``.
 * ``axisOrder``: STAT table axis order. Defaults to fvar order.
 * ``familyName``: Family name for variable fonts. Defaults to family name of first source file.
+* ``flattenComponents``: Whether to flatten components on export. Defaults to ``true``.
 
 """
 
@@ -199,6 +200,8 @@ class GFBuilder:
             self.config["cleanUp"] = True
         if "includeSourceFixes" not in self.config:
             self.config["includeSourceFixes"] = False
+        if "flattenComponents" not in self.config:
+            self.config["flattenComponents"] = True
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
@@ -224,6 +227,7 @@ class GFBuilder:
             original_output_dir = args["output_dir"]
             tmpdir = tempfile.TemporaryDirectory()
             args["output_dir"] = tmpdir.name
+        args["flatten_components"] = self.config["flattenComponents"]
 
         if source.endswith(".glyphs"):
             FontProject().run_from_glyphs(source, **args)
