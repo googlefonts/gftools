@@ -319,7 +319,7 @@ class GFBuilder:
     def rm(self, fp):
         if os.path.isdir(fp):
             shutil.rmtree(fp, ignore_errors=True)
-        else:
+        elif os.path.isfile(fp):
             os.remove(fp)
 
     def mkdir(self, directory, clean=False):
