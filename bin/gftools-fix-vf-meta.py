@@ -8,7 +8,7 @@ Both of these fonts must also only contain a weight axis.
 
 For variable fonts with multiple axes, write a python script which
 uses fontTools.otlLib.builder.buildStatTable e.g
-https://github.com/googlefonts/literata/blob/master/sources/gen_stat.py
+https://github.com/googlefonts/literata/blob/main/sources/gen_stat.py
 
 The generated STAT tables use format 2 Axis Values. These are needed in
 order for Indesign to work.

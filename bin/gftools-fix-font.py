@@ -3,7 +3,7 @@
 gftools fix-font
 
 Update a font so it conforms to the Google Fonts specification
-https://github.com/googlefonts/gf-docs/tree/master/Spec
+https://github.com/googlefonts/gf-docs/tree/main/Spec
 
 Usage:
 

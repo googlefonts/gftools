@@ -81,7 +81,7 @@ def test_fix_fs_type(static_font):
     assert static_font["OS/2"].fsType == 0
 
 
-# Taken from https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+# Taken from https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
 STYLE_HEADERS = "style, weight_class, fs_selection, mac_style"
 STYLE_TABLE = [
     ("Hairline", 1, (1 << 6), (0 << 0)),

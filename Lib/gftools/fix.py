@@ -1,7 +1,7 @@
 """
 Functions to fix fonts so they conform to the Google Fonts
 specification:
-https://github.com/googlefonts/gf-docs/tree/master/Spec
+https://github.com/googlefonts/gf-docs/tree/main/Spec
 """
 from fontTools.misc.fixedTools import otRound
 from fontTools.ttLib import TTFont, newTable, getTableModule
@@ -181,7 +181,7 @@ def fix_fs_type(ttFont):
 def fix_weight_class(ttFont):
     """Set the OS/2 table's usWeightClass so it conforms to GF's supported
     styles table:
-    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+    https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
 
     Args:
         ttFont: a TTFont instance
@@ -208,7 +208,7 @@ def fix_weight_class(ttFont):
 def fix_fs_selection(ttFont):
     """Fix the OS/2 table's fsSelection so it conforms to GF's supported
     styles table:
-    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+    https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
 
     Args:
         ttFont: a TTFont instance
@@ -234,7 +234,7 @@ def fix_fs_selection(ttFont):
 def fix_mac_style(ttFont):
     """Fix the head table's macStyle so it conforms to GF's supported
     styles table:
-    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+    https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
 
     Args:
         ttFont: a TTFont instance
@@ -252,7 +252,7 @@ def fix_mac_style(ttFont):
 def fix_fvar_instances(ttFont):
     """Replace a variable font's fvar instances with a set of new instances
     that conform to the Google Fonts instance spec:
-    https://github.com/googlefonts/gf-docs/tree/master/Spec#fvar-instances
+    https://github.com/googlefonts/gf-docs/tree/main/Spec#fvar-instances
 
     Args:
         ttFont: a TTFont instance
@@ -306,7 +306,7 @@ def fix_fvar_instances(ttFont):
 def update_nametable(ttFont, family_name=None, style_name=None):
     """Update a static font's name table. The updated name table will conform
     to the Google Fonts support styles table:
-    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+    https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
 
     If a style_name includes tokens other than wght and ital, these tokens
     will be appended to the family name e.g
@@ -417,7 +417,7 @@ def update_nametable(ttFont, family_name=None, style_name=None):
 def fix_nametable(ttFont):
     """Fix a static font's name table so it conforms to the Google Fonts
     supported styles table:
-    https://github.com/googlefonts/gf-docs/tree/master/Spec#supported-styles
+    https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
 
     Args:
         ttFont: a TTFont instance
@@ -463,7 +463,7 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
 
 def fix_vertical_metrics(ttFonts):
     """Fix a family's vertical metrics based on:
-    https://github.com/googlefonts/gf-docs/tree/master/VerticalMetrics
+    https://github.com/googlefonts/gf-docs/tree/main/VerticalMetrics
 
     Args:
         ttFonts: a list of TTFont instances which belong to a family
