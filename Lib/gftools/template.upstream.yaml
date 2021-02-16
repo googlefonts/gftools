@@ -2,7 +2,7 @@
 # This is a yaml formatted file.
 # An "#" (number sign) denotes a comment.
 # For more help see the docs at:
-# https://github.com/googlefonts/gf-docs/tree/master/METADATA
+# https://github.com/googlefonts/gf-docs/tree/main/METADATA
 
 # Full family name, with initial upper cases and spaces
 name:
@@ -11,8 +11,8 @@ name:
 # this https://github.com/{owner}/{repo}.git
 repository_url:
 
-# The branch name used to update google fonts. e.g.: master
-branch: master
+# The branch name used to update google fonts. e.g.: `main`
+branch: main
 
 # Choose one of: {CATEGORIES}
 category:

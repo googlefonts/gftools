@@ -2,7 +2,7 @@
 
 Tool to take files from a font family project upstream git repository to the [google/fonts GitHub](https://github.com/google/fonts) repository structure, taking care of all the details.
 
-    usage: gftools packager [-h] [-f] [-y] [-q] [-g] [-b BRANCH] [-a] [-p] [--pr-upstream PR_UPSTREAM] [--push-upstream PUSH_UPSTREAM] [--no-whitelist] [name [name ...]] target
+    usage: gftools packager [-h] [-f] [-y] [-q] [-g] [-b BRANCH] [-a] [-p] [--pr-upstream PR_UPSTREAM] [--push-upstream PUSH_UPSTREAM] [--no-allowlist] [name [name ...]] target
 
 Show the command line help:
 
@@ -59,7 +59,7 @@ The target argument can be either treated as a directory or as a git repository 
 
 If `target` is treated as a directory, the tool will simply add the files package into its `{license_dir}/{family_dir}` directory within `target`. Note that in this case `target` can also be the current working tree of a git repository, but it can also be an empty or any other directory. If the sub-directory `{license_dir}/{family_dir}` already exists, it can't be overridden without giving explicit permission (`-f/--force` or answering in interactive mode).
 
-This is useful for a local quality assurance (QA) development-feedback loop when mastering a family for google/fonts. See `gftools qa` for this. Especially Font Bakery with the `googlefonts` profile (i.e. `fontbakery check-googlefonts`) is set up to check all the contents of the family package, not just the font files, and has ideally also access to the google/fonts directory structure and possible sibling families. Thus, putting the package into a checked out working directory of google/fonts master is the optimal case for local QA.
+This is useful for a local quality assurance (QA) development-feedback loop when finalizing a family for google/fonts. See `gftools qa` for this. Especially Font Bakery with the `googlefonts` profile (i.e. `fontbakery check-googlefonts`) is set up to check all the contents of the family package, not just the font files, and has ideally also access to the google/fonts directory structure and possible sibling families. Thus, putting the package into a checked out working directory of google/fonts main branch is the optimal case for local QA.
 
 ### Git Repository `-g/--gh-git`
 
@@ -115,7 +115,7 @@ To add a new family or experiment with upstream configuration settings, it can b
 
 Below is also a guide how to create an `upstream.yaml` file directly from the tool, using the `-u/--upstream-yaml` flag
 
-### Workflow: Local Mastering Loop with QA
+### Workflow: Local Finalizing Loop with QA
 
 Suppose we want to add a super family with two siblings families on google/fonts. In this case we want to run the QA tooling locally before making the PR, to make sure the PR will run smoothly. We also want to iterate quickly between fixing upstream and running QA.
 
@@ -145,7 +145,7 @@ Now edit the the file according to your projects needs.
 
 #### The `repository_url: local://` Hack
 
-**NOTE:** To achieve a real quick local mastering loop, there's a hack built into the `upstram.yaml` `repository_url` property. You can use the `local://` prefix to reference a git repository path on your disk. This has two advantages for local development:
+**NOTE:** To achieve a real quick local finalizing loop, there's a hack built into the `upstream.yaml` `repository_url` property. You can use the `local://` prefix to reference a git repository path on your disk. This has two advantages for local development:
 
 * no git clone of a repository from GitHub each time you run `gftool packager`
 * no pushing necessary to your remote working branch.
@@ -172,8 +172,8 @@ Or use a `~` tilde shortcut to your home directory, perhaps the best option:
 And the name of your feature brach, e.g:
 
     # in file familysans.upstream.yaml
-    branch: mastering_v2.000_to_google_fonts
-#### The QA – Mastering Loop
+    branch: finalizing_v2.000_to_google_fonts
+#### The QA – Finalizing Loop
 
 Now that you have set up prepared everything, start creating a package in the working directory of your local clone or fork of google/fonts. As mentioned before, especially for Font Bakery, this is optimal. Be careful with the `-f/--force` flag, if you are not sure what it does, don't use it, or read above and learn about it. You can also use the `-y/--no-confirm` flag.
 
@@ -186,7 +186,7 @@ Now that you have set up prepared everything, start creating a package in the wo
     […]
     Done!
 
-Now run `gftools qa` tools. It's initially OK to only run Font Bakery and to work on fixing all the FAIL stauses in the sources, but **this is the wrong place to teach details about the QA and mastering process.** *FIXME: Where is the right place?*:
+Now run `gftools qa` tools. It's initially OK to only run Font Bakery and to work on fixing all the FAIL stauses in the sources, but **this is the wrong place to teach details about the QA and finalizing process.** *FIXME: Where is the right place?*:
 
     $ gftools qa -f path/to/google/fonts/clone/ofl/familysans/*.ttf --fontbakery -o ./font_out_qa
     # or use Font Bakery directly if you want to use its command line options directly
@@ -196,7 +196,7 @@ The results of the quality assurance tools should point you to enough issues tha
 
 #### Make a Pull Request
 
-If you worked locally, as described in the previous sections, you should by now have an almost ready to go local file `familysans.upstream.yaml` with `local://` hack applied and a local repository of your font project, with a feature branch that contains all the latest mastering changes that you made. It's now time to get the changes of your feature branch merged into the projects repository main (usually `master`) branch. You can now change the `repository_url` and `branch` in your `familysans.upstream.yaml` file to the official project repository.
+If you worked locally, as described in the previous sections, you should by now have an almost ready to go local file `familysans.upstream.yaml` with `local://` hack applied and a local repository of your font project, with a feature branch that contains all the latest finalizing changes that you made. It's now time to get the changes of your feature branch merged into the projects repository `main` branch. You can now change the `repository_url` and `branch` in your `familysans.upstream.yaml` file to the official project repository.
 
 **NOTE:** as `branch` it is also possible to **reference a git tag**, such as a release tag if the project does tag releases, e.g. `tags/v1.000` for the tag `v1.000` or `tags/latest` for the tag `latest` do work as well. Use the `tags/` prefix to make it very clear that you are referencing a tag here.
 
@@ -204,7 +204,7 @@ The changed parts of your file should look similar to this:
 
     # in file familysans.upstream.yaml
     repository_url: https://github.com/foundry/family-sans-font.git
-    branch: master
+    branch: main
 
 Now dispatch the PR and join the discussion on [google/fonts/pulls](https://github.com/google/fonts/pulls):
 

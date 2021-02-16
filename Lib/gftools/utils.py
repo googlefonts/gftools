@@ -170,7 +170,7 @@ def download_files_in_github_dir(
     overwrite=True
 ):
     """Download files in a github dir e.g
-    https://github.com/google/fonts/tree/master/ofl/abhayalibre
+    https://github.com/google/fonts/tree/main/ofl/abhayalibre
 
     Arguments
     ---------

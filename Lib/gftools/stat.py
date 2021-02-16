@@ -5,7 +5,7 @@ This module exports the functions "gen_stat_tables" and
 generate a STAT table for each font in a Variable Font Family.
 
 The STAT AxisValues are constructed using the Google Font's Axis Registry,
-https://github.com/google/fonts/tree/master/axisregistry
+https://github.com/google/fonts/tree/main/axisregistry
 
 The function should be able to make STAT tables for any family with the
 following properties:

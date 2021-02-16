@@ -120,16 +120,16 @@ query ListFiles($repoName: String!,
 }
 """
 
-def _get_query_variables(repo_owner, repo_name, family_name, reference='refs/heads/master'):
+def _get_query_variables(repo_owner, repo_name, family_name, reference='refs/heads/main'):
   """
   call like: get_query_variables('google', 'fonts', 'gelasio')
 
   reference: see $ git help rev-parse
             and git help revisions
             and https://git-scm.com/book/en/v2/Git-Internals-Git-References
-  for a branch called "master" "refs/heads/master" is best, but
-  "master" would work as well.
-  tag names work as well, ideally "ref/tags/v0.6.8" but "v0.6.8" would
+  For a branch called "main", "refs/heads/main" is best
+  but "main" would work as well.
+  Tag names work as well, ideally "ref/tags/v0.6.8" but "v0.6.8" would
   work too. The full name is less ambiguous.
   """
   return {
@@ -213,7 +213,7 @@ def get_github_blob(repo_owner, repo_name, file_sha):
 def get_github_gf_blob(file_sha):
   return get_github_blob('google', 'fonts', file_sha)
 
-def _shallow_clone_git(target_dir, git_url, branch_or_tag='master'):
+def _shallow_clone_git(target_dir, git_url, branch_or_tag='main'):
   """
       getting this as a shallow copy, because for some files we want to
       search in the filesystem.
@@ -796,7 +796,7 @@ def _edit_upstream_info(upstream_conf_yaml: YAML, file_or_family: str,
 
   return upstream_conf_yaml, license_dir, gf_dir_content or {}
 
-def _is_allowed_file(filename: str, no_whitelist: bool=False):
+def _is_allowed_file(filename: str, no_allowlist: bool=False):
   # there are two places where .ttf files are allowed to go
   # we don't do filename/basename validation here, that's
   # a job for font bakery
@@ -804,18 +804,18 @@ def _is_allowed_file(filename: str, no_whitelist: bool=False):
       and os.path.dirname(filename) in ['', 'static']:
     return True # using this!
   elif filename not in ALLOWED_FILES \
-                        and not no_whitelist: # this is the default
+                        and not no_allowlist: # this is the default
     return False
   return True
 
-SKIP_NOT_PERMITTED = 'Target is not a permitted filename (see --no_whitelist):'
+SKIP_NOT_PERMITTED = 'Target is not a permitted filename (see --no_allowlist):'
 SKIP_SOURCE_NOT_FOUND = 'Source not found in upstream:'
 SKIP_SOURCE_NOT_BLOB = 'Source is not a blob (blob=file):'
 SKIP_COPY_EXCEPTION = 'Can\'t copy:'
 
 def _copy_upstream_files_from_git(branch: str, files: dict, repo: pygit2.Repository
             , write_file_to_package: typing.Callable[[str, bytes], None]
-            , no_whitelist: bool=False) \
+            , no_allowlist: bool=False) \
               -> OrderedDict:
 
   skipped: 'OrderedDict[str, typing.List[str]]' = OrderedDict([
@@ -826,7 +826,7 @@ def _copy_upstream_files_from_git(branch: str, files: dict, repo: pygit2.Reposit
   ])
   for source, target in files.items():
     # else: allow, write_file_to_package will raise errors if target is bad
-    if not _is_allowed_file(target, no_whitelist):
+    if not _is_allowed_file(target, no_allowlist):
       skipped[SKIP_NOT_PERMITTED].append(target)
       continue
 
@@ -854,7 +854,7 @@ def _copy_upstream_files_from_git(branch: str, files: dict, repo: pygit2.Reposit
 
 def _copy_upstream_files_from_dir(source_dir: str, files: dict,
               write_file_to_package: typing.Callable[[str, bytes], None],
-              no_whitelist: bool=False) -> OrderedDict:
+              no_allowlist: bool=False) -> OrderedDict:
 
   skipped: 'OrderedDict[str, typing.List[str]]' = OrderedDict([
       (SKIP_NOT_PERMITTED, []),
@@ -864,7 +864,7 @@ def _copy_upstream_files_from_dir(source_dir: str, files: dict,
   ])
   for source, target in files.items():
     # else: allow, write_file_to_package will raise errors if target is bad
-    if not _is_allowed_file(target, no_whitelist):
+    if not _is_allowed_file(target, no_allowlist):
       skipped[SKIP_NOT_PERMITTED].append(target)
       continue
 
@@ -932,7 +932,7 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
 def _create_package_content(package_target_dir: str, repos_dir: str,
         upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
         no_source: bool, allow_build: bool, yes: bool, quiet: bool,
-        no_whitelist: bool = False) -> str:
+        no_allowlist: bool = False) -> str:
   print(f'Creating package with \n{_format_upstream_yaml(upstream_conf_yaml)}')
   upstream_conf = upstream_conf_yaml.data
   upstream_commit_sha = None
@@ -978,7 +978,7 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
   # We are strict about what to allow, unexpected files
   # are not copied. Instead print a warning an suggest filing an
   # issue if the file is legitimate. A flag to explicitly
-  # skip the whitelist check (--no_whitelist)
+  # skip the allowlist check (--no_allowlist)
   # enables making packages even when new, yet unknown files are required).
   # Do we have a Font Bakery check for expected/allowed files? Would
   # be a good complement.
@@ -1005,22 +1005,22 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
                        , check=True)
       print(f'DONE building!')
       skipped = _copy_upstream_files_from_dir(tmp, upstream_conf['files'],
-                        write_file_to_package, no_whitelist=no_whitelist)
+                        write_file_to_package, no_allowlist=no_allowlist)
   else:
     skipped = _copy_upstream_files_from_git(upstream_conf['branch'],
                     upstream_conf['files'], repo, write_file_to_package,
-                    no_whitelist=no_whitelist)
+                    no_allowlist=no_allowlist)
   if skipped:
     message = ['Some files from upstream_conf could not be copied.']
     for reason, items in skipped.items():
       message.append(reason)
       for item in items:
         message.append(f' - {item}')
-    # The whitelist can be ignored using the flag no_whitelist flag,
+    # The allowlist can be ignored using the flag no_allowlist flag,
     # but the rest should be fixed in the files map, because it's
     # obviously wrong, not working, configuration.
     # TODO: This case could (but should it?) be a repl-case to ask
-    # interactively, if the no_whitelist flag should be used then,
+    # interactively, if the no_allowlist flag should be used then,
     # if yes, _copy_upstream_files could be tried again. But given
     # that the use case for the flag is a narrow one, I doubt the
     # effort needed and the added complexity is worth it.
@@ -1072,7 +1072,7 @@ def _check_git_target(target: str) -> None:
   repo_owner = 'google'
   repo_name = 'fonts'
   repo_name_with_owner = f'{repo_owner}/{repo_name}'
-  remote_name_or_none = _find_github_remote(repo, repo_owner, repo_name, 'master')
+  remote_name_or_none = _find_github_remote(repo, repo_owner, repo_name, 'main')
   if remote_name_or_none is None:
     # NOTE: we could ask the user if we should add the missing remote.
     # This makes especially sense if the repository is a fork of
@@ -1267,7 +1267,7 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
   remote_branch_name = local_branch_name
   # We must only allow force pushing/general pushing to branch names that
   # this tool *likely* created! Otherwise, we may end up force pushing
-  # to master! Hence: we expect a prefix for remote_branch_name indicating
+  # to `main` branch! Hence: we expect a prefix for remote_branch_name indicating
   # this tool created it.
   if remote_branch_name.find(GIT_NEW_BRANCH_PREFIX) != 0:
     remote_branch_name = (f'{GIT_NEW_BRANCH_PREFIX}'
@@ -1287,7 +1287,7 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
   print('DONE git push!')
 
   pr_head = f'{push_owner}:{remote_branch_name}'
-  pr_base_branch = 'master'  # currently we always do PRs to master
+  pr_base_branch = 'main'  # currently we always do PRs to main
     #_updateUpstream(prRemoteName, prRemoteRef))
     #// NOTE: at this point the PUSH was already successful, so the branch
     #// of the PR exists or if it existed it has changed.
@@ -1426,8 +1426,8 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
       pass
 
   if not base_commit:
-    #fetch! make sure we're on the actual gf master HEAD
-    _git_fetch_master(repo, remote_name)
+    #fetch! make sure we're on the actual gf main HEAD
+    _git_fetch_main(repo, remote_name)
     # base_commit = repo.revparse_single(f'refs/remotes/{base_remote_branch}')
     # same but maybe better readable:
     base_commit = repo.branches.remote[base_remote_branch].peel()
@@ -1528,10 +1528,10 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str, family_dir: str,
 
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
-  remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
-  base_remote_branch = f'{remote_name}/master'
+  remote_name = _find_github_remote(repo, 'google', 'fonts', 'main')
+  base_remote_branch = f'{remote_name}/main'
   if remote_name is None:
-    raise Exception('No remote found for google/fonts master.')
+    raise Exception('No remote found for google/fonts main.')
 
   _git_make_commit(repo, add_commit, force, yes, quiet, branch,
                    remote_name, base_remote_branch, tmp_package_family_dir,
@@ -1542,10 +1542,10 @@ def _dispatch_git(target: str, target_branch: str,pr_upstream: str,
                   push_upstream: str) -> None:
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
-  remote_name = _find_github_remote(repo, 'google', 'fonts', 'master')
-  base_remote_branch = f'{remote_name}/master'
+  remote_name = _find_github_remote(repo, 'google', 'fonts', 'main')
+  base_remote_branch = f'{remote_name}/main'
   if remote_name is None:
-    raise Exception('No remote found for google/fonts master.')
+    raise Exception('No remote found for google/fonts main.')
 
   git_branch: pygit2.Branch = repo.branches.local[target_branch]
   tip_commit: pygit2.Commit = git_branch.peel()
@@ -1708,7 +1708,7 @@ def _output_upstream_yaml(file_or_family: typing.Union[str, None], target: str,
 
 
 def make_package(file_or_families: typing.List[str], target: str, yes: bool,
-                 quiet: bool, no_whitelist: bool, is_gf_git: bool, force: bool,
+                 quiet: bool, no_allowlist: bool, is_gf_git: bool, force: bool,
                  add_commit: bool, pr: bool, pr_upstream: str,
                  push_upstream: str, upstream_yaml: bool, no_source: bool,
                  allow_build: bool, branch: typing.Union[str, None]=None):
@@ -1756,7 +1756,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
                                 # if is_gf_git source is removed in an
                                 # extra commit
                                 no_source and not is_gf_git,
-                                allow_build, yes, quiet, no_whitelist)
+                                allow_build, yes, quiet, no_allowlist)
           family_dirs.append(family_dir)
         except UserAbortError as e:
           # The user aborted already, no need to bother any further.
@@ -1926,18 +1926,18 @@ class PYGit2RemoteCallbacks(pygit2.RemoteCallbacks):
   #         f'  indexed_objects {tp.indexed_objects}\n'
   #         f'  received_objects {tp.received_objects}')
 
-def _git_fetch_master(repo: pygit2.Repository, remote_name: str) -> None:
+def _git_fetch_main(repo: pygit2.Repository, remote_name: str) -> None:
 
   # perform a fetch
-  print(f'Start fetching {remote_name}/master')
+  print(f'Start fetching {remote_name}/main')
   # fetch(refspecs=None, message=None, callbacks=None, prune=0)
-  # using just 'master' instead of 'refs/heads/master' works as well
+  # using just 'main' instead of 'refs/heads/main' works as well
 
   # This fails on MacOS, just as any oother pygit2 network interaction.
   # remote = repo.remotes[remote_name]
-  # stats = remote.fetch(['refs/heads/master'], callbacks=PYGit2RemoteCallbacks())
+  # stats = remote.fetch(['refs/heads/main'], callbacks=PYGit2RemoteCallbacks())
 
-  subprocess.run(['git', 'fetch', remote_name, 'master'],
+  subprocess.run(['git', 'fetch', remote_name, 'main'],
     cwd=repo.path,
     check=True,
     stdout=subprocess.PIPE
@@ -1994,7 +1994,7 @@ def _create_tmp_remote(repo: pygit2.Repository, url:str) -> typing.Iterator[pygi
 #
 #   refspecs_candidates = {
 #       '1': f'+refs/heads/*:refs/remotes/{remote_name}/*'
-#     , '2': f'+refs/heads/master:refs/remotes/{remote_name}/master'
+#     , '2': f'+refs/heads/main:refs/remotes/{remote_name}/main'
 #   }
 #   print('Pick a fetch refspec for the remote:')
 #   print(f'1: {refspecs_candidates["1"]} (default)')
