@@ -394,3 +394,32 @@ def test_gen_stat_tables_from_config(var_fonts):
 
     assert _get_axis_value(roman, "wght", "Light", 300) == None
     assert _get_axis_value(italic, "wght", "Light", 300) == None
+
+    # Check ps names
+    assert roman['name'].getName(25, 3, 1, 0x409).toUnicode() == "RalewayRoman"
+    assert italic['name'].getName(25, 3, 1, 0x409).toUnicode() == "RalewayItalic"
+    desired_roman_ps_names = [
+        "RalewayRoman-Thin",
+        "RalewayRoman-ExtraLight",
+        "RalewayRoman-Light",
+        "RalewayRoman-Regular",
+        "RalewayRoman-Medium",
+        "RalewayRoman-SemiBold",
+        "RalewayRoman-Bold",
+        "RalewayRoman-ExtraBold",
+        "RalewayRoman-Black",
+    ]
+    _check_ps_instance_names(roman, desired_roman_ps_names)
+
+    desired_italic_ps_names = [
+        "RalewayItalic-Thin",
+        "RalewayItalic-ExtraLight",
+        "RalewayItalic-Light",
+        "RalewayItalic-Regular",
+        "RalewayItalic-Medium",
+        "RalewayItalic-SemiBold",
+        "RalewayItalic-Bold",
+        "RalewayItalic-ExtraBold",
+        "RalewayItalic-Black",
+    ]
+    _check_ps_instance_names(italic, desired_italic_ps_names)
