@@ -448,4 +448,5 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None):
                 else:
                     stat[-1] = ital_stat_for_roman
             this_stat = stat
+        _update_fvar_nametable_records(ttFont, this_stat)
         buildStatTable(ttFont, this_stat)
