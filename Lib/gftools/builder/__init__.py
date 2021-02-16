@@ -71,6 +71,7 @@ from ufo2ft import CFFOptimization
 from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.utils import font_is_italic
+from gftools.instancer import gen_static_font
 from fontTools.otlLib.builder import buildStatTable
 import statmake.classes
 import statmake.lib
@@ -306,6 +307,32 @@ class GFBuilder:
             self.mkdir(self.config["woffDir"], clean=True)
         if self.config["buildTTF"]:
             self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
+            if "instances" in self.config:
+                self.instantiate_static_fonts(
+                    self.config["ttDir"], self.post_process_ttf
+                )
+            else:
+                self.build_a_static_format(
+                    "ttf", self.config["ttDir"], self.post_process_ttf
+                )
+
+    def instantiate_static_fonts(self, directory, postprocessor):
+        self.mkdir(directory, clean=True)
+        for font in self.config["instances"]:
+            varfont_path = os.path.join(self.config['vfDir'], font)
+            varfont = TTFont(varfont_path)
+            for font, instances in self.config["instances"].items():
+                for inst in instances:
+                    out_filename = f"{self.config['familyName']}-{inst['styleName']}.ttf".replace(" ", "")
+                    dst = os.path.join(directory, out_filename)
+                    gen_static_font(
+                        varfont,
+                        self.config["familyName"],
+                        inst["styleName"],
+                        inst["coordinates"],
+                        dst=dst
+                    )
+                    postprocessor(dst)
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
