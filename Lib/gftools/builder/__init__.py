@@ -55,7 +55,7 @@ required, all others have sensible defaults:
 * ``logLevel``: Debugging log level. Defaults to ``INFO``.
 * ``stylespaceFile``: A statmake ``.stylespace`` file.
 * ``stat``: A STAT table configuration. This may be either a list of axes and
-    values as demonstrated above, or a dictionary mapping each source file to a
+    values as demonstrated above, or a dictionary mapping each variable font to a
     per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
     STAT table is generated automatically using ``gftools.stat``.
 * ``instances``: A list of static font ttf instances to generate from each variable
