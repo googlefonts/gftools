@@ -1,4 +1,4 @@
-from fontTools.varLib.instancer import instantiateVariableFont
+from fontTools.varLib.instancer import instantiateVariableFont, OverlapMode
 from gftools.fix import update_nametable, fix_fs_selection, fix_mac_style
 
 
