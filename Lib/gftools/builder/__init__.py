@@ -30,6 +30,19 @@ which looks like this::
           nominalValue: 1
           rangeMaxValue: 50
         ...
+    ...
+    instances:
+      Texturina[wght].ttf:
+      - styleName: "Regular"
+        coordinates:
+          wght: 400
+        ...
+      Texturina-Italic[wght].ttf:
+      - styleName: "Bold Italic"
+        coordinates:
+          wght: 700
+        ...
+      ...
 
 To build a font family from the command line, use:
 
@@ -45,6 +58,9 @@ required, all others have sensible defaults:
     values as demonstrated above, or a dictionary mapping each source file to a
     per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
     STAT table is generated automatically using ``gftools.stat``.
+* ``instances``: A list of static font ttf instances to generate from each variable
+    font as demonstrated above. If this argument isn't provided, static ttfs will
+    be generated for each instance that is specified in the source files.
 * ``buildVariable``: Build variable fonts. Defaults to true.
 * ``buildStatic``: Build static fonts (OTF or TTF depending on ``$buildOTF``
     and ``$buildTTF`). Defaults to true.

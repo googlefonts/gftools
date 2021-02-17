@@ -5,21 +5,17 @@ from gftools.fix import update_nametable, fix_fs_selection, fix_mac_style
 __all__ = ["gen_static_font"]
 
 
-def default_axis_coords(ttFont):
-    assert "fvar" in ttFont
-
-
 def gen_static_font(
-    var_font, family_name, style_name, axes, keep_overlaps=True, dst=None
+    var_font, family_name, style_name, axes, keep_overlaps=False, dst=None
 ):
-    """Generate a GF compliant static font from a variable font.
+    """Generate a GF spec compliant static font from a variable font.
 
     Args:
         var_font: a variable TTFont instance
-        family_name: desired static font family name
-        style_name: desired static font style name
+        family_name: font family name
+        style_name: font style name
         axes: dictionary containing axis positions e.g {"wdth": 100, "wght": 400}
-        keep_overlaps: If true do not remove glyph overlaps
+        keep_overlaps: If true, keep glyph overlaps
         dst: Optional. Path to output font
 
     Returns:
@@ -30,7 +26,7 @@ def gen_static_font(
     if not keep_overlaps:
         keep_overlaps = OverlapMode.REMOVE
 
-    # if axes dict doesn't include all fvar axes, include default fvar vals
+    # if the axes dict doesn't include all fvar axes, add default fvar vals to it
     fvar_dflts = {a.axisTag: a.defaultValue for a in var_font['fvar'].axes}
     for k, v in fvar_dflts.items():
         if k not in axes:
