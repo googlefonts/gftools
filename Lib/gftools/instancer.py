@@ -36,6 +36,7 @@ def gen_static_font(
     update_nametable(static_font, family_name, style_name)
     fix_fs_selection(static_font)
     fix_mac_style(static_font)
+    static_font['OS/2'].usWidthClass = 5
     if dst:
         static_font.save(dst)
     return static_font
