@@ -46,7 +46,10 @@ required, all others have sensible defaults:
     per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
     STAT table is generated automatically using ``gftools.stat``.
 * ``buildVariable``: Build variable fonts. Defaults to true.
-* ``buildStatic``: Build static fonts. Defaults to true.
+* ``buildStatic``: Build static fonts (OTF or TTF depending on ``$buildOTF``
+    and ``$buildTTF`). Defaults to true.
+* ``buildOTF``: Build OTF fonts. Defaults to false.
+* ``buildTTF``: Build TTF fonts. Defaults to true.
 * ``buildWebfont``: Build WOFF2 fonts. Defaults to ``$buildStatic``.
 * ``outputDir``: Where to put the fonts. Defaults to ``../fonts/``
 * ``vfDir``: Where to put variable fonts. Defaults to ``$outputDir/variable``.
@@ -190,6 +193,10 @@ class GFBuilder:
             self.config["buildVariable"] = True
         if "buildStatic" not in self.config:
             self.config["buildStatic"] = True
+        if "buildOTF" not in self.config:
+            self.config["buildOTF"] = False
+        if "buildTTF" not in self.config:
+            self.config["buildTTF"] = True
         if "buildWebfont" not in self.config:
             self.config["buildWebfont"] = self.config["buildStatic"]
         if "autohintTTF" not in self.config:
@@ -293,10 +300,12 @@ class GFBuilder:
             )
 
     def build_static(self):
-        self.build_a_static_format("otf", self.config["otDir"], self.post_process)
+        if self.config["buildOTF"]:
+            self.build_a_static_format("otf", self.config["otDir"], self.post_process)
         if self.config["buildWebfont"]:
             self.mkdir(self.config["woffDir"], clean=True)
-        self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
+        if self.config["buildTTF"]:
+            self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
