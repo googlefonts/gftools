@@ -339,11 +339,15 @@ class GFBuilder:
             varfont = TTFont(varfont_path)
             for font, instances in self.config["instances"].items():
                 for inst in instances:
-                    out_filename = f"{self.config['familyName']}-{inst['styleName']}.ttf".replace(" ", "")
+                    if 'familyName' in inst:
+                        family_name = inst['familyName']
+                    else:
+                        family_name = self.config['familyName']
+                    out_filename = f"{family_name}-{inst['styleName']}.ttf".replace(" ", "")
                     dst = os.path.join(directory, out_filename)
                     gen_static_font(
                         varfont,
-                        self.config["familyName"],
+                        family_name,
                         inst["styleName"],
                         inst["coordinates"],
                         dst=dst
