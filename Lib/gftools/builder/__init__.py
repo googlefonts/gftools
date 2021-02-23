@@ -48,7 +48,7 @@ required, all others have sensible defaults:
 * ``buildVariable``: Build variable fonts. Defaults to true.
 * ``buildStatic``: Build static fonts (OTF or TTF depending on ``$buildOTF``
     and ``$buildTTF`). Defaults to true.
-* ``buildOTF``: Build OTF fonts. Defaults to false.
+* ``buildOTF``: Build OTF fonts. Defaults to true.
 * ``buildTTF``: Build TTF fonts. Defaults to true.
 * ``buildWebfont``: Build WOFF2 fonts. Defaults to ``$buildStatic``.
 * ``outputDir``: Where to put the fonts. Defaults to ``../fonts/``
@@ -194,7 +194,7 @@ class GFBuilder:
         if "buildStatic" not in self.config:
             self.config["buildStatic"] = True
         if "buildOTF" not in self.config:
-            self.config["buildOTF"] = False
+            self.config["buildOTF"] = True
         if "buildTTF" not in self.config:
             self.config["buildTTF"] = True
         if "buildWebfont" not in self.config:
