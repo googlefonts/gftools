@@ -58,8 +58,8 @@ required, all others have sensible defaults:
     values as demonstrated above, or a dictionary mapping each variable font to a
     per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
     STAT table is generated automatically using ``gftools.stat``.
-* ``instances``: A list of static font ttf instances to generate from each variable
-    font as demonstrated above. If this argument isn't provided, static ttfs will
+* ``instances``: A list of static font TTF instances to generate from each variable
+    font as demonstrated above. If this argument isn't provided, static TTFs will
     be generated for each instance that is specified in the source files.
 * ``buildVariable``: Build variable fonts. Defaults to true.
 * ``buildStatic``: Build static fonts (OTF or TTF depending on ``$buildOTF``
@@ -322,7 +322,6 @@ class GFBuilder:
         if self.config["buildWebfont"]:
             self.mkdir(self.config["woffDir"], clean=True)
         if self.config["buildTTF"]:
-            self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
             if "instances" in self.config:
                 self.instantiate_static_fonts(
                     self.config["ttDir"], self.post_process_ttf
