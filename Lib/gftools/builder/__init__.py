@@ -33,13 +33,17 @@ which looks like this::
     ...
     instances:
       Texturina[wght].ttf:
-      - styleName: "Regular"
-        coordinates:
+      - coordinates:
           wght: 400
+      - coordinates:
+          wght: 500
+      - familyName: "Texturina Exotic"
+        styleName: "Medium"
+        coordinates:
+          wght: 500
         ...
       Texturina-Italic[wght].ttf:
-      - styleName: "Bold Italic"
-        coordinates:
+      - coordinates:
           wght: 700
         ...
       ...
