@@ -245,10 +245,14 @@ class GFBuilder:
             )
             output_files = self.run_fontmake(source, args)
             newname = self.rename_variable(output_files[0])
-            self.post_process(newname)
             ttFont = TTFont(newname)
             ttFonts.append(ttFont)
+
         self.gen_stat(ttFonts)
+        # We post process each variable font after generating the STAT tables
+        # because these tables are needed in order to fix the name tables.
+        for ttFont in ttFonts:
+            self.post_process(ttFont.reader.file.name)
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:
