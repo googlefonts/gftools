@@ -346,13 +346,17 @@ class GFBuilder:
                         family_name = inst['familyName']
                     else:
                         family_name = self.config['familyName']
-                    out_filename = f"{family_name}-{inst['styleName']}.ttf".replace(" ", "")
+                    if "styleName" in inst:
+                        style_name = inst['styleName']
+                    else:
+                        style_name = None
+                    out_filename = f"{family_name}-{style_name}.ttf".replace(" ", "")
                     dst = os.path.join(directory, out_filename)
                     gen_static_font(
                         varfont,
-                        family_name,
-                        inst["styleName"],
-                        inst["coordinates"],
+                        axes=inst["coordinates"],
+                        family_name=family_name,
+                        style_name=style_name,
                         dst=dst
                     )
                     postprocessor(dst)
