@@ -90,7 +90,7 @@ from fontmake.font_project import FontProject
 from ufo2ft import CFFOptimization
 from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
-from gftools.utils import font_is_italic
+from gftools.utils import font_is_italic, font_familyname, font_stylename
 from gftools.instancer import gen_static_font
 from fontTools.otlLib.builder import buildStatTable
 import statmake.classes
@@ -346,15 +346,23 @@ class GFBuilder:
                         family_name = inst['familyName']
                     else:
                         family_name = self.config['familyName']
-                    out_filename = f"{family_name}-{inst['styleName']}.ttf".replace(" ", "")
-                    dst = os.path.join(directory, out_filename)
-                    gen_static_font(
+                    if "styleName" in inst:
+                        style_name = inst['styleName']
+                    else:
+                        style_name = None
+
+                    static_font = gen_static_font(
                         varfont,
-                        family_name,
-                        inst["styleName"],
-                        inst["coordinates"],
-                        dst=dst
+                        axes=inst["coordinates"],
+                        family_name=family_name,
+                        style_name=style_name,
                     )
+                    family_name = font_familyname(static_font)
+                    style_name = font_stylename(static_font)
+                    dst = os.path.join(
+                        directory, f"{family_name}-{style_name}.ttf".replace(" ", "")
+                    )
+                    static_font.save(dst)
                     postprocessor(dst)
 
     def build_a_static_format(self, format, directory, postprocessor):
