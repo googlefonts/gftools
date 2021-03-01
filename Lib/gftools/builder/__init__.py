@@ -285,7 +285,7 @@ class GFBuilder:
     def rename_variable(self, fontfile):
         if "axisOrder" not in self.config:
             font = TTFont(fontfile)
-            self.config["axisOrder"] = [ax.axisTag for ax in font["fvar"].axes]
+            self.config["axisOrder"] = sorted([ax.axisTag for ax in font["fvar"].axes])
         axes = ",".join(self.config["axisOrder"])
         newname = fontfile.replace("-VF.ttf", "[%s].ttf" % axes)
         os.rename(fontfile, newname)
