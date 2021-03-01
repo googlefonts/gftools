@@ -30,6 +30,23 @@ which looks like this::
           nominalValue: 1
           rangeMaxValue: 50
         ...
+    ...
+    instances:
+      Texturina[wght].ttf:
+      - coordinates:
+          wght: 400
+      - coordinates:
+          wght: 500
+      - familyName: "Texturina Exotic"
+        styleName: "Medium"
+        coordinates:
+          wght: 500
+        ...
+      Texturina-Italic[wght].ttf:
+      - coordinates:
+          wght: 700
+        ...
+      ...
 
 To build a font family from the command line, use:
 
@@ -42,9 +59,12 @@ required, all others have sensible defaults:
 * ``logLevel``: Debugging log level. Defaults to ``INFO``.
 * ``stylespaceFile``: A statmake ``.stylespace`` file.
 * ``stat``: A STAT table configuration. This may be either a list of axes and
-    values as demonstrated above, or a dictionary mapping each source file to a
+    values as demonstrated above, or a dictionary mapping each variable font to a
     per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
     STAT table is generated automatically using ``gftools.stat``.
+* ``instances``: A list of static font TTF instances to generate from each variable
+    font as demonstrated above. If this argument isn't provided, static TTFs will
+    be generated for each instance that is specified in the source files.
 * ``buildVariable``: Build variable fonts. Defaults to true.
 * ``buildStatic``: Build static fonts (OTF or TTF depending on ``$buildOTF``
     and ``$buildTTF`). Defaults to true.
@@ -71,6 +91,7 @@ from ufo2ft import CFFOptimization
 from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.utils import font_is_italic
+from gftools.instancer import gen_static_font
 from fontTools.otlLib.builder import buildStatTable
 import statmake.classes
 import statmake.lib
@@ -305,7 +326,36 @@ class GFBuilder:
         if self.config["buildWebfont"]:
             self.mkdir(self.config["woffDir"], clean=True)
         if self.config["buildTTF"]:
-            self.build_a_static_format("ttf", self.config["ttDir"], self.post_process_ttf)
+            if "instances" in self.config:
+                self.instantiate_static_fonts(
+                    self.config["ttDir"], self.post_process_ttf
+                )
+            else:
+                self.build_a_static_format(
+                    "ttf", self.config["ttDir"], self.post_process_ttf
+                )
+
+    def instantiate_static_fonts(self, directory, postprocessor):
+        self.mkdir(directory, clean=True)
+        for font in self.config["instances"]:
+            varfont_path = os.path.join(self.config['vfDir'], font)
+            varfont = TTFont(varfont_path)
+            for font, instances in self.config["instances"].items():
+                for inst in instances:
+                    if 'familyName' in inst:
+                        family_name = inst['familyName']
+                    else:
+                        family_name = self.config['familyName']
+                    out_filename = f"{family_name}-{inst['styleName']}.ttf".replace(" ", "")
+                    dst = os.path.join(directory, out_filename)
+                    gen_static_font(
+                        varfont,
+                        family_name,
+                        inst["styleName"],
+                        inst["coordinates"],
+                        dst=dst
+                    )
+                    postprocessor(dst)
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)

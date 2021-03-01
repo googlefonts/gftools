@@ -91,6 +91,7 @@ setup(
         'pygit2',
         'strictyaml',
         'fontmake',
+        'skia-pathops',
         'statmake',
         'PyYAML',
         'babelfont',

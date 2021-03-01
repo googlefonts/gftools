@@ -32,4 +32,5 @@ jobs:
           pytest ./Lib/gftools/tests/test_fix.py
           pytest ./Lib/gftools/tests/test_stat.py
           pytest ./Lib/gftools/tests/test_html.py
+          pytest ./Lib/gftools/tests/test_instancer.py
           mypy ./Lib/gftools/packager.py
