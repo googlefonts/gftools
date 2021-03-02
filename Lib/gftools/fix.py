@@ -423,9 +423,9 @@ def fix_nametable(ttFont):
         ttFont: a TTFont instance
     """
     if "fvar" in ttFont:
-        # TODO, regen the nametable so it reflects the default fvar axes
-        # coordinates. Implement once https://github.com/fonttools/fonttools/pull/2078
-        # is merged.
+        from fontTools.varLib.instancer.names import updateNameTable
+        dflt_axes = {a.axisTag: a.defaultValue for a in ttFont['fvar'].axes}
+        updateNameTable(ttFont, dflt_axes)
         return
     family_name = font_familyname(ttFont)
     style_name = font_stylename(ttFont)
