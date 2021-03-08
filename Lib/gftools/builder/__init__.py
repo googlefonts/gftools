@@ -283,11 +283,11 @@ class GFBuilder:
             return [os.path.join(original_output_dir, x) for x in file_names]
 
     def rename_variable(self, fontfile):
-        if "axisOrder" not in self.config:
-            font = TTFont(fontfile)
-            self.config["axisOrder"] = sorted([ax.axisTag for ax in font["fvar"].axes])
-        axes = ",".join(self.config["axisOrder"])
-        newname = fontfile.replace("-VF.ttf", "[%s].ttf" % axes)
+        font = TTFont(fontfile)
+        assert "fvar" in font
+        axis_tags = sorted([ax.axisTag for ax in font["fvar"].axes])
+        axis_tags = ",".join(axis_tags)
+        newname = fontfile.replace("-VF.ttf", "[%s].ttf" % axis_tags)
         os.rename(fontfile, newname)
         return newname
 
