@@ -292,6 +292,8 @@ class GFBuilder:
         return newname
 
     def gen_stat(self, varfonts):
+        if "axisOrder" not in self.config:
+            self.config["axisOrder"] = [ax.axisTag for ax in varfonts[0]["fvar"].axes]
         if len(varfonts) > 1 and "ital" not in self.config["axisOrder"]:
             # *Are* any italic? Presumably, but test
             if any(font_is_italic(f) for f in varfonts):
