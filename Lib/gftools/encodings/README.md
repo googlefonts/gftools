@@ -10,10 +10,10 @@ As `unicode-range` values, this data is 'mini-fied', with contiguous ranges expr
 
 Typically within a font family, all the Unicode characters in each file are also in every other file that make up the family.
 And typically, all the Unicode characters in a font file can be found within the set of Namelist files.
-When a font family is onboarded into the `main` branch of http://github.com/google/fonts, a METADATA file is included that lists at the end the subsets supported;
+When a font family is onboarded into the `main` branch of http://github.com/google/fonts, a [METADATA](https://github.com/googlefonts/gf-docs/blob/main/METADATA/README.md) file is included that lists at the end the subsets supported;
 those refer to these Namelists.
 
-If the font files include characters that are not in any Namelist declared in the family METADATA file, those characters will not be available to Fonts API end-users, unless the users request the character using the `text=` API option ([learn more](https://developers.google.com/fonts/docs/getting_started#optimizing_your_font_requests)). 
+If the font files include characters that are not in any Namelist declared in the family [METADATA](https://github.com/googlefonts/gf-docs/blob/main/METADATA/README.md) file, those characters will not be available to Fonts API end-users, unless the users request the character using the `text=` API option ([learn more](https://developers.google.com/fonts/docs/getting_started#optimizing_your_font_requests)). 
 
 * Developers can use Namefiles with [pyftsubset](https://github.com/behdad/fonttools/blob/master/Lib/fontTools/subset.py) to generate subsets from full `ttf` files.
 
