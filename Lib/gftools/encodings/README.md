@@ -1,33 +1,33 @@
-This directory contains "Namelist" files, that list Unicode characters followed by glyph names or glyph descriptions.
-
-Typically all the Unicodes in each file are in each font.
-If the fonts go beyond that list, those additional characters will not be available to Fonts API end users.
-
-The Google Fonts API uses these files in combination with [pyftsubset](https://github.com/behdad/fonttools/blob/master/Lib/fontTools/subset.py) to generate script subsets from the full `.ttf` files in this repository.
-
-There are "legacy" encodings, the files directly in this directory, and "novel" encodings contained in the `GF Glyph Sets` subdirectory.
-The latter directory contains itself a [`README.md`]('GF Glyph Sets/README.md').
-
 # The "Namelist" file format
 
-The extension of a Namelist file is "`.nam`".
+This directory contains "Namelist" files, for developers.
+Typeface designers typically want **glyph sets**, and the `GF Glyph Sets` subdirectory here contains a [`README.md`]('GF Glyph Sets/README.md') describing them.
 
-Namelist files are encoded in UTF-8.
+Their purpose is to subset fonts available from the Google Fonts API.
+They define the `unicode-range` property values included in the `@font-face` rules returned by the Google Fonts API.
+Each file lists Unicode characters, one per line, followed by glyph names or glyph descriptions.
+As `unicode-range` values, this data is 'mini-fied', with contiguous ranges expressed as such (start-end hex values).
 
-### *legacy* subsetting
+Typically within a font family, all the Unicode characters in each file are also in every other file that make up the family.
+And typically, all the Unicode characters in a font file can be found within the set of Namelist files.
+When a font family is onboarded into the `main` branch of http://github.com/google/fonts, a METADATA file is included that lists at the end the subsets supported;
+those refer to these Namelists.
 
-* all encodings with the exception of `khmer` include `latin_unique-glyphs.nam`
-* all *extended* encodings with filenames like`{lang}-ext_unique-glyphs.nam` also include `{lang}_unique-glyphs.nam`
+If the font files include characters that are not in any Namelist declared in the family METADATA file, those characters will not be available to Fonts API end-users, unless the users request the character using the `text=` API option ([learn more](https://developers.google.com/fonts/docs/getting_started#optimizing_your_font_requests)). 
 
-This is implemented in the `CodepointFiles` function of [google_fonts.py](../util/google_fonts.py)
+* Developers can use Namefiles with [pyftsubset](https://github.com/behdad/fonttools/blob/master/Lib/fontTools/subset.py) to generate subsets from full `ttf` files.
 
-*NOTE: the legacy files have also been adapted to the novel header `#$ include` style.*
+* The extension of a Namelist file is "`.nam`".
 
-### *novel* subsetting
+* Namelist files are encoded in UTF-8.
 
-The [`README.md`]('GF Glyph Sets/README.md') describes mostly how each of the Namelist files depend on each other,
-to implement this [header includes](#header) were created.
+* All encodings with the exception of `khmer` include `latin_unique-glyphs.nam`
 
+* All *extended* encodings with filenames like`{lang}-ext_unique-glyphs.nam` also include `{lang}_unique-glyphs.nam`
+
+* This is implemented in the `CodepointFiles` function of [google_fonts.py](../util/google_fonts.py)
+
+* The [`README.md`]('GF Glyph Sets/README.md') describes mostly how each of the Namelist files depend on each other, to implement this [header includes](#header) were created.
 
 ## Codepoint format
 
@@ -42,7 +42,6 @@ Example:
 0x03E4  Ϥ COPTIC CAPITAL LETTER FEI
 0x10142  𐅂 GREEK ACROPHONIC ATTIC ONE DRACHMA
 ```
-
 
 ## Comments
 
@@ -84,7 +83,7 @@ Using this sample python implementation to obtain the glyph name:
 line.strip().rsplit(' ')[-1]
 ```
 
-## <a name="header"></a> Header
+## Header
 
 The header was created to make the Namelist format more self contained.
 
@@ -134,7 +133,7 @@ Example from `GF-latin-expert_unique-glyphs.nam`
 
 * `label {name}` A human readable name for the file, to be used in user interfaces. Could also have a further `{locale}` argument for internationalization.
 
-# Scripts
+## Scripts
 
 A python script, `tools/namelist.py` can generate these files:
 
