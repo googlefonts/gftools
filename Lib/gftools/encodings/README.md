@@ -15,7 +15,7 @@ those refer to these Namelists.
 
 If the font files include characters that are not in any Namelist declared in the family [METADATA](https://github.com/googlefonts/gf-docs/blob/main/METADATA/README.md) file, those characters will not be available to Fonts API end-users, unless the users request the character using the `text=` API option ([learn more](https://developers.google.com/fonts/docs/getting_started#optimizing_your_font_requests)). 
 
-* Developers can use Namefiles with [pyftsubset](https://github.com/behdad/fonttools/blob/master/Lib/fontTools/subset.py) to generate subsets from full `ttf` files.
+* Developers can use Namefiles with [pyftsubset](https://github.com/behdad/fonttools/blob/main/Lib/fontTools/subset.py) to generate subsets from full `ttf` files.
 
 * The extension of a Namelist file is "`.nam`".
 
