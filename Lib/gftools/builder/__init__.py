@@ -92,10 +92,12 @@ from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.utils import font_is_italic, font_familyname, font_stylename
 from gftools.instancer import gen_static_font
+from gftools.builder.cache import Cache
 from fontTools.otlLib.builder import buildStatTable
 import statmake.classes
 import statmake.lib
 from babelfont import Babelfont
+from glob import glob
 import sys
 import os
 import shutil
@@ -108,7 +110,8 @@ import yaml
 
 class GFBuilder:
     def __init__(self, configfile=None, config=None):
-        if configfile:
+        self.configfile = configfile
+        if self.configfile:
             self.config = yaml.load(open(configfile), Loader=yaml.SafeLoader)
             if os.path.dirname(configfile):
                 os.chdir(os.path.dirname(configfile))
@@ -117,6 +120,9 @@ class GFBuilder:
         self.masters = {}
         self.logger = logging.getLogger("GFBuilder")
         self.fill_config_defaults()
+        self.cache = Cache()
+        self.changed_project = self.cache.changed_project(self)
+
 
     def build(self):
         loglevel = getattr(logging, self.config["logLevel"].upper())
@@ -155,6 +161,9 @@ class GFBuilder:
                 ])
             )
         )
+        self.cache.add_project(self)
+        self.cache.close()
+
         if self.config["cleanUp"]:
             files_added_during_build = set(os.listdir()) - set(source_files)
             if not files_added_during_build:
@@ -164,6 +173,7 @@ class GFBuilder:
             )
             for file_ in files_added_during_build:
                 self.rm(file_)
+
 
     def load_masters(self):
         if self.masters:
@@ -232,27 +242,35 @@ class GFBuilder:
             self.config["flattenComponents"] = True
 
     def build_variable(self):
-        self.mkdir(self.config["vfDir"], clean=True)
+        self.mkdir(self.config["vfDir"], clean=False)
         args = {"output": ["variable"], "family_name": self.config["familyName"]}
         ttFonts = []
+        changed_output = self.cache.changed_directory(self.config['vfDir'])
         for source in self.config["sources"]:
             if not source.endswith(".designspace") and not source.endswith("glyphs"):
                 continue
-            self.logger.info("Creating variable fonts from %s" % source)
             sourcebase = os.path.splitext(os.path.basename(source))[0]
             args["output_path"] = os.path.join(
                 self.config["vfDir"], sourcebase + "-VF.ttf",
             )
-            output_files = self.run_fontmake(source, args)
-            newname = self.rename_variable(output_files[0])
-            ttFont = TTFont(newname)
-            ttFonts.append(ttFont)
+            if changed_output or self.changed_project:
+                self.logger.info("Creating variable fonts from %s" % source)
+                output_files = self.run_fontmake(source, args)
+                newname = self.rename_variable(output_files[0])
+                ttFont = TTFont(newname)
+                ttFonts.append(ttFont)
+            else:
+                self.logger.info(
+                    "Skipping variable font generation since project hasn't changed"
+                )
+                ttFonts = [TTFont(f) for f in glob(os.path.join(self.config['vfDir'], "*.ttf"))]
 
         self.gen_stat(ttFonts)
         # We post process each variable font after generating the STAT tables
         # because these tables are needed in order to fix the name tables.
         for ttFont in ttFonts:
             self.post_process(ttFont.reader.file.name)
+        self.cache.add_directory(self.config['vfDir'])
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:
@@ -276,7 +294,7 @@ class GFBuilder:
             file_names = os.listdir(args["output_dir"])
             for file_name in file_names:
                 shutil.move(
-                    os.path.join(args["output_dir"], file_name), original_output_dir
+                    os.path.join(args["output_dir"], file_name), os.path.join(original_output_dir, file_name)
                 )
             tmpdir.cleanup()
             args["output_dir"] = original_output_dir
@@ -330,7 +348,7 @@ class GFBuilder:
         if self.config["buildOTF"]:
             self.build_a_static_format("otf", self.config["otDir"], self.post_process)
         if self.config["buildWebfont"]:
-            self.mkdir(self.config["woffDir"], clean=True)
+            self.mkdir(self.config["woffDir"], clean=False)
         if self.config["buildTTF"]:
             if "instances" in self.config:
                 self.instantiate_static_fonts(
@@ -342,7 +360,7 @@ class GFBuilder:
                 )
 
     def instantiate_static_fonts(self, directory, postprocessor):
-        self.mkdir(directory, clean=True)
+        self.mkdir(directory, clean=False)
         for font in self.config["instances"]:
             varfont_path = os.path.join(self.config['vfDir'], font)
             varfont = TTFont(varfont_path)
@@ -372,22 +390,26 @@ class GFBuilder:
                     postprocessor(dst)
 
     def build_a_static_format(self, format, directory, postprocessor):
-        self.mkdir(directory, clean=True)
+        self.mkdir(directory, clean=False)
         args = {
             "output": [format],
             "output_dir": directory,
             "optimize_cff": CFFOptimization.SUBROUTINIZE,
         }
+        changed_output_dir = self.cache.changed_directory(directory)
         for source in self.config["sources"]:
             if source.endswith("ufo"):
                 if "interpolate" in args:
                     del args["interpolate"]
             else:
                 args["interpolate"] = True
-            self.logger.info("Creating static fonts from %s" % source)
-            for fontfile in self.run_fontmake(source, args):
-                self.logger.info("Created static font %s" % fontfile)
-                postprocessor(fontfile)
+            if changed_output_dir or self.changed_project:
+                self.logger.info("Creating static fonts from %s" % source)
+                output_files = self.run_fontmake(source, args)
+            else:
+                output_files = glob(os.path.join(directory, "*.[t|o]tf"))
+            [postprocessor(f) for f in output_files]
+            self.cache.add_directory(directory)
 
     def rm(self, fp):
         if os.path.isdir(fp):
@@ -398,6 +420,8 @@ class GFBuilder:
     def mkdir(self, directory, clean=False):
         if clean:
             self.rm(directory)
+        if os.path.isdir(directory):
+            return
         os.makedirs(directory)
 
     def post_process(self, filename):

@@ -32,6 +32,7 @@ import time
 import json
 from browserstack.local import Local
 from PIL import Image
+import hashlib
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -504,3 +505,7 @@ def read_proto(fp, schema):
         data = text_format.Parse(f.read(), schema)
     return data
 
+
+def md5_hash(fp):
+    with open(fp, 'rb') as data:
+        return hashlib.md5(data.read()).hexdigest()

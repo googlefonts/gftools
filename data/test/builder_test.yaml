@@ -2,6 +2,7 @@ sources:
   - Lora.glyphs
 outputDir: "."
 familyName: Lora
+cleanUp: false
 stat:
   Lora[wght].ttf:
   - name: Weight
