@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 import argparse
+import difflib
+import sys
+import traceback
 from gftools.builder import GFBuilder
 from gftools.builder import __doc__ as GFBuilder_doc
 
@@ -72,7 +75,6 @@ if args.debug:
     builder.config["logLevel"] = "DEBUG"
 
 if args.dump_config:
-    import sys
     import yaml
 
     with open(args.dump_config, "w") as fp:
@@ -80,4 +82,15 @@ if args.dump_config:
         fp.write(yaml.dump(config, Dumper=yaml.SafeDumper))
     sys.exit()
 
-builder.build()
+try:
+    builder.build()
+except KeyError as bad_key:
+    print(traceback.format_exc())
+    print("Error: A key in the configuration file, typically ``config.yaml``, is likely misspelled.")
+    print("Error caused by key:", bad_key)
+    config_keys = []
+    for key in builder.config.keys():
+        config_keys.append(key)
+    key_close_matches = difflib.get_close_matches(str(bad_key), config_keys)
+    print("Possibly misspelled key in the configuration file: ", key_close_matches)
+    sys.exit(1)
