@@ -139,7 +139,7 @@ parser.add_argument(
 parser.add_argument(
             '-B', '--allow-build',
             action='store_true',
-            help='Allow executing the bash command in stored in the "build" '
+            help='Allow executing the bash command stored in the "build" '
             'key of upstream-conf, if present. Don\'t allow this lightly '
             'and review build command, build process and its dependencies prior. '
             'This support for building from sources is provisional, a '
