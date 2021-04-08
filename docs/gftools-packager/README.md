@@ -175,9 +175,9 @@ And the name of your feature brach, e.g:
     branch: finalizing_v2.000_to_google_fonts
 #### The QA – Finalizing Loop
 
-Now that you have set up prepared everything, start creating a package in the working directory of your local clone or fork of google/fonts. As mentioned before, especially for Font Bakery, this is optimal. Be careful with the `-f/--force` flag, if you are not sure what it does, don't use it, or read above and learn about it. You can also use the `-y/--no-confirm` flag.
+Now that you have prepared everything, start creating a package in the working directory of your local clone or fork of google/fonts. As mentioned before, especially for Font Bakery, this is optimal. Be careful with the `-f/--force` flag, if you are not sure what it does, don't use it, or read above and learn about it. You can also use the `-y/--no-confirm` flag.
 
-    $ gftools familysans.upstream.yaml path/to/google/fonts/clone -fy
+    $ gftools packager familysans.upstream.yaml path/to/google/fonts/clone -fy
 
   If everything goes well, you will see a line like this in the output, that points you to where the package has been created:
 
