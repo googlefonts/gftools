@@ -33,8 +33,9 @@ def gen_static_font(
         if k not in axes:
             axes[k] = v
 
+    update_style_name = True if not style_name else False
     static_font = instantiateVariableFont(
-        var_font, axes, overlap=keep_overlaps, updateFontNames=True
+        var_font, axes, overlap=keep_overlaps, updateFontNames=update_style_name
     )
 
     if not family_name:
