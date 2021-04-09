@@ -110,7 +110,7 @@ import yaml
 
 class GFBuilder:
     def __init__(self, configfile=None, config=None):
-        self.configfile = configfile
+        self.configfile = os.path.abspath(configfile)
         if self.configfile:
             self.config = yaml.load(open(configfile), Loader=yaml.SafeLoader)
             if os.path.dirname(configfile):
@@ -173,7 +173,6 @@ class GFBuilder:
             )
             for file_ in files_added_during_build:
                 self.rm(file_)
-
 
     def load_masters(self):
         if self.masters:
