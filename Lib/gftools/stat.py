@@ -74,7 +74,7 @@ def _gen_stat_from_fvar(ttFont, axis_reg=axis_registry):
                 if axis_tag == "opsz" and axis_defaults[axis_tag] == fallback.value:
                     axis_value["flags"] |= ELIDABLE_AXIS_VALUE_NAME
                 # for all other weights, we want to use the axis reg default
-                elif fallback.value == axis_reg[axis_tag].default_value:
+                elif axis_tag != "opsz" and fallback.value == axis_reg[axis_tag].default_value:
                     axis_value["flags"] |= ELIDABLE_AXIS_VALUE_NAME
                 results[axis_tag]["values"].append(axis_value)
     return results
