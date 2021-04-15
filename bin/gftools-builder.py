@@ -15,10 +15,12 @@
 #
 import argparse
 import difflib
+import re
 import sys
-import traceback
 from gftools.builder import GFBuilder
+from gftools.builder.schema import schema
 from gftools.builder import __doc__ as GFBuilder_doc
+from strictyaml import load, YAMLError
 
 
 parser = argparse.ArgumentParser(
@@ -53,6 +55,9 @@ parser.add_argument("--dump-config", type=str, help="Config file to generate")
 
 args = parser.parse_args()
 
+with open(args.file[0]) as f:
+    unprocessed_yaml = f.read()
+
 if len(args.file) == 1 and (
     args.file[0].endswith(".yaml") or args.file[0].endswith(".yml")
 ):
@@ -83,14 +88,25 @@ if args.dump_config:
     sys.exit()
 
 try:
-    builder.build()
-except KeyError as bad_key:
-    print(traceback.format_exc())
-    print("Error: A key in the configuration file, typically ``config.yaml``, is likely misspelled.")
-    print("Error caused by key:", bad_key)
-    config_keys = []
-    for key in builder.config.keys():
-        config_keys.append(key)
-    key_close_matches = difflib.get_close_matches(str(bad_key), config_keys)
-    print("Possibly misspelled key in the configuration file: ", key_close_matches)
+    config_yaml = load(unprocessed_yaml, schema)
+except YAMLError as error:
+    print(error)
+    print('\nERROR ' + '*'*64 + '\n')
+    error_problem = str(error.problem)
+    bad_key = str(re.findall(r"'(.*?)'", error_problem))
+    print("A key in the configuration file, typically ``config.yaml``, is likely misspelled.")
+    print("\nError caused by key:", bad_key)
+    # TODO Eli H: Find a better way to get these config keys
+    #             so they don't get out of sync with: Lib/gftools/builder/schema.py
+    config_keys = ["sources", "logLevel", "stylespaceFile", "stat", "familyName",
+                   "includeSourceFixes", "stylespaceFile", "instances", "buildVariable",
+                   "buildStatic", "buildOTF", "buildTTF", "buildWebfont", "outputDir",
+                   "vfDir", "ttDir", "otDir", "woffDir", "cleanUp", "autohintTTF",
+                   "axisOrder", "flattenComponents", "name", "tag", "values", "name",
+                   "value", "nominalValue", "linkedValue", "rangeMinValue", "rangeMaxValue",
+                   "flags", "familyName", "styleName", "coordinates"]
+    key_close_matches = difflib.get_close_matches(bad_key, config_keys)
+    print("Possibly misspelled key in the configuration file:", key_close_matches)
     sys.exit(1)
+
+builder.build()
