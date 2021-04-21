@@ -1,4 +1,17 @@
-from strictyaml import load, Map, MapPattern, Str, Int, Seq, YAMLError, Optional, Bool
+"""
+This schema represents all known key/value pairs for the builder config file.
+"""
+from strictyaml import (
+                        load,
+                        Map,
+                        MapPattern,
+                        Str,
+                        Int,
+                        Seq,
+                        YAMLError,
+                        Optional,
+                        Bool
+                        )
 
 
 stat_schema = Seq(
