@@ -96,6 +96,7 @@ from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.utils import font_is_italic, font_familyname, font_stylename
 from gftools.instancer import gen_static_font
 from strictyaml import load, YAMLError
+from strictyaml.exceptions import YAMLValidationError
 from ufo2ft import CFFOptimization
 import difflib
 import glyphsLib
@@ -126,18 +127,23 @@ class GFBuilder:
             unprocessed_yaml = f.read()
         try:
             return load(unprocessed_yaml, schema).data
-        except YAMLError as error:
-            error_problem = str(error.problem)
-            bad_key = str(re.findall(r"'(.*?)'", error_problem))
-            config_keys = re.findall(r'"(.*?)"', str(schema._validator))
-            config_keys.extend(re.findall(r"'(.*?)'", str(schema._validator)))
-            key_close_matches = difflib.get_close_matches(bad_key, config_keys, 8, 0.4)
-            raise YAMLError(
-                f"\nERROR **********************"
-                f"\nA key in the configuration file, typically ``config.yaml``, is likely misspelled."
-                f"\nError caused by key: {bad_key}"
-                f"\nPossible misspelled key close matches: {key_close_matches}"
-            )
+        except YAMLValidationError as e:
+            if "unexpected key not in schema" in e.problem:
+                bad_key = str(re.findall(r"'(.*?)'", e.problem))
+                config_keys = re.findall(r'"(.*?)"', str(schema._validator))
+                config_keys.extend(re.findall(r"'(.*?)'", str(schema._validator)))
+                key_close_matches = difflib.get_close_matches(bad_key, config_keys, 8, 0.4)
+                raise YAMLError(
+                    f"\nERROR **********************"
+                    f"\nA key in the configuration file, typically ``config.yaml``, is likely misspelled."
+                    f"\nError caused by key: {bad_key}"
+                    f"\nPossible misspelled key close matches: {key_close_matches}"
+                )
+            else:
+                raise ValueError(
+                    "The yaml config file isn't structured properly. Please refer to: "
+                    "https://github.com/googlefonts/gftools/blob/main/Lib/gftools/builder/__init__.py#L7"
+                )
 
     def build(self):
         loglevel = getattr(logging, self.config["logLevel"].upper())
