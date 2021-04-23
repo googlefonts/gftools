@@ -111,21 +111,21 @@ import tempfile
 
 class GFBuilder:
     def __init__(self, configfile=None, config=None):
-        self.load_builder_config(configfile, schema)
+        if configfile:
+            self.config = self.load_config(configfile)
+            if os.path.dirname(configfile):
+                os.chdir(os.path.dirname(configfile))
+        else:
+            self.config = config
+        self.masters = {}
+        self.logger = logging.getLogger("GFBuilder")
+        self.fill_config_defaults()
 
-    def load_builder_config(self, configfile, schema=schema):
+    def load_config(self, configfile):
         with open(configfile) as f:
             unprocessed_yaml = f.read()
         try:
-            if configfile:
-                self.config = load(unprocessed_yaml, schema).data
-                if os.path.dirname(configfile):
-                    os.chdir(os.path.dirname(configfile))
-            else:
-                self.config = config
-            self.masters = {}
-            self.logger = logging.getLogger("GFBuilder")
-            self.fill_config_defaults()
+            return load(unprocessed_yaml, schema).data
         except YAMLError as error:
             error_problem = str(error.problem)
             bad_key = str(re.findall(r"'(.*?)'", error_problem))
@@ -138,7 +138,6 @@ class GFBuilder:
                 f"\nError caused by key: {bad_key}"
                 f"\nPossible misspelled key close matches: {key_close_matches}"
             )
-            sys.exit(1)
 
     def build(self):
         loglevel = getattr(logging, self.config["logLevel"].upper())
