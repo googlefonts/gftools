@@ -110,12 +110,13 @@ import yaml
 
 class GFBuilder:
     def __init__(self, configfile=None, config=None):
-        self.configfile = os.path.abspath(configfile)
-        if self.configfile:
+        if configfile:
+            self.configfile = os.path.abspath(configfile)
             self.config = yaml.load(open(configfile), Loader=yaml.SafeLoader)
             if os.path.dirname(configfile):
                 os.chdir(os.path.dirname(configfile))
         else:
+            self.configfile = None
             self.config = config
         self.masters = {}
         self.logger = logging.getLogger("GFBuilder")

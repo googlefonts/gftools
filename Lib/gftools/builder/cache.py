@@ -1,3 +1,5 @@
+from fontTools.designspaceLib import DesignSpaceDocument
+from fontTools.feaLib.lexer import Lexer
 import os
 import sqlite3
 from collections import defaultdict
@@ -7,6 +9,7 @@ from pkg_resources import working_set
 import shutil
 import yaml
 import json
+from pathlib import Path
 
 
 class Cache(object):
@@ -47,6 +50,7 @@ class Cache(object):
         self._init_db()
 
     def add_files(self, files):
+        files = self._extract_files_from_sources(files)
         file_hashes = self._hash_files(files)
         for filepath, filehash in file_hashes.items():
             self.cur.execute("SELECT * from file_cache WHERE file=?", (filepath,))
@@ -62,18 +66,9 @@ class Cache(object):
         return files
 
     def changed_files(self, files):
-        source_files = []
-        for f in files:
-            # Get ufo paths from a designspace
-            if f.endswith(".designspace"):
-                ds = designspaceLib()
-                ds.read(f)
-                for ufo in ds.sources:
-                    source_files.append(ufo)
-            source_files.append(f)
-
+        files = self._extract_files_from_sources(files)
         changed = []
-        file_hashes = self._hash_files(source_files)
+        file_hashes = self._hash_files(files)
         for filepath, filehash in file_hashes.items():
             self.cur.execute("SELECT * FROM file_cache WHERE file=?", (filepath,))
             previous_hash = self.cur.fetchone()
@@ -84,6 +79,52 @@ class Cache(object):
             if previous_filehash != filehash:
                 changed.append(filepath)
         return changed
+
+    def _extract_files_from_sources(self, files):
+        source_files = []
+        # Get ufo paths from a designspace
+        for f in files:
+            if f.endswith(".designspace"):
+                ds = DesignSpaceDocument()
+                ds.read(f)
+                for ufo in ds.sources:
+                    source_files.append(ufo.path)
+
+        # get individual files in .ufos
+        source_files += files
+        ufo_files = []
+        for f in source_files:
+            if f.endswith(".ufo"):
+                ufo_path = Path(f)
+                sub_files = ufo_path.rglob("*")
+                ufo_files += [str(f) for f in sub_files if f.is_file()]
+
+        # get .fea files from include statements
+        source_files += ufo_files
+        fea_files = []
+        for f in source_files:
+            if f.endswith(".fea"):
+                # TODO (MF) fix path relation for included .fea files
+                fea_files += self._get_fea_files(f, os.path.dirname(os.path.dirname(f)))
+        return source_files + fea_files
+
+    def _get_fea_files(self, fea, d_):
+        """Use stack based Depth First Search in order to find sibling .fea
+        files which are linked using the include .fea statement.
+
+        http://adobe-type-tools.github.io/afdko/OpenTypeFeatureFileSpecification.html#3
+        """
+        stack = [fea]
+        res, seen = [], set()
+        while stack:
+            n = stack.pop()
+            if n in seen:
+                continue
+            seen.add(n)
+            res.append(n)
+            l = Lexer(open(n).read(), n)
+            stack += [os.path.join(d_, fp) for t, fp, _, in l if t == "FILENAME"]
+        return res
 
     def _hash_files(self, files):
         return {f: md5_hash(f) for f in files}
@@ -151,6 +192,8 @@ class Cache(object):
         return ",".join(str(s) for s in sorted(working_set))
 
     def add_config(self, fp):
+        if not fp:
+            return None
         config_data = json.dumps(self._load_config(fp))
         self.cur.execute("SELECT * FROM config_cache WHERE path=?", (fp,))
         if not self.cur.fetchone():
@@ -163,6 +206,8 @@ class Cache(object):
         return config_data
 
     def changed_config(self, fp):
+        if not fp:
+            return None
         config_data = self._load_config(fp)
         self.cur.execute("SELECT * FROM config_cache WHERE path=?", (fp,))
         previous_config = self.cur.fetchone()
