@@ -129,15 +129,10 @@ class GFBuilder:
             return load(unprocessed_yaml, schema).data
         except YAMLValidationError as e:
             if "unexpected key not in schema" in e.problem:
-                bad_key = str(re.findall(r"'(.*?)'", e.problem))
-                config_keys = re.findall(r'"(.*?)"', str(schema._validator))
-                config_keys.extend(re.findall(r"'(.*?)'", str(schema._validator)))
-                key_close_matches = difflib.get_close_matches(bad_key, config_keys, 8, 0.4)
+                bad_key = str(e.problem)
                 raise YAMLError(
-                    f"\nERROR **********************"
                     f"\nA key in the configuration file, typically ``config.yaml``, is likely misspelled."
-                    f"\nError caused by key: {bad_key}"
-                    f"\nPossible misspelled key close matches: {key_close_matches}"
+                    f"\nError caused by: {bad_key}"
                 )
             else:
                 raise ValueError(
