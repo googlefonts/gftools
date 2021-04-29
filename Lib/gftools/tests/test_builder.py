@@ -2,6 +2,7 @@ from gftools.builder.cache import Cache
 import pytest
 import tempfile
 import os
+import shutil
 
 
 def test_caching_files():
@@ -93,3 +94,42 @@ def test_caching_directory():
         with open(f1, "w") as doc:
             doc.write("Hello again")
         assert cache.changed_directory(test_dir) == {"modified": [f1]}
+
+
+def test_caching_ufo_file():
+    with tempfile.NamedTemporaryFile(suffix=".db") as db, \
+        tempfile.TemporaryDirectory() as test_dir:
+
+        ufo_path = os.path.join("data", "test", "Jost-Regular.ufo")
+        test_ufo_path = os.path.join(test_dir, "Jost-Regular.ufo")
+        shutil.copytree(ufo_path, test_ufo_path)
+
+        cache = Cache(db_path=db.name)
+        files_added = cache.add_files([test_ufo_path])
+        # Jost-Regular.ufo contains 540 individual files
+        assert len(files_added) == 540
+
+        # Let's test on an identical file
+        files_changed = cache.changed_files([test_ufo_path])
+        assert len(files_changed) == 0
+
+        # Let's modify a file
+        a_glyph = os.path.join(test_ufo_path, "glyphs", "a.glif")
+        with open(a_glyph, "w") as glyph:
+            glyph.write("foobar")
+        files_changed = cache.changed_files([test_ufo_path])
+        assert len(files_changed) == 1
+
+        # Let's modify another file and not update the cache
+        b_glyph = os.path.join(test_ufo_path, "glyphs", "b.glif")
+        with open(b_glyph, "w") as glyph:
+            glyph.write("foobar")
+        files_changed = cache.changed_files([test_ufo_path])
+        assert len(files_changed) == 2
+
+        # Let's recache
+        cache.add_files([test_ufo_path])
+        files_changed = cache.changed_files([test_ufo_path])
+        assert len(files_changed) == 0
+
+        # What about deletions/additions?

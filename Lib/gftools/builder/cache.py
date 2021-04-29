@@ -1,5 +1,6 @@
 from fontTools.designspaceLib import DesignSpaceDocument
 from fontTools.feaLib.lexer import Lexer
+from glyphsLib import GSFont
 import os
 import sqlite3
 from collections import defaultdict
@@ -50,7 +51,7 @@ class Cache(object):
         self._init_db()
 
     def add_files(self, files):
-        files = self._extract_files_from_sources(files)
+        files = self._get_source_files(files)
         file_hashes = self._hash_files(files)
         for filepath, filehash in file_hashes.items():
             self.cur.execute("SELECT * from file_cache WHERE file=?", (filepath,))
@@ -66,7 +67,7 @@ class Cache(object):
         return files
 
     def changed_files(self, files):
-        files = self._extract_files_from_sources(files)
+        files = self._get_source_files(files)
         changed = []
         file_hashes = self._hash_files(files)
         for filepath, filehash in file_hashes.items():
@@ -80,33 +81,35 @@ class Cache(object):
                 changed.append(filepath)
         return changed
 
-    def _extract_files_from_sources(self, files):
+    def _get_source_files(self, files):
         source_files = []
-        # Get ufo paths from a designspace
         for f in files:
+            # Get ufo paths from a designspace
             if f.endswith(".designspace"):
                 ds = DesignSpaceDocument()
                 ds.read(f)
                 for ufo in ds.sources:
                     source_files.append(ufo.path)
+            source_files.append(f)
 
-        # get individual files in .ufos
-        source_files += files
         ufo_files = []
         for f in source_files:
+            # Get individual files in a ufo
             if f.endswith(".ufo"):
                 ufo_path = Path(f)
-                sub_files = ufo_path.rglob("*")
-                ufo_files += [str(f) for f in sub_files if f.is_file()]
+                sub_files = list(ufo_path.rglob("*"))
+                # find linked fea files
+                for s_f in sub_files:
+                    if s_f.suffix == ".fea":
+                        ufo_files += self._get_fea_files(s_f, os.path.dirname(f))
+                    if s_f.is_file():
+                        ufo_files.append(str(s_f))
 
-        # get .fea files from include statements
-        source_files += ufo_files
-        fea_files = []
+        glyphs_files = []
         for f in source_files:
-            if f.endswith(".fea"):
-                # TODO (MF) fix path relation for included .fea files
-                fea_files += self._get_fea_files(f, os.path.dirname(os.path.dirname(f)))
-        return source_files + fea_files
+            if f.endswith(".glyphs"):
+                font = GSFont(f)
+        return [str(f) for f in source_files + ufo_files if not str(f).endswith(".ufo")]
 
     def _get_fea_files(self, fea, d_):
         """Use stack based Depth First Search in order to find sibling .fea
