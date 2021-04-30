@@ -11,6 +11,9 @@ import shutil
 import yaml
 import json
 from pathlib import Path
+import hashlib
+import tarfile
+import io
 
 
 class Cache(object):
@@ -50,36 +53,62 @@ class Cache(object):
         self.cur.execute("DROP TABLE config_cache")
         self._init_db()
 
+    def find_linked_files(self, files):
+        """Get referenced source files"""
+        ufos = []
+        fea = []
+        return files
+
     def add_files(self, files):
-        files = self._get_source_files(files)
-        file_hashes = self._hash_files(files)
-        for filepath, filehash in file_hashes.items():
-            self.cur.execute("SELECT * from file_cache WHERE file=?", (filepath,))
-            if not self.cur.fetchone():
-                self.cur.execute(
-                    "INSERT INTO file_cache VALUES (?,?)", (filepath, filehash)
-                )
+        # TODO get ufos from designspaces and linked fea files
+        files = self.find_linked_files(files)
+        # Remove previously cached files
+        for f in files:
+            if os.path.isfile(f):
+                suffix = os.path.dirname(f)
             else:
-                self.cur.execute(
-                    "UPDATE file_cache SET md5=? WHERE file=?", (filehash, filepath)
-                )
+                suffix = f
+            self.cur.execute("DELETE FROM file_cache WHERE file LIKE '%%%s%%'" % suffix)
+
+        file_hashes = self._hash_files(files)
+
+        for filepath, filehash in file_hashes.items():
+            self.cur.execute(
+                "INSERT INTO file_cache VALUES (?,?)", (filepath, filehash)
+            )
         self.con.commit()
         return files
 
     def changed_files(self, files):
-        files = self._get_source_files(files)
-        changed = []
-        file_hashes = self._hash_files(files)
-        for filepath, filehash in file_hashes.items():
-            self.cur.execute("SELECT * FROM file_cache WHERE file=?", (filepath,))
-            previous_hash = self.cur.fetchone()
-            if not previous_hash:
-                changed.append(filepath)
-                continue
-            _, previous_filehash = previous_hash
-            if previous_filehash != filehash:
-                changed.append(filepath)
-        return changed
+        previous_hashes = {}
+        for f in files:
+            if os.path.isfile(f):
+                suffix = os.path.dirname(f)
+            else:
+                suffix = f
+            self.cur.execute("SELECT * FROM file_cache WHERE file LIKE '%%%s%%'" % suffix)
+            previous_hashes = {k: v for k, v in self.cur.fetchall()}
+
+        results = {}
+
+        missing = set(previous_hashes) - set(files)
+        if missing:
+            results['missing'] = sorted(list(missing))
+
+        new = set(files) - set(previous_hashes)
+        if new:
+            results['new'] = sorted(list(new))
+
+        matching_files = set(files) & set(previous_hashes)
+        file_hashes = self._hash_files(matching_files)
+        for key in matching_files:
+            if file_hashes[key] != previous_hashes[key]:
+                if not "modified" in results:
+                    results['modified'] = []
+                results['modified'].append(key)
+        if "modified" in results:
+            results['modified'] = sorted(results['modified'])
+        return results
 
     def _get_source_files(self, files):
         source_files = []
@@ -130,34 +159,28 @@ class Cache(object):
         return res
 
     def _hash_files(self, files):
-        return {f: md5_hash(f) for f in files}
+        res = {}
+        for f in files:
+            if os.path.isdir(f):
+                res[f] = self.md5_hash_dir(f)
+            elif os.path.isfile(f):
+                res[f] = md5_hash(f)
+            else:
+                raise IOError(f"{f} is not a file or directory")
+        return res
 
-    def add_directory(self, fp):
-        # Remove any existing records which belong to the fp
-        self.cur.execute("DELETE FROM file_cache WHERE file LIKE '%%%s%%'" % fp)
-        files = [os.path.join(fp, f) for f in os.listdir(fp) if f != ".DS_Store"]
-        return self.add_files(files)
-
-    def changed_directory(self, fp):
-        files = [os.path.join(fp, f) for f in os.listdir(fp) if f != ".DS_Store"]
-        files = self._hash_files(files)
-        self.cur.execute("SELECT * FROM file_cache WHERE file LIKE '%%%s%%'" % fp)
-        previous_files = {k: v for k, v in self.cur.fetchall()}
-        diff = defaultdict(list)
-        for filepath, file_hash in files.items():
-            if filepath not in previous_files:
-                diff["new"].append(filepath)
-                continue
-
-            if files[filepath] != previous_files[filepath]:
-                diff["modified"].append(filepath)
-
-        for filepath, file_hash in previous_files.items():
-            if filepath not in files:
-                diff["missing"].append(filepath)
-                continue
-
-        return dict(diff)
+    @staticmethod
+    def md5_hash_dir(fp):
+        # Calculating the hash for every file using os.walk is slow. Since
+        # the hashes don't need to be portable to other machines, we can
+        # simply zip the directory then calculate the checksum of the zip
+        # file.
+        r = io.BytesIO()
+        with tarfile.open(fileobj=r, mode='w') as tar:
+            tar.add(fp, recursive=True)
+        hash_ = hashlib.md5()
+        hash_.update(r.getvalue())
+        return hash_.hexdigest()
 
     def add_dependencies(self):
         python_path = shutil.which("python")
