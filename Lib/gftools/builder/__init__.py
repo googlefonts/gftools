@@ -84,32 +84,36 @@ required, all others have sensible defaults:
 
 """
 
-from fontTools import designspaceLib
-from fontTools.ttLib import TTFont
+from babelfont import Babelfont
 from fontmake.font_project import FontProject
-from ufo2ft import CFFOptimization
+from fontTools import designspaceLib
+from fontTools.otlLib.builder import buildStatTable
+from fontTools.ttLib import TTFont
+from fontTools.ttLib.woff2 import main as woff2_main
+from gftools.builder.schema import schema
 from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.utils import font_is_italic, font_familyname, font_stylename
 from gftools.instancer import gen_static_font
-from fontTools.otlLib.builder import buildStatTable
+from strictyaml import load, YAMLError
+from strictyaml.exceptions import YAMLValidationError
+from ufo2ft import CFFOptimization
+import difflib
+import glyphsLib
+import logging
+import os
+import re
+import shutil
 import statmake.classes
 import statmake.lib
-from babelfont import Babelfont
 import sys
-import os
-import shutil
-import glyphsLib
 import tempfile
-from fontTools.ttLib.woff2 import main as woff2_main
-import logging
-import yaml
 
 
 class GFBuilder:
     def __init__(self, configfile=None, config=None):
         if configfile:
-            self.config = yaml.load(open(configfile), Loader=yaml.SafeLoader)
+            self.config = self.load_config(configfile)
             if os.path.dirname(configfile):
                 os.chdir(os.path.dirname(configfile))
         else:
@@ -117,6 +121,24 @@ class GFBuilder:
         self.masters = {}
         self.logger = logging.getLogger("GFBuilder")
         self.fill_config_defaults()
+
+    def load_config(self, configfile):
+        with open(configfile) as f:
+            unprocessed_yaml = f.read()
+        try:
+            return load(unprocessed_yaml, schema).data
+        except YAMLValidationError as e:
+            if "unexpected key not in schema" in e.problem:
+                bad_key = str(e.problem)
+                raise YAMLError(
+                    f"\nA key in the configuration file, typically ``config.yaml``, is likely misspelled."
+                    f"\nError caused by: {bad_key}"
+                )
+            else:
+                raise ValueError(
+                    "The yaml config file isn't structured properly. Please refer to: "
+                    "https://github.com/googlefonts/gftools/blob/main/Lib/gftools/builder/__init__.py#L7"
+                )
 
     def build(self):
         loglevel = getattr(logging, self.config["logLevel"].upper())
