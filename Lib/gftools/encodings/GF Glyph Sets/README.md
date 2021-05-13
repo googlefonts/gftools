@@ -2,7 +2,7 @@
 Google Fonts 2016 Glyph Sets
 ============================
 
-Three levels of glyph sets were developed in June 2016 as a new baseline standard for fonts in the Google Fonts library.
+Three levels of Latin glyph sets were developed in June 2016 as a new baseline standard for fonts in the Google Fonts library.
 Existing fonts in the library can be upgraded to these as part of a drive towards new quality standards.
 All new fonts submitted to the library must now support the Plus level as a minumum requirement.
 
