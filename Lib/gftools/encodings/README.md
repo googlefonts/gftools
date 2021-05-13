@@ -1,4 +1,13 @@
-# The "Namelist" file format
+# Google Fonts API subsets
+
+The `.nam` files in this directory are provided to explain how the Unicode Range subsets are defined, typically per script (writing system), in the Google Fonts css API.
+
+This information is useful for expert web developers.
+
+If you are a font developer or typeface designer, you probably won't find them too useful.
+Instead, see the subdirectory `GF Glyph Sets` which provides glyph set definition "standards" that are typically useful sets to draw.
+
+## The "Namelist" file format
 
 This directory contains "Namelist" files, for developers.
 Typeface designers typically want **glyph sets**, and the `GF Glyph Sets` subdirectory here contains a [`README.md`]('GF Glyph Sets/README.md') describing them.
@@ -29,7 +38,7 @@ If the font files include characters that are not in any Namelist declared in th
 
 * The [`README.md`]('GF Glyph Sets/README.md') describes mostly how each of the Namelist files depend on each other, to implement this [header includes](#header) were created.
 
-## Codepoint format
+#### Codepoint format
 
 A line that starts with `0x` and then have 4 or 5 **uppercase** hex digits; what follows is an arbitrary description to the end of the line.
 
@@ -43,7 +52,7 @@ Example:
 0x10142  𐅂 GREEK ACROPHONIC ATTIC ONE DRACHMA
 ```
 
-## Comments
+#### Comments
 
 Comments are lines starting with `#`.
 
@@ -83,7 +92,7 @@ Using this sample python implementation to obtain the glyph name:
 line.strip().rsplit(' ')[-1]
 ```
 
-## Header
+#### Header
 
 The header was created to make the Namelist format more self contained.
 
@@ -103,7 +112,7 @@ Format for header data:
 #$ {keyword} {arguments}
 ```
 
-### Keyword `#$ include {namfile}`
+##### Keyword `#$ include {namfile}`
 
 The `include` keyword can be used zero or more times. Order of appearance should have no effect on the resulting set and thus be not important.
 
@@ -127,7 +136,7 @@ Example from `GF-latin-expert_unique-glyphs.nam`
 ```
 
 
-### Possible Keywords
+##### Possible Keywords
 
 * `author {name}` (zero or more) since we can already find `# Created by` comments in the novel nam-files we could as well just institutionalize it.
 
