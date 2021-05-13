@@ -6,9 +6,11 @@ The tools and files under this directory are available under the Apache License 
 
 ## Google Fonts Official Glyph Sets (Encodings)
 
-<https://github.com/googlefonts/gftools/tree/main/Lib/gftools/encodings>
+This repo also contains definitions of glyph sets useful for type designers:
 
-## Usage Examples
+<https://github.com/googlefonts/gftools/tree/main/Lib/gftools/encodings/GF%20Glyph%20Sets>
+
+## Tool Usage Examples
 
 Compare fonts:
 
@@ -43,7 +45,7 @@ Package and PR a family update to google/fonts. Much more detailed [documentatio
 
     gftools packager "Family Sans" path/to/local/google/fonts -py
 
-## Installation
+## Tool Installation
 
 Please install these tools using pip:
 
@@ -58,7 +60,7 @@ Once You have installed these system packages, install gftools using the followi
     pip install 'gftools[qa]'
 
 
-### Requirements and Dependencies
+### Tool Requirements and Dependencies
 
 These tools depend on the submodule `GlyphsInfo`.
 Make sure the submodule is up to date by running:
