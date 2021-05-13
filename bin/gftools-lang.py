@@ -137,9 +137,6 @@ LANGUAGE_OVERRIDES = {
 }
 
 SCRIPT_OVERRIDES = {
-  'Beng': {
-    'name': 'Bengali',
-  },
   'Cans': {
     'name': 'Unified Canadian Aboriginal Syllabics',
   },
