@@ -21,6 +21,7 @@ message FamilyProto {
   repeated AxisSegmentProto axes = 10;
   map<string, float> registry_default_overrides = 11;
   optional SourceProto source = 12;
+  optional bool is_noto = 13;
 };
 
 message FontProto {
