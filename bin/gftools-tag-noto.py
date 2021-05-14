@@ -52,12 +52,11 @@ def main(argv):
   for path in argv[1:]:
     family = _ReadProto(fonts_public_pb2.FamilyProto(), path)
     if NOTO_FAMILY_NAME.search(family.name):
-      # if FLAGS.preview:
-      #   print(family.name)
-      # else:
-      #   family.is_noto = True
-      #   _WriteProto(family, path)
-      print (path.replace('/Users/williamsnathan/src/fonts/', '').replace('/METADATA.pb', ''))
+      if FLAGS.preview:
+        print(family.name)
+      else:
+        family.is_noto = True
+        _WriteProto(family, path)
 
 
 if __name__ == '__main__':
