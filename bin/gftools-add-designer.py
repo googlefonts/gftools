@@ -1,12 +1,32 @@
 #!/usr/bin/env python3
 """Add or update a designer entry in the Google Fonts catalog.
 
+Designer profiles are stored in the google/fonts repo:
+https://github.com/google/fonts/tree/main/catalog/designers
+
+This script is intended to help onboarders quickly create individual designer
+profiles.
+
+Designer Profiles are visible to the public. They are included in the the about
+section for each family e.g:
+https://fonts.google.com/specimen/Roboto#about
+
+In 2021, Rosalie Wagner created an online form for us to collect designer
+information from the general public. The form populates the following spreadsheet,
+https://docs.google.com/spreadsheets/d/1G1rkk_jJnuV7lVWkfCbqwTkSjbbWJcC1a2Xfoh-nRWM/edit#gid=1905114301
+
+There is also an image directory where the designer's profile pics are uploaded into.
+
+In order to use the spreadsheet command in this script, you will need to
+download the folder which contains the spreadsheet and designer images.
+You can then use the ``--spreadsheet`` arg.
+
 Usage:
 # Add or update a designer entry. User will need to hand complete the bio.html
 $ gftools add-designer ~/Type/fonts/catalog/designers "Theo Salvadore" path/to/img.png
 
 # Add or update a designer entry and use the spreadsheet to create the bio.html file
-$ gftools add-designer ~/Type/fonts/catalog/designers "Theo Salvador" path/to/img.png --spreadsheet .GFDesigners.xlsx
+$ gftools add-designer ~/Type/fonts/catalog/designers "Theo Salvador" path/to/img.png --spreadsheet ./GFDesigners.xlsx
 """
 import argparse
 import os
@@ -82,9 +102,7 @@ def make_designer(
         print("Generating bio.html")
         html_text = f"<p>{bio}</p>"
         if urls:
-            hrefs = " | ".join(
-                f"<a href={u}>{u.split('//')[1]}</a>" for u in urls
-            )
+            hrefs = " | ".join(f"<a href={u}>{u.split('//')[1]}</a>" for u in urls)
             html_text += "\n" + f"<p>{hrefs}</p>"
     elif os.path.isfile(bio_file):
         print("Skipping. No bio text supplied but bio.html already exists")
@@ -97,7 +115,7 @@ def make_designer(
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(usage=__doc__)
     parser.add_argument("designers_directory")
     parser.add_argument("name")
     parser.add_argument("img_path")
@@ -111,13 +129,20 @@ def main():
 
         df = pd.read_excel(args.spreadsheet)
         entry = df.loc[df["Name"] == args.name]
+        if len(entry) == 0:
+            raise ValueError(f"Spreadsheet doesn't contain name '{args.name}'")
         bio = entry["Bio"].item()
         urls = entry["Link"].item()
-        if urls:
+        if isinstance(urls, float):  # pandas DF sets empty cells to a float
+            urls = None
+        else:
             urls = parse_urls(urls)
+
+        if isinstance(bio, float):
+            bio = None
     else:
         bio = None
-        url = None
+        urls = None
 
     make_designer(args.designers_directory, args.name, args.img_path, bio, urls)
 
