@@ -22,17 +22,19 @@ download the folder which contains the spreadsheet and designer images.
 You can then use the ``--spreadsheet`` arg.
 
 Usage:
-# Add or update a designer entry. User will need to hand complete the bio.html
-$ gftools add-designer ~/Type/fonts/catalog/designers "Theo Salvadore" path/to/img.png
+# Add or update a designer entry. User will need to hand complete the bio.html.
+$ gftools add-designer path/to/local/clone/fonts/catalog/designers "Theo Salvadore" --img_path path/to/img.png
 
-# Add or update a designer entry and use the spreadsheet to create the bio.html file
-$ gftools add-designer ~/Type/fonts/catalog/designers "Theo Salvador" path/to/img.png --spreadsheet ./GFDesigners.xlsx
+# Add or update a designer entry using the spreadsheet.
+$ gftools add-designer path/to/local/clone/fonts/catalog/designers "Theo Salvador" --img_path path/to/img.png --spreadsheet ./GFDesigners.xlsx
 """
 import argparse
+from glob import glob
 import os
 from PIL import Image
 from gftools.designers_pb2 import DesignerInfoProto
 from google.protobuf import text_format
+from pandas.core.base import PandasObject
 
 
 def process_image(fp):
@@ -44,18 +46,20 @@ def process_image(fp):
         print("warning: img is rectangular when it should be square")
     if width < 300 or height < 300:
         print("warning: img is smaller than 300x300px")
+        return img
 
     print("resizing image")
     img.thumbnail((300, 300))
     return img
 
 
-def gen_info(designer, img_path, link=""):
+def gen_info(designer, img_path=None, link=""):
     # Write info.pb
     info = DesignerInfoProto()
     info.designer = designer
     info.link = ""
-    info.avatar.file_name = img_path
+    if img_path:
+        info.avatar.file_name = img_path
 
     text_proto = text_format.MessageToString(info, as_utf8=True, use_index_order=True)
     return text_proto
@@ -71,10 +75,25 @@ def parse_urls(string):
     return res
 
 
+def gen_hrefs(urls):
+    res = {}
+    for url in urls:
+        if "twitter" in url:
+            res[url] = "Twitter"
+        elif "facebook" in url:
+            res[url] = "Facebook"
+        elif "instagram" in url:
+            res[url] = "Instagram"
+        else:
+            # https://www.mysite.com --> mysite.com
+            res[url] = url.split("//")[1]
+    return " | ".join(f"<a href={k}>{v}</a>" for k,v in res.items())
+
+
 def make_designer(
     designer_directory,
     name,
-    img_path,
+    img_path=None,
     bio=None,
     urls=None,
 ):
@@ -84,13 +103,23 @@ def make_designer(
         print(f"{name} isn't in catalog. Creating new dir {designer_dir}")
         os.mkdir(designer_dir)
 
-    print(f"processing image {img_path}")
-    image = process_image(img_path)
-    image_file = os.path.join(designer_dir, f"{designer_dir_name}.png")
-    image.save(image_file)
+    existing_imgs = glob(os.path.join(designer_dir, "*[.png|.jpg|.jpeg]"))
+    if not img_path and existing_imgs:
+        img_path = existing_imgs[0]
+    img_dst = os.path.join(designer_dir, f"{designer_dir_name}.png")
+
+    if img_path and img_path in existing_imgs:
+        print("Skipping image processing")
+    elif img_path:
+        print(f"processing image {img_path}")
+        # remove any existing images
+        if existing_imgs:
+            [os.remove(i) for i in existing_imgs]
+        image = process_image(img_path)
+        image.save(img_dst)
 
     print(f"Generating info.pb file")
-    info_pb = gen_info(name, os.path.basename(image_file))
+    info_pb = gen_info(name, os.path.basename(img_dst) if os.path.isfile(img_dst) else None)
     filename = os.path.join(designer_dir, "info.pb")
     with open(filename, "w") as f:
         f.write(info_pb)
@@ -102,7 +131,7 @@ def make_designer(
         print("Generating bio.html")
         html_text = f"<p>{bio}</p>"
         if urls:
-            hrefs = " | ".join(f"<a href={u}>{u.split('//')[1]}</a>" for u in urls)
+            hrefs = gen_hrefs(urls)
             html_text += "\n" + f"<p>{hrefs}</p>"
     elif os.path.isfile(bio_file):
         print("Skipping. No bio text supplied but bio.html already exists")
@@ -112,13 +141,14 @@ def make_designer(
     if html_text:
         with open(bio_file, "w") as f:
             f.write(html_text)
+    print(f"Finished profile {designer_dir}")
 
 
 def main():
     parser = argparse.ArgumentParser(usage=__doc__)
-    parser.add_argument("designers_directory")
-    parser.add_argument("name")
-    parser.add_argument("img_path")
+    parser.add_argument("designers_directory", help="path to google/fonts designer dir")
+    parser.add_argument("name", help="Designer name e.g 'Steve Matteson'")
+    parser.add_argument("--img_path", help="Optional path to profile image", default=None)
     parser.add_argument(
         "--spreadsheet", help="Optional path to the Google Drive spreadsheet"
     )
