@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Exposes information of interest buried in the CLDR.
 
 Specifically useful are language and region info.
