@@ -99,5 +99,8 @@ setup(
         'brotli',
         'browserstack-local==1.2.2',
         'pybrowserstack-screenshots==0.1',
+        'pandas',
+        'xlrd',
+        'openpyxl',
     ]
     )
