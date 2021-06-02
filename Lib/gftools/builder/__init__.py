@@ -292,14 +292,14 @@ class GFBuilder:
         ):
             filters = args.get("filters", [])
             if self.config["flattenComponents"]:
-                filters.append([
+                filters.append(
                     loadFilterFromString("FlattenComponentsFilter")
-                ])
+                )
 
             if self.config["decomposeTransformedComponents"]:
-                filters.append([
+                filters.append(
                     loadFilterFromString("DecomposeTransformedComponentsFilter")
-                ])
+                )
             args["filters"] = filters
 
         if source.endswith(".glyphs"):
