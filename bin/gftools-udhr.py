@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Extracts text samples from UDHR translations.
 
 Translations exist for myriad languages at varying levels of support. The tool
