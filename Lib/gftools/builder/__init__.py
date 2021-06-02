@@ -81,6 +81,7 @@ required, all others have sensible defaults:
 * ``axisOrder``: STAT table axis order. Defaults to fvar order.
 * ``familyName``: Family name for variable fonts. Defaults to family name of first source file.
 * ``flattenComponents``: Whether to flatten components on export. Defaults to ``true``.
+* ``decomposeTransformedComponents``: Whether to decompose transformed components on export. Defaults to ``true``.
 
 """
 
@@ -98,6 +99,7 @@ from gftools.instancer import gen_static_font
 from strictyaml import load, YAMLError
 from strictyaml.exceptions import YAMLValidationError
 from ufo2ft import CFFOptimization
+from ufo2ft.filters import loadFilterFromString
 import difflib
 import glyphsLib
 import logging
@@ -252,6 +254,8 @@ class GFBuilder:
             self.config["includeSourceFixes"] = False
         if "flattenComponents" not in self.config:
             self.config["flattenComponents"] = True
+        if "decomposeTransformedComponents" not in self.config:
+            self.config["decomposeTransformedComponents"] = True
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
@@ -281,7 +285,22 @@ class GFBuilder:
             original_output_dir = args["output_dir"]
             tmpdir = tempfile.TemporaryDirectory()
             args["output_dir"] = tmpdir.name
-        args["flatten_components"] = self.config["flattenComponents"]
+
+        if (
+            self.config["flattenComponents"] or
+            self.config["decomposeTransformedComponents"]
+        ):
+            filters = args.get("filters", [])
+            if self.config["flattenComponents"]:
+                filters.append([
+                    loadFilterFromString("FlattenComponentsFilter")
+                ])
+
+            if self.config["decomposeTransformedComponents"]:
+                filters.append([
+                    loadFilterFromString("DecomposeTransformedComponentsFilter")
+                ])
+            args["filters"] = filters
 
         if source.endswith(".glyphs"):
             FontProject().run_from_glyphs(source, **args)
