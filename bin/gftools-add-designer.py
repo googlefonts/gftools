@@ -12,8 +12,7 @@ section for each family e.g:
 https://fonts.google.com/specimen/Roboto#about
 
 In 2021, Rosalie Wagner created an online form for us to collect designer
-information from the general public. The form populates the following spreadsheet,
-https://docs.google.com/spreadsheets/d/1G1rkk_jJnuV7lVWkfCbqwTkSjbbWJcC1a2Xfoh-nRWM/edit#gid=1905114301
+information from the general public. The form populates a private spreadsheet.
 
 There is also an image directory where the designer's profile pics are uploaded into.
 
