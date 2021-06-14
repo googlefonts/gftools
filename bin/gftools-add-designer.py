@@ -34,6 +34,7 @@ from PIL import Image
 from gftools.designers_pb2 import DesignerInfoProto
 from google.protobuf import text_format
 from pandas.core.base import PandasObject
+from gftools.utils import strip_accents
 
 
 def process_image(fp):
@@ -96,7 +97,9 @@ def make_designer(
     bio=None,
     urls=None,
 ):
-    designer_dir_name = name.lower().replace(" ", "").replace("-", "")
+    designer_dir_name = strip_accents(
+        name.lower().replace(" ", "").replace("-", "")
+    )
     designer_dir = os.path.join(designer_directory, designer_dir_name)
     if not os.path.isdir(designer_dir):
         print(f"{name} isn't in catalog. Creating new dir {designer_dir}")

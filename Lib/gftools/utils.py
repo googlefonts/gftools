@@ -36,6 +36,7 @@ if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
     from ConfigParser import ConfigParser
+import unicodedata as uni
 
 # =====================================
 # HELPER FUNCTIONS
@@ -504,3 +505,7 @@ def read_proto(fp, schema):
         data = text_format.Parse(f.read(), schema)
     return data
 
+
+def strip_accents(string):
+    """Remove accents from a string e.g 'àce' --> 'ace'"""
+    return "".join([uni.normalize("NFD", x)[0] for x in string])
