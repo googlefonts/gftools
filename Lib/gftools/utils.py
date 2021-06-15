@@ -36,7 +36,6 @@ if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
     from ConfigParser import ConfigParser
-import unicodedata as uni
 
 # =====================================
 # HELPER FUNCTIONS

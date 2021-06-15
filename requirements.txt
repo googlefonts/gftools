@@ -23,4 +23,4 @@ skia-pathops
 pandas
 xlrd
 openpyxl
-unicdecode
+unidecode
