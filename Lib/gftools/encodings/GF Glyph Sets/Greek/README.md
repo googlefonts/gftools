@@ -3,23 +3,19 @@ Google Fonts Greek Glyphs Sets
 ============================
 
 ## Structure and Hierarchy of Glyph Sets for Greek:
-****
 
-###General Use
+#### General Use
 
 1. **Core** Basic Monotonic set for everyday Modern Greek
 2. **Plus** Basic Polytonic set for Scholarly Greek
 3. **Expert** Small Caps for Core and Plus sets, Superscript Letters
 
-###Scholarly Use
+#### Scholarly Use
 
 1. **Pro** Extended Polytonic set for Ancient Greek Studies
 2. **Archaic** Variable Letterforms for Ancient Texts, Papyri
 3. **Ancient Musical Symbols** Greek and Byzantine Musical Symbols
 4. **Coptic** Liturgical language for Coptic Church  
-
-
-****
 
 ## General Use
 
@@ -39,7 +35,7 @@ Basic Monotonic Greek
 ### 2. GF Greek Plus, 265 glyphs total 
 
 > +185 Optional Small Cap Glyphs
-> 
+
 Basic Polytonic Greek
 
 * Polytonic UC `ἈἉἊἋἌἍἎἏἘἙἚἛἜἝἨἩἪἫἬἭἮἯἸἹἺἻἼἽἾἿὈὉὊὋὌὍὙὛὝὟὨὩὪὫὬὭὮὯᾈᾉᾊᾋᾌᾍᾎᾏᾘᾙᾚᾛᾜᾝᾞᾟᾨᾩᾪᾫᾬᾭᾮᾯᾸᾹᾺΆᾼῈΈῊΉῌῘῙῚΊῨῩῪΎῬῸΌῺΏῼ `
@@ -56,19 +52,16 @@ Basic Polytonic Greek
 
 Small Caps for Core and Plus sets, Superscript Letters
 
-
 * Core .sc `άέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώ`
 * Plus .sc `ἀἁἂἃἄἅἆἇἐἑἒἓἔἕἠἡἢἣἤἥἦἧἰἱἲἳἴἵἶἷὀὁὂὃὄὅὐὑὒὓὔὕὖὗὠὡὢὣὤὥὦὧὰάὲέὴήὶίὸόὺύὼώᾀᾁᾂᾃᾄᾅᾆᾇᾐᾑᾒᾓᾔᾕᾖᾗᾠᾡᾢᾣᾤᾥᾦᾧᾰᾱᾲᾳᾴᾶᾷιῂῃῄῆῇῐῑῒΐῖῗῠῡῢΰῤῥῦῧῲῳῴῶῷ Ϗ`
 * Archaic Numerals .sc `ϛ ϟ ϡ ϝ`
 * Iota Adscript as ss01 .sc `ᾈᾉᾊᾋᾌᾍᾎᾏᾘᾙᾚᾛᾜᾝᾞᾟᾨᾩᾪᾫᾬᾭᾮᾯᾼῌῼ`
 * Superior Letters .sups `ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρςστυφχψω`
-*** 
 * Ligatures `λλ γγ`
 
 ## Scholarly Use
 
-
-### 1. GF Greek Pro, 82 glyphs total 
+### 4. GF Greek Pro, 82 glyphs total 
 
 Extended Polytonic Greek, for scholarly edition of ancient texts (Ancient and Roman Greece studies, Byzantine studies, Greek Biblical studies)
 
@@ -113,7 +106,7 @@ Extended Polytonic Greek, for scholarly edition of ancient texts (Ancient and Ro
 * `overlinecomb.init`, cropped on the left
 * `overlinecomb.fina`, cropped on the right
 
-### 2. GF Greek Archaic, 143 glyphs total
+### 5. GF Greek Archaic, 143 glyphs total
 
 Archaic, Papyri
 
@@ -129,13 +122,13 @@ Archaic, Papyri
 * Geometric shape `□`
 * Astrological symbols `★☉☊☋☌☍☽☾☿♀♁♂♃♄♅♆♇♈♉♊♋♌♍♎♏♐♑♒♓`
  
-### 3. GF Ancient Musical Symbols, 316 glyphs total
+### 6. GF Ancient Musical Symbols, 316 glyphs total
 
 * Greek Vocal Notation Symbols
 * Greek Instrumental Notation Symbols
 * Byzantine Musical Symbols
 
-### 4. GF Coptic, 137 glyphs total
+### 7. GF Coptic, 137 glyphs total
 
 Coptic `U+03E2` – `U+03EF`, Coptic Unicode block `U+2C80` – `U+2CFF`
 
@@ -153,9 +146,7 @@ Coptic `U+03E2` – `U+03EF`, Coptic Unicode block `U+2C80` – `U+2CFF`
 * Coptic Fraction ` ⳽ ` 
 * Punctuation ` ⳾ ⳿ ` 
 
-
-
-
 ### Acknowledgements:
 
-GF Greek Glyph Sets defined by Irene Vlachou @irenevl and Thomas Linard @thlinard. Documented by Alexei Vanyashin @alexeiva January 2017.
+GF Greek Glyph Sets defined by Irene Vlachou @irenevl and Thomas Linard @thlinard.
+Documented by Alexei Vanyashin @alexeiva January 2017.
