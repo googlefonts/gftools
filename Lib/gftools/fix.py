@@ -150,7 +150,7 @@ def fix_unhinted_font(ttFont):
     """
     gasp = newTable("gasp")
     # Set GASP so all sizes are smooth
-    gasp.gaspRange = {0xFFFF: 15}
+    gasp.gaspRange = {65535: 0x000a}
 
     program = ttProgram.Program()
     assembly = ["PUSHW[]", "511", "SCANCTRL[]", "PUSHB[]", "4", "SCANTYPE[]"]
