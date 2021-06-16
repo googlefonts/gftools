@@ -43,7 +43,13 @@ def process_image(fp):
     img = Image.open(fp)
     width, height = img.size
     if width != height:
-        print("warning: img is rectangular when it should be square")
+        print("warning: img is rectangular. Cropping img")
+        if height < width:
+            crop_amount = (width - height) / 2
+            img = img.crop((crop_amount, 0, width-crop_amount, height))
+        elif width < height:
+            crop_amount = (height - width) / 2
+            img = img.crop((0, crop_amount, width, height-crop_amount))
     if width < 300 or height < 300:
         print("warning: img is smaller than 300x300px")
         return img
