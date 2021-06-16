@@ -30,6 +30,15 @@ which looks like this::
           nominalValue: 1
           rangeMaxValue: 50
         ...
+    statFormat4:
+      - name: Green
+        location:
+          wght: 300
+          wdth: 200
+      - name: Blue
+        location:
+          wght: 400
+          wdth: 200
     ...
     instances:
       Texturina[wght].ttf:
@@ -340,10 +349,15 @@ class GFBuilder:
             if any(font_is_italic(f) for f in varfonts):
                 self.config["axisOrder"].append("ital")
 
+        locations = self.config.get("statFormat4", None)
+        if locations and 'stat' not in self.config:
+            raise ValueError(
+                "Cannot add statFormat 4 axisValues since no stat table has been declared."
+            )
         if "stylespaceFile" in self.config and self.config["stylespaceFile"]:
             self.gen_stat_stylespace(self.config["stylespaceFile"], varfonts)
         elif "stat" in self.config:
-            gen_stat_tables_from_config(self.config["stat"], varfonts)
+            gen_stat_tables_from_config(self.config["stat"], varfonts, locations=locations)
         else:
             gen_stat_tables(varfonts, self.config["axisOrder"])
 

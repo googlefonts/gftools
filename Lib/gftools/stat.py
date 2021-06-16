@@ -368,7 +368,7 @@ def gen_stat_tables(
         _update_fvar_nametable_records(ttFont, stat_table)
         buildStatTable(ttFont, stat_table)
 
-def gen_stat_tables_from_config(stat, varfonts, has_italic=None):
+def gen_stat_tables_from_config(stat, varfonts, has_italic=None, locations=None):
     """
     Generate a stat table for each font in a family from a Python configuration.
 
@@ -448,5 +448,10 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None):
                 else:
                     stat[-1] = ital_stat_for_roman
             this_stat = stat
+
+        if isinstance(locations, dict):
+            if filename not in locations:
+                raise ValueError("Filename %s not found in locations" % filename)
+            locations = locations[filename]
         _update_fvar_nametable_records(ttFont, this_stat)
-        buildStatTable(ttFont, this_stat)
+        buildStatTable(ttFont, this_stat, locations=locations)
