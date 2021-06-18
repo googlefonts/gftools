@@ -170,8 +170,6 @@ def _WriteReport(metadata_paths, out_dir, languages):
       if not languages[l].HasField('sample_text') and l not in supported_without_sample_text:
         supported_without_sample_text[l] = languages[l]
 
-  print (len(without_sample_text))
-
   for lang in supported_without_sample_text.values():
     rows.append([lang.id, lang.name, lang.language, lang.script, lang.population])
 
@@ -180,7 +178,7 @@ def _WriteReport(metadata_paths, out_dir, languages):
 
 
 def main(argv):
-  # assert len(argv) > 1, 'No METADATA.pb files specified'
+  assert len(argv) > 1, 'No METADATA.pb files specified'
 
   languages = _LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
   scripts = _LoadScripts(os.path.join(FLAGS.lang, 'scripts'))

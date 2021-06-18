@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\nlang.proto\"Q\n\x0bRegionProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x12\n\npopulation\x18\x03 \x01(\x05\x12\x14\n\x0cregion_group\x18\x04 \x03(\t\"\'\n\x0bScriptProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"\xec\x01\n\rLanguageProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x10\n\x08language\x18\x02 \x01(\t\x12\x0e\n\x06script\x18\x03 \x01(\t\x12\x0c\n\x04name\x18\x04 \x01(\t\x12\x16\n\x0epreferred_name\x18\x05 \x01(\t\x12\x0f\n\x07\x61utonym\x18\x06 \x01(\t\x12\x12\n\npopulation\x18\x07 \x01(\x05\x12\x0e\n\x06region\x18\x08 \x03(\t\x12+\n\x0e\x65xemplar_chars\x18\t \x01(\x0b\x32\x13.ExemplarCharsProto\x12%\n\x0bsample_text\x18\n \x01(\x0b\x32\x10.SampleTextProto\"z\n\x12\x45xemplarCharsProto\x12\x0c\n\x04\x62\x61se\x18\x01 \x01(\t\x12\x11\n\tauxiliary\x18\x02 \x01(\t\x12\r\n\x05marks\x18\x03 \x01(\t\x12\x10\n\x08numerals\x18\x04 \x01(\t\x12\x13\n\x0bpunctuation\x18\x05 \x01(\t\x12\r\n\x05index\x18\x06 \x01(\t\"\xfc\x02\n\x0fSampleTextProto\x12\x19\n\x11\x66\x61llback_language\x18\x02 \x01(\t\x12\x15\n\rmasthead_full\x18\x03 \x01(\t\x12\x18\n\x10masthead_partial\x18\x04 \x01(\t\x12\x0e\n\x06styles\x18\x05 \x01(\t\x12\x0e\n\x06tester\x18\x06 \x01(\t\x12\x11\n\tposter_sm\x18\x07 \x01(\t\x12\x11\n\tposter_md\x18\x08 \x01(\t\x12\x11\n\tposter_lg\x18\t \x01(\t\x12\x13\n\x0bspecimen_48\x18\n \x01(\t\x12\x13\n\x0bspecimen_36\x18\x0b \x01(\t\x12\x13\n\x0bspecimen_32\x18\x0c \x01(\t\x12\x13\n\x0bspecimen_21\x18\r \x01(\t\x12\x13\n\x0bspecimen_16\x18\x0e \x01(\t\x12,\n\x06glyphs\x18\x0f \x03(\x0b\x32\x1c.SampleTextProto.GlyphsEntry\x1a-\n\x0bGlyphsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01'
+  serialized_pb=b'\n\nlang.proto\"Q\n\x0bRegionProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x12\n\npopulation\x18\x03 \x01(\x05\x12\x14\n\x0cregion_group\x18\x04 \x03(\t\"\'\n\x0bScriptProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"\x80\x02\n\rLanguageProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x10\n\x08language\x18\x02 \x01(\t\x12\x0e\n\x06script\x18\x03 \x01(\t\x12\x0c\n\x04name\x18\x04 \x01(\t\x12\x16\n\x0epreferred_name\x18\x05 \x01(\t\x12\x0f\n\x07\x61utonym\x18\x06 \x01(\t\x12\x12\n\npopulation\x18\x07 \x01(\x05\x12\x0e\n\x06region\x18\x08 \x03(\t\x12+\n\x0e\x65xemplar_chars\x18\t \x01(\x0b\x32\x13.ExemplarCharsProto\x12%\n\x0bsample_text\x18\n \x01(\x0b\x32\x10.SampleTextProto\x12\x12\n\nhistorical\x18\x0b \x01(\x08\"z\n\x12\x45xemplarCharsProto\x12\x0c\n\x04\x62\x61se\x18\x01 \x01(\t\x12\x11\n\tauxiliary\x18\x02 \x01(\t\x12\r\n\x05marks\x18\x03 \x01(\t\x12\x10\n\x08numerals\x18\x04 \x01(\t\x12\x13\n\x0bpunctuation\x18\x05 \x01(\t\x12\r\n\x05index\x18\x06 \x01(\t\"\xfc\x02\n\x0fSampleTextProto\x12\x19\n\x11\x66\x61llback_language\x18\x02 \x01(\t\x12\x15\n\rmasthead_full\x18\x03 \x01(\t\x12\x18\n\x10masthead_partial\x18\x04 \x01(\t\x12\x0e\n\x06styles\x18\x05 \x01(\t\x12\x0e\n\x06tester\x18\x06 \x01(\t\x12\x11\n\tposter_sm\x18\x07 \x01(\t\x12\x11\n\tposter_md\x18\x08 \x01(\t\x12\x11\n\tposter_lg\x18\t \x01(\t\x12\x13\n\x0bspecimen_48\x18\n \x01(\t\x12\x13\n\x0bspecimen_36\x18\x0b \x01(\t\x12\x13\n\x0bspecimen_32\x18\x0c \x01(\t\x12\x13\n\x0bspecimen_21\x18\r \x01(\t\x12\x13\n\x0bspecimen_16\x18\x0e \x01(\t\x12,\n\x06glyphs\x18\x0f \x03(\x0b\x32\x1c.SampleTextProto.GlyphsEntry\x1a-\n\x0bGlyphsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01'
 )
 
 
@@ -195,6 +195,13 @@ _LANGUAGEPROTO = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='historical', full_name='LanguageProto.historical', index=10,
+      number=11, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -208,7 +215,7 @@ _LANGUAGEPROTO = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=139,
-  serialized_end=375,
+  serialized_end=395,
 )
 
 
@@ -274,8 +281,8 @@ _EXEMPLARCHARSPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=377,
-  serialized_end=499,
+  serialized_start=397,
+  serialized_end=519,
 )
 
 
@@ -313,8 +320,8 @@ _SAMPLETEXTPROTO_GLYPHSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=837,
-  serialized_end=882,
+  serialized_start=857,
+  serialized_end=902,
 )
 
 _SAMPLETEXTPROTO = _descriptor.Descriptor(
@@ -435,8 +442,8 @@ _SAMPLETEXTPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=502,
-  serialized_end=882,
+  serialized_start=522,
+  serialized_end=902,
 )
 
 _LANGUAGEPROTO.fields_by_name['exemplar_chars'].message_type = _EXEMPLARCHARSPROTO

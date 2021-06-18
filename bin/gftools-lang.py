@@ -156,6 +156,7 @@ flags.mark_flag_as_required('out')
 flags.DEFINE_bool('gen_lang', False, 'Whether to generate the lang metadata package', short_name='l')
 flags.DEFINE_bool('report', False, 'Whether to output a report of lang metadata insights', short_name='r')
 flags.DEFINE_string('noto_root', None, 'Path to noto root', short_name='n')
+flags.DEFINE_bool('mark_historical_languages', False, 'Whether to update the lang metadata package to specify historical scripts', short_name='h')
 
 
 class Cldr():
@@ -174,6 +175,7 @@ class Cldr():
     self._DownloadCldrZip()
 
     lang_index = self._ParseLanguageIndex()
+    lang_historical = self._ParseHistoricalLanguages()
     lang_aliases = self._ParseLanguageAliases()
     lang_names, script_names, region_names = self._ParseDisplayNamesFromEnXml()
     lang_names_supplement, region_names_supplement = self._ParseDisplayNamesFromSupplementalData()
@@ -184,7 +186,7 @@ class Cldr():
     region_populations, lang_populations, lang_regions = self._ParseLanguageRegionInfo()
     region_groups = self._ParseRegionGroups()
 
-    self.langs = self._CompileLanguages(lang_index, lang_aliases, lang_names, lang_populations, script_names)
+    self.langs = self._CompileLanguages(lang_index, lang_historical, lang_aliases, lang_names, lang_populations, script_names)
     self.regions = self._CompileRegions(region_names, region_populations)
     self.region_groups = self._CompileRegionGroups(region_groups, region_names)
     self.scripts = self._CompileScripts(lang_index, script_names)
@@ -217,6 +219,24 @@ class Cldr():
       else:
         lang_index[l_id] = scripts
     return lang_index
+
+  def _ParseHistoricalLanguages(self):
+    root = etree.parse(os.path.join(self._zip_dir.name,
+                       SUPPLEMENTAL_DATA_XML_PATH), parser=NO_COMMENTS_XML_PARSER)
+    language_data = root.find('.//{*}languageData')
+
+    historical = {}
+    for l in language_data:
+      if l.get('scripts') is None:
+        continue
+      if l.get('alt') == 'secondary':
+        l_id = l.get('type')
+        scripts = [] if l.get('scripts') is None else l.get('scripts').split(' ')
+        if l_id in historical:
+          historical[l_id].extend(scripts)
+        else:
+          historical[l_id] = scripts
+    return historical
 
   def _ParseLanguageAliases(self):
     root = etree.parse(os.path.join(self._zip_dir.name,
@@ -323,11 +343,19 @@ class Cldr():
       exemplar_chars[category] = chars
     return exemplar_chars
 
-  def _CompileLanguages(self, lang_index, lang_aliases, lang_names, lang_populations, script_names):
+  def _CompileLanguages(self, lang_index, lang_historical, lang_aliases, lang_names, lang_populations, script_names):
     langs = {}
     for lang_code in lang_index:
       primary_script_found = False
       for script_code in lang_index[lang_code]:
+        historical = False
+        if lang_code in lang_historical:
+          if len(lang_historical[lang_code]) == 0:
+            # All scripts are historical for language
+            historical = True
+          else:
+            historical = script_code in lang_historical[lang_code]
+
         alt_code = lang_code + '_' + script_code
 
         if alt_code not in lang_populations and not primary_script_found:
@@ -348,7 +376,7 @@ class Cldr():
 
         population = lang_populations[key] or 0
         aliases = lang_aliases[alt_code] or lang_aliases[lang_code] or []
-        langs[key] = self.Language(key, lang_code, script_code, aliases, display_name, population)
+        langs[key] = self.Language(key, lang_code, script_code, aliases, display_name, population, historical)
     return langs
 
   def _CompileRegions(self, region_names, region_populations):
@@ -382,13 +410,14 @@ class Cldr():
 
   class Language():
 
-    def __init__(self, key, lang_code, script_code, aliases, display_name, population):
+    def __init__(self, key, lang_code, script_code, aliases, display_name, population, historical):
       self.id = key
       self.lang_code = lang_code
       self.script_code = script_code
       self.aliases = aliases
       self.name = display_name
       self.population = int(population)
+      self.historical = historical
       self.regions = None
       self.exemplar_chars = None
 
@@ -807,6 +836,14 @@ def _GetSampleText(lang_code, cldr, udhrs):
   return sample_text
 
 
+def _IsHistorical(cldr_lang, hg_lang):
+  if cldr_lang is not None and cldr_lang.historical:
+    return True
+  if hg_lang is not None and 'status' in hg_lang:
+    return hg_lang['status'] == 'historical'
+  return False
+
+
 def _LoadLanguages(languages_dir):
   languages = {}
   for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
@@ -994,6 +1031,33 @@ def _WriteReport(out_dir):
     _WriteCsv(path, rows)
 
 
+def _MarkHistoricalLanguages():
+  langs = _LoadLanguages(os.path.join(FLAGS.out, 'languages'))
+  hyperglot_languages = languages.Languages()
+  with Cldr() as cldr:
+    for lang in langs.values():
+      cldr_lang = None if lang.id not in cldr.langs else cldr.langs[lang.id]
+      hg_lang = None
+      if cldr_lang is None:
+        if lang.id in hyperglot_languages:
+          hg_lang = hyperglot_languages[lang.language]
+      else:
+        hg_lang = _GetHyperglotLanguage(cldr_lang, hyperglot_languages)
+      historical = _IsHistorical(cldr_lang, hg_lang)
+      if historical:
+        lang.historical = True
+        _WriteProto(lang, os.path.join(FLAGS.out, 'languages', lang.id + '.textproto'))
+
+
+def _LoadLanguages(languages_dir):
+  langs = {}
+  for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
+    with open(textproto_file, 'r', encoding='utf-8') as f:
+      language = text_format.Parse(f.read(), lang_pb2.LanguageProto())
+      langs[language.id] = language
+  return langs
+
+
 def main(argv):
   out_dir = FLAGS.out
   pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True)
@@ -1014,6 +1078,9 @@ def main(argv):
       path = os.path.join(out_dir, 'languages')
       pathlib.Path(path).mkdir(parents=True, exist_ok=True)
       _WriteLanguageMetadata(cldr, path)
+
+  if FLAGS.mark_historical_languages:
+    _MarkHistoricalLanguages()
 
   if FLAGS.report:
     print('Writing insights report...')
