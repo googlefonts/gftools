@@ -32,6 +32,14 @@ stat_schema = Seq(
     }),
 )
 
+stat_format4_schema = Seq(
+    Map({
+        "name": Str(),
+        Optional("flags"): Int(),
+        "location": MapPattern(Str(), Int()),
+    })
+)
+
 instance_schema = MapPattern(Str(), Seq(
     Map({
         Optional("familyName"): Str(),
@@ -46,6 +54,7 @@ schema = Map(
         Optional("logLevel"): Str(),
         Optional("stylespaceFile"): Str(),
         Optional("stat"): stat_schema | MapPattern(Str(), stat_schema),
+        Optional("statFormat4"): stat_format4_schema | MapPattern(Str(), stat_format4_schema),
         Optional("familyName"): Str(),
         Optional("includeSourceFixes"): Bool(),
         Optional("stylespaceFile"): Str(),
