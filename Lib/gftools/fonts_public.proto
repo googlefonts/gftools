@@ -5,6 +5,8 @@ syntax = "proto2";
  */
 package google.fonts;
 
+import "lang.proto";
+
 option java_package = "com.google.fonts.proto";
 option java_outer_classname = "FontsPublic";
 
@@ -23,6 +25,12 @@ message FamilyProto {
   optional SourceProto source = 12;
   optional bool is_noto = 13;
   repeated string languages = 14;
+  repeated FamilyFallbackProto fallbacks = 15;
+
+  // Map of categories to space-delimited glyph strings
+  map<string, string> sample_glyphs = 16;
+
+  optional SampleTextProto sample_text = 17;
 };
 
 message FontProto {
@@ -46,4 +54,23 @@ message AxisSegmentProto {
 message SourceProto {
   optional string repository_url = 1;
   optional string commit = 2;
+}
+
+enum TargetTypeProto {
+  TARGET_UNSPECIFIED = 0;
+  TARGET_OS_WINDOWS = 1;
+  TARGET_OS_MAC = 2;
+  TARGET_OS_LINUX = 3;
+}
+
+message TargetProto {
+  optional TargetTypeProto target_type = 1;  //  e.g., OS
+}
+
+message FamilyFallbackProto {
+  repeated AxisSegmentProto axis_target = 1;  // activate for this region
+  repeated TargetProto target = 2;            // activate for any of these
+  optional float size_adjust_pct = 3;         // e.g. 90%
+  optional float ascent_override_pct = 5;     // e.g. 110%
+  repeated string local_src = 4;  // e.g. Impact; the local family to use
 }

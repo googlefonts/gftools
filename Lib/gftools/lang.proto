@@ -1,6 +1,8 @@
 syntax = "proto2";
 // Protos for lang pkg (language/region metadata)
 
+package google.fonts;
+
 // A region or territory as defined in the CLDR
 message RegionProto {
   optional string id = 1;  // Region codes defined by CLDR
@@ -73,8 +75,5 @@ message SampleTextProto {
   optional string specimen_21 = 13;
   optional string specimen_16 = 14;
 
-  // Map of categories to space-delimited glyph strings
-  map<string, string> glyphs = 15;
-
-  // Next = 16;
+  // Next = 15;
 }

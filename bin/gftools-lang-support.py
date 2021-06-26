@@ -34,6 +34,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')
 flags.mark_flag_as_required('lang')
 flags.DEFINE_bool('report', False, 'Whether to output a report of lang metadata insights', short_name='r')
+flags.DEFINE_bool('sample_text_audit', False, 'Whether to run the sample text audit', short_name='s')
 flags.DEFINE_string('out', None, 'Path to output directory for report', short_name='o')
 
 
@@ -177,18 +178,71 @@ def _WriteReport(metadata_paths, out_dir, languages):
   _WriteCsv(path, rows)
 
 
-def main(argv):
-  assert len(argv) > 1, 'No METADATA.pb files specified'
+def _SampleTextAudit(out_dir, languages, scripts):
+  rows = [['id','language','script','has_sample_text','historical']]
+  # sort by script|has_sample_text|historical|id
+  entries = []
 
+  min_sample_text_languages = 0
+  by_script = {}
+  for l in languages.values():
+    if l.script not in by_script:
+      by_script[l.script] = []
+    by_script[l.script].append(l)
+  for script in by_script:
+    languages_with_sample_text = {l.id for l in by_script[script] if l.HasField('sample_text') and not l.sample_text.HasField('fallback_language')}
+    non_historical_languages_without_sample_text = [l for l in by_script[script] if not l.historical and l.id not in languages_with_sample_text]
+    if len(languages_with_sample_text) < 2:
+      if len(languages_with_sample_text) == 1 and len(by_script[script]) > 1 and len(non_historical_languages_without_sample_text) > 1:
+        min_sample_text_languages += 1
+      elif len(languages_with_sample_text) == 0:
+        if len(non_historical_languages_without_sample_text) > 1:
+          min_sample_text_languages += 2
+        else:
+          min_sample_text_languages += 1
+
+  print(min_sample_text_languages)
+
+
+
+  #   if len(languages_with_sample_text) == 0 or (len(languages_with_sample_text) == 1 and len(by_script[script]) > 1):
+  #     for l in by_script[script]:
+  #       entries.append({
+  #         'id': l.id,
+  #         'language': l.name,
+  #         'script': scripts[l.script].name,
+  #         'has_sample_text': l.id in languages_with_sample_text,
+  #         'historical': l.historical,
+  #       })
+
+  # last_script = None
+  # entries.sort(key = lambda x: (x['script'], not x['has_sample_text'], not x['historical'], x['id']))
+  # for e in entries:
+  #   if last_script is not None and e['script'] != last_script:
+  #     rows.append([])
+  #   rows.append([e['id'], e['language'], e['script'], 'X' if e['has_sample_text'] else '', 'X' if e['historical'] else ''])
+  #   last_script = e['script']
+
+  # path = os.path.join(out_dir, 'sample_text_audit.csv')
+  # _WriteCsv(path, rows)
+
+
+def main(argv):
   languages = _LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
   scripts = _LoadScripts(os.path.join(FLAGS.lang, 'scripts'))
   regions = _LoadRegions(os.path.join(FLAGS.lang, 'regions'))
 
   if FLAGS.report:
+    assert len(argv) > 1, 'No METADATA.pb files specified'
     assert FLAGS.out is not None, 'No output dir specified (--out)'
     print('Writing insights report...')
     _WriteReport(argv[1:], FLAGS.out, languages)
+  elif FLAGS.sample_text_audit:
+    assert FLAGS.out is not None, 'No output dir specified (--out)'
+    print('Auditing sample text')
+    _SampleTextAudit(FLAGS.out, languages, scripts)
   else:
+    assert len(argv) > 1, 'No METADATA.pb files specified'
     line_to_lang_name = {}
     for l in languages:
       line = 'languages: "{code}"'.format(code=languages[l].id)

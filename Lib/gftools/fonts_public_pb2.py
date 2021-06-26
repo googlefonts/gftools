@@ -11,6 +11,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
+import lang_pb2 as lang__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -19,8 +20,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=b'\n\026com.google.fonts.protoB\013FontsPublic',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x12\x66onts_public.proto\x12\x0cgoogle.fonts\"\xe4\x03\n\x0b\x46\x61milyProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x65signer\x18\x02 \x02(\t\x12\x0f\n\x07license\x18\x03 \x02(\t\x12\x10\n\x08\x63\x61tegory\x18\x04 \x02(\t\x12\x12\n\ndate_added\x18\x05 \x02(\t\x12&\n\x05\x66onts\x18\x06 \x03(\x0b\x32\x17.google.fonts.FontProto\x12\x0f\n\x07\x61liases\x18\x07 \x03(\t\x12\x0f\n\x07subsets\x18\x08 \x03(\t\x12\x19\n\x11ttf_autohint_args\x18\t \x01(\t\x12,\n\x04\x61xes\x18\n \x03(\x0b\x32\x1e.google.fonts.AxisSegmentProto\x12[\n\x1aregistry_default_overrides\x18\x0b \x03(\x0b\x32\x37.google.fonts.FamilyProto.RegistryDefaultOverridesEntry\x12)\n\x06source\x18\x0c \x01(\x0b\x32\x19.google.fonts.SourceProto\x12\x0f\n\x07is_noto\x18\r \x01(\x08\x12\x11\n\tlanguages\x18\x0f \x03(\t\x1a?\n\x1dRegistryDefaultOverridesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x02:\x02\x38\x01\"\x8a\x01\n\tFontProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\r\n\x05style\x18\x02 \x02(\t\x12\x0e\n\x06weight\x18\x03 \x02(\x05\x12\x10\n\x08\x66ilename\x18\x04 \x02(\t\x12\x18\n\x10post_script_name\x18\x05 \x02(\t\x12\x11\n\tfull_name\x18\x06 \x02(\t\x12\x11\n\tcopyright\x18\x07 \x01(\t\"Z\n\x10\x41xisSegmentProto\x12\x0b\n\x03tag\x18\x01 \x01(\t\x12\x11\n\tmin_value\x18\x02 \x01(\x02\x12\x11\n\tmax_value\x18\x04 \x01(\x02J\x04\x08\x03\x10\x04R\rdefault_value\"5\n\x0bSourceProto\x12\x16\n\x0erepository_url\x18\x01 \x01(\t\x12\x0e\n\x06\x63ommit\x18\x02 \x01(\tB%\n\x16\x63om.google.fonts.protoB\x0b\x46ontsPublic'
-)
+  serialized_pb=b'\n\x12\x66onts_public.proto\x12\x0cgoogle.fonts\x1a\nlang.proto\"\xfe\x04\n\x0b\x46\x61milyProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x65signer\x18\x02 \x02(\t\x12\x0f\n\x07license\x18\x03 \x02(\t\x12\x10\n\x08\x63\x61tegory\x18\x04 \x02(\t\x12\x12\n\ndate_added\x18\x05 \x02(\t\x12&\n\x05\x66onts\x18\x06 \x03(\x0b\x32\x17.google.fonts.FontProto\x12\x0f\n\x07\x61liases\x18\x07 \x03(\t\x12\x0f\n\x07subsets\x18\x08 \x03(\t\x12\x19\n\x11ttf_autohint_args\x18\t \x01(\t\x12,\n\x04\x61xes\x18\n \x03(\x0b\x32\x1e.google.fonts.AxisSegmentProto\x12[\n\x1aregistry_default_overrides\x18\x0b \x03(\x0b\x32\x37.google.fonts.FamilyProto.RegistryDefaultOverridesEntry\x12)\n\x06source\x18\x0c \x01(\x0b\x32\x19.google.fonts.SourceProto\x12\x0f\n\x07is_noto\x18\r \x01(\x08\x12\x11\n\tlanguages\x18\x0e \x03(\t\x12\x35\n\x06glyphs\x18\x0f \x03(\x0b\x32%.google.fonts.FamilyProto.GlyphsEntry\x12\x32\n\x0bsample_text\x18\x10 \x01(\x0b\x32\x1d.google.fonts.SampleTextProto\x1a?\n\x1dRegistryDefaultOverridesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x02:\x02\x38\x01\x1a-\n\x0bGlyphsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x8a\x01\n\tFontProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\r\n\x05style\x18\x02 \x02(\t\x12\x0e\n\x06weight\x18\x03 \x02(\x05\x12\x10\n\x08\x66ilename\x18\x04 \x02(\t\x12\x18\n\x10post_script_name\x18\x05 \x02(\t\x12\x11\n\tfull_name\x18\x06 \x02(\t\x12\x11\n\tcopyright\x18\x07 \x01(\t\"Z\n\x10\x41xisSegmentProto\x12\x0b\n\x03tag\x18\x01 \x01(\t\x12\x11\n\tmin_value\x18\x02 \x01(\x02\x12\x11\n\tmax_value\x18\x04 \x01(\x02J\x04\x08\x03\x10\x04R\rdefault_value\"5\n\x0bSourceProto\x12\x16\n\x0erepository_url\x18\x01 \x01(\t\x12\x0e\n\x06\x63ommit\x18\x02 \x01(\tB%\n\x16\x63om.google.fonts.protoB\x0b\x46ontsPublic'
+  ,
+  dependencies=[lang__pb2.DESCRIPTOR,])
 
 
 
@@ -59,8 +61,46 @@ _FAMILYPROTO_REGISTRYDEFAULTOVERRIDESENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=458,
-  serialized_end=521,
+  serialized_start=577,
+  serialized_end=640,
+)
+
+_FAMILYPROTO_GLYPHSENTRY = _descriptor.Descriptor(
+  name='GlyphsEntry',
+  full_name='google.fonts.FamilyProto.GlyphsEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='google.fonts.FamilyProto.GlyphsEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='google.fonts.FamilyProto.GlyphsEntry.value', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=b'8\001',
+  is_extendable=False,
+  syntax='proto2',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=642,
+  serialized_end=687,
 )
 
 _FAMILYPROTO = _descriptor.Descriptor(
@@ -164,15 +204,29 @@ _FAMILYPROTO = _descriptor.Descriptor(
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
       name='languages', full_name='google.fonts.FamilyProto.languages', index=13,
-      number=15, type=9, cpp_type=9, label=3,
+      number=14, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='glyphs', full_name='google.fonts.FamilyProto.glyphs', index=14,
+      number=15, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='sample_text', full_name='google.fonts.FamilyProto.sample_text', index=15,
+      number=16, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
-  nested_types=[_FAMILYPROTO_REGISTRYDEFAULTOVERRIDESENTRY, ],
+  nested_types=[_FAMILYPROTO_REGISTRYDEFAULTOVERRIDESENTRY, _FAMILYPROTO_GLYPHSENTRY, ],
   enum_types=[
   ],
   serialized_options=None,
@@ -181,8 +235,8 @@ _FAMILYPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=37,
-  serialized_end=521,
+  serialized_start=49,
+  serialized_end=687,
 )
 
 
@@ -255,8 +309,8 @@ _FONTPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=524,
-  serialized_end=662,
+  serialized_start=690,
+  serialized_end=828,
 )
 
 
@@ -301,8 +355,8 @@ _AXISSEGMENTPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=664,
-  serialized_end=754,
+  serialized_start=830,
+  serialized_end=920,
 )
 
 
@@ -340,15 +394,18 @@ _SOURCEPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=756,
-  serialized_end=809,
+  serialized_start=922,
+  serialized_end=975,
 )
 
 _FAMILYPROTO_REGISTRYDEFAULTOVERRIDESENTRY.containing_type = _FAMILYPROTO
+_FAMILYPROTO_GLYPHSENTRY.containing_type = _FAMILYPROTO
 _FAMILYPROTO.fields_by_name['fonts'].message_type = _FONTPROTO
 _FAMILYPROTO.fields_by_name['axes'].message_type = _AXISSEGMENTPROTO
 _FAMILYPROTO.fields_by_name['registry_default_overrides'].message_type = _FAMILYPROTO_REGISTRYDEFAULTOVERRIDESENTRY
 _FAMILYPROTO.fields_by_name['source'].message_type = _SOURCEPROTO
+_FAMILYPROTO.fields_by_name['glyphs'].message_type = _FAMILYPROTO_GLYPHSENTRY
+_FAMILYPROTO.fields_by_name['sample_text'].message_type = lang__pb2._SAMPLETEXTPROTO
 DESCRIPTOR.message_types_by_name['FamilyProto'] = _FAMILYPROTO
 DESCRIPTOR.message_types_by_name['FontProto'] = _FONTPROTO
 DESCRIPTOR.message_types_by_name['AxisSegmentProto'] = _AXISSEGMENTPROTO
@@ -363,12 +420,20 @@ FamilyProto = _reflection.GeneratedProtocolMessageType('FamilyProto', (_message.
     # @@protoc_insertion_point(class_scope:google.fonts.FamilyProto.RegistryDefaultOverridesEntry)
     })
   ,
+
+  'GlyphsEntry' : _reflection.GeneratedProtocolMessageType('GlyphsEntry', (_message.Message,), {
+    'DESCRIPTOR' : _FAMILYPROTO_GLYPHSENTRY,
+    '__module__' : 'fonts_public_pb2'
+    # @@protoc_insertion_point(class_scope:google.fonts.FamilyProto.GlyphsEntry)
+    })
+  ,
   'DESCRIPTOR' : _FAMILYPROTO,
   '__module__' : 'fonts_public_pb2'
   # @@protoc_insertion_point(class_scope:google.fonts.FamilyProto)
   })
 _sym_db.RegisterMessage(FamilyProto)
 _sym_db.RegisterMessage(FamilyProto.RegistryDefaultOverridesEntry)
+_sym_db.RegisterMessage(FamilyProto.GlyphsEntry)
 
 FontProto = _reflection.GeneratedProtocolMessageType('FontProto', (_message.Message,), {
   'DESCRIPTOR' : _FONTPROTO,
@@ -394,4 +459,5 @@ _sym_db.RegisterMessage(SourceProto)
 
 DESCRIPTOR._options = None
 _FAMILYPROTO_REGISTRYDEFAULTOVERRIDESENTRY._options = None
+_FAMILYPROTO_GLYPHSENTRY._options = None
 # @@protoc_insertion_point(module_scope)
