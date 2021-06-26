@@ -23,7 +23,7 @@ from absl import flags
 from collections import defaultdict
 from collections import deque
 from fontTools.ttLib import TTFont
-from gftools import lang_pb2
+from gftools import fonts_public_pb2
 from google.protobuf import text_format
 from hyperglot import languages
 from hyperglot import parse
@@ -714,7 +714,7 @@ class UdhrTranslations():
       raise Exception('Unsupported text type: ' + text_type)
 
     def GetSampleTexts(self):
-      sample_text = lang_pb2.SampleTextProto()
+      sample_text = fonts_public_pb2.SampleTextProto()
       sample_text.masthead_full = self._Get(self.TextType.GLYPHS, char_count = 4)
       sample_text.masthead_partial = self._Get(self.TextType.GLYPHS, char_count = 2)
       sample_text.styles = self._Get(self.TextType.PHRASE, min_chars = 40, max_chars = 60)
@@ -775,7 +775,7 @@ def _GetAutonym(cldr, lang, hg_lang):
 
 
 def _GetExemplarCharacters(cldr, lang, hg_lang):
-  exemplar_chars = lang_pb2.ExemplarCharsProto()
+  exemplar_chars = fonts_public_pb2.ExemplarCharsProto()
 
   if hg_lang is not None and 'orthographies' in hg_lang:
     ortho = _GetHyperglotOrtho(cldr, lang, hg_lang)
@@ -804,7 +804,7 @@ def _GetExemplarCharacters(cldr, lang, hg_lang):
   if 'index' in lang.exemplar_chars:
     exemplar_chars.index = lang.exemplar_chars['index']
 
-  if text_format.MessageToString(exemplar_chars) == text_format.MessageToString(lang_pb2.ExemplarCharsProto()):
+  if text_format.MessageToString(exemplar_chars) == text_format.MessageToString(fonts_public_pb2.ExemplarCharsProto()):
     return None
 
   return exemplar_chars
@@ -831,7 +831,7 @@ def _GetSampleText(lang_code, cldr, udhrs):
     warnings.warn('Unable to find sample text fallback: ' + lang_code)
     return None
 
-  sample_text = lang_pb2.SampleTextProto()
+  sample_text = fonts_public_pb2.SampleTextProto()
   sample_text.fallback_language = fallback
   return sample_text
 
@@ -848,7 +848,7 @@ def _LoadLanguages(languages_dir):
   languages = {}
   for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
     with open(textproto_file, 'r', encoding='utf-8') as f:
-      language = text_format.Parse(f.read(), lang_pb2.LanguageProto())
+      language = text_format.Parse(f.read(), fonts_public_pb2.LanguageProto())
       languages[language.id] = language
   return languages
 
@@ -857,7 +857,7 @@ def _LoadScripts(scripts_dir):
   scripts = {}
   for textproto_file in glob.iglob(os.path.join(scripts_dir, '*.textproto')):
     with open(textproto_file, 'r', encoding='utf-8') as f:
-      script = text_format.Parse(f.read(), lang_pb2.ScriptProto())
+      script = text_format.Parse(f.read(), fonts_public_pb2.ScriptProto())
       scripts[script.id] = script
   return scripts
 
@@ -911,7 +911,7 @@ def _WriteRegionMetadata(cldr, out_dir):
     if os.path.exists(path):
       continue
 
-    region = lang_pb2.RegionProto()
+    region = fonts_public_pb2.RegionProto()
     region.id = r.id
     region.name = r.name
     region.population = r.population
@@ -927,7 +927,7 @@ def _WriteScriptMetadata(cldr, out_dir):
     path = os.path.join(out_dir, s + '.textproto')
     if os.path.exists(path):
       continue
-    script = lang_pb2.ScriptProto()
+    script = fonts_public_pb2.ScriptProto()
     script.id = s
     script.name = cldr.scripts[s]
     _WriteProto(script, path)
@@ -944,7 +944,7 @@ def _WriteLanguageMetadata(cldr, out_dir):
       lang = cldr.langs[lang_code]
       hg_lang = _GetHyperglotLanguage(lang, hyperglot_languages)
 
-      language = lang_pb2.LanguageProto()
+      language = fonts_public_pb2.LanguageProto()
       language.id = lang.id
       language.language = lang.lang_code
       language.script = lang.script_code
@@ -1053,7 +1053,7 @@ def _LoadLanguages(languages_dir):
   langs = {}
   for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
     with open(textproto_file, 'r', encoding='utf-8') as f:
-      language = text_format.Parse(f.read(), lang_pb2.LanguageProto())
+      language = text_format.Parse(f.read(), fonts_public_pb2.LanguageProto())
       langs[language.id] = language
   return langs
 

@@ -21,7 +21,6 @@ gftools lang -l ./lang/ -r ./ofl/noto*/METADATA.pb
 from absl import app
 from absl import flags
 from fontTools.ttLib import TTFont
-from gftools import lang_pb2
 from gftools import fonts_public_pb2
 from google.protobuf import text_format
 from hyperglot import parse
@@ -65,7 +64,7 @@ def _LoadLanguages(languages_dir):
   languages = {}
   for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
     with open(textproto_file, 'r', encoding='utf-8') as f:
-      language = text_format.Parse(f.read(), lang_pb2.LanguageProto())
+      language = text_format.Parse(f.read(), fonts_public_pb2.LanguageProto())
       languages[language.id] = language
   return languages
 
@@ -74,7 +73,7 @@ def _LoadScripts(scripts_dir):
   scripts = {}
   for textproto_file in glob.iglob(os.path.join(scripts_dir, '*.textproto')):
     with open(textproto_file, 'r', encoding='utf-8') as f:
-      script = text_format.Parse(f.read(), lang_pb2.ScriptProto())
+      script = text_format.Parse(f.read(), fonts_public_pb2.ScriptProto())
       scripts[script.id] = script
   return scripts
 
@@ -83,7 +82,7 @@ def _LoadRegions(regions_dir):
   regions = {}
   for textproto_file in glob.iglob(os.path.join(regions_dir, '*.textproto')):
     with open(textproto_file, 'r', encoding='utf-8') as f:
-      region = text_format.Parse(f.read(), lang_pb2.RegionProto())
+      region = text_format.Parse(f.read(), fonts_public_pb2.RegionProto())
       regions[region.id] = region
   return regions
 
@@ -201,30 +200,28 @@ def _SampleTextAudit(out_dir, languages, scripts):
         else:
           min_sample_text_languages += 1
 
+    if len(languages_with_sample_text) == 0 or (len(languages_with_sample_text) == 1 and len(by_script[script]) > 1):
+      for l in by_script[script]:
+        entries.append({
+          'id': l.id,
+          'language': l.name,
+          'script': scripts[l.script].name,
+          'has_sample_text': l.id in languages_with_sample_text,
+          'historical': l.historical,
+        })
+
   print(min_sample_text_languages)
 
+  last_script = None
+  entries.sort(key = lambda x: (x['script'], not x['has_sample_text'], not x['historical'], x['id']))
+  for e in entries:
+    if last_script is not None and e['script'] != last_script:
+      rows.append([])
+    rows.append([e['id'], e['language'], e['script'], 'X' if e['has_sample_text'] else '', 'X' if e['historical'] else ''])
+    last_script = e['script']
 
-
-  #   if len(languages_with_sample_text) == 0 or (len(languages_with_sample_text) == 1 and len(by_script[script]) > 1):
-  #     for l in by_script[script]:
-  #       entries.append({
-  #         'id': l.id,
-  #         'language': l.name,
-  #         'script': scripts[l.script].name,
-  #         'has_sample_text': l.id in languages_with_sample_text,
-  #         'historical': l.historical,
-  #       })
-
-  # last_script = None
-  # entries.sort(key = lambda x: (x['script'], not x['has_sample_text'], not x['historical'], x['id']))
-  # for e in entries:
-  #   if last_script is not None and e['script'] != last_script:
-  #     rows.append([])
-  #   rows.append([e['id'], e['language'], e['script'], 'X' if e['has_sample_text'] else '', 'X' if e['historical'] else ''])
-  #   last_script = e['script']
-
-  # path = os.path.join(out_dir, 'sample_text_audit.csv')
-  # _WriteCsv(path, rows)
+  path = os.path.join(out_dir, 'sample_text_audit.csv')
+  _WriteCsv(path, rows)
 
 
 def main(argv):

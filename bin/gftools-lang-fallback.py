@@ -17,7 +17,7 @@ gftools lang-fallback -l ./lang/
 
 from absl import app
 from absl import flags
-from gftools import lang_pb2
+from gftools import fonts_public_pb2
 from google.protobuf import text_format
 import glob
 import os
@@ -46,7 +46,7 @@ def _WriteProto(proto, path, comments = None):
 def _LoadLanguages(languages_dir):
   languages = {}
   for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
-    language = _ReadProto(lang_pb2.LanguageProto(), textproto_file)
+    language = _ReadProto(fonts_public_pb2.LanguageProto(), textproto_file)
     languages[language.id] = language
   return languages
 
@@ -60,7 +60,7 @@ def main(argv):
         if lang.id == l.id:
           continue
         if l.script == lang.script and l.HasField('sample_text') and not l.sample_text.HasField('fallback_language'):
-          sample_text = lang_pb2.SampleTextProto()
+          sample_text = fonts_public_pb2.SampleTextProto()
           sample_text.fallback_language = l.id
           lang.sample_text.MergeFrom(sample_text)
           if FLAGS.preview:
