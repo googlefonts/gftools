@@ -7,6 +7,7 @@ from strictyaml import (
                         MapPattern,
                         Str,
                         Int,
+                        Float,
                         Seq,
                         YAMLError,
                         Optional,
@@ -21,11 +22,11 @@ stat_schema = Seq(
         "values": Seq(
             Map({
                 "name": Str(),
-                "value": Int(),
-                Optional("nominalValue"): Int(),
-                Optional("linkedValue"): Int(),
-                Optional("rangeMinValue"): Int(),
-                Optional("rangeMaxValue"): Int(),
+                "value": Int() | Float(),
+                Optional("nominalValue"): Int() | Float(),
+                Optional("linkedValue"): Int() | Float(),
+                Optional("rangeMinValue"): Int() | Float(),
+                Optional("rangeMaxValue"): Int() | Float(),
                 Optional("flags"): Int()
             })
         )
@@ -36,7 +37,7 @@ stat_format4_schema = Seq(
     Map({
         "name": Str(),
         Optional("flags"): Int(),
-        "location": MapPattern(Str(), Int()),
+        "location": MapPattern(Str(), Int() | Float()),
     })
 )
 
@@ -44,7 +45,7 @@ instance_schema = MapPattern(Str(), Seq(
     Map({
         Optional("familyName"): Str(),
         Optional("styleName"): Str(),
-        "coordinates": MapPattern(Str(), Int()),
+        "coordinates": MapPattern(Str(), Int() | Float()),
     })
 ))
 
