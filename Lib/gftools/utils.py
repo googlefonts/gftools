@@ -26,7 +26,7 @@ from unidecode import unidecode
 import browserstack_screenshots
 from collections import namedtuple
 from github import Github
-from pkg_resources import resource_filename
+from pkg_resources import resource_filename, get_distribution
 from google.protobuf import text_format
 import time
 import json
@@ -325,7 +325,8 @@ def unique_name(ttFont, nameids):
     font_version = _font_version(ttFont)
     vendor = ttFont["OS/2"].achVendID.strip()
     ps_name = nameids[6]
-    return f"{font_version};{vendor};{ps_name}"
+    gftools_version = get_distribution('gftools').version
+    return f"{font_version};{vendor};{ps_name};{gftools_version}"
 
 
 def _font_version(font, platEncLang=(3, 1, 0x409)):
