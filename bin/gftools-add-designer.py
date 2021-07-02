@@ -86,7 +86,7 @@ def gen_hrefs(urls):
         else:
             # https://www.mysite.com --> mysite.com
             res[url] = url.split("//")[1]
-    return " | ".join(f"<a href={k}>{v}</a>" for k,v in res.items())
+    return " | ".join(f'<a href="{k}">{v}</a>' for k,v in res.items())
 
 
 def make_designer(
