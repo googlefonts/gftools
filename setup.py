@@ -47,7 +47,7 @@ setup(
     packages=['gftools',
               'gftools.util',
               'gftools.builder'],
-    package_data={'gftools.util': ["GlyphsInfo/*.xml"],
+    package_data={'gftools.util': ["GlyphsInfo/*.xml", "UnicodeSections/*.json"],
                   'gftools': [
                       "encodings/*.nam",
                       "encodings/GF Glyph Sets/*.nam",
