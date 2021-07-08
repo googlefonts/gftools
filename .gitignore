@@ -1,4 +1,7 @@
 
+# venv
+venv/
+
 # PyCharm
 .idea/
 .dccache
