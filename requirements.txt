@@ -1,4 +1,4 @@
-fonttools[ufo,lxml,woff,unicode,interpolatable]
+fonttools[ufo]
 #google-apputils
 absl-py
 protobuf
