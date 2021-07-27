@@ -137,7 +137,7 @@ class SampleTextExtractor():
     return s
 
   def _ExtractWord(self, min_chars, max_chars):
-    for iterator in [self._GetWords()]:
+    for iterator in [self._words, self._GetWords()]:
       for w in iterator:
         if w is None:
           continue
@@ -147,7 +147,7 @@ class SampleTextExtractor():
     return self._ExtractPhrase(min_chars, max_chars)
 
   def _ExtractPhrase(self, min_chars, max_chars):
-    for iterator in [self._GetParagraphs()]:
+    for iterator in [self._paragraphs, self._GetParagraphs()]:
       for para in iterator:
         if para is None:
           continue
@@ -161,7 +161,7 @@ class SampleTextExtractor():
               breaks.pop()
               phrase = para[breaks[0]+1:breaks[len(breaks)-1]]
               p_size = self._DisplayLength(phrase)
-            if min_chars <= p_size:
+            if min_chars <= p_size and phrase not in self._phrase_history:
               self._phrase_history.add(phrase)
               return phrase
     return self._ExtractParagraph(min_chars, max_chars)
@@ -172,7 +172,7 @@ class SampleTextExtractor():
     return self._ExtractPhrase(min_chars, max_chars)
 
   def _ExtractParagraph(self, min_chars, max_chars):
-    for iterator in [self._GetParagraphs()]:
+    for iterator in [self._paragraphs, self._GetParagraphs()]:
       for para in iterator:
         if para is None:
           continue
@@ -185,7 +185,7 @@ class SampleTextExtractor():
     p = []
     p_size = 0
     while p_size < min_chars:
-      for iterator in [self._GetParagraphs()]:
+      for iterator in [self._paragraphs, self._GetParagraphs()]:
         for para in iterator:
           if para is None:
             continue
@@ -227,8 +227,8 @@ class SampleTextExtractor():
     sample_text.masthead_partial = self._Get(self.TextType.GLYPHS, char_count = 2)
     sample_text.styles = self._Get(self.TextType.PHRASE, min_chars = 40, max_chars = 60)
     sample_text.tester = self._Get(self.TextType.PHRASE, min_chars = 60, max_chars = 90)
-    sample_text.poster_sm = self._Get(self.TextType.PHRASE, min_chars = 10, max_chars = 18)
-    sample_text.poster_md = self._Get(self.TextType.PHRASE, min_chars = 5, max_chars = 12)
+    sample_text.poster_sm = self._Get(self.TextType.PHRASE, min_chars = 10, max_chars = 15)
+    sample_text.poster_md = self._Get(self.TextType.PHRASE, min_chars = 8, max_chars = 12)
     sample_text.poster_lg = self._Get(self.TextType.WORD, min_chars = 3, max_chars = 8)
     sample_text.specimen_48 = self._Get(self.TextType.SENTENCE, min_chars = 50, max_chars = 80)
     sample_text.specimen_36 = self._Get(self.TextType.PARAGRAPH, min_chars = 100, max_chars = 120)
