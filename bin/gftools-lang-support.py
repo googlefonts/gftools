@@ -177,7 +177,7 @@ def _WriteReport(metadata_paths, out_dir, languages):
   _WriteCsv(path, rows)
 
 
-def _SampleTextAudit(out_dir, languages, scripts):
+def _SampleTextAudit(out_dir, languages, scripts, unused_scripts=[]):
   rows = [['id','language','script','has_sample_text','historical']]
   # sort by script|has_sample_text|historical|id
   entries = []
@@ -189,6 +189,8 @@ def _SampleTextAudit(out_dir, languages, scripts):
       by_script[l.script] = []
     by_script[l.script].append(l)
   for script in by_script:
+    if script in unused_scripts:
+      continue
     languages_with_sample_text = {l.id for l in by_script[script] if l.HasField('sample_text') and not l.sample_text.HasField('fallback_language')}
     non_historical_languages_without_sample_text = [l for l in by_script[script] if not l.historical and l.id not in languages_with_sample_text]
     if len(languages_with_sample_text) < 2:
@@ -200,7 +202,7 @@ def _SampleTextAudit(out_dir, languages, scripts):
         else:
           min_sample_text_languages += 1
 
-    if len(languages_with_sample_text) == 0 or (len(languages_with_sample_text) == 1 and len([l for l in by_script[script] if l.historical]) > 1 ):
+    if len(languages_with_sample_text) == 0 or (len(languages_with_sample_text) == 1 and len([l for l in by_script[script] if not l.historical]) > 1 ):
       for l in by_script[script]:
         entries.append({
           'id': l.id,
@@ -237,7 +239,16 @@ def main(argv):
   elif FLAGS.sample_text_audit:
     assert FLAGS.out is not None, 'No output dir specified (--out)'
     print('Auditing sample text')
-    _SampleTextAudit(FLAGS.out, languages, scripts)
+    seen_scripts = set()
+    unused_scripts = set()
+    for path in argv[1:]:
+      family = _ReadProto(fonts_public_pb2.FamilyProto(), path)
+      for l in family.languages:
+        seen_scripts.add(languages[l].script)
+    for s in scripts:
+      if s not in seen_scripts:
+        unused_scripts.add(s)
+    _SampleTextAudit(FLAGS.out, languages, scripts, unused_scripts)
   else:
     assert len(argv) > 1, 'No METADATA.pb files specified'
     line_to_lang_name = {}

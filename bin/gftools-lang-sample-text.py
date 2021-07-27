@@ -23,6 +23,7 @@ import csv
 import glob
 import os
 import re
+import yaml
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')
@@ -72,7 +73,6 @@ def main(argv):
   languages = _LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
 
   if FLAGS.udhrs.endswith('.yaml'):
-    import yaml
     with open(FLAGS.udhrs, 'r') as f:
       data = yaml.safe_load(f)
       for translation, meta in data.items():
@@ -104,7 +104,48 @@ def main(argv):
           language.autonym = meta['name_autonym'].strip()
         _WriteProto(language, os.path.join(FLAGS.lang, 'languages', language.id + '.textproto'))
 
-  else:
+  elif FLAGS.udhrs.endswith('.csv'):
+    with open(FLAGS.udhrs, newline='') as csvfile:
+      reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+      head = next(reader)
+      index_id = head.index('id')
+      index_name = head.index('language')
+      index_historical = head.index('historical')
+      index_sample = head.index('SAMPLE')
+      for row in reader:
+        id = row[index_id]
+        if id in languages:
+          language = languages[row[index_id]]
+        else:
+          language = fonts_public_pb2.LanguageProto()
+          language.id = id
+          language.language, language.script = id.split('_')
+          language.name = row[index_name]
+        historical = row[index_historical] == 'X'
+        if language.historical != historical:
+          if historical:
+            language.historical = True
+          else:
+            language.ClearField('historical')
+        sample = row[index_sample]
+        if sample and not sample.startswith('http'):
+          udhr = Udhr(
+            key=id,
+            iso639_3=language.language,
+            iso15924=language.script,
+            bcp47=id,
+            direction=None,
+            ohchr=None,
+            stage=4,
+            loc=None,
+            name=None
+          )
+          udhr.LoadArticleOne(sample)
+          if not language.HasField('sample_text'):
+            language.sample_text.MergeFrom(udhr.GetSampleTexts())
+        _WriteProto(language, os.path.join(FLAGS.lang, 'languages', language.id + '.textproto'))
+
+  elif os.path.isdir(FLAGS.udhrs):
     for udhr_path in glob.glob(os.path.join(FLAGS.udhrs, '*')):
       if udhr_path.endswith('index.xml') or os.path.basename(udhr_path).startswith('status'):
         continue
@@ -131,6 +172,8 @@ def main(argv):
       language.sample_text.MergeFrom(udhr.GetSampleTexts())
       _WriteProto(language, os.path.join(FLAGS.lang, 'languages', language.id + '.textproto'))
 
+    else:
+      raise Exception('Unsupported input type for --udhrs: ' + FLAGS.udhrs)
 
 
 if __name__ == '__main__':
