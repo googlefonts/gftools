@@ -1,13 +1,22 @@
 
+# venv
+venv/
 
-# Basic
+# PyCharm
+.idea/
+.dccache
 
-*.pyc
-.DS_Store
+# VSCode
+.vscode/
+*.code-workspace
 
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.mypy_cache/
 
 # Distribution / packaging
-
 .Python
 build/
 develop-eggs/
@@ -26,3 +35,30 @@ MANIFEST
 
 # auto-generated version file
 Lib/gftools/_version.py
+
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# macOS
+.DS_Store
+
+## Thumbnails
+._*
+
+## Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+## Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
