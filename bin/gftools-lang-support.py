@@ -200,7 +200,7 @@ def _SampleTextAudit(out_dir, languages, scripts):
         else:
           min_sample_text_languages += 1
 
-    if len(languages_with_sample_text) == 0 or (len(languages_with_sample_text) == 1 and len(by_script[script]) > 1):
+    if len(languages_with_sample_text) == 0 or (len(languages_with_sample_text) == 1 and len([l for l in by_script[script] if l.historical]) > 1 ):
       for l in by_script[script]:
         entries.append({
           'id': l.id,
