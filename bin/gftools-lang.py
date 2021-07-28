@@ -189,6 +189,7 @@ class Cldr():
     self.regions = self._CompileRegions(region_names, region_populations)
     self.region_groups = self._CompileRegionGroups(region_groups, region_names)
     self.scripts = self._CompileScripts(lang_index, script_names)
+    self.lang_regions = lang_regions
     self._SetRegionsOnLanguages(lang_regions)
     self._SetExemplarCharsOnLanguages()
 
@@ -355,18 +356,17 @@ class Cldr():
           else:
             historical = script_code in lang_historical[lang_code]
 
-        alt_code = lang_code + '_' + script_code
-
-        if alt_code not in lang_populations and not primary_script_found:
-          key = lang_code
+        key = lang_code + '_' + script_code
+        if key not in lang_populations and not primary_script_found:
+          alt_code = lang_code
           primary_script_found = True
         else:
-          key = alt_code
+          alt_code = key
 
-        if alt_code in lang_names:
-          display_name = lang_names[alt_code]
-        elif key in lang_names:
+        if key in lang_names:
           display_name = lang_names[key]
+        elif alt_code in lang_names:
+          display_name = lang_names[alt_code]
         elif lang_code in lang_names:
           display_name = '{lang}, {script}'.format(lang=lang_names[lang_code], script=script_names[script_code])
         else:
@@ -374,8 +374,8 @@ class Cldr():
           display_name = None
 
         population = lang_populations[key] or 0
-        aliases = lang_aliases[alt_code] or lang_aliases[lang_code] or []
-        langs[key] = self.Language(key, lang_code, script_code, aliases, display_name, population, historical)
+        aliases = lang_aliases[key] or lang_aliases[lang_code] or []
+        langs[alt_code] = self.Language(key, lang_code, script_code, aliases, display_name, population, historical)
     return langs
 
   def _CompileRegions(self, region_names, region_populations):
@@ -396,11 +396,17 @@ class Cldr():
 
   def _SetRegionsOnLanguages(self, lang_regions):
     for lang_code in lang_regions:
-      if lang_code not in self.langs:
+      lang = None
+      if lang_code in self.langs:
+        lang = self.langs[lang_code]
+      if lang is None:
+        print ('Looking very hard for language: ' + lang_code)
+        for l in self.langs.values():
+          if l.lang_code == lang_code:
+            print (l)
         warnings.warn('Unable to find language when setting region info: ' + lang_code)
         continue
-      regions = lang_regions[lang_code]
-      self.langs[lang_code].SetRegions(regions)
+      lang.SetRegions(lang_regions[lang_code])
 
   def _SetExemplarCharsOnLanguages(self):
     for lang_code in self.langs:
