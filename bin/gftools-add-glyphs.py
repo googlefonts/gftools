@@ -11,10 +11,10 @@ and consequently has a more complete set of language metadata.
 Usage:
 
 # Standard usage. Output lang metadata to a dir. Does not overwrite existing data.
-gftools lang -l ./lang/ ./ofl/noto*/METADATA.pb
+gftools add-glyphs -l ./lang/ ./ofl/noto*/METADATA.pb
 
 # Generate a report with insights about data and potential metadata holes.
-gftools lang -l ./lang/ -r ./ofl/noto*/METADATA.pb
+gftools add-glyphs -l ./lang/ -r ./ofl/noto*/METADATA.pb
 
 """
 
