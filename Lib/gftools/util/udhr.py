@@ -96,7 +96,7 @@ class SampleTextExtractor():
     seen = set()
     for article in self._udhr.articles:
       for para in article['content']:
-        for ch in self._non_word_regex.sub('', para):
+        for ch in (self._non_word_regex.sub('', para) or self._space_regex.sub('', para)):
           ch = ch.lower()
           if ch not in seen:
             seen.add(ch)
