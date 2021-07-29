@@ -8,6 +8,11 @@ package google.fonts;
 option java_package = "com.google.fonts.proto";
 option java_outer_classname = "FontsPublic";
 
+enum FontType {
+  TYPE_TTF = 0;
+  TYPE_OTF = 1;
+}
+
 message FamilyProto {
   required string name = 1;
   required string designer = 2;
@@ -29,6 +34,8 @@ message FamilyProto {
   map<string, string> sample_glyphs = 16;
 
   optional SampleTextProto sample_text = 17;
+
+  optional FontType source_type = 18;
 };
 
 message FontProto {
