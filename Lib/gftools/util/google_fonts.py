@@ -39,6 +39,7 @@ import sys
 import unittest
 from pkg_resources import resource_filename
 from warnings import warn
+from absl.flags._exceptions import UnparsedFlagAccessError
 
 if __name__ == '__main__':
   # some of the imports here wouldn't work otherwise
@@ -337,7 +338,11 @@ def CodepointFileForSubset(subset):
     OSError: If the --nam_dir doesn't exist. errno.ENOTDIR.
   """
   # expanduser so we can do things like --nam_dir=~/oss/googlefontdirectory/
-  enc_path = os.path.expanduser(FLAGS.nam_dir)
+  try:
+    enc_path = os.path.expanduser(FLAGS.nam_dir)
+  # Use gftools/encodings data if function is called without using absl
+  except UnparsedFlagAccessError:
+    enc_path = resource_filename("gftools", "encodings")
   if not os.path.exists(enc_path):
     raise OSError(errno.ENOTDIR, 'No such directory', enc_path)
 
