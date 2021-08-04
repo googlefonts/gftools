@@ -93,9 +93,6 @@ required, all others have sensible defaults:
 * ``decomposeTransformedComponents``: Whether to decompose transformed components on export. Defaults to ``true``.
 
 """
-
-from babelfont import Babelfont
-from fontmake.font_project import FontProject
 from fontTools import designspaceLib
 from fontTools.otlLib.builder import buildStatTable
 from fontTools.ttLib import TTFont
@@ -107,18 +104,24 @@ from gftools.utils import font_is_italic, font_familyname, font_stylename
 from gftools.instancer import gen_static_font
 from strictyaml import load, YAMLError
 from strictyaml.exceptions import YAMLValidationError
-from ufo2ft import CFFOptimization
-from ufo2ft.filters import loadFilterFromString
-import difflib
-import glyphsLib
 import logging
 import os
 import re
 import shutil
-import statmake.classes
-import statmake.lib
 import sys
 import tempfile
+try:
+    from babelfont import Babelfont
+    from fontmake.font_project import FontProject
+    import glyphsLib
+    import statmake.classes
+    import statmake.lib
+    from ufo2ft import CFFOptimization
+    from ufo2ft.filters import loadFilterFromString
+except ModuleNotFoundError:
+    raise ModuleNotFoundError(("gftools was installed without the font build "
+        "dependencies. To install the dependencies run `pip install gftools[font-build]`.\n"
+        "See https://github.com/googlefonts/gftools#installation for further info."))
 
 
 class GFBuilder:

@@ -24,7 +24,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install packages
         run: |
-          pip install .
+          pip install .[all]
           pip install mypy==0.812 pytest
       - name: Run Tests
         run: |

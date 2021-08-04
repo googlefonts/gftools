@@ -59,6 +59,18 @@ Once You have installed these system packages, install gftools using the followi
 
     pip install 'gftools[qa]'
 
+If you need to use `gftools builder` run:
+
+    pip install 'gftools[font-build']'
+
+If you need to use `gftools add-designer` run:
+
+    pip install 'gftools[designer-build]'
+
+To install gftools with all dependencies run:
+
+    pip install 'gftools[all]'
+
 
 ### Tool Requirements and Dependencies
 

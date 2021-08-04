@@ -27,6 +27,34 @@ def gftools_scripts():
 with open('README.md') as f:
     long_description = f.read()
 
+
+qa_deps = [
+    'fontbakery',
+    'fontdiffenator',
+    'gfdiffbrowsers',
+    'browserstack-local==1.2.2',
+    'pybrowserstack-screenshots==0.1',
+    'Jinja2==3.0.1'
+]
+
+font_build_deps = [
+    "fontmake>=2.4.0",
+    "babelfont",
+    "skia-pathops",
+    "glyphsLib",
+    "ttfautohint-py",
+    "brotli",
+    "statmake",
+]
+
+designer_build_deps = [
+    "openpyxl",
+    "xlrd",
+    "pandas",
+]
+
+all_deps = qa_deps + font_build_deps + designer_build_deps
+
 setup(
     name="gftools",
     use_scm_version={"write_to": "Lib/gftools/_version.py"},
@@ -70,16 +98,19 @@ setup(
     ],
     setup_requires=['setuptools_scm'],
     # Dependencies needed for gftools qa.
-    extras_require={"qa": ['fontbakery', 'fontdiffenator', 'gfdiffbrowsers']},
+    extras_require={
+        "qa": qa_deps,
+        "font-build": font_build_deps,
+        "designer-build": designer_build_deps,
+        "all": all_deps,
+    },
     install_requires=[
 #       'fontforge', # needed by build-font2ttf script
 #                      but there's no fontforge package on pypi
 #                      see: https://github.com/fontforge/fontforge/issues/2048
         'setuptools',
         'FontTools[ufo]',
-        'Flask',
         'absl-py',
-        'glyphsLib',
         'PyGithub',
         'pillow',
         'protobuf',
@@ -90,17 +121,6 @@ setup(
         'vttlib',
         'pygit2',
         'strictyaml',
-        'fontmake>=2.4.0',
-        'skia-pathops',
-        'statmake',
         'PyYAML',
-        'babelfont',
-        'ttfautohint-py',
-        'brotli',
-        'browserstack-local==1.2.2',
-        'pybrowserstack-screenshots==0.1',
-        'pandas',
-        'xlrd',
-        'openpyxl',
     ]
-    )
+)

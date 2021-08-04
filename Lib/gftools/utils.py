@@ -23,14 +23,10 @@ import re
 import shutil
 import unicodedata
 from unidecode import unidecode
-import browserstack_screenshots
 from collections import namedtuple
 from github import Github
 from pkg_resources import resource_filename
 from google.protobuf import text_format
-import time
-import json
-from browserstack.local import Local
 from PIL import Image
 if sys.version_info[0] == 3:
     from configparser import ConfigParser

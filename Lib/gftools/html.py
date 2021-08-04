@@ -1,15 +1,11 @@
 from fontTools.ttLib import TTFont
-import browserstack_screenshots
 from pkg_resources import resource_filename
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 import pathlib
-from browserstack.local import Local
 import tempfile
 import sys
 import os
 from multiprocessing import Process
 from contextlib import contextmanager
-import http.server
 from http.server import *
 import logging
 import time
@@ -28,6 +24,14 @@ from gftools.utils import (
     partition,
     get_encoded_glyphs,
 )
+try:
+    from jinja2 import Environment, FileSystemLoader, select_autoescape
+    from browserstack.local import Local
+    import browserstack_screenshots
+except ModuleNotFoundError:
+    raise ModuleNotFoundError(("gftools was installed without the QA "
+        "dependencies. To install the dependencies run `pip install gftools[qa]`.\n"
+        "See https://github.com/googlefonts/gftools#installation for further info."))
 
 
 __all__ = [
