@@ -1,4 +1,6 @@
 #$ include GF-latin-pro_unique-glyphs.nam
+# see discussion in https://github.com/googlefonts/gftools/pull/177
+# see example in Questrial
 0x0180  ƀ LATIN SMALL LETTER B WITH STROKE
 0x0181  Ɓ LATIN CAPITAL LETTER B WITH HOOK
 0x0186  Ɔ LATIN CAPITAL LETTER OPEN O
