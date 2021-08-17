@@ -1,55 +1,119 @@
 #!/usr/bin/env python3
-"""Report how many fonts have been added/updated between two dates
+"""Generate a html report for the google/fonts repo
 
-Usage: python push-stats.py from_date to_date
-       python push-stats.py 2020-01-01 2020-06-01
+The report contains information regarding:
+- Issues opened and closed
+- How many families, metadata updates and infrastructure commits have been pushed
+- How many commits each contributor has made
 
-WARNING: was written in < 30 mins by Marc Foley. Do not expect miracles :)
+Usage:
+gftools push-stats path/to/google/fonts/repo out.html
 """
-import requests
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pkg_resources import resource_filename
+from datetime import datetime
+import pygit2
+from github import Github
+import os
 import json
-from datetime import datetime, timedelta
-import sys
-
-if len(sys.argv) != 3:
-    print("Usage: python info.py YYYY-MM-DD YYYY-MMDD")
-    print("e.g: python info.py 2020-01-01 2020-06-01")
-    sys.exit()
-
-from_date = sys.argv[1]
-to_date = sys.argv[2]
-
-r = requests.get("http://fonts-dev.sandbox.google.com/metadata/fonts")
-data = json.loads(r.text.replace(")]}'", ""))
+import argparse
 
 
-family_meta = data['familyMetadataList']
+def get_commits(repo):
+    commits = list(repo.walk(repo.head.target))
+    res = []
+    for idx in range(1, len(commits)):
+        current_commit = commits[idx - 1]
+        prev_commit = commits[idx]
+
+        # Basic meta
+        author = current_commit.author.name
+        title = current_commit.message.split("\n")[0]
+        date = datetime.fromtimestamp(int(current_commit.commit_time))
+
+        diff = prev_commit.tree.diff_to_tree(current_commit.tree)
+        if "Merge branch" in current_commit.message:
+            continue
+        # Commit has all new files
+        if all(d.status == 1 for d in diff.deltas):
+            status = "new"
+        # Contains modifications
+        elif any(d.status == 3 for d in diff.deltas):
+            status = "modified"
+        else:
+            status = "modified"
+
+        # Type of commit
+        if any(d.new_file.path.endswith(("ttf", "otf")) for d in diff.deltas):
+            kind = "family"
+        elif any(
+            d.new_file.path.endswith(("metadata.pb", "DESCRIPTION.en_us.html"))
+            for d in diff.deltas
+        ):
+            kind = "metadata"
+        elif any(d.new_file.path.endswith("info.pb") for d in diff.deltas):
+            kind = "designer"
+        else:
+            kind = "infrastructure"
+
+        res.append(
+            {
+                "date": date.isoformat(),
+                "title": title,
+                "author": author,
+                "status": status,
+                "kind": kind,
+            }
+        )
+    return res
 
 
-new_families = []
-updated_families = []
-for family in family_meta:
-    if family['dateAdded'] >= from_date and family['dateAdded'] <= to_date:
-        new_families.append(family)
+def get_issues(repo):
+    issues = list(repo.get_issues(state="all", since=datetime(2021, 5, 1)))
+    res = []
+    for i in issues:
+        if i.pull_request:  # ignore prs
+            continue
+        d = {
+            "date": i.created_at.isoformat(),
+            "title": i.title,
+            "closed": True if i.closed_at else False,
+        }
+        res.append(d)
+    return res
 
-    if family['lastModified'] >= from_date and family['lastModified'] <= to_date:
-        if family not in new_families:
-            updated_families.append(family)
 
-print("new families", len(new_families))
-print("updated families", len(updated_families))
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("repo_path")
+    parser.add_argument("out")
+    args = parser.parse_args()
+
+    push_template_dir = resource_filename("gftools", "push-templates")
+    env = Environment(
+        loader=FileSystemLoader(push_template_dir),
+        autoescape=select_autoescape(),
+    )
+
+    print("Getting commits")
+    repo = pygit2.Repository(args.repo_path)
+    commits = get_commits(repo)
+
+    print("Getting issues")
+    github = Github(os.environ["GH_TOKEN"])
+    repo = github.get_repo("google/fonts")
+    issues = get_issues(repo)
+
+    template = env.get_template("index.html")
+    with open(args.out, "w") as doc:
+        doc.write(
+            template.render(
+                commit_data=json.dumps({"issues": issues, "commits": commits}),
+                current_year=datetime.now().year,
+                years=list(range(2015, datetime.now().year + 2)),
+            )
+        )
 
 
-def family_info(family):
-    axes = ",".join([a['tag'] for a in family['axes']])
-    print(f"{family['family']}\t{axes}")
-
-print("NEW FAMILIES")
-for family in new_families:
-    family_info(family)
-print("")
-
-print("UPDATED FAMILIES")
-for family in updated_families:
-    family_info(family)
-print("")
+if __name__ == "__main__":
+    main()
