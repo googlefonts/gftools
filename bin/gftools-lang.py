@@ -152,6 +152,7 @@ INDEX_XML = 'index.xml'
 FLAGS = flags.FLAGS
 flags.DEFINE_string('out', None, 'Path to lang metadata package', short_name='o')
 flags.mark_flag_as_required('out')
+flags.DEFINE_boolean('overwrite_sample_text', False, 'Whether to overwrite sample text with any generated from UDHR translations', short_name='w')
 flags.DEFINE_bool('gen_lang', False, 'Whether to generate the lang metadata package', short_name='l')
 flags.DEFINE_bool('report', False, 'Whether to output a report of lang metadata insights', short_name='r')
 flags.DEFINE_string('noto_root', None, 'Path to noto root', short_name='n')
@@ -460,11 +461,13 @@ class UdhrTranslations():
 
     for udhr in self._udhrs:
       udhr.Parse(self._LoadUdhrTranslation(udhr))
-      if udhr.bcp47 in self._udhr_map and self._udhr_map[udhr.bcp47].stage > udhr.stage:
-        w = 'Skipping UDHR "{other}" in favor of "{this}"'.format(other=self._udhr_map[udhr.bcp47].name, this=udhr.name)
+      if udhr.iso639_3 != 'yue': continue
+      key = udhr.iso639_3 + '_' + udhr.iso15924
+      if key in self._udhr_map and self._udhr_map[key].stage > udhr.stage:
+        w = 'Skipping UDHR "{other}" in favor of "{this}"'.format(other=self._udhr_map[udhr.key].name, this=udhr.name)
         warnings.warn(w)
         continue
-      self._udhr_map[udhr.bcp47] = udhr
+      self._udhr_map[key] = udhr
 
   def __enter__(self):
     return self
@@ -508,28 +511,23 @@ class UdhrTranslations():
     return [udhr for udhr in self._udhrs if udhr.stage >= min_stage]
 
   def GetUdhr(self, lang, min_stage=0):
-    lang_code = lang.id
-    alt_code = lang_code + '_' + lang.script_code
-    if lang_code in SUPPLEMENTAL_ALIASES:
-      alias = SUPPLEMENTAL_ALIASES[lang_code]
+    key = lang.lang_code + '_' + lang.script_code
+    if key in SUPPLEMENTAL_ALIASES:
+      alias = SUPPLEMENTAL_ALIASES[key]
       if alias in self._udhr_map and self._udhr_map[alias].stage >= min_stage:
         return self._udhr_map[alias]
-    if alt_code in self._udhr_map and self._udhr_map[alt_code].stage >= min_stage:
-      return self._udhr_map[alt_code]
-    if lang_code in self._udhr_map and self._udhr_map[lang_code].stage >= min_stage:
-      return self._udhr_map[lang_code]
+    if key in self._udhr_map and self._udhr_map[key].stage >= min_stage:
+      return self._udhr_map[key]
     return None
 
   def HasUdhr(self, lang, min_stage=0):
-    lang_code = lang.id
-    alt_code = lang_code + '_' + lang.script_code
-    if lang_code in SUPPLEMENTAL_ALIASES:
-      alias = SUPPLEMENTAL_ALIASES[lang_code]
+    key = lang.lang_code + '_' + lang.script_code
+    print(self._udhr_map.keys())
+    if key in SUPPLEMENTAL_ALIASES:
+      alias = SUPPLEMENTAL_ALIASES[key]
       if alias in self._udhr_map and self._udhr_map[alias].stage >= min_stage:
         return True
-    if alt_code in self._udhr_map and self._udhr_map[alt_code].stage >= min_stage:
-      return True
-    if lang_code in self._udhr_map and self._udhr_map[lang_code].stage >= min_stage:
+    if key in self._udhr_map and self._udhr_map[key].stage >= min_stage:
       return True
     return False
 
@@ -616,28 +614,9 @@ def _GetExemplarCharacters(cldr, lang, hg_lang):
 
 def _GetSampleText(lang_code, cldr, udhrs):
   lang = cldr.langs[lang_code]
-  if udhrs.HasUdhr(lang, min_stage=4):
-    return udhrs.GetUdhr(lang, min_stage=4).GetSampleTexts()
-
-  # Find a fallback language – largest population with same script(s)
-  fallback = None
-  population = -1
-  for fallback_lang_code in cldr.langs:
-    fallback_lang = cldr.langs[fallback_lang_code]
-    p = fallback_lang.population
-    if lang.script_code == fallback_lang.script_code and \
-        udhrs.HasUdhr(fallback_lang, min_stage=4) and \
-        p > population:
-      fallback = fallback_lang_code
-      population = p
-
-  if fallback is None:
-    warnings.warn('Unable to find sample text fallback: ' + lang_code)
-    return None
-
-  sample_text = fonts_public_pb2.SampleTextProto()
-  sample_text.fallback_language = fallback
-  return sample_text
+  if udhrs.HasUdhr(lang, min_stage=0):
+    return udhrs.GetUdhr(lang, min_stage=0).GetSampleTexts()
+  return None
 
 
 def _IsHistorical(cldr_lang, hg_lang):
@@ -780,6 +759,21 @@ def _WriteLanguageMetadata(cldr, out_dir):
       _WriteProto(language, path)
 
 
+def _OverwriteSampleText(cldr, out_dir):
+  languages = _LoadLanguages(out_dir)
+  with UdhrTranslations() as udhrs:
+    udhr_map = {u.iso639_3 + '_' + u.iso15924: u for u in udhrs.GetUdhrs()}
+    for l in languages.values():
+      if not l.id.startswith('yue'): continue
+      if l.id in udhr_map:
+        udhr = udhr_map[l.id]
+        path = os.path.join(out_dir, l.id + '.textproto')
+        sample_text = udhr.GetSampleTexts()
+        print(sample_text)
+        l.sample_text.MergeFrom(sample_text)
+        _WriteProto(l, path)
+
+
 def _WriteReport(out_dir):
   rows = [['Language', '(name)', 'No name', 'No autonym', 'No exemplar chars', 'No sample text', 'Sample text fallback', '(name)']]
 
@@ -882,6 +876,13 @@ def main(argv):
       path = os.path.join(out_dir, 'languages')
       pathlib.Path(path).mkdir(parents=True, exist_ok=True)
       _WriteLanguageMetadata(cldr, path)
+
+  if FLAGS.overwrite_sample_text:
+    with Cldr() as cldr:
+      print ('Overwriting sample text...')
+      path = os.path.join(out_dir, 'languages')
+      pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+      _OverwriteSampleText(cldr, path)
 
   if FLAGS.mark_historical_languages:
     _MarkHistoricalLanguages()

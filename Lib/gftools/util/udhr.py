@@ -79,6 +79,7 @@ class SampleTextExtractor():
     self._space_regex = re.compile(r'\s+')
     self._non_space_regex = re.compile(r'[^\s]+')
     self._non_word_space_regex = re.compile(r'[^\w\s]+')
+    self._any_regex = re.compile(r'.')
 
   def _DisplayLength(self, s):
     """Returns length of given string. Omits combining characters.
@@ -151,7 +152,7 @@ class SampleTextExtractor():
       for para in iterator:
         if para is None:
           continue
-        for regex in [self._space_regex, self._non_word_regex]:
+        for regex in [self._any_regex, self._space_regex, self._non_word_regex]:
           breaks = [-1]
           for match in regex.finditer(para, min_chars):
             breaks.append(match.start())
@@ -195,7 +196,7 @@ class SampleTextExtractor():
             p.pop()
           elif min_chars <= p_size:
             return '\n'.join(p)
-    # assert len(p) > 0, 'Unable to extract passage: ' + self._udhr.key
+    assert len(p) > 0, 'Unable to extract passage: ' + self._udhr.key
     if len(p) == 0:
       p.append([p for p in self._GetParagraphs()][0])
     return '\n'.join(p)
@@ -227,8 +228,8 @@ class SampleTextExtractor():
     sample_text.masthead_partial = self._Get(self.TextType.GLYPHS, char_count = 2)
     sample_text.styles = self._Get(self.TextType.PHRASE, min_chars = 40, max_chars = 60)
     sample_text.tester = self._Get(self.TextType.PHRASE, min_chars = 60, max_chars = 90)
-    sample_text.poster_sm = self._Get(self.TextType.PHRASE, min_chars = 10, max_chars = 15)
-    sample_text.poster_md = self._Get(self.TextType.PHRASE, min_chars = 8, max_chars = 12)
+    sample_text.poster_sm = self._Get(self.TextType.PHRASE, min_chars = 10, max_chars = 17)
+    sample_text.poster_md = self._Get(self.TextType.PHRASE, min_chars = 6, max_chars = 12)
     sample_text.poster_lg = self._Get(self.TextType.WORD, min_chars = 3, max_chars = 8)
     sample_text.specimen_48 = self._Get(self.TextType.SENTENCE, min_chars = 50, max_chars = 80)
     sample_text.specimen_36 = self._Get(self.TextType.PARAGRAPH, min_chars = 100, max_chars = 120)
