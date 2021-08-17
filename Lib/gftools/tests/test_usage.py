@@ -32,7 +32,7 @@ class TestSubcommands(unittest.TestCase):
         """Tests if the output from running gftools --list-subcommands
         matches the scripts within the bin folder"""
 
-        scripts = [re.sub('\.\w*$', '', f.replace('gftools-', '')) for f in \
+        scripts = [re.sub(r'\.\w*$', '', f.replace('gftools-', '')) for f in \
                    os.listdir(self.bin_path) if f.startswith('gftools-')]
         subcommands = subprocess.check_output(['python',
                                                os.path.join('bin', 'gftools'),
