@@ -7,7 +7,7 @@ venv/
 .dccache
 
 # VSCode
-#.vscode/
+.vscode/
 *.code-workspace
 
 # Byte-compiled / optimized / DLL files
