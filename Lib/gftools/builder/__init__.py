@@ -40,6 +40,12 @@ which looks like this::
           wght: 400
           wdth: 200
     ...
+    meta:
+      - slng:
+        - Latn
+        - Cyrl
+        - sr-Cyrl
+    ...
     instances:
       Texturina[wght].ttf:
       - coordinates:
@@ -71,6 +77,9 @@ required, all others have sensible defaults:
     values as demonstrated above, or a dictionary mapping each variable font to a
     per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
     STAT table is generated automatically using ``gftools.stat``.
+* ``meta``: A meta table configuration. This should be a dictionary with ``dlng``
+    and/or ``slng`` keys, with the values being a list of script/language tags
+    as defined in the OpenType Specification.
 * ``instances``: A list of static font TTF instances to generate from each variable
     font as demonstrated above. If this argument isn't provided, static TTFs will
     be generated for each instance that is specified in the source files.
@@ -103,6 +112,7 @@ from fontTools.ttLib.woff2 import main as woff2_main
 from gftools.builder.schema import schema
 from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
+from gftools.meta import gen_meta_table
 from gftools.utils import font_is_italic, font_familyname, font_stylename
 from gftools.instancer import gen_static_font
 from strictyaml import load, YAMLError
@@ -284,6 +294,7 @@ class GFBuilder:
             ttFonts.append(ttFont)
 
         self.gen_stat(ttFonts)
+        self.gen_meta(ttFonts)
         # We post process each variable font after generating the STAT tables
         # because these tables are needed in order to fix the name tables.
         for ttFont in ttFonts:
@@ -459,6 +470,7 @@ class GFBuilder:
         self.logger.info("Postprocessing font %s" % filename)
         font = TTFont(filename)
         fix_font(font, include_source_fixes=self.config["includeSourceFixes"])
+        self.gen_meta([font])
         font.save(filename)
 
     def post_process_ttf(self, filename):
@@ -483,6 +495,12 @@ class GFBuilder:
             wf_filename,
             wf_filename.replace(self.config["ttDir"], self.config["woffDir"]),
         )
+
+    def gen_meta(self, ttFonts):
+        if "meta" not in self.config:
+            return
+        for ttFont in ttFonts:
+            gen_meta_table(ttFont, self.config["meta"])
 
 
 if __name__ == "__main__":
