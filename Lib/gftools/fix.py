@@ -364,24 +364,20 @@ def update_nametable(ttFont, family_name=None, style_name=None):
     if not style_name:
         style_name = font_stylename(ttFont)
 
-    is_ribbi = style_name in ("Regular", "Bold", "Italic", "Bold Italic")
+    ribbi = ("Regular", "Bold", "Italic", "Bold Italic")
+    tokens = family_name.split() + style_name.split()
 
-    nameids = {}
-    if is_ribbi:
-        nameids[1] = family_name
-        nameids[2] = style_name
-    else:
-        tokens = style_name.split()
-        family_name_suffix = " ".join([t for t in tokens if t not in ["Italic"]])
-        nameids[1] = f"{family_name} {family_name_suffix}".strip()
-        nameids[2] = "Regular" if "Italic" not in tokens else "Italic"
-
-        typo_family_suffix = " ".join(
-            t for t in tokens if t not in list(WEIGHT_NAMES) + ["Italic"]
-        )
-        nameids[16] = f"{family_name} {typo_family_suffix}".strip()
-        typo_style = " ".join(t for t in tokens if t in list(WEIGHT_NAMES) + ["Italic"])
-        nameids[17] = typo_style
+    nameids = {
+        1: " ".join(t for t in tokens if t not in ribbi),
+        2: " ".join(t for t in tokens if t in ribbi) or "Regular",
+        16: " ".join(t for t in tokens if t not in list(WEIGHT_NAMES) + ['Italic']),
+        17: " ".join(t for t in tokens if t in list(WEIGHT_NAMES) + ['Italic']) or "Regular"
+    }
+    # Remove typo name if they match since they're redundant
+    if nameids[16] == nameids[1]:
+        del nameids[16]
+    if nameids[17] == nameids[2]:
+        del nameids[17]
 
     family_name = nameids.get(16) or nameids.get(1)
     style_name = nameids.get(17) or nameids.get(2)
