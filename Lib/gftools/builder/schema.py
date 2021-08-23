@@ -33,6 +33,11 @@ stat_schema = Seq(
     }),
 )
 
+meta_schema = Map({
+        Optional("dlng"): Seq(Str()),
+        Optional("slng"): Seq(Str()),
+})
+
 stat_format4_schema = Seq(
     Map({
         "name": Str(),
@@ -55,6 +60,7 @@ schema = Map(
         Optional("logLevel"): Str(),
         Optional("stylespaceFile"): Str(),
         Optional("stat"): stat_schema | MapPattern(Str(), stat_schema),
+        Optional("meta"): meta_schema,
         Optional("statFormat4"): stat_format4_schema | MapPattern(Str(), stat_format4_schema),
         Optional("familyName"): Str(),
         Optional("includeSourceFixes"): Bool(),
