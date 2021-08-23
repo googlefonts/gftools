@@ -78,7 +78,7 @@ required, all others have sensible defaults:
     per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
     STAT table is generated automatically using ``gftools.stat``.
 * ``meta``: A meta table configuration. This should be a dictionary with ``dlng``
-    and/or ``slng`` keys, with the values being a list of script/language tags
+    and/or ``slng`` keys, with the values being a list of ScriptLangTags
     as defined in the OpenType Specification.
 * ``instances``: A list of static font TTF instances to generate from each variable
     font as demonstrated above. If this argument isn't provided, static TTFs will
