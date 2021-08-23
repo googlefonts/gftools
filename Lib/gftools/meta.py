@@ -55,21 +55,22 @@ def _validate_scriptlangtag(value):
     except LanguageTagError:
         log.warning(f"Skipping unparsable script/lang tag '{value}'")
         return False
+    if len(code.language) == 4 and code.language.isalpha():
+        code.script = code.language.title()
+        code.language = None
     if not code.script:
         log.warning(
             f"meta table script/lang tags must have a script component, '{value}' does not"
         )
         return False
-    if code.is_valid():
-        return True
-    if code.language and not VALIDITY.match(code.language):
+    if code.language and not VALIDITY.fullmatch(code.language):
         log.warning(f"Invalid language code '{code.language}' in '{value}'")
-    if not VALIDITY.match(code.script):
+    if not VALIDITY.fullmatch(code.script):
         log.warning(f"Invalid script code '{code.script}' in '{value}'")
-    if code.territory and not VALIDITY.match(code.territory):
+    if code.territory and not VALIDITY.fullmatch(code.territory):
         log.warning(f"Invalid territory code '{code.territory}' in '{value}'")
     if code.variants:
         for variant in code.variants:
-            if not VALIDITY.match(variant):
+            if not VALIDITY.fullmatch(variant):
                 log.warning(f"Invalid variant code '{variant}' in '{value}'")
-    return False
+    return code.is_valid()
