@@ -55,7 +55,7 @@ def _validate_scriptlangtag(value):
     except LanguageTagError:
         log.warning(f"Skipping unparsable script/lang tag '{value}'")
         return False
-    if len(code.language) == 4 and code.language.isalpha():
+    if code.language and len(code.language) == 4 and code.language.isalpha():
         code.script = code.language.title()
         code.language = None
     if not code.script:

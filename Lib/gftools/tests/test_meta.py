@@ -12,11 +12,11 @@ def test_meta_where_none_present():
     a_font = TTFont(os.path.join(TEST_DATA, "Inconsolata[wdth,wght].ttf"))
     assert "meta" not in a_font
     gen_meta_table(a_font, {
-        "slng": ["en-Latn", "tur-Hang-IT", "tur"],
+        "slng": ["en-Latn", "tur-Hang-IT", "tur", "Latn"],
         "dlng": ["en-Latn-AZ"]
     })
     assert a_font["meta"].data == {
-        "slng": "en-Latn, tur-Hang-IT",
+        "slng": "Latn, en-Latn, tur-Hang-IT",
         "dlng": "en-Latn-AZ"
     }
 
