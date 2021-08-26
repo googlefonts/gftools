@@ -71,65 +71,65 @@ var colors = [
 ];
 
 
-offset_date = (date, duration) => {
+offsetDate = (date, duration) => {
     if (duration === "daily") {
-	date.setHours(date.getHours() - 24)
+        date.setHours(date.getHours() - 24);
     }
     else if (duration === "weekly") {
-	date.setHours(date.getHours() - 24*7)
+        date.setHours(date.getHours() - 24*7);
     }
     else if (duration === "monthly") {
-	date.setMonth(date.getMonth() - 1)
+        date.setMonth(date.getMonth() - 1);
     }
     else if (duration === "quarterly") {
-	date.setMonth(date.getMonth() - 3)
+        date.setMonth(date.getMonth() - 3);
     }
     else if (duration === "annually") {
-	date.setYear(date.getFullYear() - 1);
+        date.setYear(date.getFullYear() - 1);
     }
     else {
-	throw "duration param is not correct!";
+        throw "duration param is not correct!";
     }
-    return date
+    return date;
 
 }
 
-filter_commits = (data, start, end) => {
+filterCommits = (data, start, end) => {
     res = [];
     for (i in data) {
 	if (data[i]['date'] >= start && data[i]['date'] <= end) {
 	    res.push(data[i]);
-	}
+        }
     }
     return res;
 }
 
-contributors_graph_data = (commits, top) => {
+contributorsGraphData = (commits, top) => {
     let res = {};
     for (i in commits) {
-	let commit = commits[i];
-	let author = commit['author'];
-	if (!(author in res)) {
-	    res[author] = 0;
-	}
-	res[author] += 1;
+        let commit = commits[i];
+        let author = commit['author'];
+        if (!(author in res)) {
+            res[author] = 0;
+        }
+        res[author] += 1;
     }
     var sorted = [];
     for (k in res) {
 	sorted.push([k, res[k]]);
     }
-    sorted.sort(function(a, b){
+    sorted.sort(function(a, b) {
 	return b[1] - a[1]
     });
     sorted = sorted.slice(0, top);
 
     var labels = [];
     for (i in sorted) {
-	labels.push(sorted[i][0]);
+        labels.push(sorted[i][0]);
     }
     var data = [];
     for (i in sorted) {
-	data.push(sorted[i][1]);
+        data.push(sorted[i][1]);
     }
     return {
 	type: 'pie',
@@ -151,12 +151,12 @@ contributors_graph_data = (commits, top) => {
 }
 
 
-commits_graph_data = (data, duration) => {
+commitsGraphData = (data, duration) => {
     var delta = new Date(data[0]['date'])
     var label = delta.toDateString();
     let res = {};
     for (i in data) {
-	let date = Date.parse(data[i]['date']);
+        let date = Date.parse(data[i]['date']);
 	var label = delta.toISOString();
 	if (date > delta) {
 	    if (data[i]['kind'] === "family") {
@@ -170,7 +170,7 @@ commits_graph_data = (data, duration) => {
 	    }
 	}
 	else {
-	    var delta = offset_date(delta, duration);
+	    var delta = offsetDate(delta, duration);
 	    var label = delta.toISOString();
 	    res[label] = {"family": 0, "metadata": 0, "designer": 0, "infrastructure": 0};
 	}
@@ -233,7 +233,7 @@ commits_graph_data = (data, duration) => {
     return data
 }
 
-issues_graph_data = (issues, duration) => {
+issuesGraphData = (issues, duration) => {
     var delta = new Date(issues[0]['date'])
     var label = delta.toDateString();
     let res = {};
@@ -249,7 +249,7 @@ issues_graph_data = (issues, duration) => {
 	}
 	else {
 	    console.log(duration)
-	    var delta = offset_date(delta, duration);
+	    var delta = offsetDate(delta, duration);
 	    var label = delta.toISOString();
 	    res[label] = {"opened": 0, "closed": 0};
 	}
@@ -291,42 +291,46 @@ issues_graph_data = (issues, duration) => {
 
 // init constants. TODO Use classes if this gets more complicated
 duration = "quarterly"
-start_date = document.getElementsByName("start-date")[0]
-end_date = document.getElementsByName("end-date")[0]
+startDate = document.getElementsByName("start-date")[0].value
+endDate = document.getElementsByName("end-date")[0].value
 
-commits_chart = new Chart(document.getElementById("commits-chart"), commits_graph_data(data['commits'], duration));
-contributors_chart = new Chart(document.getElementById("contributors-chart"), contributors_graph_data(data['commits'], 7));
-issues_chart = new Chart(document.getElementById("issues-chart"), issues_graph_data(data['issues'], duration));
+commitsChart = null;
+contributorsChart = null;
+issuesChart = null;
 
-build_charts = (start, end, duration) => {
-    var commits = filter_commits(data['commits'], start, end);
-    var issues = filter_commits(data['issues'], start, end);
-    console.log(commits.length)
+
+buildCharts = (start, end, duration) => {
+    var commits = filterCommits(data['commits'], start, end);
+    var issues = filterCommits(data['issues'], start, end);
     
-    commits_chart.destroy();
-    commits_chart = new Chart(document.getElementById("commits-chart"), commits_graph_data(commits, duration));
-    
-    contributors_chart.destroy();
-    contributors_chart = new Chart(document.getElementById("contributors-chart"), contributors_graph_data(commits, 7));
-
-    issues_chart.destroy();
-    issues_chart = new Chart(document.getElementById("issues-chart"), issues_graph_data(issues, duration));
+    if (commitsChart != null) {
+        commitsChart.destroy();
+        contributorsChart.destroy();
+        issuesChart.destroy();
+    }
+    commitsChart = new Chart(document.getElementById("commits-chart"), commitsGraphData(commits, duration));
+    contributorsChart = new Chart(document.getElementById("contributors-chart"), contributorsGraphData(commits, 7));
+    issuesChart = new Chart(document.getElementById("issues-chart"), issuesGraphData(issues, duration));
 }
 
 const buttons = document.querySelectorAll('button');
-buttons.forEach(elem => elem.addEventListener("click", function(){
+buttons.forEach(elem => elem.addEventListener("click", function() {
     duration = elem.dataset.duration;
-    build_charts(start_date, end_date, duration)
-}, false))
+    buildCharts(startDate, endDate, duration)
+}, false));
 
-start_date.addEventListener("change", function() {
-    start_date = document.getElementsByName("start-date")[0].value;
-    build_charts(start_date, end_date, duration)
-}, false)
-end_date.addEventListener("change", function() {
-    end_date = document.getElementsByName("end-date")[0].value;
-    build_charts(start_date, end_date, duration)
-}, false)
+startDateBtn = document.getElementsByName("start-date")[0]
+startDateBtn.addEventListener("change", function() {
+    startDate = document.getElementsByName("start-date")[0].value;
+    buildCharts(startDate, endDate, duration)
+}, false);
+endDateBtn = document.getElementsByName("end-date")[0]
+endDateBtn.addEventListener("change", function() {
+    endDate = document.getElementsByName("end-date")[0].value;
+    buildCharts(startDate, endDate, duration)
+}, false);
+
+buildCharts(startDate, endDate, duration);
 
 </script>
 </html>

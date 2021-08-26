@@ -69,7 +69,7 @@ def get_commits(repo):
 
 
 def get_issues(repo):
-    issues = list(repo.get_issues(state="all", since=datetime(2021, 5, 1)))
+    issues = list(repo.get_issues(state="all", since=datetime(2014, 1, 1)))
     res = []
     for i in issues:
         if i.pull_request:  # ignore prs
