@@ -54,7 +54,8 @@ setup(
                       'template.upstream.yaml',
                       "axisregistry/*.textproto",
                       "udhr_all.txt",
-                      "templates/*.html"
+                      "templates/*.html",
+                      "push-templates/*.html"
                   ]
                  },
     scripts=gftools_scripts(),
