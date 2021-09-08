@@ -702,8 +702,6 @@ def drop_mac_names(ttfont):
 
 def fix_font(font, include_source_fixes=False):
     font["OS/2"].version = 4
-    if "DSIG" not in font:
-        add_dummy_dsig(font)
 
     if "fpgm" in font:
         fix_hinted_font(font)
