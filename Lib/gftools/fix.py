@@ -78,6 +78,7 @@ UNWANTED_TABLES = frozenset(
         "TSI5",
         "prop",
         "MVAR",
+        "Debg",
     ]
 )
 
