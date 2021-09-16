@@ -110,7 +110,6 @@ def main():
             template.render(
                 commit_data=json.dumps({"issues": issues, "commits": commits}),
                 current_year=datetime.now().year,
-                years=list(range(2015, datetime.now().year + 2)),
             )
         )
 

@@ -28,27 +28,10 @@
 	    <button data-duration="quarterly">Quarterly</button>
 	    <button data-duration="annually">Annually</button>
 
-	    <label for="start-date">Start:</label>
-            <select name="start-date">
-            {% for year in years %}
-                {% if year == current_year-2 %}
-                    <option selected="selected" value="{{ year }}">{{ year }}</option>
-                {% else %}
-                    <option value="{{ year }}">{{ year }}</option>
-                {% endif %}
-            {% endfor %}
-            </select>
-
-            <label for="end-date">End:</label>
-            <select name="end-date">
-            {% for year in years %}
-                {% if year == current_year+1 %}
-                    <option selected="selected" value="{{ year }}">{{ year }}</option>
-                {% else %}
-                    <option value="{{ year }}">{{ year }}</option>
-                {% endif %}
-            {% endfor %}
-            </select>
+        <label for="start-date">Start:</label>
+        <input type="date" id="start-date" name="start-date" value="{{ current_year - 2 }}-01-01" min="2014-01-01">
+        <label for="end-date">End:</label>
+        <input type="date" id="end-date" name="end-date" value="{{ current_year + 1 }}-12-31" min="2014-01-01">
 	</div>
 	<h2>Pushes</h2>
 	<canvas id="commits-chart" width="800" height="450"></canvas>
