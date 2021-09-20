@@ -283,6 +283,9 @@ class GFBuilder:
             ttFont = TTFont(newname)
             ttFonts.append(ttFont)
 
+        if not ttFonts:
+            return
+
         self.gen_stat(ttFonts)
         # We post process each variable font after generating the STAT tables
         # because these tables are needed in order to fix the name tables.
