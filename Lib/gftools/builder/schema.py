@@ -52,6 +52,7 @@ instance_schema = MapPattern(Str(), Seq(
 schema = Map(
     {
         "sources": Seq(Str()),
+        Optional("vttSources"): MapPattern(Str(), Str()),
         Optional("logLevel"): Str(),
         Optional("stylespaceFile"): Str(),
         Optional("stat"): stat_schema | MapPattern(Str(), stat_schema),
