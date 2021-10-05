@@ -744,15 +744,25 @@ class ScreenShotLocal:
     def __init__(self):
         from selenium import webdriver
         from platform import platform
-        # TODO what about different browsers?
-        self.driver = webdriver.Chrome()
+
+        # Using headless mode enables us to set the window size
+        # to any arbitrary value which means we can use to capture
+        # the full size of the body elem
+        options = webdriver.ChromeOptions()
+        options.add_argument("--headless")
+        options.add_argument("--hide-scrollbars")
+        self.driver = webdriver.Chrome(options=options)
         self.platform = platform()
 
     def take(self, url, dst_dir):
         filename = os.path.join(dst_dir, f"{self.platform}-test.png")
         self.driver.get(url)
+        body_el = self.driver.find_element_by_tag_name('body')
+        self.driver.set_window_size(
+            body_el.size['width'],
+            body_el.size['height']
+        )
         self.driver.save_screenshot(filename)
-        # TODO add full size screenshots!
 
     def __del__(self):
         self.driver.quit()
