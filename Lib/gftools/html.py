@@ -29,6 +29,7 @@ from gftools.utils import (
     get_encoded_glyphs,
 )
 from selenium import webdriver
+from platform import platform
 
 
 __all__ = [
@@ -743,7 +744,6 @@ class ScreenShotLocal:
     """Use Selenium with Chrome to take screenshots"""
     def __init__(self):
         from selenium import webdriver
-        from platform import platform
 
         # Using headless mode enables us to set the window size
         # to any arbitrary value which means we can use to capture
@@ -752,10 +752,17 @@ class ScreenShotLocal:
         options.add_argument("--headless")
         options.add_argument("--hide-scrollbars")
         self.driver = webdriver.Chrome(options=options)
-        self.platform = platform()
+        self.file_prefix = self._file_prefix()
+
+    def _file_prefix(self):
+        meta = self.driver.capabilities
+        plat = platform()
+        browser = meta['browserName']
+        browser_version = meta['browserVersion']
+        return f'Desktop_{plat}_{browser}_{browser_version}'.replace(" ", "-")
 
     def take(self, url, dst_dir):
-        filename = os.path.join(dst_dir, f"{self.platform}-test.png")
+        filename = os.path.join(dst_dir, f"{self.file_prefix}.png")
         self.driver.get(url)
         body_el = self.driver.find_element_by_tag_name('body')
         self.driver.set_window_size(
