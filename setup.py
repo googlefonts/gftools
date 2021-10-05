@@ -103,5 +103,6 @@ setup(
         'pandas',
         'xlrd',
         'openpyxl',
+        'selenium'
     ]
     )

@@ -28,6 +28,7 @@ from gftools.utils import (
     partition,
     get_encoded_glyphs,
 )
+from selenium import webdriver
 
 
 __all__ = [
@@ -315,6 +316,7 @@ class HtmlTemplater(object):
         self,
         out="out",
         template_dir=resource_filename("gftools", "templates"),
+        selenium_screenshots=False,
         browserstack_username=None,
         browserstack_access_key=None,
         browserstack_config=None,
@@ -395,8 +397,15 @@ class HtmlTemplater(object):
             if any([browserstack_access_key, "BSTACK_ACCESS_KEY" in os.environ])
             else False
         )
+        self.use_selenium_for_screenshots = selenium_screenshots
 
-        if self.has_browserstack:
+        if self.use_selenium_for_screenshots:
+            try:
+                from selenium import webdriver
+            except ImportError:
+                raise ImportError("Selenium webdriver is not installed")
+            self.screenshot = ScreenShotLocal()
+        elif self.has_browserstack:
             self.browserstack_username = (
                 browserstack_username or os.environ["BSTACK_USERNAME"]
             )
@@ -409,7 +418,7 @@ class HtmlTemplater(object):
             auth = (self.browserstack_username, self.browserstack_access_key)
             self.screenshot = ScreenShot(auth=auth, config=self.browserstack_config)
         else:
-            log.warning("No Browserstack credentials found. Image output disabled")
+            log.warning("No Browserstack credentials found or selenium not found")
 
     def build_pages(self, pages=None, dst=None, **kwargs):
         if not pages:
@@ -456,18 +465,31 @@ class HtmlTemplater(object):
             pages = pages if pages else self.documents.keys()
             log.warning("Generating images with Browserstack. This may take a while")
             img_dir = dst if dst else self.mkdir(os.path.join(self.out, "img"))
-            with browserstack_local(self.browserstack_access_key), daemon_server(
-                directory=self.out
-            ):
-                for page in pages:
-                    if page not in self.documents:
-                        raise ValueError(
-                            f"{page} doesn't exist in documents, '{self.documents}'"
-                        )
-                    paths = self.documents[page].path
-                    out = os.path.join(img_dir, page)
-                    self.mkdir(out)
-                    self._save_img(paths, out)
+            if self.use_selenium_for_screenshots:
+                with daemon_server(directory=self.out):
+                    time.sleep(3)
+                    for page in pages:
+                        if page not in self.documents:
+                            raise ValueError(
+                                f"{page} doesn't exist in documents, '{self.documents}'"
+                            )
+                        paths = self.documents[page].path
+                        out = os.path.join(img_dir, page)
+                        self.mkdir(out)
+                        self._save_img(paths, out)
+            else:
+                with browserstack_local(self.browserstack_access_key), daemon_server(
+                    directory=self.out
+                ):
+                    for page in pages:
+                        if page not in self.documents:
+                            raise ValueError(
+                                f"{page} doesn't exist in documents, '{self.documents}'"
+                            )
+                        paths = self.documents[page].path
+                        out = os.path.join(img_dir, page)
+                        self.mkdir(out)
+                        self._save_img(paths, out)
 
     def _save_img(self, path, dst):
         page = os.path.relpath(path, start=self.out)
@@ -483,10 +505,18 @@ class HtmlTemplater(object):
 
 class HtmlProof(HtmlTemplater):
     def __init__(
-        self, fonts, out="out", template_dir=resource_filename("gftools", "templates")
+        self,
+        fonts,
+        out="out",
+        template_dir=resource_filename("gftools", "templates"),
+        selenium_screenshots=False,
     ):
         """Proof a single family."""
-        super().__init__(out, template_dir=template_dir)
+        super().__init__(
+            out,
+            template_dir=template_dir,
+            selenium_screenshots=selenium_screenshots
+        )
         fonts_dir = os.path.join(out, "fonts")
         self.mkdir(fonts_dir)
 
@@ -506,7 +536,10 @@ class HtmlProof(HtmlTemplater):
     def partition(self):
         with tempfile.TemporaryDirectory() as tmp_out:
             temp_html = HtmlProof(
-                fonts=self.fonts, out=tmp_out, template_dir=self.template_dir
+                fonts=self.fonts,
+                out=tmp_out,
+                template_dir=self.template_dir,
+                selenium_screenshots=self.use_selenium_for_screenshots
             )
             # disable too_big_for_browserstack for subclasses otherwise we'll infinte loop
             temp_html.too_big_for_browserstack = False
@@ -530,9 +563,14 @@ class HtmlDiff(HtmlTemplater):
         fonts_after,
         out="out",
         template_dir=resource_filename("gftools", "templates"),
+        selenium_screenshots=False,
     ):
         """Compare two families"""
-        super().__init__(out=out, template_dir=template_dir)
+        super().__init__(
+            out=out,
+            template_dir=template_dir,
+            selenium_screenshots=selenium_screenshots
+        )
         fonts_before_dir = os.path.join(out, "fonts_before")
         fonts_after_dir = os.path.join(out, "fonts_after")
         self.mkdir(fonts_before_dir)
@@ -632,6 +670,7 @@ class HtmlDiff(HtmlTemplater):
                 fonts_after=self.fonts_after,
                 out=tmp_out,
                 template_dir=self.template_dir,
+                selenium_screenshots=self.use_selenium_for_screenshots
             )
             # disable too_big_for_browserstack for subclasses otherwise we'll infinte loop
             temp_html.too_big_for_browserstack = False
@@ -698,6 +737,25 @@ def browserstack_local(access_key):
         yield local
     finally:
         local.stop()
+
+
+class ScreenShotLocal:
+    """Use Selenium with Chrome to take screenshots"""
+    def __init__(self):
+        from selenium import webdriver
+        from platform import platform
+        # TODO what about different browsers?
+        self.driver = webdriver.Chrome()
+        self.platform = platform()
+
+    def take(self, url, dst_dir):
+        filename = os.path.join(dst_dir, f"{self.platform}-test.png")
+        self.driver.get(url)
+        self.driver.save_screenshot(filename)
+        # TODO add full size screenshots!
+
+    def __del__(self):
+        self.driver.quit()
 
 
 class ScreenShot(browserstack_screenshots.Screenshots):

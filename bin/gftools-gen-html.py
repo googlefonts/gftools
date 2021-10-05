@@ -56,6 +56,10 @@ def main():
         help="Output images using Browserstack.",
     )
     universal_options_parser.add_argument(
+        '--selenium-screenshots', action="store_true", default=False,
+        help="Use selenium instead of Browserstack to take sceenshots"
+    )
+    universal_options_parser.add_argument(
         "--out", "-o", help="Output dir", default="diffbrowsers"
     )
     universal_options_parser.add_argument(
@@ -88,7 +92,12 @@ def main():
     args = parser.parse_args()
 
     if args.command == "proof":
-        html = HtmlProof(args.fonts, args.out, template_dir=args.template_dir)
+        html = HtmlProof(
+            args.fonts,
+            args.out,
+            template_dir=args.template_dir,
+            selenium_screenshots=args.selenium_screenshots
+        )
 
     elif args.command == "diff":
         html = HtmlDiff(
@@ -96,6 +105,7 @@ def main():
             args.fonts_after,
             args.out,
             template_dir=args.template_dir,
+            selenium_screenshots=args.selenium_screenshots
         )
 
     html.build_pages(args.pages, pt_size=args.pt_size)
