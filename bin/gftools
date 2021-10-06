@@ -95,7 +95,7 @@ if __name__ == '__main__':
         # relay
         cmd = subcommands[sys.argv[1]]
         # execute ['gftools-{subcommand}'.format(sys.argv[1])] + sys.argv[2:]
-        args = [cmd] + sys.argv[2:]
+        args = ["python", cmd] + sys.argv[2:]
         p = subprocess.Popen(args, stdout=sys.stdout,
                              stdin=sys.stdin,
                              stderr=sys.stderr)
