@@ -34,7 +34,7 @@
 # SCANTYPE
 #
 # This script depends on fontTools Python library, available
-# in most packaging systems and sf.net/projects/fonttools/
+# in most packaging systems and https://github.com/fonttools/fonttools
 #
 # Usage:
 #
