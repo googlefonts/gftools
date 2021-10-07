@@ -467,17 +467,15 @@ class HtmlTemplater(object):
             log.warning("Generating images with Browserstack. This may take a while")
             img_dir = dst if dst else self.mkdir(os.path.join(self.out, "img"))
             if self.use_selenium_for_screenshots:
-                with daemon_server(directory=self.out):
-                    time.sleep(3)
-                    for page in pages:
-                        if page not in self.documents:
-                            raise ValueError(
-                                f"{page} doesn't exist in documents, '{self.documents}'"
-                            )
-                        paths = self.documents[page].path
-                        out = os.path.join(img_dir, page)
-                        self.mkdir(out)
-                        self._save_img(paths, out)
+                for page in pages:
+                    if page not in self.documents:
+                        raise ValueError(
+                            f"{page} doesn't exist in documents, '{self.documents}'"
+                        )
+                    paths = self.documents[page].path
+                    out = os.path.join(img_dir, page)
+                    self.mkdir(out)
+                    self._save_img(paths, out)
             else:
                 with browserstack_local(self.browserstack_access_key), daemon_server(
                     directory=self.out
@@ -493,8 +491,11 @@ class HtmlTemplater(object):
                         self._save_img(paths, out)
 
     def _save_img(self, path, dst):
-        page = os.path.relpath(path, start=self.out)
-        url = f"{self.server_url}/{page}"
+        if self.use_selenium_for_screenshots:
+            url = f"file://{path}"
+        else:
+            page = os.path.relpath(path, start=self.out)
+            url = f"{self.server_url}/{page}"
         self.screenshot.take(url, dst)
 
     def partition(self):
@@ -655,10 +656,14 @@ class HtmlDiff(HtmlTemplater):
 
     def _save_img(self, document, dst):
         # Output results as a gif
-        before_page = os.path.relpath(document[0], start=self.out)
-        after_page = os.path.relpath(document[1], start=self.out)
-        before_url = f"{self.server_url}/{before_page}"
-        after_url = f"{self.server_url}/{after_page}"
+        if self.use_selenium_for_screenshots:
+            before_url = f"file://{document[0]}"
+            after_url = f"file://{document[1]}"
+        else:
+            before_page = os.path.relpath(document[0], start=self.out)
+            after_page = os.path.relpath(document[1], start=self.out)
+            before_url = f"{self.server_url}/{before_page}"
+            after_url = f"{self.server_url}/{after_page}"
         with tempfile.TemporaryDirectory() as before_dst, tempfile.TemporaryDirectory() as after_dst:
             self.screenshot.take(before_url, before_dst)
             self.screenshot.take(after_url, after_dst)
