@@ -14,7 +14,7 @@ browserstack-local==1.2.2
 pybrowserstack-screenshots==0.1
 glyphslib
 opentype-sanitizer
-pygit2
+pygit2==1.6.1
 requests
 strictyaml
 tabulate
