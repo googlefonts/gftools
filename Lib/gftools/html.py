@@ -321,6 +321,7 @@ class HtmlTemplater(object):
         browserstack_username=None,
         browserstack_access_key=None,
         browserstack_config=None,
+        width=1280,
     ):
         """
         Generate html documents from Jinja2 templates and optionally
@@ -392,7 +393,7 @@ class HtmlTemplater(object):
         self.documents = {}
         # Set to true if html pages are going get cropped in Browserstack
         self.too_big_for_browserstack = False
-        self.width = 1280
+        self.width = width
 
         self.has_browserstack = (
             True
@@ -546,10 +547,12 @@ class HtmlProof(HtmlTemplater):
                 fonts=self.fonts,
                 out=tmp_out,
                 template_dir=self.template_dir,
-                selenium_screenshots=self.use_selenium_for_screenshots
+                selenium_screenshots=False
             )
             # disable too_big_for_browserstack for subclasses otherwise we'll infinte loop
             temp_html.too_big_for_browserstack = False
+            temp_html.use_selenium_for_screenshots = True
+            temp_html.screenshot = self.screenshot
             css_class_groups = partition(self.css_font_classes, 4)
             for idx, group in enumerate(css_class_groups):
                 temp_html.css_font_classes = group
@@ -656,7 +659,6 @@ class HtmlDiff(HtmlTemplater):
         after_path = os.path.join(self.out, after_filename)
         with open(after_path, "w") as after_html:
             after_html.write(after)
-
         return (before_path, after_path)
 
     def _save_img(self, document, dst):
@@ -751,43 +753,75 @@ def browserstack_local(access_key):
 
 
 class ScreenShotLocal:
-    """Use Selenium with Chrome to take screenshots"""
-    def __init__(self):
+    """Use selenium to take screenshots from local browsers"""
+    def __init__(self, width=1280):
         from selenium import webdriver
 
-        # Using headless mode enables us to set the window size
-        # to any arbitrary value which means we can use to capture
-        # the full size of the body elem
-        options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument("--hide-scrollbars")
-        self.driver = webdriver.Chrome(options=options)
-        self.file_prefix = self._file_prefix()
+        self.browsers = self._get_browsers()
+        self.width = width
 
-    def _file_prefix(self):
-        meta = self.driver.capabilities
+    def _file_prefix(self, browser):
+        meta = browser.capabilities
         plat = platform()
         browser = meta['browserName']
         browser_version = meta['browserVersion']
-        return f'Desktop_{plat}_{browser}_{browser_version}'.replace(" ", "-")
+        return f'{plat}_{browser}_{browser_version}'.replace(" ", "-")
 
     def take(self, url, dst_dir):
-        filename = os.path.join(dst_dir, f"{self.file_prefix}.png")
-        self.driver.get(url)
-        body_el = self.driver.find_element_by_tag_name('body')
-        self.driver.set_window_size(
-            self.driver.get_window_size()['width'],
-            body_el.size['height']
-        )
-        self.driver.save_screenshot(filename)
+        for browser in self.browsers:
+            file_prefix = self._file_prefix(browser)
+            filename = os.path.join(dst_dir, f"{file_prefix}.png")
+            browser.set_window_size(
+                self.width,
+                1000
+            )
+            browser.get(url)
+            # recalc since image size since we now know the height
+            body_el = browser.find_element_by_tag_name('body')
+            browser.set_window_size(
+                self.width,
+                body_el.size['height']
+            )
+            browser.save_screenshot(filename)
 
     def set_width(self, width):
         # we don't care about setting height since we will always return a
         # full height screenshot
-        self.driver.set_window_size(width, 1000)
+        self.width = width
+
+    def _get_browsers(self):
+        """Determine which browsers we can screenshot which exist on the system"""
+        # We can add more webdrivers if needed. Let's focus on these first
+        supported = ["Chrome", "Firefox", "Safari"]
+        has = []
+        driver = webdriver
+        for browser in supported:
+            try:
+                # TODO customise more browsers. We should aim for at least Safari and FF
+                if browser == "Chrome":
+                    # Using headless mode enables us to set the window size
+                    # to any arbitrary value which means we can use to capture
+                    # the full size of the body elem
+                    options = webdriver.ChromeOptions()
+                    options.add_argument("--headless")
+                    options.add_argument("--hide-scrollbars")
+                    browser_driver = getattr(driver, browser)(options=options)
+                elif browser == "Firefox":
+                    options = webdriver.FirefoxOptions()
+                    options.add_argument("--headless")
+                    options.add_argument("--hide-scrollbars")
+                    options = webdriver.FirefoxOptions()
+                    browser_driver = getattr(driver, browser)(options=options)
+                else:
+                    browser_driver = getattr(driver, browser)()
+                has.append(browser_driver)
+            except:
+                pass
+        return has
 
     def __del__(self):
-        self.driver.quit()
+        for browser in self.browsers:
+            browser.quit()
 
 
 class ScreenShot(browserstack_screenshots.Screenshots):
