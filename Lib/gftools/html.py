@@ -392,6 +392,7 @@ class HtmlTemplater(object):
         self.documents = {}
         # Set to true if html pages are going get cropped in Browserstack
         self.too_big_for_browserstack = False
+        self.width = 1280
 
         self.has_browserstack = (
             True
@@ -456,17 +457,20 @@ class HtmlTemplater(object):
         [shutil.copy(f, dst) for f in srcs]
         return [os.path.join(dst, os.path.basename(f)) for f in srcs]
 
-    def save_imgs(self, pages=None, dst=None):
+    def save_imgs(self, pages=None, dst=None, width=1280):
         assert hasattr(self, "screenshot")
+        self.width = width
+        self.screenshot.set_width(self.width)
 
         if self.too_big_for_browserstack:
             log.info("Images will be too big for Browserstack. Partitioning pages")
             self.partition()
         else:
             pages = pages if pages else self.documents.keys()
-            log.warning("Generating images with Browserstack. This may take a while")
             img_dir = dst if dst else self.mkdir(os.path.join(self.out, "img"))
             if self.use_selenium_for_screenshots:
+                log.warning("Generating images with Selenium.")
+
                 for page in pages:
                     if page not in self.documents:
                         raise ValueError(
@@ -477,6 +481,7 @@ class HtmlTemplater(object):
                     self.mkdir(out)
                     self._save_img(paths, out)
             else:
+                log.warning("Generating images with Browserstack. This may take a while.")
                 with browserstack_local(self.browserstack_access_key), daemon_server(
                     directory=self.out
                 ):
@@ -550,7 +555,7 @@ class HtmlProof(HtmlTemplater):
                 temp_html.css_font_classes = group
                 for page, doc in self.documents.items():
                     temp_html.build_page(page, **doc.options)
-                temp_html.save_imgs()
+                temp_html.save_imgs(width=self.width)
                 src_imgs = os.path.join(temp_html.out, "img")
                 dir_name = "-".join(s._style.replace(" ", "") for s in group)
                 dst_imgs = os.path.join(self.out, "img", dir_name)
@@ -688,7 +693,7 @@ class HtmlDiff(HtmlTemplater):
                 temp_html.css_font_classes_after = css_class_groups_after[idx]
                 for page, doc in self.documents.items():
                     temp_html.build_page(page, **doc.options)
-                temp_html.save_imgs()
+                temp_html.save_imgs(width=self.width)
                 src_imgs = os.path.join(temp_html.out, "img")
                 dir_name = "-".join(s._style.replace(" ", "") for s in group)
                 dst_imgs = os.path.join(self.out, "img", dir_name)
@@ -771,10 +776,15 @@ class ScreenShotLocal:
         self.driver.get(url)
         body_el = self.driver.find_element_by_tag_name('body')
         self.driver.set_window_size(
-            body_el.size['width'],
+            self.driver.get_window_size()['width'],
             body_el.size['height']
         )
         self.driver.save_screenshot(filename)
+
+    def set_width(self, width):
+        # we don't care about setting height since we will always return a
+        # full height screenshot
+        self.driver.set_window_size(width, 1000)
 
     def __del__(self):
         self.driver.quit()
@@ -832,3 +842,20 @@ class ScreenShot(browserstack_screenshots.Screenshots):
         else:
             log.warning("screenshot timed out, ignoring this result")
         return filename
+
+    def set_width(self, width):
+        supported_widths = frozenset([1024, 1280])
+
+        if width not in supported_widths:
+            raise ValueError(
+                f"Browserstack Windows screenshots only supports 1024x768 or "
+                f"1280x1024 res. Got width '{width}'\n"
+                f"https://www.browserstack.com/screenshots/api"
+            )
+
+        if width == 1024:
+            self.config['win_res'] = "1024x768"
+            self.config["mac_res"] = "1024x768"
+        else:
+            self.config['win_res'] = "1280x1024"
+            self.config['mac_res'] = "1280x1024"

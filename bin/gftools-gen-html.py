@@ -60,6 +60,10 @@ def main():
         help="Use selenium instead of Browserstack to take sceenshots"
     )
     universal_options_parser.add_argument(
+        "--width", type=int, default=1280, choices=[1024, 1280],
+        help="Set screenshot image width"
+    )
+    universal_options_parser.add_argument(
         "--out", "-o", help="Output dir", default="diffbrowsers"
     )
     universal_options_parser.add_argument(
@@ -111,7 +115,7 @@ def main():
     html.build_pages(args.pages, pt_size=args.pt_size)
 
     if args.imgs:
-        html.save_imgs()
+        html.save_imgs(width=args.width)
 
 
 if __name__ == "__main__":
