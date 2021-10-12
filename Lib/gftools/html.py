@@ -174,7 +174,7 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
     for ttFont in ttFonts:
         family_name = font_familyname(ttFont)
         style_name = font_stylename(ttFont)
-        font_path = ttFont.reader.file.name
+        font_path = pathlib.Path(ttFont.reader.file.name).as_posix()
         path = (
             font_path
             if not server_dir
