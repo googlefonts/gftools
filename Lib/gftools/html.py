@@ -178,7 +178,7 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
         path = (
             font_path
             if not server_dir
-            else os.path.relpath(font_path, start=server_dir)
+            else pathlib.Path(os.path.relpath(font_path, start=server_dir)).as_posix()
         )
         src = f"url({path})"
         font_family = _class_name(family_name, style_name, position)
