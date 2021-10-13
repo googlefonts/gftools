@@ -74,5 +74,6 @@ schema = Map(
         Optional("autohintTTF"): Bool(),
         Optional("axisOrder"): Seq(Str()),
         Optional("flattenComponents"): Bool(),
+        Optional("decomposeTransformedComponents"): Bool(),
     }
 )

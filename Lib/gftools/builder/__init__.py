@@ -310,7 +310,7 @@ class GFBuilder:
 
             if self.config["decomposeTransformedComponents"]:
                 filters.append(
-                    loadFilterFromString("DecomposeTransformedComponentsFilter")
+                    loadFilterFromString("DecomposeTransformedComponentsFilter(pre=True)")
                 )
             args["filters"] = filters
 
