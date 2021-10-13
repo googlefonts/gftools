@@ -305,12 +305,12 @@ class GFBuilder:
             filters = args.get("filters", [])
             if self.config["flattenComponents"]:
                 filters.append(
-                    loadFilterFromString("FlattenComponentsFilter")
+                    loadFilterFromString("FlattenComponentsFilter(pre=True)")
                 )
 
             if self.config["decomposeTransformedComponents"]:
                 filters.append(
-                    loadFilterFromString("DecomposeTransformedComponentsFilter")
+                    loadFilterFromString("DecomposeTransformedComponentsFilter(pre=True)")
                 )
             args["filters"] = filters
 
