@@ -108,7 +108,8 @@ from gftools.instancer import gen_static_font
 from strictyaml import load, YAMLError
 from strictyaml.exceptions import YAMLValidationError
 from ufo2ft import CFFOptimization
-from ufo2ft.filters import loadFilterFromString
+from ufo2ft.filters.flattenComponents import FlattenComponentsFilter
+from ufo2ft.filters.decomposeTransformedComponents import DecomposeTransformedComponentsFilter
 import difflib
 import glyphsLib
 import logging
@@ -305,12 +306,12 @@ class GFBuilder:
             filters = args.get("filters", [])
             if self.config["flattenComponents"]:
                 filters.append(
-                    loadFilterFromString("FlattenComponentsFilter(pre=True)")
+                    FlattenComponentsFilter(pre=True)
                 )
 
             if self.config["decomposeTransformedComponents"]:
                 filters.append(
-                    loadFilterFromString("DecomposeTransformedComponentsFilter(pre=True)")
+                    DecomposeTransformedComponentsFilter(pre=True)
                 )
             args["filters"] = filters
 
