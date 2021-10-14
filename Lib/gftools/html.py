@@ -810,7 +810,6 @@ class ScreenShotLocal:
                     options = webdriver.FirefoxOptions()
                     options.add_argument("--headless")
                     options.add_argument("--hide-scrollbars")
-                    options = webdriver.FirefoxOptions()
                     browser_driver = getattr(driver, browser)(options=options)
                 else:
                     browser_driver = getattr(driver, browser)()
