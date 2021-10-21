@@ -23,6 +23,7 @@ from gftools.utils import (
     unique_name,
 )
 from gftools.util.styles import (get_stylename, is_regular, is_bold, is_italic)
+from gftools.stat import gen_stat_tables
 
 from os.path import basename
 from copy import deepcopy
@@ -754,6 +755,7 @@ def fix_family(fonts, include_source_fixes=False):
                 "fix fonts. See Repo readme to add keys."
             )
         fix_vertical_metrics(fonts)
+        gen_stat_tables(fonts, ["opsz", "wdth", "wght", "ital", "slnt"])
 
 
 class FontFixer():
