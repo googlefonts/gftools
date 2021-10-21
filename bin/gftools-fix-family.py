@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 def new_filename(font, font_renamed=None):
     if font_renamed:
         return fix_filename(font)
-    return font.reader.file.name
+    return os.path.basename(font.reader.file.name)
 
 
 def main():
