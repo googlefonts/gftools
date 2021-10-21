@@ -56,6 +56,7 @@ __all__ = [
     "drop_superfluous_mac_names",
     "fix_font",
     "fix_family",
+    "rename_font",
 ]
 
 
@@ -430,6 +431,47 @@ def fix_nametable(ttFont):
     update_nametable(ttFont, family_name, style_name)
 
 
+def rename_font(font, new_name):
+    nametable = font["name"]
+    current_name = font_familyname(font)
+    if not current_name:
+        raise Exception(
+            "Name table does not contain nameID 1 or nameID 16. "
+            "This tool does not work on webfonts."
+        )
+    log.info("Updating font name records")
+    for record in nametable.names:
+        record_string = record.toUnicode()
+
+        no_space = current_name.replace(" ", "")
+        hyphenated = current_name.replace(" ", "-")
+        # name with no spaces
+        if no_space in record_string:
+            new_string = record_string.replace(no_space, new_name.replace(" ", ""))
+        # name with hyphens instead of spaces
+        elif hyphenated in record_string:
+            new_string = record_string.replace(hyphenated, new_name.replace(" ", "-"))
+        # name with spaces
+        else:
+            new_string = record_string.replace(current_name, new_name)
+
+        if new_string is not record_string:
+            record_info = (
+                record.nameID,
+                record.platformID,
+                record.platEncID,
+                record.langID
+            )
+            log.info(
+                "Updating {}: '{}' to '{}'".format(
+                    record_info,
+                    record_string,
+                    new_string,
+                )
+            )
+            record.string = new_string
+
+
 def inherit_vertical_metrics(ttFonts, family_name=None):
     """Inherit the vertical metrics from the same family which is
     hosted on Google Fonts.
@@ -702,7 +744,9 @@ def drop_mac_names(ttfont):
     return changed
 
 
-def fix_font(font, include_source_fixes=False):
+def fix_font(font, include_source_fixes=False, new_family_name=None):
+    if new_family_name:
+        rename_font(font, new_family_name)
     font["OS/2"].version = 4
 
     if "fpgm" in font:
@@ -728,18 +772,19 @@ def fix_font(font, include_source_fixes=False):
 
         if "fvar" in font:
             fix_fvar_instances(font)
-            # TODO (Marc F) add gen-stat once merged
-            # https://github.com/googlefonts/gftools/pull/263
 
 
-def fix_family(fonts, include_source_fixes=False):
+def fix_family(fonts, include_source_fixes=False, new_family_name=None):
     """Fix all fonts in a family"""
     validate_family(fonts)
-    family_name = font_familyname(fonts[0])
 
     for font in fonts:
-        fix_font(font, include_source_fixes=include_source_fixes)
-
+        fix_font(
+            font,
+            include_source_fixes=include_source_fixes,
+            new_family_name=new_family_name
+        )
+    family_name = font_familyname(fonts[0])
     if include_source_fixes:
         try:
             if Google_Fonts_has_family(family_name):

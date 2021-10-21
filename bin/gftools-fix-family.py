@@ -34,10 +34,14 @@ def main():
         action="store_true",
         help="Fix font issues that should be fixed in the source files.",
     )
+    parser.add_argument(
+        "--new-family-name",
+        help="Change the family's font family name"
+    )
     args = parser.parse_args()
 
     fonts = [TTFont(f) for f in args.fonts]
-    fix_family(fonts, args.include_source_fixes)
+    fix_family(fonts, args.include_source_fixes, args.new_family_name)
 
     if args.inplace:
         for font in fonts:
