@@ -25,7 +25,7 @@ from gftools.utils import (
 from gftools.util.styles import (get_stylename, is_regular, is_bold, is_italic)
 from gftools.stat import gen_stat_tables
 
-from os.path import basename
+from os.path import basename, splitext
 from copy import deepcopy
 import logging
 
@@ -57,6 +57,7 @@ __all__ = [
     "fix_font",
     "fix_family",
     "rename_font",
+    "fix_filename"
 ]
 
 
@@ -470,6 +471,20 @@ def rename_font(font, new_name):
                 )
             )
             record.string = new_string
+
+
+def fix_filename(ttFont):
+    ext = splitext(ttFont.reader.file.name)[1]
+    family_name = font_familyname(ttFont)
+    style_name = font_stylename(ttFont)
+
+    if "fvar" in ttFont:
+        axes = ",".join([a.axisTag for a in ttFont['fvar'].axes])
+        if "Italic" in style_name:
+            return f"{family_name}-Italic[{axes}]{ext}".replace(" ", "")
+        return f"{family_name}[{axes}]{ext}".replace(" ", "")
+    else:
+        return f"{family_name}-{style_name}{ext}".replace(" ", "")
 
 
 def inherit_vertical_metrics(ttFonts, family_name=None):
