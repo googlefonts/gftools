@@ -446,13 +446,8 @@ def rename_font(font, new_name):
 
         no_space = current_name.replace(" ", "")
         hyphenated = current_name.replace(" ", "-")
-        # name with no spaces
-        if no_space in record_string:
+        if " " not in record_string:
             new_string = record_string.replace(no_space, new_name.replace(" ", ""))
-        # name with hyphens instead of spaces
-        elif hyphenated in record_string:
-            new_string = record_string.replace(hyphenated, new_name.replace(" ", "-"))
-        # name with spaces
         else:
             new_string = record_string.replace(current_name, new_name)
 
@@ -483,8 +478,7 @@ def fix_filename(ttFont):
         if "Italic" in style_name:
             return f"{family_name}-Italic[{axes}]{ext}".replace(" ", "")
         return f"{family_name}[{axes}]{ext}".replace(" ", "")
-    else:
-        return f"{family_name}-{style_name}{ext}".replace(" ", "")
+    return f"{family_name}-{style_name}{ext}".replace(" ", "")
 
 
 def inherit_vertical_metrics(ttFonts, family_name=None):
@@ -815,7 +809,8 @@ def fix_family(fonts, include_source_fixes=False, new_family_name=None):
                 "fix fonts. See Repo readme to add keys."
             )
         fix_vertical_metrics(fonts)
-        gen_stat_tables(fonts, ["opsz", "wdth", "wght", "ital", "slnt"])
+        if all(["fvar" in f for f in fonts]):
+            gen_stat_tables(fonts, ["opsz", "wdth", "wght", "ital", "slnt"])
 
 
 class FontFixer():
