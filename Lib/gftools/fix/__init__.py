@@ -118,21 +118,6 @@ def remove_tables(ttFont, tables=None):
         del ttFont[tbl]
 
 
-def add_dummy_dsig(ttFont):
-    """Add a dummy dsig table to a font. Older versions of MS Word
-    require this table.
-
-    Args:
-        ttFont: a TTFont instance
-    """
-    newDSIG = newTable("DSIG")
-    newDSIG.ulVersion = 1
-    newDSIG.usFlag = 0
-    newDSIG.usNumSigs = 0
-    newDSIG.signatureRecords = []
-    ttFont.tables["DSIG"] = newDSIG
-
-
 def fix_unhinted_font(ttFont):
     """Improve the appearance of an unhinted font on Win platforms by:
         - Add a new GASP table with a newtable that has a single
