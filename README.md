@@ -47,6 +47,9 @@ Package and PR a family update to google/fonts. Much more detailed [documentatio
 
 ## Tool Installation
 
+
+**Please note that gftools requires [Python 3.7](http://www.python.org/download/) or later.**
+
 Please install these tools using pip:
 
     pip install gftools
