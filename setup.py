@@ -69,6 +69,7 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'
     ],
+    python_requires=">=3.7",
     setup_requires=['setuptools_scm>=4,<6.1'],
     # Dependencies needed for gftools qa.
     extras_require={"qa": ['fontbakery', 'fontdiffenator', 'gfdiffbrowsers']},
