@@ -33,34 +33,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-__all__ = [
-    "remove_tables",
-    "add_dummy_dsig",
-    "fix_unhinted_font",
-    "fix_hinted_font",
-    "fix_fs_type",
-    "fix_weight_class",
-    "fix_fs_selection",
-    "fix_mac_style",
-    "fix_fvar_instances",
-    "update_nametable",
-    "fix_nametable",
-    "inherit_vertical_metrics",
-    "fix_vertical_metrics",
-    "fix_ascii_fontmetadata",
-    "drop_nonpid0_cmap",
-    "drop_mac_cmap",
-    "fix_pua",
-    "fix_isFixedPitch",
-    "drop_mac_names",
-    "drop_superfluous_mac_names",
-    "fix_font",
-    "fix_family",
-    "rename_font",
-    "fix_filename"
-]
-
-
 # The _KNOWN_WEIGHT_VALUES constant is used internally by the GF Engineering
 # team so we cannot update ourselves. TODO (Marc F) unify this one day
 WEIGHT_NAMES = _KNOWN_WEIGHTS
@@ -84,6 +56,110 @@ UNWANTED_TABLES = frozenset(
         "Debg",
     ]
 )
+
+
+class BaseFix:
+
+    def __init__(self, font):
+        self.font = font
+    
+    def fix_ttf(self):
+        raise NotImplementedError
+    
+    def fix_ufo(self):
+        raise NotImplementedError
+    
+    def fix_glyphs(self):
+        raise NotImplementedError
+    
+    def fix(self):
+        if isinstance(self.font, TTFont):
+            self.fix_ttf()
+        elif isinstance(self.font, GSFont):
+            self.fix_glyphs()
+        elif isinstance(self.font, UFO):
+            self.fix_ufo()
+
+
+class FixFSType(BaseFix):
+    """
+    Font Embedding (fsType)
+
+    Set to 0 (Installable embedding)
+    """
+
+    def fix_ttf(self):
+        self.font['OS/2'].fsType = 0
+    
+    def fix_ufo(self):
+        self.font.info.openTypeOS2Type = 0
+    
+    def fix_glyphs(self):
+        self.font.customParameters["fsType"] = []
+
+
+class FixStyleLinking(BaseFix):
+
+    def fix_ttf(self):
+        self._fix_ttf_fs_selection()
+        self._fix_ttf_mac_style()
+    
+    def _fix_ttf_fs_selection(self):
+        stylename = font_stylename(self.font)
+        tokens = set(stylename.split())
+        old_selection = fs_selection = ttFont["OS/2"].fsSelection
+
+        # turn off all bits except for bit 7 (USE_TYPO_METRICS)
+        fs_selection &= 1 << 7
+
+        if "Italic" in tokens:
+            fs_selection |= 1 << 0
+        if "Bold" in tokens:
+            fs_selection |= 1 << 5
+        # enable Regular bit for all other styles
+        if not tokens & set(["Bold", "Italic"]):
+            fs_selection |= 1 << 6
+        ttFont["OS/2"].fsSelection = fs_selection
+        return old_selection != fs_selection
+
+    def _fix_ttf_mac_style(ttFont):
+        """Fix the head table's macStyle so it conforms to GF's supported
+        styles table:
+        https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
+
+        Args:
+            ttFont: a TTFont instance
+        """
+        stylename = font_stylename(ttFont)
+        tokens = set(stylename.split())
+        mac_style = 0
+        if "Italic" in tokens:
+            mac_style |= 1 << 1
+        if "Bold" in tokens:
+            mac_style |= 1 << 0
+        ttFont["head"].macStyle = mac_style
+
+    def fix_glyphs(self):
+            # fix instance names to pass gf spec
+        for instance in self.font.instances:
+            if 'Italic' in instance.name:
+                instance.isItalic = True
+                if instance.weight != 'Bold' and instance.weight != 'Regular':
+                    instance.linkStyle = instance.weight
+                else:
+                    instance.linkStyle = ''
+            else:
+                instance.linkStyle = ''
+
+
+def fix_family2(fonts):
+    fixing_classes = [v for k,v in globals().items() if k.startswith("Fix") if k != "BaseFix"]
+    for clazz in fixing_classes:
+        fixer = clazz(font)
+        try:
+            fixer.fix()
+        except NotImplementedError:
+            print("Skipping")
 
 
 def remove_tables(ttFont, tables=None):
@@ -156,140 +232,97 @@ def fix_hinted_font(ttFont):
     return ttFont["head"].flags != old
 
 
-def fix_fs_type(ttFont):
-    """Set the OS/2 table's fsType flag to 0 (Installable embedding).
+class FixWeightClass(BaseFix):
 
-    Args:
-        ttFont: a TTFont instance
-    """
-    old = ttFont["OS/2"].fsType
-    ttFont["OS/2"].fsType = 0
-    return old != 0
+    def fix_ttf(self):
+        """Set the OS/2 table's usWeightClass so it conforms to GF's supported
+        styles table:
+        https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
 
+        Args:
+            ttFont: a TTFont instance
+        """
+        old_weight_class = self.font["OS/2"].usWeightClass
+        stylename = font_stylename(self.font)
+        tokens = stylename.split()
+        self.font['OS/2'].usWeightClass = self._get_weight_class(tokens)
+    
+    def fix_glyphs(self):
+        for instance in self.font.instances:
+            tokens = instance.name.split()
+            instance.weightClass = self._get_weight_class(tokens)
+    
+    def _get_weight_class(self, tokens):
+        # Order WEIGHT_NAMES so longest names are first
+        for style in sorted(WEIGHT_NAMES, key=lambda k: len(k), reverse=True):
+            if style in tokens:
+                self.font["OS/2"].usWeightClass = WEIGHT_NAMES[style]
+                return self.font["OS/2"].usWeightClass != old_weight_class
 
-def fix_weight_class(ttFont):
-    """Set the OS/2 table's usWeightClass so it conforms to GF's supported
-    styles table:
-    https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
-
-    Args:
-        ttFont: a TTFont instance
-    """
-    old_weight_class = ttFont["OS/2"].usWeightClass
-    stylename = font_stylename(ttFont)
-    tokens = stylename.split()
-    # Order WEIGHT_NAMES so longest names are first
-    for style in sorted(WEIGHT_NAMES, key=lambda k: len(k), reverse=True):
-        if style in tokens:
-            ttFont["OS/2"].usWeightClass = WEIGHT_NAMES[style]
-            return ttFont["OS/2"].usWeightClass != old_weight_class
-
-    if "Italic" in tokens:
-        ttFont["OS/2"].usWeightClass = 400
-        return ttFont["OS/2"].usWeightClass != old_weight_class
-    raise ValueError(
-        f"Cannot determine usWeightClass because font style, '{stylename}' "
-        f"doesn't have a weight token which is in our known "
-        f"weights, '{WEIGHT_NAMES.keys()}'"
-    )
-
-
-def fix_fs_selection(ttFont):
-    """Fix the OS/2 table's fsSelection so it conforms to GF's supported
-    styles table:
-    https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
-
-    Args:
-        ttFont: a TTFont instance
-    """
-    stylename = font_stylename(ttFont)
-    tokens = set(stylename.split())
-    old_selection = fs_selection = ttFont["OS/2"].fsSelection
-
-    # turn off all bits except for bit 7 (USE_TYPO_METRICS)
-    fs_selection &= 1 << 7
-
-    if "Italic" in tokens:
-        fs_selection |= 1 << 0
-    if "Bold" in tokens:
-        fs_selection |= 1 << 5
-    # enable Regular bit for all other styles
-    if not tokens & set(["Bold", "Italic"]):
-        fs_selection |= 1 << 6
-    ttFont["OS/2"].fsSelection = fs_selection
-    return old_selection != fs_selection
+        if "Italic" in tokens:
+            self.font["OS/2"].usWeightClass = 400
+            return self.font["OS/2"].usWeightClass != old_weight_class
+        raise ValueError(
+            f"Cannot determine usWeightClass because font style, '{stylename}' "
+            f"doesn't have a weight token which is in our known "
+            f"weights, '{WEIGHT_NAMES.keys()}'"
+        )
 
 
-def fix_mac_style(ttFont):
-    """Fix the head table's macStyle so it conforms to GF's supported
-    styles table:
-    https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
+class FixInstances(BaseFix):
 
-    Args:
-        ttFont: a TTFont instance
-    """
-    stylename = font_stylename(ttFont)
-    tokens = set(stylename.split())
-    mac_style = 0
-    if "Italic" in tokens:
-        mac_style |= 1 << 1
-    if "Bold" in tokens:
-        mac_style |= 1 << 0
-    ttFont["head"].macStyle = mac_style
+    def fix_ttf(self):
+        """Replace a variable font's fvar instances with a set of new instances
+        that conform to the Google Fonts instance spec:
+        https://github.com/googlefonts/gf-docs/tree/main/Spec#fvar-instances
 
+        Args:
+            self.font: a self.font instance
+        """
+        if "fvar" not in self.font:
+            raise ValueError("self.font is not a variable font")
 
-def fix_fvar_instances(ttFont):
-    """Replace a variable font's fvar instances with a set of new instances
-    that conform to the Google Fonts instance spec:
-    https://github.com/googlefonts/gf-docs/tree/main/Spec#fvar-instances
+        fvar = self.font["fvar"]
+        default_axis_vals = {a.axisTag: a.defaultValue for a in fvar.axes}
 
-    Args:
-        ttFont: a TTFont instance
-    """
-    if "fvar" not in ttFont:
-        raise ValueError("ttFont is not a variable font")
+        stylename = font_stylename(self.font)
+        is_italic = "Italic" in stylename
+        is_roman_and_italic = any(a for a in ("slnt", "ital") if a in default_axis_vals)
 
-    fvar = ttFont["fvar"]
-    default_axis_vals = {a.axisTag: a.defaultValue for a in fvar.axes}
+        wght_axis = next((a for a in fvar.axes if a.axisTag == "wght"), None)
+        wght_min = int(wght_axis.minValue)
+        wght_max = int(wght_axis.maxValue)
 
-    stylename = font_stylename(ttFont)
-    is_italic = "Italic" in stylename
-    is_roman_and_italic = any(a for a in ("slnt", "ital") if a in default_axis_vals)
+        nametable = self.font["name"]
 
-    wght_axis = next((a for a in fvar.axes if a.axisTag == "wght"), None)
-    wght_min = int(wght_axis.minValue)
-    wght_max = int(wght_axis.maxValue)
+        def gen_instances(is_italic):
+            results = []
+            for wght_val in range(wght_min, wght_max + 100, 100):
+                name = (
+                    WEIGHT_VALUES[wght_val]
+                    if not is_italic
+                    else f"{WEIGHT_VALUES[wght_val]} Italic".strip()
+                )
+                name = name.replace("Regular Italic", "Italic")
 
-    nametable = ttFont["name"]
+                coordinates = deepcopy(default_axis_vals)
+                coordinates["wght"] = wght_val
 
-    def gen_instances(is_italic):
-        results = []
-        for wght_val in range(wght_min, wght_max + 100, 100):
-            name = (
-                WEIGHT_VALUES[wght_val]
-                if not is_italic
-                else f"{WEIGHT_VALUES[wght_val]} Italic".strip()
-            )
-            name = name.replace("Regular Italic", "Italic")
+                inst = NamedInstance()
+                inst.subfamilyNameID = nametable.addName(name)
+                inst.coordinates = coordinates
+                results.append(inst)
+            return results
 
-            coordinates = deepcopy(default_axis_vals)
-            coordinates["wght"] = wght_val
-
-            inst = NamedInstance()
-            inst.subfamilyNameID = nametable.addName(name)
-            inst.coordinates = coordinates
-            results.append(inst)
-        return results
-
-    instances = []
-    if is_roman_and_italic:
-        for bool_ in (False, True):
-            instances += gen_instances(is_italic=bool_)
-    elif is_italic:
-        instances += gen_instances(is_italic=True)
-    else:
-        instances += gen_instances(is_italic=False)
-    fvar.instances = instances
+        instances = []
+        if is_roman_and_italic:
+            for bool_ in (False, True):
+                instances += gen_instances(is_italic=bool_)
+        elif is_italic:
+            instances += gen_instances(is_italic=True)
+        else:
+            instances += gen_instances(is_italic=False)
+        fvar.instances = instances
 
 
 def update_nametable(ttFont, family_name=None, style_name=None):
