@@ -55,7 +55,10 @@ which looks like this::
       - coordinates:
           wght: 700
         ...
-      ...
+    vttSources:
+      Texturina[wght].ttf: vtt-roman.ttx
+      Texturina-Italic[wght].ttf: vtt-italic.ttx
+    ...
 
 To build a font family from the command line, use:
 
@@ -98,7 +101,7 @@ from babelfont import Babelfont
 from fontmake.font_project import FontProject
 from fontTools import designspaceLib
 from fontTools.otlLib.builder import buildStatTable
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.woff2 import main as woff2_main
 from gftools.builder.schema import schema
 from gftools.fix import fix_font
@@ -110,6 +113,8 @@ from strictyaml.exceptions import YAMLValidationError
 from ufo2ft import CFFOptimization
 from ufo2ft.filters.flattenComponents import FlattenComponentsFilter
 from ufo2ft.filters.decomposeTransformedComponents import DecomposeTransformedComponentsFilter
+from vttLib.transfer import merge_from_file as merge_vtt_hinting
+from vttLib import compile_instructions as compile_vtt_hinting
 import difflib
 import glyphsLib
 import logging
@@ -177,8 +182,13 @@ class GFBuilder:
 
         if self.config["buildVariable"]:
             self.build_variable()
+            # transfer vf vtt hints now in case static fonts are instantiated
+            if "vttSources" in self.config:
+                self.build_vtt(self.config['vfDir'])
         if self.config["buildStatic"]:
             self.build_static()
+            if "vttSources" in self.config:
+                self.build_vtt(self.config['ttDir'])
         # All done
         self.logger.info(
             "Building %s completed. All done!" % (
@@ -480,6 +490,23 @@ class GFBuilder:
         from ttfautohint import ttfautohint
 
         ttfautohint(**ttfautohint_parse_args([filename, filename]))
+
+    def build_vtt(self, font_dir):
+        for font, vtt_source in self.config['vttSources'].items():
+            if font not in os.listdir(font_dir):
+                continue
+            self.logger.debug(f"Compiling hint file {vtt_source} into {font}")
+            font_path = os.path.join(font_dir, font)
+            font = TTFont(font_path)
+            merge_vtt_hinting(font, vtt_source, keep_cvar=True)
+            compile_vtt_hinting(font, ship=True)
+
+            # Add a gasp table which is optimised for VTT hinting
+            # https://googlefonts.github.io/how-to-hint-variable-fonts/
+            gasp_tbl = newTable("gasp")
+            gasp_tbl.gaspRange = {8: 10, 65535: 15}
+            gasp_tbl.version = 1
+            font['gasp'] = gasp_tbl
 
     def move_webfont(self, filename):
         wf_filename = filename.replace(".ttf", ".woff2")
