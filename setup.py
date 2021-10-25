@@ -90,7 +90,7 @@ setup(
         'unidecode',
         'opentype-sanitizer',
         'vttlib',
-        'pygit2==1.6.1',
+        'pygit2',
         'strictyaml',
         'fontmake>=2.4.0',
         'skia-pathops',
