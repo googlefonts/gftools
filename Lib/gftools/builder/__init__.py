@@ -101,7 +101,7 @@ from babelfont import Babelfont
 from fontmake.font_project import FontProject
 from fontTools import designspaceLib
 from fontTools.otlLib.builder import buildStatTable
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.woff2 import main as woff2_main
 from gftools.builder.schema import schema
 from gftools.fix import fix_font
@@ -500,6 +500,13 @@ class GFBuilder:
             font = TTFont(font_path)
             merge_vtt_hinting(font, vtt_source, keep_cvar=True)
             compile_vtt_hinting(font, ship=True)
+
+            # Add a gasp table which is optimised for VTT hinting
+            # https://googlefonts.github.io/how-to-hint-variable-fonts/
+            gasp_tbl = newTable("gasp")
+            gasp_tbl.gaspRange = {8: 10, 65535: 15}
+            gasp_tbl.version = 1
+            font['gasp'] = gasp_tbl
 
     def move_webfont(self, filename):
         wf_filename = filename.replace(".ttf", ".woff2")
