@@ -37,6 +37,7 @@ NAME_IDS = {
   7: 'trademark',
   8: 'manufacturer',
   9: 'designer',
+  10: 'description',
   11: 'urlvendor',
   12: 'urldesigner',
   13: 'license',
@@ -73,9 +74,10 @@ parser.add_argument('-m', '--manufacturer', type=str,
                     help='Update manufacturer string')
 parser.add_argument('-d', '--designer', type=str,
                     help='Update designer string')
+parser.add_argument('-desc', '--description', type=str,
+                    help='Update description string')
 parser.add_argument('-l', '--license', type=str,
                     help='Update license string')
-
 parser.add_argument('-uv', '--urlvendor', type=str,
                     help='Update url vendor string')
 parser.add_argument('-ud', '--urldesigner', type=str,
