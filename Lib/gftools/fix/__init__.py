@@ -65,22 +65,36 @@ class BaseFix:
 
     def __init__(self, font):
         self.font = font
+        self.format = self._get_format()
+    
+    def _get_format(self):
+        if isinstance(self.font, TTFont):
+            return "sfnt"
+        elif isinstance(self.font, GSFont):
+            return "glyphs"
+        elif isinstance(self.font, Font):
+            return "ufo"
+        else:
+            raise NotImplementedError(f"Current font format isn't supported")
     
     def fix_ttf(self):
         raise NotImplementedError
     
     def fix_ufo(self):
+        import pdb
+        pdb.set_trace()
+        log.info(f"Skipping {self.__class__} since a fix doesn't exist for {self.format}")
         raise NotImplementedError
     
     def fix_glyphs(self):
         raise NotImplementedError
     
     def fix(self):
-        if isinstance(self.font, TTFont):
+        if self.format == "sfnt":
             self.fix_ttf()
-        elif isinstance(self.font, GSFont):
+        elif self.format == "glyphs":
             self.fix_glyphs()
-        elif isinstance(self.font, Font):
+        elif self.format == "ufo":
             self.fix_ufo()
 
 
