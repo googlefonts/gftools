@@ -22,6 +22,7 @@ from gftools.utils import (
     validate_family,
     unique_name,
 )
+from gftools.axisreg import axis_registry
 from gftools.util.styles import (get_stylename, is_regular, is_bold, is_italic)
 from gftools.stat import gen_stat_tables
 
@@ -162,36 +163,47 @@ def fix_family2(fonts):
             print("Skipping")
 
 
-def remove_tables(ttFont, tables=None):
-    """Remove unwanted tables from a font. The unwanted tables must belong
-    to the UNWANTED_TABLES set.
+class FixTables:
 
-    Args:
-        ttFont: a TTFont instance
-        tables: an iterable containing tables remove
-    """
-    tables_to_remove = UNWANTED_TABLES if not tables else frozenset(tables)
-    font_tables = frozenset(ttFont.keys())
+    def fix_ttf(self, tables=None):
+        """Remove unwanted tables from a font. The unwanted tables must belong
+        to the UNWANTED_TABLES set.
+        """
+        tables_to_remove = UNWANTED_TABLES if not tables else frozenset(tables)
+        font_tables = frozenset(self.font.keys())
 
-    tables_not_in_font = tables_to_remove - font_tables
-    if tables_not_in_font:
-        log.warning(
-            f"Cannot remove tables '{list(tables_not_in_font)}' since they are "
-            f"not in the font."
-        )
+        tables_not_in_font = tables_to_remove - font_tables
+        if tables_not_in_font:
+            log.warning(
+                f"Cannot remove tables '{list(tables_not_in_font)}' since they are "
+                f"not in the font."
+            )
 
-    required_tables = tables_to_remove - UNWANTED_TABLES
-    if required_tables:
-        log.warning(
-            f"Cannot remove tables '{list(required_tables)}' since they are required"
-        )
+        required_tables = tables_to_remove - UNWANTED_TABLES
+        if required_tables:
+            log.warning(
+                f"Cannot remove tables '{list(required_tables)}' since they are required"
+            )
 
-    tables_to_remove = UNWANTED_TABLES & font_tables & tables_to_remove
-    if not tables_to_remove:
-        return
-    log.info(f"Removing tables '{list(tables_to_remove)}' from font")
-    for tbl in tables_to_remove:
-        del ttFont[tbl]
+        tables_to_remove = UNWANTED_TABLES & font_tables & tables_to_remove
+        if not tables_to_remove:
+            return
+        log.info(f"Removing tables '{list(tables_to_remove)}' from font")
+        for tbl in tables_to_remove:
+            del self.font[tbl]
+
+
+def FixHinting(BaseFix):
+
+    def fix_ttf(self):
+        """Infer whether font is unhinted, VTT hinted or TTFA hinted"""
+        pass
+
+    def fix_ufo(self):
+        """Insert a gasp table and other filters"""
+    
+    def fix_glyphs(self):
+        """Must be some customParameter for this"""
 
 
 def fix_unhinted_font(ttFont):
@@ -323,6 +335,14 @@ class FixInstances(BaseFix):
         else:
             instances += gen_instances(is_italic=False)
         fvar.instances = instances
+    
+    def fix_glyphs(self):
+        # Strip out instances which are not Thin-Black or Thin Italic-Black Italic.
+        # We cannot generate these from scratch because we cannot infer how designer units
+        # will translate
+        names = set(WEIGHT_VALUES.values())
+        names |= set(f"{n} Italic".replace("Regular Italic", "Italic").strip() for n in names)
+        self.font.instances = [i for i in self.font.instances if i.name in names] 
 
 
 def update_nametable(ttFont, family_name=None, style_name=None):
@@ -578,11 +598,17 @@ def copy_vertical_metrics(src_font, dst_font):
         setattr(dst_font[table], key, val)
 
 
-def fix_italic_angle(ttFont):
-    style_name = font_stylename(ttFont)
-    if "Italic" not in style_name and ttFont["post"].italicAngle != 0:
-        ttFont["post"].italicAngle = 0
+class FixItalicAngle(BaseFix):
     # TODO (Marc F) implement for italic fonts
+    def fix_ttf(self):
+        style_name = font_stylename(self.font)
+        if "Italic" not in style_name and self.font["post"].italicAngle != 0:
+            self.font["post"].italicAngle = 0
+    
+    def fix_glyphs(self):
+        for master in self.font.masters:
+            if "Italc" not in master.name and master.italicAngle != 0:
+                master.italicAngle = 0
 
 
 def fix_ascii_fontmetadata(font):
