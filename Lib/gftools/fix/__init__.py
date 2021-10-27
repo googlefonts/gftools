@@ -29,6 +29,8 @@ from gftools.stat import gen_stat_tables
 from os.path import basename, splitext
 from copy import deepcopy
 import logging
+from glyphsLib import GSFont
+from defcon import Font
 
 
 log = logging.getLogger(__name__)
@@ -78,7 +80,7 @@ class BaseFix:
             self.fix_ttf()
         elif isinstance(self.font, GSFont):
             self.fix_glyphs()
-        elif isinstance(self.font, UFO):
+        elif isinstance(self.font, Font):
             self.fix_ufo()
 
 
@@ -151,6 +153,21 @@ class FixStyleLinking(BaseFix):
                     instance.linkStyle = ''
             else:
                 instance.linkStyle = ''
+    
+    def fix_ufo(self):
+        # Can infer these values correctly if we set the Style Map Family Name
+        # and Style Map Style name correctly
+        family_name = self.font.info.familyName
+        style_name = self.font.info.styleName
+        if style_name in set(["Regular", "Italic", "Bold", "Bold Italic"]):
+            # delete any map names since they are not needed
+            self.font.info.styleMapFamilyName = None
+            self.font.info.styleMapStyleName = None
+        else:
+            family = f"{family_name} {style_name}".replace("Italic", "").strip()
+            self.font.info.styleMapFamilyName = family
+            style = "regular" if "Italic" not in style_name else "italic"
+            self.font.info.styleMapStyleName = style
 
 
 def fix_family2(fonts):
@@ -163,7 +180,7 @@ def fix_family2(fonts):
             print("Skipping")
 
 
-class FixTables:
+class FixTables(BaseFix):
 
     def fix_ttf(self, tables=None):
         """Remove unwanted tables from a font. The unwanted tables must belong
@@ -193,55 +210,41 @@ class FixTables:
             del self.font[tbl]
 
 
-def FixHinting(BaseFix):
+class FixHinting(BaseFix):
 
     def fix_ttf(self):
-        """Infer whether font is unhinted, VTT hinted or TTFA hinted"""
-        pass
+        # TODO determine whether font is ttfa or vtt
+        if "fpgm" not in self.font:
+            self._fix_ttf_unhinted()
+        else:
+            self._fix_ttf_hinted()
+    
+    def _fix_ttf_unhinted(self):
+        gasp = newTable("gasp")
+        # Set GASP so all sizes are smooth
+        gasp.gaspRange = {0xFFFF: 15}
+
+        program = ttProgram.Program()
+        assembly = ["PUSHW[]", "511", "SCANCTRL[]", "PUSHB[]", "4", "SCANTYPE[]"]
+        program.fromAssembly(assembly)
+
+        prep = newTable("prep")
+        prep.program = program
+
+        self.font["gasp"] = gasp
+        self.font["prep"] = prep
+    
+    def _fix_ttf_hinted(self):
+        # We may want to throw in a custom gasp table here
+        old = self.font["head"].flags
+        self.font["head"].flags |= 1 << 3
+        return self.font["head"].flags != old
 
     def fix_ufo(self):
         """Insert a gasp table and other filters"""
     
     def fix_glyphs(self):
         """Must be some customParameter for this"""
-
-
-def fix_unhinted_font(ttFont):
-    """Improve the appearance of an unhinted font on Win platforms by:
-        - Add a new GASP table with a newtable that has a single
-          range which is set to smooth.
-        - Add a new prep table which is optimized for unhinted fonts.
-
-    Args:
-        ttFont: a TTFont instance
-    """
-    gasp = newTable("gasp")
-    # Set GASP so all sizes are smooth
-    gasp.gaspRange = {0xFFFF: 15}
-
-    program = ttProgram.Program()
-    assembly = ["PUSHW[]", "511", "SCANCTRL[]", "PUSHB[]", "4", "SCANTYPE[]"]
-    program.fromAssembly(assembly)
-
-    prep = newTable("prep")
-    prep.program = program
-
-    ttFont["gasp"] = gasp
-    ttFont["prep"] = prep
-
-
-def fix_hinted_font(ttFont):
-    """Improve the appearance of a hinted font on Win platforms by enabling
-    the head table's flag 3.
-
-    Args:
-        ttFont: a TTFont instance
-    """
-    if not 'fpgm' in ttFont:
-        return False, ["Skipping. Font is not hinted."]
-    old = ttFont["head"].flags
-    ttFont["head"].flags |= 1 << 3
-    return ttFont["head"].flags != old
 
 
 class FixWeightClass(BaseFix):
@@ -343,6 +346,10 @@ class FixInstances(BaseFix):
         names = set(WEIGHT_VALUES.values())
         names |= set(f"{n} Italic".replace("Regular Italic", "Italic").strip() for n in names)
         self.font.instances = [i for i in self.font.instances if i.name in names] 
+    
+    def fix_designspace(self):
+        # do the same as glyphsapp also update basefix to load designspaces
+        pass
 
 
 def update_nametable(ttFont, family_name=None, style_name=None):
