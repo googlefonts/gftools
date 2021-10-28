@@ -66,6 +66,7 @@ class BaseFix:
     def __init__(self, font):
         self.font = font
         self.format = self._get_format()
+        self.family_name = self._get_family_name()
     
     def _get_format(self):
         if isinstance(self.font, TTFont):
@@ -78,16 +79,13 @@ class BaseFix:
             raise NotImplementedError(f"Current font format isn't supported")
     
     def fix_ttf(self):
-        raise NotImplementedError
+        log.info(f"Skipping {self.__class__} since a fix doesn't exist for {self.format}")
     
     def fix_ufo(self):
-        import pdb
-        pdb.set_trace()
         log.info(f"Skipping {self.__class__} since a fix doesn't exist for {self.format}")
-        raise NotImplementedError
     
     def fix_glyphs(self):
-        raise NotImplementedError
+        log.info(f"Skipping {self.__class__} since a fix doesn't exist for {self.format}")
     
     def fix(self):
         if self.format == "sfnt":
@@ -96,6 +94,14 @@ class BaseFix:
             self.fix_glyphs()
         elif self.format == "ufo":
             self.fix_ufo()
+
+    def _get_family_name(self):
+        if self.format == "glyphs":
+            return self.font.familyName
+        elif self.format == "ufo":
+            return self.font.info.familyName
+        elif self.format == "sfnt":
+            return font_familyname(self.font)
 
 
 class FixFSType(BaseFix):
@@ -568,6 +574,12 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
         if typo_metrics_enabled(src_font):
             font["OS/2"].fsSelection |= 1 << 7
 
+
+class FixVerticalMetrics(BaseFix):
+    def __init__(self, font):
+        super().__init__(font=font)
+        import pdb
+        pdb.set_trace()
 
 def fix_vertical_metrics(ttFonts):
     """Fix a family's vertical metrics based on:
