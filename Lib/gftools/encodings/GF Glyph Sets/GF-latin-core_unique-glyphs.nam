@@ -1,8 +1,6 @@
 
 #$ include GF-latin-ascii_unique-glyphs.nam
          .notdef
-         .null
-0x000D   CR
 0x0020   SPACE
 0x00A0   NO-BREAK SPACE
 0x0021 ! EXCLAMATION MARK
