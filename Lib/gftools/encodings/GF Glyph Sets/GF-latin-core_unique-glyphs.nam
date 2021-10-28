@@ -1,6 +1,7 @@
 #$ include GF-latin-ascii_unique-glyphs.nam
          .notdef
 0x0020   SPACE
+0x00A0   NO-BREAK SPACE
 0x0021 ! EXCLAMATION MARK
 0x0022 " QUOTATION MARK
 0x0023 # NUMBER SIGN
