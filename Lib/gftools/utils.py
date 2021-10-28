@@ -32,6 +32,7 @@ import time
 import json
 from browserstack.local import Local
 from PIL import Image
+from functools import lru_cache
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -40,6 +41,7 @@ else:
 # =====================================
 # HELPER FUNCTIONS
 
+@lru_cache
 def download_family_from_Google_Fonts(family, dst=None):
     """Download a font family from Google Fonts"""
     url = 'https://fonts.google.com/download?family={}'.format(
@@ -271,6 +273,24 @@ def font_familyname(ttFont):
         ttFont: a TTFont instance
     """
     return get_name_record(ttFont, 16, fallbackID=1)
+
+
+def find_regular_styles(ttFonts):
+    """Find a font which contains a Regular style"""
+    results = []
+    for ttFont in ttFonts:
+        if "fvar" not in ttFont:
+            if "Regular" == font_familyname(ttFont):
+                results.append(ttFont)
+        else:
+            name_tbl = ttFont['name']
+            for inst in ttFont['fvar'].instances:
+                name_id = inst.subfamilyNameID
+                name = name_tbl.getName(name_id, 3, 1, 0x409).toUnicode()
+                if name == "Regular":
+                    results.append(ttFont)
+    return results
+                
 
 
 def get_name_record(ttFont, nameID, fallbackID=None, platform=(3, 1, 0x409)):

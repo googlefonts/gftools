@@ -66,7 +66,7 @@ class BaseFix:
     def __init__(self, font):
         self.font = font
         self.format = self._get_format()
-        self.family_name = self._get_family_name()
+        self.family_name, self.style_name = self._get_family_name()
     
     def _get_format(self):
         if isinstance(self.font, TTFont):
@@ -79,12 +79,15 @@ class BaseFix:
             raise NotImplementedError(f"Current font format isn't supported")
     
     def fix_ttf(self):
-        log.info(f"Skipping {self.__class__} since a fix doesn't exist for {self.format}")
+        self.skip_msg()
     
     def fix_ufo(self):
-        log.info(f"Skipping {self.__class__} since a fix doesn't exist for {self.format}")
+        self.skip_msg()
     
     def fix_glyphs(self):
+        self.skip_msg()
+    
+    def skip_msg(self):
         log.info(f"Skipping {self.__class__} since a fix doesn't exist for {self.format}")
     
     def fix(self):
@@ -97,11 +100,11 @@ class BaseFix:
 
     def _get_family_name(self):
         if self.format == "glyphs":
-            return self.font.familyName
+            return self.font.familyName, self.font.styleName
         elif self.format == "ufo":
-            return self.font.info.familyName
+            return self.font.info.familyName, self.font.info.styleName
         elif self.format == "sfnt":
-            return font_familyname(self.font)
+            return font_familyname(self.font), font_stylename(self.font)
 
 
 class FixFSType(BaseFix):
@@ -175,7 +178,7 @@ class FixStyleLinking(BaseFix):
                 instance.linkStyle = ''
     
     def fix_ufo(self):
-        # Can infer these values correctly if we set the Style Map Family Name
+        # Can infer these values if we set the Style Map Family Name
         # and Style Map Style name correctly
         family_name = self.font.info.familyName
         style_name = self.font.info.styleName
@@ -261,23 +264,22 @@ class FixHinting(BaseFix):
         return self.font["head"].flags != old
 
     def fix_ufo(self):
-        """Insert a gasp table and other filters"""
+        # idk if there's hinting in ufo2ft yet
+        # this pr, https://github.com/googlefonts/ufo2ft/pull/335 was reverted
+        # dama just store their vtt instructions in the ufo's data dir
+        # let's just treat ufos as unhinted for the time being
+        self.font.info.openTypeGaspRangeRecords = [
+            {'rangeGaspBehavior': [0, 1, 2, 3], 'rangeMaxPPEM': 65535}
+        ]
     
     def fix_glyphs(self):
-        """Must be some customParameter for this"""
+        # Glyphsapp's gasp panel is broken
+        pass
 
 
 class FixWeightClass(BaseFix):
 
     def fix_ttf(self):
-        """Set the OS/2 table's usWeightClass so it conforms to GF's supported
-        styles table:
-        https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
-
-        Args:
-            ttFont: a TTFont instance
-        """
-        old_weight_class = self.font["OS/2"].usWeightClass
         stylename = font_stylename(self.font)
         tokens = stylename.split()
         self.font['OS/2'].usWeightClass = self._get_weight_class(tokens)
@@ -287,16 +289,18 @@ class FixWeightClass(BaseFix):
             tokens = instance.name.split()
             instance.weightClass = self._get_weight_class(tokens)
     
+    def fix_ufo(self):
+        tokens = self.font.info.styleName.split()
+        self.font.info.openTypeOS2WeightClass = self._get_weight_class(tokens)
+    
     def _get_weight_class(self, tokens):
         # Order WEIGHT_NAMES so longest names are first
         for style in sorted(WEIGHT_NAMES, key=lambda k: len(k), reverse=True):
             if style in tokens:
-                self.font["OS/2"].usWeightClass = WEIGHT_NAMES[style]
-                return self.font["OS/2"].usWeightClass != old_weight_class
+                return WEIGHT_NAMES[style]
 
         if "Italic" in tokens:
-            self.font["OS/2"].usWeightClass = 400
-            return self.font["OS/2"].usWeightClass != old_weight_class
+            return 400
         raise ValueError(
             f"Cannot determine usWeightClass because font style, '{stylename}' "
             f"doesn't have a weight token which is in our known "
@@ -315,7 +319,7 @@ class FixInstances(BaseFix):
             self.font: a self.font instance
         """
         if "fvar" not in self.font:
-            raise ValueError("self.font is not a variable font")
+            return
 
         fvar = self.font["fvar"]
         default_axis_vals = {a.axisTag: a.defaultValue for a in fvar.axes}
@@ -575,11 +579,81 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
             font["OS/2"].fsSelection |= 1 << 7
 
 
-class FixVerticalMetrics(BaseFix):
+class FixInheritVerticalMetrics(BaseFix):
+    # TODO Adjust by upm vals
+
     def __init__(self, font):
         super().__init__(font=font)
+        self.on_googlefonts = Google_Fonts_has_family(self.family_name)
+        if not self.on_googlefonts:
+            log.warning(f"Family is not on Google Fonts")
+            return
+        gf_family = download_family_from_Google_Fonts(self.family_name)
+        self.gf_ttFonts = [TTFont(f) for f in gf_family]
+        self.gf_font = self.match_font()
+    
+    def match_font(self):
+        for gf_ttFont in self.gf_ttFonts:
+            gf_styles = self._styles_in_ttFont(gf_ttFont)
+
+            if self.format == "sfnt":
+                styles = self._styles_in_ttFont(self.font)
+            elif self.format == "ufo":
+                styles = set([self.font.info.styleName])
+            elif self.format == "glyphs":
+                styles = set(i.name for i in self.font.instances)
+            
+            matching = styles & gf_styles
+            if matching:
+                return gf_ttFont
+        # TODO return Regular instead
+        log.warning(f"{self.style_name} isn't on Google Fonts. Using first font instead")
+        return self.gf_ttFonts[0]
+    
+    def _styles_in_ttFont(self, ttFont):
+        name_tbl = ttFont['name']
+        if "fvar" in ttFont:
+            res = set()
+            for inst in ttFont['fvar'].instances:
+                res.add(
+                    name_tbl.getName(inst.subfamilyNameID, 3, 1, 0x409).toUnicode()
+                )
+            return res
+        return set([font_stylename(ttFont)])
+
+    def fix_ttf(self):
+        self.font['OS/2'].usWinAscent = self.gf_font['OS/2'].usWinAscent
+        self.font['OS/2'].usWinDescent = self.gf_font['OS/2'].usWinDescent
+        self.font['OS/2'].sTypoAscender = self.gf_font['OS/2'].sTypoAscender
+        self.font['OS/2'].sTypoDescender = self.gf_font['OS/2'].sTypoDescender
+        self.font['OS/2'].sTypoLineGap = self.gf_font['OS/2'].sTypoLineGap
+        self.font['hhea'].ascender = self.gf_font['hhea'].ascender
+        self.font['hhea'].descender = self.gf_font['hhea'].descender
+        self.font['hhea'].lineGap = self.gf_font['hhea'].lineGap
+    
+    def fix_ufo(self):
         import pdb
         pdb.set_trace()
+        self.font.info.openTypeOS2WinAscent = self.gf_font['OS/2'].usWinAscent
+        self.font.info.openTypeOS2WinDescent = self.gf_font['OS/2'].usWinDescent
+        self.font.info.openTypeOS2TypoAscender = self.gf_font['OS/2'].sTypoAscender
+        self.font.info.openTypeOS2TypoDescender = self.gf_font['OS/2'].sTypoDescender
+        self.font.info.openTypeOS2TypoLineGap = self.gf_font['OS/2'].sTypoLineGap
+        self.font.info.openTypeHheaAscender = self.gf_font['hhea'].ascender
+        self.font.info.openTypeHheaDescender = self.gf_font['hhea'].descender
+        self.font.info.openTypeHheaLineGap = self.gf_font['hhea'].lineGap
+    
+    def fix_glyphs(self):
+        for master in self.font.masters:
+            master.winAscent = self.gf_font['OS/2'].usWinAscent
+            master.winDescent = self.gf_font['OS/2'].usWinDescent
+            master.typoAscender = self.gf_font['OS/2'].sTypoAscender
+            master.typoDescender = self.gf_font['OS/2'].sTypoDescender
+            master.typoLineGap = self.gf_font['OS/2'].sTypoLineGap
+            master.hheaAscender = self.gf_font["hhea"].ascender
+            master.hheaDescender = self.gf_font['hhea'].descender
+            master.hheaLineGap = self.gf_font['hhea'].lineGap
+
 
 def fix_vertical_metrics(ttFonts):
     """Fix a family's vertical metrics based on:
