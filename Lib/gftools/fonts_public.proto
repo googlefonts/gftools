@@ -60,6 +60,8 @@ enum TargetTypeProto {
   TARGET_OS_WINDOWS = 1;
   TARGET_OS_MAC = 2;
   TARGET_OS_LINUX = 3;
+  TARGET_OS_ANDROID = 4;
+  TARGET_OS_IOS = 5;
 }
 
 // Message so we can add additional fields like value in future
