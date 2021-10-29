@@ -37,9 +37,7 @@ from gftools.utils import (
     download_family_from_Google_Fonts,
     download_files_in_github_pr,
     download_files_in_github_dir,
-    download_file,
     Google_Fonts_has_family,
-    load_Google_Fonts_api_key,
     mkdir,
 )
 from gftools.html import HtmlProof, HtmlDiff
