@@ -550,35 +550,6 @@ def fix_filename(ttFont):
     return f"{family_name}-{style_name}{ext}".replace(" ", "")
 
 
-def inherit_vertical_metrics(ttFonts, family_name=None):
-    """Inherit the vertical metrics from the same family which is
-    hosted on Google Fonts.
-
-    Args:
-        ttFonts: a list of TTFont instances which belong to a family
-        family_name: Optional string which allows users to specify a
-            different family to inherit from e.g "Maven Pro".
-    """
-    family_name = font_familyname(ttFonts[0]) if not family_name else family_name
-
-    gf_fonts = list(map(TTFont, download_family_from_Google_Fonts(family_name)))
-    gf_fonts = {font_stylename(f): f for f in gf_fonts}
-    # TODO (Marc F) use Regular font instead. If VF use font which has Regular
-    # instance
-    gf_fallback = list(gf_fonts.values())[0]
-
-    fonts = {font_stylename(f): f for f in ttFonts}
-    for style, font in fonts.items():
-        if style in gf_fonts:
-            src_font = gf_fonts[style]
-        else:
-            src_font = gf_fallback
-        copy_vertical_metrics(src_font, font)
-
-        if typo_metrics_enabled(src_font):
-            font["OS/2"].fsSelection |= 1 << 7
-
-
 class BaseRegressionFix(BaseFix):
     def __init__(self, font):
         super().__init__(font=font)
@@ -847,69 +818,7 @@ class FixWidthMeta(BaseFix):
                 self.font.customParameters['panose'] = [0] * 10
             self.font.customParameters['panose'][0] = 2
             self.font.customParameters['panose'][3] = 9
-
-
-def fix_isFixedPitch(ttfont):
-
-
-    if len(same_width) == 1:
-        if ttfont['post'].isFixedPitch == 1:
-            messages.append("Skipping isFixedPitch is set correctly")
-        else:
-            messages.append("Font is monospace. Updating isFixedPitch to 0")
-            ttfont['post'].isFixedPitch = 1
-            changed = True
-
-        familyType = ttfont['OS/2'].panose.bFamilyType
-        if familyType == 2:
-            expected = 9
-        elif familyType == 3 or familyType == 5:
-            expected = 3
-        elif familyType == 0:
-            messages.append("Font is monospace but panose fields seems to be not set."
-                  " Setting values to defaults (FamilyType = 2, Proportion = 9).")
-            ttfont['OS/2'].panose.bFamilyType = 2
-            ttfont['OS/2'].panose.bProportion = 9
-            changed = True
-            expected = None
-        else:
-            expected = None
-
-        if expected:
-            if ttfont['OS/2'].panose.bProportion == expected:
-                messages.append("Skipping OS/2.panose.bProportion is set correctly")
-            else:
-                messages.append(("Font is monospace."
-                       " Since OS/2.panose.bFamilyType is {}"
-                       " we're updating OS/2.panose.bProportion"
-                       " to {}").format(familyType, expected))
-                ttfont['OS/2'].panose.bProportion = expected
-                changed = True
-
-        widths = [m[0] for m in ttfont['hmtx'].metrics.values() if m[0] > 0]
-        width_max = max(widths)
-        if ttfont['hhea'].advanceWidthMax == width_max:
-            messages.append("Skipping hhea.advanceWidthMax is set correctly")
-        else:
-            messsages.append("Font is monospace. Updating hhea.advanceWidthMax to %i" %
-                  width_max)
-            ttfont['hhea'].advanceWidthMax = width_max
-            changed = True
-
-        avg_width = otRound(sum(widths) / len(widths))
-        if avg_width == ttfont['OS/2'].xAvgCharWidth:
-            messages.append("Skipping OS/2.xAvgCharWidth is set correctly")
-        else:
-            messages.append("Font is monospace. Updating OS/2.xAvgCharWidth to %i" %
-                  avg_width)
-            ttfont['OS/2'].xAvgCharWidth = avg_width
-            changed = True
-    else:
-        if ttfont['post'].isFixedPitch != 0 or ttfont['OS/2'].panose.bProportion != 0:
-            changed = True
-        ttfont['post'].isFixedPitch = 0
-        ttfont['OS/2'].panose.bProportion = 0
-    return changed, messages
+        # hhea advanceWidthMax and OS/2 xAvgCharWidth will be calculated by fontmake
 
 
 def drop_superfluous_mac_names(ttfont):
