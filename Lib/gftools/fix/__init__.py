@@ -579,9 +579,7 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
             font["OS/2"].fsSelection |= 1 << 7
 
 
-class FixInheritVerticalMetrics(BaseFix):
-    # TODO Adjust by upm vals
-
+class BaseRegressionFix(BaseFix):
     def __init__(self, font):
         super().__init__(font=font)
         self.on_googlefonts = Google_Fonts_has_family(self.family_name)
@@ -591,7 +589,8 @@ class FixInheritVerticalMetrics(BaseFix):
         gf_family = download_family_from_Google_Fonts(self.family_name)
         self.gf_ttFonts = [TTFont(f) for f in gf_family]
         self.gf_font = self.match_font()
-    
+        self.gf_regular_font = self.gf_regular_style()
+
     def match_font(self):
         for gf_ttFont in self.gf_ttFonts:
             gf_styles = self._styles_in_ttFont(gf_ttFont)
@@ -607,9 +606,9 @@ class FixInheritVerticalMetrics(BaseFix):
             if matching:
                 return gf_ttFont
         # TODO return Regular instead
-        log.warning(f"{self.style_name} isn't on Google Fonts. Using first font instead")
-        return self.gf_ttFonts[0]
-    
+        log.warning(f"{self.style_name} isn't on Google Fonts. Using Regular font instead")
+        return self.gf_regular_style()
+
     def _styles_in_ttFont(self, ttFont):
         name_tbl = ttFont['name']
         if "fvar" in ttFont:
@@ -620,7 +619,18 @@ class FixInheritVerticalMetrics(BaseFix):
                 )
             return res
         return set([font_stylename(ttFont)])
+    
+    def gf_regular_style(self):
+        for gf_ttFont in self.gf_ttFonts:
+            styles = self._style_in_ttFont(gf_ttFont)
+            if "Regular" in styles:
+                return gf_ttFont
+        return self.gf_ttFonts[0]
+ 
 
+class FixInheritVerticalMetrics(BaseRegressionFix):
+    # TODO Adjust by upm vals
+    
     def fix_ttf(self):
         self.font['OS/2'].usWinAscent = self.gf_font['OS/2'].usWinAscent
         self.font['OS/2'].usWinDescent = self.gf_font['OS/2'].usWinDescent
@@ -630,10 +640,10 @@ class FixInheritVerticalMetrics(BaseFix):
         self.font['hhea'].ascender = self.gf_font['hhea'].ascender
         self.font['hhea'].descender = self.gf_font['hhea'].descender
         self.font['hhea'].lineGap = self.gf_font['hhea'].lineGap
+        if typo_metrics_enabled(self.gf_font):
+            self.font["OS/2"].fsSelection |= 1 << 7
     
     def fix_ufo(self):
-        import pdb
-        pdb.set_trace()
         self.font.info.openTypeOS2WinAscent = self.gf_font['OS/2'].usWinAscent
         self.font.info.openTypeOS2WinDescent = self.gf_font['OS/2'].usWinDescent
         self.font.info.openTypeOS2TypoAscender = self.gf_font['OS/2'].sTypoAscender
@@ -642,6 +652,11 @@ class FixInheritVerticalMetrics(BaseFix):
         self.font.info.openTypeHheaAscender = self.gf_font['hhea'].ascender
         self.font.info.openTypeHheaDescender = self.gf_font['hhea'].descender
         self.font.info.openTypeHheaLineGap = self.gf_font['hhea'].lineGap
+        if typo_metrics_enabled(self.gf_font):
+            if self.font.info.openTypeOS2Selection == None:
+                self.font.info.openTypeOS2Selection = []
+            if 7 not in self.font.info.openTypeOS2Selection:
+                self.font.info.openTypeOS2Selection.append(7)
     
     def fix_glyphs(self):
         for master in self.font.masters:
@@ -653,56 +668,44 @@ class FixInheritVerticalMetrics(BaseFix):
             master.hheaAscender = self.gf_font["hhea"].ascender
             master.hheaDescender = self.gf_font['hhea'].descender
             master.hheaLineGap = self.gf_font['hhea'].lineGap
+        for inst in self.font.instances:
+            if typo_metrics_enabled(self.gf_font):
+                inst.customParameters
 
 
-def fix_vertical_metrics(ttFonts):
+class FixVerticalMetrics(BaseFix):
     """Fix a family's vertical metrics based on:
     https://github.com/googlefonts/gf-docs/tree/main/VerticalMetrics
 
     Args:
         ttFonts: a list of TTFont instances which belong to a family
     """
-    src_font = next((f for f in ttFonts if font_stylename(f) == "Regular"), ttFonts[0])
+    
+    def fix_ttf(self):
+        src_font = self.gf_regular_font
 
-    # TODO (Marc F) CJK Fonts?
+        # TODO (Marc F) CJK Fonts?
 
-    # If OS/2.fsSelection bit 7 isn't enabled, enable it and set the typo metrics
-    # to the previous win metrics.
-    if not typo_metrics_enabled(src_font):
-        src_font["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
-        src_font["OS/2"].sTypoAscender = src_font["OS/2"].usWinAscent
-        src_font["OS/2"].sTypoDescender = -src_font["OS/2"].usWinDescent
-        src_font["OS/2"].sTypoLineGap = 0
+        # If OS/2.fsSelection bit 7 isn't enabled, enable it and set the typo metrics
+        # to the previous win metrics.
+        if not typo_metrics_enabled(src_font):
+            src_font["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
+            src_font["OS/2"].sTypoAscender = src_font["OS/2"].usWinAscent
+            src_font["OS/2"].sTypoDescender = -src_font["OS/2"].usWinDescent
+            src_font["OS/2"].sTypoLineGap = 0
 
-    # Set the hhea metrics so they are the same as the typo
-    src_font["hhea"].ascent = src_font["OS/2"].sTypoAscender
-    src_font["hhea"].descent = src_font["OS/2"].sTypoDescender
-    src_font["hhea"].lineGap = src_font["OS/2"].sTypoLineGap
+        # Set the hhea metrics so they are the same as the typo
+        src_font["hhea"].ascent = src_font["OS/2"].sTypoAscender
+        src_font["hhea"].descent = src_font["OS/2"].sTypoDescender
+        src_font["hhea"].lineGap = src_font["OS/2"].sTypoLineGap
 
-    # Set the win Ascent and win Descent to match the family's bounding box
-    win_desc, win_asc = family_bounding_box(ttFonts)
-    src_font["OS/2"].usWinAscent = win_asc
-    src_font["OS/2"].usWinDescent = abs(win_desc)
+        # Set the win Ascent and win Descent to match the family's bounding box
+        win_desc, win_asc = family_bounding_box(ttFonts)
+        src_font["OS/2"].usWinAscent = win_asc
+        src_font["OS/2"].usWinDescent = abs(win_desc)
 
-    # Set all fonts vertical metrics so they match the src_font
-    for ttFont in ttFonts:
+        # Set all fonts vertical metrics so they match the src_font
         ttFont["OS/2"].fsSelection |= 1 << 7
-        copy_vertical_metrics(src_font, ttFont)
-
-
-def copy_vertical_metrics(src_font, dst_font):
-    for table, key in [
-        ("OS/2", "usWinAscent"),
-        ("OS/2", "usWinDescent"),
-        ("OS/2", "sTypoAscender"),
-        ("OS/2", "sTypoDescender"),
-        ("OS/2", "sTypoLineGap"),
-        ("hhea", "ascent"),
-        ("hhea", "descent"),
-        ("hhea", "lineGap"),
-    ]:
-        val = getattr(src_font[table], key)
-        setattr(dst_font[table], key, val)
 
 
 class FixItalicAngle(BaseFix):
@@ -791,14 +794,63 @@ def fix_pua(font):
     return True
 
 
+class FixWidthMeta(BaseFix):
+
+    def fix_ttf(self):
+        same_width = set()
+        glyph_metrics = ttfont['hmtx'].metrics
+        for character in [chr(c) for c in range(65, 91)]:
+            same_width.add(glyph_metrics[character][0])
+
+        # enable Monospace properties
+        if len(same_width) == 1:
+            self.font['post'].isFixedPitch = 1
+            self.font['OS/2'].panose.bFamilyType = 2
+            self.font['OS/2'].panose.bProportion = 9
+
+        widths = [m[0] for m in ttfont['hmtx'].metrics.values() if m[0] > 0]
+        max_width = max(widths)
+        self.font['hhea'].advanceWidthMax = max_width
+        avg_width = int(sum(widths) / len(widths))
+        self.font['OS/2'].xAvgCharWidth = avg_width
+    
+    def fix_ufo(self):
+        same_width = set()
+        for g in self.font:
+            g_unicodes = set(g.unicodes)
+            if g_unicodes.issubset(set(range(65, 91))):
+                same_width |= g_unicodes
+        
+        if len(same_width) == 1:
+            self.font.info.postscriptIsFixedPitch = True
+            if not self.font.info.openTypeOS2Panose:
+                self.font.info.openTypeOS2Panose = [0] * 10
+            self.font.info.openTypeOS2Panose[0] = 2
+            self.font.info.openTypeOS2Panose[3] = 9
+        # hhea advanceWidthMax and OS/2 xAvgCharWidth will be calculated by fontmake
+    
+    def fix_glyphs(self):
+        same_width = set()
+        layer_ids = [m.id for m in self.font.masters]
+        for glyph in self.font.glyphs:
+            if not glyph.unicode:
+                continue
+            if int(glyph.unicode, 16) not in set(range(65, 91)):
+                continue
+            for l in glyph.layers:
+                if l._layerId in layer_ids:
+                    same_width.add(l.width)
+        
+        if len(same_width) == 1:
+            self.font.customParameters["isFixedPitch"] = True
+            if not self.font.customParameters['panose']:
+                self.font.customParameters['panose'] = [0] * 10
+            self.font.customParameters['panose'][0] = 2
+            self.font.customParameters['panose'][3] = 9
+
+
 def fix_isFixedPitch(ttfont):
 
-    same_width = set()
-    glyph_metrics = ttfont['hmtx'].metrics
-    messages = []
-    changed = False
-    for character in [chr(c) for c in range(65, 91)]:
-        same_width.add(glyph_metrics[character][0])
 
     if len(same_width) == 1:
         if ttfont['post'].isFixedPitch == 1:
