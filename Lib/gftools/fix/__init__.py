@@ -1,7 +1,5 @@
 """
-Functions to fix fonts so they conform to the Google Fonts
-specification:
-https://github.com/googlefonts/gf-docs/tree/main/Spec
+# Google Fonts Specification
 """
 from fontTools.misc.fixedTools import otRound
 from fontTools.ttLib import TTFont, newTable, getTableModule
@@ -44,21 +42,6 @@ WEIGHT_NAMES["Hairline"] = 1
 WEIGHT_NAMES["ExtraBlack"] = 1000
 WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
-
-UNWANTED_TABLES = frozenset(
-    [
-        "FFTM",
-        "TTFA",
-        "TSI0",
-        "TSI1",
-        "TSI2",
-        "TSI3",
-        "TSI5",
-        "prop",
-        "MVAR",
-        "Debg",
-    ]
-)
 
 
 class FixFonts:
@@ -121,9 +104,14 @@ class BaseFix:
 
 class FixFSType(BaseFix):
     """
-    Font Embedding (fsType)
+    ## FsType
 
-    Set to 0 (Installable embedding)
+    The fsType in the OS/2 table is a legacy DRM-related field. Fonts in the
+    Google Fonts collection must have it set to zero (also known as
+    "Installable Embedding"). This setting indicates that the fonts can be
+    embedded in documents and permanently installed by applications on remote systems.
+    More detailed info is available at:
+    https://docs.microsoft.com/en-us/typography/opentype/spec/os2#fstype
     """
     def fix_ttf(self):
         self.font['OS/2'].fsType = 0
@@ -216,11 +204,26 @@ def fix_family2(fonts):
 
 class FixTables(BaseFix):
 
+    UNWANTED_TABLES = frozenset(
+        [
+            "FFTM",
+            "TTFA",
+            "TSI0",
+            "TSI1",
+            "TSI2",
+            "TSI3",
+            "TSI5",
+            "prop",
+            "MVAR",
+            "Debg",
+        ]
+    )
+
     def fix_ttf(self, tables=None):
         """Remove unwanted tables from a font. The unwanted tables must belong
         to the UNWANTED_TABLES set.
         """
-        tables_to_remove = UNWANTED_TABLES if not tables else frozenset(tables)
+        tables_to_remove = self.UNWANTED_TABLES if not tables else frozenset(tables)
         font_tables = frozenset(self.font.keys())
 
         tables_not_in_font = tables_to_remove - font_tables
@@ -245,6 +248,11 @@ class FixTables(BaseFix):
 
 
 class FixHinting(BaseFix):
+    """
+    ## Hinting
+
+    TODO
+    """
 
     TTFA_FIRST_FUNC = [
         'PUSHB[ ]\t/* 1 value pushed */',
@@ -261,7 +269,6 @@ class FixHinting(BaseFix):
     VTT_GASP = {8: 10, 65535: 15}
 
     def fix_ttf(self):
-        # TODO determine whether font is ttfa or vtt
         if "fpgm" not in self.font:
             self._fix_ttf_unhinted()
         elif self._is_ttfa_hinted(self):
@@ -345,15 +352,42 @@ class FixWeightClass(BaseFix):
 
 
 class FixInstances(BaseFix):
+    """
+    ## Supported Styles
+
+    Google’s static fonts API supports up to 18 styles in one family: up to 9 weights (Thin–Black), + their matching Italics. The table below lists each style’s specific name table and bit settings.
+
+    `fontmake` doesn’t produce platform 1 (Mac) name entries any more. The respective columns below are for reference, but are optional.
+
+    | Filename                        | Family Name (ID 1, Win) | Subfamily Name (ID 2, Win) | *optional:* Family Name (ID 1, Mac) | *optional:* Subfamily Name (ID 2, Mac) | Typographic Family Name (ID 16) | Typo Subfamily Name (ID 17) | OS/2 usWeightClass | OS/2 fsSelection | head macStyle |
+    |---------------------------------|------------------------|---------------------------|------------------------|---------------------------|-------------------------------------|---------------------------------|--------------------|---------------------|----------------|
+    | FamilyName-Thin.ttf             | Family Name Thin       | Regular                   | Family Name            | Thin                      | Family Name                         | Thin                            | 100                | bit 6               |                |
+    | FamilyName-ExtraLight.ttf       | Family Name ExtraLight | Regular                   | Family Name            | ExtraLight                | Family Name                         | ExtraLight                      | 200                | bit 6               |                |
+    | FamilyName-Light.ttf            | Family Name Light      | Regular                   | Family Name            | Light                     | Family Name                         | Light                           | 300                | bit 6               |                |
+    | FamilyName-Regular.ttf          | Family Name            | Regular                   | Family Name            | Regular                   |                                     |                                 | 400                | bit 6               |                |
+    | FamilyName-Medium.ttf           | Family Name Medium     | Regular                   | Family Name            | Medium                    | Family Name                         | Medium                          | 500                | bit 6               |                |
+    | FamilyName-SemiBold.ttf         | Family Name SemiBold   | Regular                   | Family Name            | SemiBold                  | Family Name                         | SemiBold                        | 600                | bit 6               |                |
+    | FamilyName-Bold.ttf             | Family Name            | Bold                      | Family Name            | Bold                      |                                     |                                 | 700                | bit 5               | bit 0          |
+    | FamilyName-ExtraBold.ttf        | Family Name ExtraBold  | Regular                   | Family Name            | ExtraBold                 | Family Name                         | ExtraBold                       | 800                | bit 6               |                |
+    | FamilyName-Black.ttf            | Family Name Black      | Regular                   | Family Name            | Black                     | Family Name                         | Black                           | 900                | bit 6               |                |
+    |                                 |                        |                           |                        |                           |                                     |                                 |                    |                     |                |
+    | FamilyName-ThinItalic.ttf       | Family Name Thin       | Italic                    | Family Name            | Thin Italic               | Family Name                         | Thin Italic                     | 100                | bit 0               | bit 1          |
+    | FamilyName-ExtraLightItalic.ttf | Family Name ExtraLight | Italic                    | Family Name            | ExtraLight Italic         | Family Name                         | ExtraLight Italic               | 200                | bit 0               | bit 1          |
+    | FamilyName-LightItalic.ttf      | Family Name Light      | Italic                    | Family Name            | Light Italic              | Family Name                         | Light Italic                    | 300                | bit 0               | bit 1          |
+    | FamilyName-Italic.ttf           | Family Name            | Italic                    | Family Name            | Italic                    |                                     |                                 | 400                | bit 0               | bit 1          |
+    | FamilyName-MediumItalic.ttf     | Family Name Medium     | Italic                    | Family Name            | Medium Italic             | Family Name                         | Medium Italic                   | 500                | bit 0               | bit 1          |
+    | FamilyName-SemiBoldItalic.ttf   | Family Name SemiBold   | Italic                    | Family Name            | SemiBold Italic           | Family Name                         | SemiBold Italic                 | 600                | bit 0               | bit 1          |
+    | FamilyName-BoldItalic.ttf       | Family Name            | Bold Italic               | Family Name            | Bold Italic               |                                     |                                 | 700                | bit 5 + bit 0       | bit 0 + bit 1  |
+    | FamilyName-ExtraBoldItalic.ttf  | Family Name ExtraBold  | Italic                    | Family Name            | ExtraBold Italic          | Family Name                         | ExtraBold Italic                | 800                | bit 0               | bit 1          |
+    | FamilyName-BlackItalic.ttf      | Family Name Black      | Italic                    | Family Name            | Black Italic              | Family Name                         | Black Italic                    | 900                | bit 0               | bit 1          |
+
+
+    If a family has styles which are not in the above table, they should be released as a separate/new family. To do this, append any Unsupported style (e.g Condensed) to the family name, so it becomes part of the family name, rather than part of the style name. We frequently use this approach for [Condensed](https://fonts.google.com/?query=condensed) and [smallcap](https://fonts.google.com/?query=sc) sibling families.
+
+    For projects which use glyphsapp, we have an example [repository](https://github.com/davelab6/glyphs-export) which contains glyphs files that are set correctly.
+    """
 
     def fix_ttf(self):
-        """Replace a variable font's fvar instances with a set of new instances
-        that conform to the Google Fonts instance spec:
-        https://github.com/googlefonts/gf-docs/tree/main/Spec#fvar-instances
-
-        Args:
-            self.font: a self.font instance
-        """
         if "fvar" not in self.font:
             return
 
@@ -802,6 +836,14 @@ def fix_pua(font):
 
 
 class FixWidthMeta(BaseFix):
+    """
+    ## Monospace fonts
+
+    We require the post table isFixedPitch to be set, and the OS/2 panose
+    table to have OS/2.panose.bProportion (bit 4) set correctly. If either
+    of these is set incorrectly, users may get fallback glyphs which are
+    not monospaced, if they type a character which doesn't exist in the font.
+    """
 
     def fix_ttf(self):
         same_width = set()
@@ -959,71 +1001,3 @@ def fix_family(fonts, include_source_fixes=False, new_family_name=None):
         fix_vertical_metrics(fonts)
         if all(["fvar" in f for f in fonts]):
             gen_stat_tables(fonts, ["opsz", "wdth", "wght", "ital", "slnt"])
-
-
-class FontFixer():
-    def __init__(self, path, report=True, verbose=False, **kwargs):
-        self.font = TTFont(path)
-        self.path = path
-        self.font_filename = basename(path)
-        self.saveit = False
-        self.report = report
-        self.verbose = verbose
-        self.messages = []
-        self.args = kwargs
-        self.fixes = []
-        if "fixes" in kwargs:
-            self.fixes = kwargs["fixes"]
-
-    def __del__(self):
-        if self.report:
-            print("\n".join(self.messages))
-        if self.saveit:
-            if self.verbose:
-                print('Saving %s to %s.fix' % (self.font_filename, self.path))
-            self.font.save(self.path + ".fix")
-        elif self.verbose:
-            print('There were no changes needed on %s!' % self.font_filename)
-
-    def show(self):
-        pass
-
-    def fix(self):
-        for f in self.fixes:
-            rv = f(self.font)
-            if isinstance(rv, tuple) and len(rv) == 2:
-                changed, messages = rv
-                self.messages.extend(messages)
-            else:
-                changed = rv
-            if changed:
-                self.saveit = True
-
-
-class GaspFixer(FontFixer):
-
-    def fix(self, value=15):
-        try:
-            table = self.font.get('gasp')
-            table.gaspRange[65535] = value
-            self.saveit = True
-        except:
-            print(('ER: {}: no table gasp... '
-                  'Creating new table. ').format(self.path))
-            table = ttLib.newTable('gasp')
-            table.gaspRange = {65535: value}
-            self.font['gasp'] = table
-            self.saveit = True
-
-    def show(self):
-        try:
-            self.font.get('gasp')
-        except:
-            print('ER: {}: no table gasp'.format(self.path))
-            return
-
-        try:
-            print(self.font.get('gasp').gaspRange[65535])
-        except IndexError:
-            print('ER: {}: no index 65535'.format(self.path))
-
