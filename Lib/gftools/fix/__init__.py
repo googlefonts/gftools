@@ -61,6 +61,18 @@ UNWANTED_TABLES = frozenset(
 )
 
 
+class FixFonts:
+    def __init__(self, fonts, fixes=[]):
+        self.fonts = fonts
+        self.fixes = fixes
+        self.report = []
+        self.diff = {}
+    
+    def fix(self, produce_diffs=True):
+       for f in self.fixes:
+           fixer = f(self.font)
+
+
 class BaseFix:
 
     def __init__(self, font):
@@ -113,7 +125,6 @@ class FixFSType(BaseFix):
 
     Set to 0 (Installable embedding)
     """
-
     def fix_ttf(self):
         self.font['OS/2'].fsType = 0
     
@@ -235,33 +246,58 @@ class FixTables(BaseFix):
 
 class FixHinting(BaseFix):
 
+    TTFA_FIRST_FUNC = [
+        'PUSHB[ ]\t/* 1 value pushed */',
+        '0',
+        'FDEF[ ]\t/* FunctionDefinition */',
+        'DUP[ ]\t/* DuplicateTopStack */',
+        'PUSHB[ ]\t/* 1 value pushed */',
+        '0',
+        'NEQ[ ]\t/* NotEqual */',
+        'IF[ ]\t/* If */',
+        'RCVT[ ]\t/* ReadCVT */',
+    ]
+    SMOOTH_GASP = {0xFFFF: 15}
+    VTT_GASP = {8: 10, 65535: 15}
+
     def fix_ttf(self):
         # TODO determine whether font is ttfa or vtt
         if "fpgm" not in self.font:
             self._fix_ttf_unhinted()
+        elif self._is_ttfa_hinted(self):
+            self._fix_ttfa_hinting()
         else:
-            self._fix_ttf_hinted()
+            self._fix_vtt_hinting()
     
-    def _fix_ttf_unhinted(self):
-        gasp = newTable("gasp")
-        # Set GASP so all sizes are smooth
-        gasp.gaspRange = {0xFFFF: 15}
+    def _is_ttfa_hinted(self):
+        if "fpgm" not in self.font:
+            return False
+        return self.font['fpgm'].program.getAssembly()[:9] == self.TTFA_FIRST_FUNC
 
+    def _fix_ttf_unhinted(self):
         program = ttProgram.Program()
         assembly = ["PUSHW[]", "511", "SCANCTRL[]", "PUSHB[]", "4", "SCANTYPE[]"]
         program.fromAssembly(assembly)
-
         prep = newTable("prep")
         prep.program = program
-
-        self.font["gasp"] = gasp
         self.font["prep"] = prep
+        self._add_gasp_tbl(self.SMOOTH_GASP)
     
-    def _fix_ttf_hinted(self):
+    def _add_gasp_tbl(self, gasp):
+        gasp = newTable("gasp")
+        # Set GASP so all sizes are smooth
+        gasp.gaspRange = gasp
+        self.font["gasp"] = gasp
+    
+    def _fix_ttfa_hinting(self):
         # We may want to throw in a custom gasp table here
         old = self.font["head"].flags
         self.font["head"].flags |= 1 << 3
-        return self.font["head"].flags != old
+        self._add_gasp_tbl(self.SMOOTH_GASP)
+    
+    def _fix_vtt_hinting(self):
+        # TODO check if TSI tables are in font, if so, compile them
+        self._add_gasp_tbl(self.VTT_GASP)
 
     def fix_ufo(self):
         # idk if there's hinting in ufo2ft yet
