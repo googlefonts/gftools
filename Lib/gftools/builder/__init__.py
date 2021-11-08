@@ -97,7 +97,6 @@ required, all others have sensible defaults:
 
 """
 
-from babelfont import Babelfont
 from fontmake.font_project import FontProject
 from fontTools import designspaceLib
 from fontTools.otlLib.builder import buildStatTable
@@ -117,6 +116,7 @@ from vttLib.transfer import merge_from_file as merge_vtt_hinting
 from vttLib import compile_instructions as compile_vtt_hinting
 import difflib
 import glyphsLib
+from defcon import Font
 import logging
 import os
 import re
@@ -135,7 +135,6 @@ class GFBuilder:
                 os.chdir(os.path.dirname(configfile))
         else:
             self.config = config
-        self.masters = {}
         self.logger = logging.getLogger("GFBuilder")
         self.fill_config_defaults()
 
@@ -209,40 +208,32 @@ class GFBuilder:
             for file_ in files_added_during_build:
                 self.rm(file_)
 
-    def load_masters(self):
-        if self.masters:
-            return
-        for src in self.config["sources"]:
-            if src.endswith("glyphs"):
-                gsfont = glyphsLib.GSFont(src)
-                self.masters[src] = []
-                for master in gsfont.masters:
-                    self.masters[src].append(Babelfont.open(src, master=master.name))
-            elif src.endswith("designspace"):
-                continue
+    def get_family_name(self):
+        """Ensure that all source files have the same family name"""
+        names = set()
+        for fp in self.config["sources"]:
+            if fp.endswith("glyphs"):
+                src = glyphsLib.GSFont(fp)
+                names.add(src.familyName)
+            elif fp.endswith("ufo"):
+                src = Font(fp)
+                names.add(src.info.familyName)
+            elif fp.endswith("designspace"):
+                ds = designspaceLib.DesignSpaceDocument.fromfile(self.config["sources"][0])
+                names.add(ds.sources[0].familyName)
             else:
-                self.masters[src] = [Babelfont.open(src)]
+                raise ValueError(f"{fp} not a supported source file!")
+
+        if len(names) > 1:
+            raise ValueError(
+                f"Inconsistent family names in sources {names}. Set familyName in config instead"
+            )
+        return list(names)[0]
 
     def fill_config_defaults(self):
         if "familyName" not in self.config:
             self.logger.info("Deriving family name (this takes a while)")
-            if  self.config["sources"][0].endswith("designspace"):
-                designspace = designspaceLib.DesignSpaceDocument.fromfile(self.config["sources"][0])
-                self.config["familyName"] = designspace.sources[0].familyName
-            else:
-                self.load_masters()
-
-                familynames = set()
-                for masters in self.masters.values():
-                    for master in masters:
-                        familynames.add(master.info.familyName)
-
-                if len(familynames) != 1:
-                    raise ValueError(
-                        "Inconsistent family names in sources (%s). Set familyName in config instead"
-                        % familynames
-                    )
-                self.config["familyName"] = list(familynames)[0]
+            self.config["familyName"] = self.get_family_name()
         if "outputDir" not in self.config:
             self.config["outputDir"] = "../fonts"
         if "vfDir" not in self.config:
