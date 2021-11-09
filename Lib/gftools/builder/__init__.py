@@ -498,6 +498,7 @@ class GFBuilder:
             gasp_tbl.gaspRange = {8: 10, 65535: 15}
             gasp_tbl.version = 1
             font['gasp'] = gasp_tbl
+            font.save(font.reader.file.name)
 
     def move_webfont(self, filename):
         wf_filename = filename.replace(".ttf", ".woff2")
