@@ -34,6 +34,7 @@ from PIL import Image
 from gftools.designers_pb2 import DesignerInfoProto
 from google.protobuf import text_format
 from pandas.core.base import PandasObject
+from unidecode import unidecode
 
 
 def process_image(fp):
@@ -42,7 +43,13 @@ def process_image(fp):
     img = Image.open(fp)
     width, height = img.size
     if width != height:
-        print("warning: img is rectangular when it should be square")
+        print("warning: img is rectangular. Cropping img")
+        if height < width:
+            crop_amount = (width - height) / 2
+            img = img.crop((crop_amount, 0, width-crop_amount, height))
+        elif width < height:
+            crop_amount = (height - width) / 2
+            img = img.crop((0, crop_amount, width, height-crop_amount))
     if width < 300 or height < 300:
         print("warning: img is smaller than 300x300px")
         return img
@@ -89,6 +96,19 @@ def gen_hrefs(urls):
     return " | ".join(f'<a href="{k}">{v}</a>' for k,v in res.items())
 
 
+def designer_name(name):
+    """Google Fonts only accepts designer names which use the Latin script"""
+    # Check all characters are within range U+0000 - U+024F (Basic Latin - Latin Ex-B)
+    # https://www.compart.com/en/unicode/plane/U+0000
+    invalid_chars = [c for c in name if ord(c) > 0x024F]
+    if invalid_chars:
+        raise argparse.ArgumentTypeError(
+            f"'{name}' has the following illegal characters {invalid_chars}. "
+            "Please Latinize names."
+        )
+    return name
+
+
 def make_designer(
     designer_directory,
     name,
@@ -96,7 +116,9 @@ def make_designer(
     bio=None,
     urls=None,
 ):
-    designer_dir_name = name.lower().replace(" ", "").replace("-", "")
+    designer_dir_name = unidecode(
+        name.lower().replace(" ", "").replace("-", ""), "strict",
+    )
     designer_dir = os.path.join(designer_directory, designer_dir_name)
     if not os.path.isdir(designer_dir):
         print(f"{name} isn't in catalog. Creating new dir {designer_dir}")
@@ -146,7 +168,7 @@ def make_designer(
 def main():
     parser = argparse.ArgumentParser(usage=__doc__)
     parser.add_argument("designers_directory", help="path to google/fonts designer dir")
-    parser.add_argument("name", help="Designer name e.g 'Steve Matteson'")
+    parser.add_argument("name", help="Designer name e.g 'Steve Matteson'", type=designer_name)
     parser.add_argument("--img_path", help="Optional path to profile image", default=None)
     parser.add_argument(
         "--spreadsheet", help="Optional path to the Google Drive spreadsheet"

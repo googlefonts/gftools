@@ -500,4 +500,3 @@ def read_proto(fp, schema):
     with open(fp, "rb") as f:
         data = text_format.Parse(f.read(), schema)
     return data
-

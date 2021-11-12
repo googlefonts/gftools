@@ -104,5 +104,6 @@ setup(
         'pandas',
         'xlrd',
         'openpyxl',
+        'unidecode',
     ]
     )
