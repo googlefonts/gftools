@@ -28,9 +28,24 @@ jobs:
       - name: Build executables
         run: |
           pyinstaller gftools.spec
+      - name: zip filename
+        id: zip-name
+        shell: bash
+        run: |
+          run: echo "ZIP_NAME=$(echo '${{ RUNNER_OS }}'-binaries" >> $GITHUB_ENV
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.ZIP_NAME }}
+        path: |
+          dist/*
+        outputs:
+          zip_name: ${{ env.ZIP_NAME }}
   build:
     name: Create and Publish Release
     runs-on: ubuntu-latest
+    needs:
+      - apps
 
     steps:
       - uses: actions/checkout@v2
@@ -77,3 +92,33 @@ jobs:
         run: |
           python setup.py sdist bdist_wheel
           twine upload dist/gftools*
+      outputs:
+        zip_name: ${{ env.ZIP_NAME }}
+
+  attach:
+    # only run if the commit is tagged...
+    if: github.event_name == 'release'
+    # ... and it builds successfully
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    env:
+      ZIP_NAME: ${{ needs.build.outputs.zip_name }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download artefact files
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: ${{ env.ZIP_NAME }}
+      - name: Zip files
+        run: zip -r ${{ env.ZIP_NAME }}.zip ${{ env.ZIP_NAME }}
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.ZIP_NAME }}.zip
+          asset_name: ${{ env.ZIP_NAME }}.zip
+          tag: ${{ github.ref }}
+          overwrite: true
+          body: "Executable binaries"
