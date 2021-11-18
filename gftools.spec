@@ -1,8 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
+import freetype as ft
 
 datas = []
-binaries = [("venv/lib/python3.9/site-packages/freetype/libfreetype.dylib", ".")]
+binaries = [(ft.raw.filename, ".")]
 hiddenimports = []
 tmp_ret = collect_all("gftools")
 datas += tmp_ret[0]
