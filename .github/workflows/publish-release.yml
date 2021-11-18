@@ -6,6 +6,28 @@ on:
 name: Create and Publish Release
 
 jobs:
+  apps:
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      matrix:
+        python-version: [3.9]
+        platform: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install packages
+        run: |
+          pip install .
+          pip install pyinstaller
+      - name: Build executables
+        run: |
+          pyinstaller gftools.spec
   build:
     name: Create and Publish Release
     runs-on: ubuntu-latest
