@@ -44,8 +44,12 @@ WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
 
 
+def load_fixers():
+    return [v for k,v in globals().items() if k.startswith("Fix") if k != "BaseFix"]
+
+
 class FixFonts:
-    def __init__(self, fonts, fixes=[]):
+    def __init__(self, fonts, fixes=load_fixers()):
         self.fonts = fonts
         self.fixes = fixes
         self.report = []
@@ -714,6 +718,15 @@ class FixInheritVerticalMetrics(BaseRegressionFix):
                 inst.customParameters
 
 
+class FixDesignspace(BaseFix):
+
+    def fix_glyphs(self):
+        """
+        Check if designspace is orthogonal.
+        """
+        pass
+
+
 class FixVerticalMetrics(BaseFix):
     """Fix a family's vertical metrics based on:
     https://github.com/googlefonts/gf-docs/tree/main/VerticalMetrics
@@ -758,7 +771,7 @@ class FixItalicAngle(BaseFix):
     
     def fix_glyphs(self):
         for master in self.font.masters:
-            if "Italc" not in master.name and master.italicAngle != 0:
+            if "Italic" not in master.name and master.italicAngle != 0:
                 master.italicAngle = 0
 
 
