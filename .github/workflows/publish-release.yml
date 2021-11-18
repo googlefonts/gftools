@@ -23,7 +23,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install packages
         run: |
-          pip install .
+          pip install .[qa]
           pip install pyinstaller
       - name: Build executables
         run: |
