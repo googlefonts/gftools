@@ -27,7 +27,6 @@ from hyperglot import parse
 import csv
 import glob
 import os
-import re
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')

@@ -2,19 +2,15 @@ from fontTools.ttLib import TTFont
 import browserstack_screenshots
 from pkg_resources import resource_filename
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-import pathlib
 from browserstack.local import Local
 import tempfile
-import sys
 import os
 from multiprocessing import Process
 from contextlib import contextmanager
-import http.server
 from http.server import *
 import logging
 import time
 from copy import copy
-import pathlib
 import shutil
 from collections import namedtuple
 from gftools.utils import (
@@ -23,7 +19,6 @@ from gftools.utils import (
     gen_gifs,
     font_familyname,
     font_stylename,
-    get_name_record,
     font_is_italic,
     partition,
     get_encoded_glyphs,

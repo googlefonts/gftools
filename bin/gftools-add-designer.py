@@ -33,7 +33,6 @@ import os
 from PIL import Image
 from gftools.designers_pb2 import DesignerInfoProto
 from google.protobuf import text_format
-from pandas.core.base import PandasObject
 
 
 def process_image(fp):

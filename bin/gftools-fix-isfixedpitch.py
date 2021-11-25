@@ -34,7 +34,6 @@ gftools-fix-isfixedpitch --fonts [font1.ttf font2.ttf ...]
 
 """
 
-from fontTools.ttLib import TTFont
 from gftools.fix import fix_isFixedPitch, FontFixer
 import argparse
 

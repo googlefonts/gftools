@@ -2,14 +2,12 @@
 This schema represents all known key/value pairs for the builder config file.
 """
 from strictyaml import (
-                        load,
                         Map,
                         MapPattern,
                         Str,
                         Int,
                         Float,
                         Seq,
-                        YAMLError,
                         Optional,
                         Bool
                         )

@@ -55,7 +55,6 @@ import glob
 import os
 import subprocess
 import time
-from fontTools.ttLib import TTFont
 
 
 # Initialize flag parser

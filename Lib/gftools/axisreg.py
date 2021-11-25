@@ -1,5 +1,5 @@
 from pkg_resources import resource_filename
-from gftools.axes_pb2 import AxisProto, FallbackProto
+from gftools.axes_pb2 import AxisProto
 from gftools.utils import read_proto
 from glob import glob
 import os

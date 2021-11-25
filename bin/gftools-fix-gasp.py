@@ -17,7 +17,6 @@
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
 #
 import argparse
-from fontTools import ttLib
 from gftools.fix import GaspFixer
 
 description = 'Fixes TTF GASP table'

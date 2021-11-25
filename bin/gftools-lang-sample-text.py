@@ -13,11 +13,9 @@ gftools lang-sample-text -l ./languages/en.textproto ./udhr_translations/en.xml
 
 from absl import app
 from absl import flags
-from fontTools.ttLib import TTFont
 from gftools import fonts_public_pb2
 from gftools.util.udhr import Udhr
 from google.protobuf import text_format
-from hyperglot import parse
 from lxml import etree
 import csv
 import glob

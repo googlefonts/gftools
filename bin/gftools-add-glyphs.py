@@ -20,15 +20,12 @@ gftools add-glyphs -l ./lang/ -r ./ofl/noto*/METADATA.pb
 
 from absl import app
 from absl import flags
-from fontTools.ttLib import TTFont
 from gftools import fonts_public_pb2
 from gftools.util import google_fonts as fonts
 from gftools.util import unicode_sections
 from google.protobuf import text_format
-import csv
 import glob
 import os
-import re
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')

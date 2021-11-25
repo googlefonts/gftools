@@ -22,7 +22,6 @@ from gftools.utils import (
     validate_family,
     unique_name,
 )
-from gftools.util.styles import (get_stylename, is_regular, is_bold, is_italic)
 from gftools.stat import gen_stat_tables
 
 from os.path import basename, splitext
