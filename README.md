@@ -54,7 +54,7 @@ Please install these tools using pip:
 
     pip install gftools
 
-(Mac OS users on M1 chips will need to upgrade pip first to support universal wheels: `pip install -u pip`.)
+(Mac OS users on M1 chips will need to upgrade pip first to support universal wheels: `pip install -U pip`.)
 
 If you need to use `gftools qa`, you will need to install Harfbuzz, Cairo, FreeType and pkg-config. These can be installed on OS X using homebrew:
 
