@@ -20,6 +20,5 @@ strictyaml
 tabulate
 unidecode
 skia-pathops
-pandas
 xlrd
 openpyxl
