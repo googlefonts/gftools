@@ -153,7 +153,10 @@ def main():
     args = parser.parse_args()
 
     if args.spreadsheet:
-        import pandas as pd
+        try:
+            import pandas as pd
+        except ImportError as e:
+            raise ValueError("The pandas library is required to read Excel spreadsheets")
 
         df = pd.read_excel(args.spreadsheet)
         entry = df.loc[df["Name"] == args.name]

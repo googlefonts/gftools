@@ -20,5 +20,4 @@ strictyaml
 tabulate
 unidecode
 skia-pathops
-pandas
 jinja2
