@@ -33,7 +33,6 @@ import os
 from PIL import Image
 from gftools.designers_pb2 import DesignerInfoProto
 from google.protobuf import text_format
-from pandas.core.base import PandasObject
 
 
 def process_image(fp):
@@ -154,7 +153,10 @@ def main():
     args = parser.parse_args()
 
     if args.spreadsheet:
-        import pandas as pd
+        try:
+            import pandas as pd
+        except ImportError as e:
+            raise ValueError("The pandas library is required to read Excel spreadsheets")
 
         df = pd.read_excel(args.spreadsheet)
         entry = df.loc[df["Name"] == args.name]
