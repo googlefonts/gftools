@@ -18,11 +18,8 @@
 #
 
 import argparse
-import os
-import sys
-
 from fontTools.ttLib import TTFont
-from gftools.fix import UNWANTED_TABLES, remove_tables
+from gftools.fix import remove_tables
 
 
 def parse_tables(table_string):

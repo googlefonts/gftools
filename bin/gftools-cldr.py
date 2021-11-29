@@ -8,10 +8,8 @@ See more at http://cldr.unicode.org/.
 
 from collections import defaultdict
 from collections import deque
-import enum
 import os
 import tempfile
-from typing import Sequence
 from urllib import request
 from lxml import etree
 import zipfile

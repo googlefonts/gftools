@@ -19,7 +19,6 @@ from absl import flags
 from gftools import fonts_public_pb2
 from google.protobuf import text_format
 import re
-import warnings
 
 
 NOTO_FAMILY_NAME = re.compile(r'^Noto .*')

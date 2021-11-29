@@ -79,7 +79,6 @@ setup(
 #                      see: https://github.com/fontforge/fontforge/issues/2048
         'setuptools',
         'FontTools[ufo]',
-        'Flask',
         'absl-py',
         'glyphsLib',
         'PyGithub',
@@ -101,7 +100,6 @@ setup(
         'brotli',
         'browserstack-local==1.2.2',
         'pybrowserstack-screenshots==0.1',
-        'xlrd',
-        'openpyxl',
+        'jinja2'
     ]
     )

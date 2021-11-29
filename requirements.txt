@@ -20,5 +20,4 @@ strictyaml
 tabulate
 unidecode
 skia-pathops
-xlrd
-openpyxl
+jinja2

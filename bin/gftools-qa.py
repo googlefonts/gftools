@@ -24,15 +24,9 @@ from fontTools.ttLib import TTFont
 import argparse
 import shutil
 import os
-from glob import glob
 import subprocess
 import logging
-from uuid import uuid4
 import re
-import requests
-from io import BytesIO
-import json
-from zipfile import ZipFile
 from gftools.utils import (
     download_family_from_Google_Fonts,
     download_files_in_github_pr,
@@ -44,8 +38,6 @@ from gftools.html import HtmlProof, HtmlDiff
 try:
     from diffenator.diff import DiffFonts
     from diffenator.font import DFont
-    from diffbrowsers.diffbrowsers import DiffBrowsers
-    from diffbrowsers.browsers import test_browsers
     from diffbrowsers.utils import load_browserstack_credentials as bstack_creds
 except ModuleNotFoundError:
     raise ModuleNotFoundError(("gftools was installed without the QA "

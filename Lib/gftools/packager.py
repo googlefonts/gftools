@@ -26,7 +26,6 @@ from strictyaml import ( # type: ignore
                         MapPattern,
                         Enum,
                         Str,
-                        Any,
                         EmptyNone,
                         EmptyDict,
                         Optional,

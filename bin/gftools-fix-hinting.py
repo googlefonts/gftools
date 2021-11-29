@@ -28,7 +28,6 @@ Bit 3 = Force ppem to integer values for all internal scaler math;
 """
 from __future__ import print_function, unicode_literals
 import argparse
-from fontTools.ttLib import TTFont
 from gftools.fix import fix_hinted_font, FontFixer
 
 def main():
