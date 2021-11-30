@@ -47,7 +47,7 @@ WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
 
 def load_fixers():
-    return [v for k,v in globals().items() if k.startswith("Fix") if k != "BaseFix"]
+    return [v for k,v in globals().items() if k.startswith("Spec") if k != "BaseSpec"]
 
 
 class FixFonts:
@@ -63,7 +63,7 @@ class FixFonts:
                 fix(font)
 
 
-class BaseFix:
+class BaseSpec:
 
     def __init__(self, font):
         self.font = font
@@ -99,6 +99,14 @@ class BaseFix:
             self.fix_glyphs()
         elif self.format == "ufo":
             self.fix_ufo()
+    
+    def check(self):
+        if self.format == "sfnt":
+            return self.check_ttf()
+        elif self.format == "glyphs":
+            return self.check_glyphs()
+        elif self.format == "ufo":
+            return self.check_ufo()
 
     def _get_family_name(self):
         if self.format == "glyphs":
@@ -109,7 +117,7 @@ class BaseFix:
             return font_familyname(self.font), font_stylename(self.font)
 
 
-class FixFSType(BaseFix):
+class SpecFSType(BaseSpec):
     """
     ## FsType
 
@@ -118,6 +126,23 @@ class FixFSType(BaseFix):
     More info is available at:
     https://docs.microsoft.com/en-us/typography/opentype/spec/os2#fstype
     """
+    def _check(self, current, expected):
+        if current != 0:
+            return False, f"OS/2.fsType is {current}. Expected f{expected}."
+        return True, "Font has correct OS/2.fsType"
+    
+    def check_ttf(self):
+        fs_type = self.font['OS/2'].fsType
+        return self._check(fs_type, 0)
+    
+    def check_ufo(self):
+        fs_type = self.font.info.openTypeOS2Type
+        return self._check(fs_type, [])
+    
+    def check_glyphs(self):
+        fs_type = None if "fsType" not in self.font.customParameters else self.font.customParameters["fsType"]
+        return self._check(fs_type, [])
+
     def fix_ttf(self):
         self.font['OS/2'].fsType = 0
     
@@ -128,7 +153,7 @@ class FixFSType(BaseFix):
         self.font.customParameters["fsType"] = []
 
 
-class FixStyleLinking(BaseFix):
+class SpecStyles(BaseSpec):
     """
     ## Supported Styles
 
@@ -187,7 +212,7 @@ class FixStyleLinking(BaseFix):
         return old_selection != fs_selection
 
     def _fix_ttf_mac_style(self):
-        """Fix the head table's macStyle so it conforms to GF's supported
+        """Spec the head table's macStyle so it conforms to GF's supported
         styles table:
         https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
 
@@ -260,18 +285,7 @@ class FixStyleLinking(BaseFix):
             f"weights, '{WEIGHT_NAMES.keys()}'"
         )
 
-
-def fix_family2(fonts):
-    fixing_classes = [v for k,v in globals().items() if k.startswith("Fix") if k != "BaseFix"]
-    for clazz in fixing_classes:
-        fixer = clazz(font)
-        try:
-            fixer.fix()
-        except NotImplementedError:
-            print("Skipping")
-
-
-class FixTables(BaseFix):
+class SpecTables(BaseSpec):
 
     UNWANTED_TABLES = frozenset(
         [
@@ -316,7 +330,7 @@ class FixTables(BaseFix):
             del self.font[tbl]
 
 
-class FixHinting(BaseFix):
+class SpecHinting(BaseSpec):
     """
     ## Hinting
 
@@ -402,9 +416,9 @@ class FixHinting(BaseFix):
         pass
 
 
-class FixInstances(BaseFix):
+class SpecInstances(BaseSpec):
     """
-    ### Fvar instances
+    ### Variable font instances
 
     We are still revising how we name our instances and which particles we should/must include in instance names. At the moment (2020-06-30), Google Fonts only allows the following named instances:
 
@@ -596,7 +610,7 @@ def update_nametable(ttFont, family_name=None, style_name=None):
 
 
 def fix_nametable(ttFont):
-    """Fix a static font's name table so it conforms to the Google Fonts
+    """Spec a static font's name table so it conforms to the Google Fonts
     supported styles table:
     https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
 
@@ -662,7 +676,7 @@ def fix_filename(ttFont):
     return f"{family_name}-{style_name}{ext}".replace(" ", "")
 
 
-class BaseRegressionFix(BaseFix):
+class BaseRegressionSpec(BaseSpec):
     def __init__(self, font):
         super().__init__(font=font)
         self.on_googlefonts = Google_Fonts_has_family(self.family_name)
@@ -711,7 +725,7 @@ class BaseRegressionFix(BaseFix):
         return self.gf_ttFonts[0]
  
 
-class FixInheritVerticalMetrics(BaseRegressionFix):
+class SpecInheritVerticalMetrics(BaseRegressionSpec):
     # TODO Adjust by upm vals
     
     def fix_ttf(self):
@@ -756,7 +770,7 @@ class FixInheritVerticalMetrics(BaseRegressionFix):
                 inst.customParameters
 
 
-class FixDesignspace(BaseFix):
+class SpecDesignspace(BaseSpec):
 
     def fix_glyphs(self):
         """
@@ -765,8 +779,8 @@ class FixDesignspace(BaseFix):
         pass
 
 
-class FixVerticalMetrics(BaseFix):
-    """Fix a family's vertical metrics based on:
+class SpecVerticalMetrics(BaseSpec):
+    """Spec a family's vertical metrics based on:
     https://github.com/googlefonts/gf-docs/tree/main/VerticalMetrics
 
     Args:
@@ -800,7 +814,7 @@ class FixVerticalMetrics(BaseFix):
         ttFont["OS/2"].fsSelection |= 1 << 7
 
 
-class FixItalicAngle(BaseFix):
+class SpecItalicAngle(BaseSpec):
     # TODO (Marc F) implement for italic fonts
     def fix_ttf(self):
         style_name = font_stylename(self.font)
@@ -818,7 +832,7 @@ class FixItalicAngle(BaseFix):
 
 
 def fix_ascii_fontmetadata(font):
-    """Fixes TTF 'name' table strings to be ascii only"""
+    """Speces TTF 'name' table strings to be ascii only"""
     for name in font['name'].names:
         title = name.string.decode(name.getEncoding())
         title = normalize_unicode_marks(title)
@@ -890,11 +904,11 @@ def fix_pua(font):
     return True
 
 
-class FixWidthMeta(BaseFix):
+class SpecWidthMeta(BaseSpec):
     """
     ## Monospace fonts
 
-    We require the post table isFixedPitch to be set, and the OS/2 panose
+    We require the post table isSpecedPitch to be set, and the OS/2 panose
     table to have OS/2.panose.bProportion (bit 4) set correctly. If either
     of these is set incorrectly, users may get fallback glyphs which are
     not monospaced, if they type a character which doesn't exist in the font.
@@ -908,7 +922,7 @@ class FixWidthMeta(BaseFix):
 
         # enable Monospace properties
         if len(same_width) == 1:
-            self.font['post'].isFixedPitch = 1
+            self.font['post'].isSpecedPitch = 1
             self.font['OS/2'].panose.bFamilyType = 2
             self.font['OS/2'].panose.bProportion = 9
 
@@ -926,7 +940,7 @@ class FixWidthMeta(BaseFix):
                 same_width.add(g.width)
         
         if len(same_width) == 1:
-            self.font.info.postscriptIsFixedPitch = True
+            self.font.info.postscriptIsSpecedPitch = True
             if not self.font.info.openTypeOS2Panose:
                 self.font.info.openTypeOS2Panose = [0] * 10
             self.font.info.openTypeOS2Panose[0] = 2
@@ -946,7 +960,7 @@ class FixWidthMeta(BaseFix):
                     same_width.add(l.width)
         
         if len(same_width) == 1:
-            self.font.customParameters["isFixedPitch"] = True
+            self.font.customParameters["isSpecedPitch"] = True
             if not self.font.customParameters['panose']:
                 self.font.customParameters['panose'] = [0] * 10
             self.font.customParameters['panose'][0] = 2
@@ -1029,7 +1043,7 @@ def fix_font(font, include_source_fixes=False, new_family_name=None):
 
 
 def fix_family(fonts, include_source_fixes=False, new_family_name=None):
-    """Fix all fonts in a family"""
+    """Spec all fonts in a family"""
     validate_family(fonts)
 
     for font in fonts:

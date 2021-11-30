@@ -59,102 +59,102 @@ STYLE_TABLE = [
     ("12pt Italic", 400, (1 << 0), (1 << 1)),
 ]
 
-# FixFSType
+# SpecFSType
 def test_fix_ttf_fs_type(static_font):
-    from gftools.fix import FixFSType
+    from gftools.spec.font import SpecFSType
     static_font["OS/2"].fsType = 4
-    fix = FixFSType(static_font)
-    fix.fix()
+    spec = SpecFSType(static_font)
+    spec.fix()
     assert static_font["OS/2"].fsType == 0
 
 
 def test_fix_glyphs_fs_type(glyphs_font):
-    from gftools.fix import FixFSType
+    from gftools.spec.font import SpecFSType
     glyphs_font.customParameters['fsType'] = [1]
-    fix = FixFSType(glyphs_font)
-    fix.fix()
+    spec = SpecFSType(glyphs_font)
+    spec.fix()
     assert glyphs_font.customParameters['fsType'] == []
 
 
 def test_fix_ufo_fs_type(ufo_font):
-    from gftools.fix import FixFSType
+    from gftools.spec.font import SpecFSType
     ufo_font.info.openTypeOS2Type = [1]
-    fix = FixFSType(ufo_font)
-    fix.fix()
+    spec = SpecFSType(ufo_font)
+    spec.fix()
     assert ufo_font.info.openTypeOS2Type == []
 
 
-# FixWidthMeta
+# SpecWidthMeta
 def test_fix_ttf_width_meta(static_font):
-    from gftools.fix import FixWidthMeta
+    from gftools.spec.font import SpecWidthMeta
     for glyph in static_font['hmtx'].metrics:
         static_font['hmtx'].metrics[glyph] = (500, 500)
-    fix = FixWidthMeta(static_font)
-    fix.fix()
-    assert static_font['post'].isFixedPitch == 1
+    spec = SpecWidthMeta(static_font)
+    spec.fix()
+    assert static_font['post'].isSpecedPitch == 1
     assert static_font['OS/2'].panose.bFamilyType == 2
     assert static_font['OS/2'].panose.bProportion == 9
 
 
 def test_fix_glyphs_width_meta(glyphs_font):
-    from gftools.fix import FixWidthMeta
+    from gftools.spec.font import SpecWidthMeta
     for glyph in glyphs_font.glyphs:
         for layer in glyph.layers:
             layer.width = 500
-    fix = FixWidthMeta(glyphs_font)
-    fix.fix()
+    spec = SpecWidthMeta(glyphs_font)
+    spec.fix()
     glyphs_font.customParameters['panose'] == [2, 0, 0, 9, 0, 0, 0, 0, 0, 0]
 
 
 def test_fix_ufo_width_meta(ufo_font):
-    from gftools.fix import FixWidthMeta
+    from gftools.spec.font import SpecWidthMeta
     for glyph in ufo_font:
         glyph.width = 500
-    fix = FixWidthMeta(ufo_font)
-    fix.fix()
+    spec = SpecWidthMeta(ufo_font)
+    spec.fix()
     ufo_font.info.openTypeOS2Panose == [2, 0, 0, 9, 0, 0, 0, 0, 0, 0]
 
 
-# FixItalicAngle
+# SpecItalicAngle
 def test_fix_ttf_italic_angle(static_font):
-    from gftools.fix import FixItalicAngle
+    from gftools.spec.font import SpecItalicAngle
     static_font['name'].setName("Regular", 2, 3, 1, 0x409)
     static_font['name'].setName("Regular", 17, 3, 1, 0x409)
     static_font["post"].italicAngle = 10
-    fix = FixItalicAngle(static_font)
-    fix.fix()
+    spec = SpecItalicAngle(static_font)
+    spec.fix()
     assert static_font['post'].italicAngle == 0
 
 
 def test_fix_glyphs_italic_angle(glyphs_font):
-    from gftools.fix import FixItalicAngle
+    from gftools.spec.font import SpecItalicAngle
     for master in glyphs_font.instances:
         master.italicAngle = 10
-    fix = FixItalicAngle(glyphs_font)
-    fix.fix()
+    spec = SpecItalicAngle(glyphs_font)
+    spec.fix()
     assert set(m.italicAngle for m in glyphs_font.masters) == {0}
 
 
 def test_fix_ufo_italic_angle(ufo_font):
-    from gftools.fix import FixItalicAngle
+    from gftools.spec.font import SpecItalicAngle
     ufo_font.info.italicAngle = 10
-    fix = FixItalicAngle(ufo_font)
-    fix.fix()
+    spec = SpecItalicAngle(ufo_font)
+    spec.fix()
     assert ufo_font.info.italicAngle == 0
 
 
-#FixStyleLinking
+#SpecStyles
 @pytest.mark.parametrize(
     STYLE_HEADERS,
     STYLE_TABLE
 )
 def test_fix_ttf_style_linking(static_font, style, weight_class, fs_selection, mac_style):
-    from gftools.fix import FixStyleLinking
+    from gftools.spec.font import SpecStyles
     name = static_font["name"]
     name.setName(style, 2, 3, 1, 0x409)
     name.setName(style, 17, 3, 1, 0x409)
-    fix = FixStyleLinking(static_font)
-    fix.fix()
+    spec = SpecStyles(static_font)
+    spec.fix()
     assert static_font["OS/2"].usWeightClass == weight_class
     assert static_font["OS/2"].fsSelection & fs_selection == fs_selection
     assert static_font["head"].macStyle == mac_style
@@ -164,13 +164,13 @@ def test_fix_ttf_style_linking(static_font, style, weight_class, fs_selection, m
     STYLE_TABLE
 )
 def test_fix_glyphs_style_linking(glyphs_font, style, weight_class, fs_selection, mac_style):
-    from gftools.fix import FixStyleLinking
+    from gftools.spec.font import SpecStyles
     from glyphsLib import GSInstance
     inst = GSInstance()
     inst.name = style
     glyphs_font.instances = [inst]
-    fix = FixStyleLinking(glyphs_font)
-    fix.fix()
+    spec = SpecStyles(glyphs_font)
+    spec.fix()
     assert inst.weightClass == weight_class
     # TODO check the other bits
 
@@ -180,10 +180,10 @@ def test_fix_glyphs_style_linking(glyphs_font, style, weight_class, fs_selection
     STYLE_TABLE
 )
 def test_fix_ufo_style_linking(ufo_font, style, weight_class, fs_selection, mac_style):
-    from gftools.fix import FixStyleLinking
+    from gftools.spec.font import SpecStyles
     ufo_font.info.styleName = style
-    fix = FixStyleLinking(ufo_font)
-    fix.fix()
+    spec = SpecStyles(ufo_font)
+    spec.fix()
     assert ufo_font.info.openTypeOS2WeightClass == weight_class
     # TODO Check the other bits
 
@@ -198,7 +198,7 @@ def _get_fvar_instance_names(var_font):
 
 def test_fix_ttf_instances(var_font):
     from copy import deepcopy
-    from gftools.fix import FixInstances
+    from gftools.spec.font import SpecInstances
     roman_instances = [
         "ExtraLight",
         "Light",
@@ -221,8 +221,8 @@ def test_fix_ttf_instances(var_font):
     ]
     var_font["fvar"].instances = []
 
-    fix = FixInstances(var_font)
-    fix.fix()
+    spec = SpecInstances(var_font)
+    spec.fix()
     inst_names = _get_fvar_instance_names(var_font)
     assert inst_names == roman_instances
 
@@ -231,8 +231,8 @@ def test_fix_ttf_instances(var_font):
     var_font2["name"].setName("Italic", 2, 3, 1, 0x409)
     var_font2["name"].setName("Italic", 17, 3, 1, 0x409)
 
-    fix = FixInstances(var_font2)
-    fix.fix()
+    spec = SpecInstances(var_font2)
+    spec.fix()
     inst_names = _get_fvar_instance_names(var_font2)
     assert inst_names == italic_instances
 
@@ -245,14 +245,14 @@ def test_fix_ttf_instances(var_font):
 
     var_font3 = deepcopy(var_font)
     var_font3['fvar'] = new_fvar
-    fix = FixInstances(var_font3)
-    fix.fix()
+    spec = SpecInstances(var_font3)
+    spec.fix()
     inst_names = _get_fvar_instance_names(var_font3)
     assert inst_names == roman_instances + italic_instances
 
 
 def test_fix_glyphs_instances(glyphs_font):
-    from gftools.fix import FixInstances
+    from gftools.spec.font import SpecInstances
     from glyphsLib import GSInstance
 
     reg_inst = GSInstance()
@@ -260,6 +260,6 @@ def test_fix_glyphs_instances(glyphs_font):
     bad_inst = GSInstance()
     bad_inst.name = "FooBar"
     glyphs_font.instances = [reg_inst, bad_inst]
-    fix = FixInstances(glyphs_font)
-    fix.fix()
+    spec = SpecInstances(glyphs_font)
+    spec.fix()
     assert glyphs_font.instances == [reg_inst]
