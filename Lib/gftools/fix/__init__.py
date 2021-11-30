@@ -113,11 +113,9 @@ class FixFSType(BaseFix):
     """
     ## FsType
 
-    The fsType in the OS/2 table is a legacy DRM-related field. Fonts in the
-    Google Fonts collection must have it set to zero (also known as
-    "Installable Embedding"). This setting indicates that the fonts can be
-    embedded in documents and permanently installed by applications on remote systems.
-    More detailed info is available at:
+    Must be set to 0 (Installable embedding)
+
+    More info is available at:
     https://docs.microsoft.com/en-us/typography/opentype/spec/os2#fstype
     """
     def fix_ttf(self):
@@ -338,7 +336,6 @@ class FixHinting(BaseFix):
 
     If the family has under a billion weekly views, release it unhinted with a smooth gasp table.
     """
-
     TTFA_FIRST_FUNC = [
         'PUSHB[ ]\t/* 1 value pushed */',
         '0',
@@ -432,7 +429,6 @@ class FixInstances(BaseFix):
     - We don't lock ourselves into an implementation we may want to change in the future. The specs are constantly evolving so it's best we wait for these to mature.
     - DTP applications do not properly support variable fonts yet. Variable font support is [experimental in Adobe applications](https://community.adobe.com/t5/indesign/variable-fonts-in-indesign/td-p/10718647).
     """
-
     def fix_ttf(self):
         if "fvar" not in self.font:
             return

@@ -3,6 +3,7 @@ from gftools.fix import (
     FixFSType,
     FixHinting,
     FixInstances,
+    FixStyleLinking,
 )
 import re
 import sys
