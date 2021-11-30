@@ -1,5 +1,5 @@
+from attr import dataclass
 from fontTools.ttLib import TTFont
-from gftools.fix import FixWidthMeta
 from glyphsLib import GSFont
 from defcon import Font
 import os
@@ -29,6 +29,36 @@ def ufo_font():
     return Font(os.path.join(TEST_DATA, "MavenPro-Regular.ufo"))
 
 
+# Taken from https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
+STYLE_HEADERS = "style, weight_class, fs_selection, mac_style"
+STYLE_TABLE = [
+    ("Hairline", 1, (1 << 6), (0 << 0)),
+    ("Thin", 100, (1 << 6), (0 << 0)),
+    ("ExtraLight", 200, (1 << 6), (0 << 0)),
+    ("Light", 300, (1 << 6), (0 << 0)),
+    ("Regular", 400, (1 << 6), (0 << 0)),
+    ("Medium", 500, (1 << 6), (0 << 0)),
+    ("SemiBold", 600, (1 << 6), (0 << 0)),
+    ("Bold", 700, (1 << 5), (1 << 0)),
+    ("ExtraBold", 800, (1 << 6), (0 << 0)),
+    ("Black", 900, (1 << 6), (0 << 0)),
+    ("ExtraBlack", 1000, (1 << 6), (0 << 0)),
+    ("Hairline Italic", 1, (1 << 0), (1 << 1)),
+    ("Thin Italic", 100, (1 << 0), (1 << 1)),
+    ("ExtraLight Italic", 200, (1 << 0), (1 << 1)),
+    ("Light Italic", 300, (1 << 0), (1 << 1)),
+    ("Italic", 400, (1 << 0), (1 << 1)),
+    ("Medium Italic", 500, (1 << 0), (1 << 1)),
+    ("SemiBold Italic", 600, (1 << 0), (1 << 1)),
+    ("Bold Italic", 700, (1 << 0) | (1 << 5), (1 << 0) | (1 << 1)),
+    ("ExtraBold Italic", 800, (1 << 0), (1 << 1)),
+    ("Black Italic", 900, (1 << 0), (1 << 1)),
+    ("ExtraBlack Italic", 1000, (1 << 0), (1 << 1)),
+    # Variable fonts may have tokens other than weight and italic in their names
+    ("SemiCondensed Bold Italic", 700, (1 << 0) | (1 << 5), (1 << 0) | (1 << 1)),
+    ("12pt Italic", 400, (1 << 0), (1 << 1)),
+]
+
 # FixFSType
 def test_fix_ttf_fs_type(static_font):
     from gftools.fix import FixFSType
@@ -52,6 +82,7 @@ def test_fix_ufo_fs_type(ufo_font):
     fix = FixFSType(ufo_font)
     fix.fix()
     assert ufo_font.info.openTypeOS2Type == []
+
 
 # FixWidthMeta
 def test_fix_ttf_width_meta(static_font):
@@ -94,6 +125,7 @@ def test_fix_ttf_italic_angle(static_font):
     fix.fix()
     assert static_font['post'].italicAngle == 0
 
+
 def test_fix_glyphs_italic_angle(glyphs_font):
     from gftools.fix import FixItalicAngle
     for master in glyphs_font.instances:
@@ -102,9 +134,51 @@ def test_fix_glyphs_italic_angle(glyphs_font):
     fix.fix()
     assert set(m.italicAngle for m in glyphs_font.masters) == {0}
 
+
 def test_fix_ufo_italic_angle(ufo_font):
     from gftools.fix import FixItalicAngle
     ufo_font.info.italicAngle = 10
     fix = FixItalicAngle(ufo_font)
     fix.fix()
     assert ufo_font.info.italicAngle == 0
+
+#FixWeightClass
+@pytest.mark.parametrize(
+    STYLE_HEADERS,
+    STYLE_TABLE
+)
+def test_fix_ttf_weight_class(static_font, style, weight_class, fs_selection, mac_style):
+    from gftools.fix import FixWeightClass
+    name = static_font["name"]
+    name.setName(style, 2, 3, 1, 0x409)
+    name.setName(style, 17, 3, 1, 0x409)
+    fix = FixWeightClass(static_font)
+    fix.fix()
+    assert static_font["OS/2"].usWeightClass == weight_class
+
+
+@pytest.mark.parametrize(
+    STYLE_HEADERS,
+    STYLE_TABLE
+)
+def test_fix_glyphs_weight_class(glyphs_font, style, weight_class, fs_selection, mac_style):
+    from gftools.fix import FixWeightClass
+    from glyphsLib import GSInstance
+    inst = GSInstance()
+    inst.name = style
+    glyphs_font.instances = [inst]
+    fix = FixWeightClass(glyphs_font)
+    fix.fix()
+    assert inst.weightClass == weight_class
+
+
+@pytest.mark.parametrize(
+    STYLE_HEADERS,
+    STYLE_TABLE
+)
+def test_fix_ufoweight_class(ufo_font, style, weight_class, fs_selection, mac_style):
+    from gftools.fix import FixWeightClass
+    ufo_font.info.styleName = style
+    fix = FixWeightClass(ufo_font)
+    fix.fix()
+    assert ufo_font.info.openTypeOS2WeightClass == weight_class
