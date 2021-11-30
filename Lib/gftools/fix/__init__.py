@@ -391,6 +391,30 @@ class FixHinting(BaseFix):
 
 class FixInstances(BaseFix):
     """
+    ### Fvar instances
+
+    We are still revising how we name our instances and which particles we should/must include in instance names. At the moment (2020-06-30), Google Fonts only allows the following named instances:
+
+    | | |
+    |-|-|
+    | Thin       | Thin Italic       |
+    | ExtraLight | ExtraLight Italic |
+    | Light      | Light Italic      |
+    | Regular    | Italic            |
+    | Medium     | Medium Italic     |
+    | SemiBold   | SemiBold Italic   |
+    | Bold       | Bold Italic       |
+    | ExtraBold  | ExtraBold Italic  |
+    | Black      | Black Italic      |
+
+
+    We only allow weight and italic particles. If a font contains additional axes, they must not be mentioned in the instance names and the coordinates for each instance must be set to reasonable default e.g if your font contains a wdth axis, you don't want every instance's wdth coordinate value to be set to Condensed (75) you would set it to Normal (100).
+
+    We have imposed this restriction for the following reasons:
+
+    - Backwards compatibility with static fonts. Documents won't break if users swap static fonts for variable fonts.
+    - We don't lock ourselves into an implementation we may want to change in the future. The specs are constantly evolving so it's best we wait for these to mature.
+    - DTP applications do not properly support variable fonts yet. Variable font support is [experimental in Adobe applications](https://community.adobe.com/t5/indesign/variable-fonts-in-indesign/td-p/10718647).
     """
 
     def fix_ttf(self):
