@@ -1,4 +1,5 @@
 from fontTools.ttLib import TTFont
+from gftools.fix import FixWidthMeta
 from glyphsLib import GSFont
 from defcon import Font
 import os
@@ -28,6 +29,7 @@ def ufo_font():
     return Font(os.path.join(TEST_DATA, "MavenPro-Regular.ufo"))
 
 
+# FixFSType
 def test_fix_ttf_fs_type(static_font):
     from gftools.fix import FixFSType
     static_font["OS/2"].fsType = 4
@@ -50,3 +52,33 @@ def test_fix_ufo_fs_type(ufo_font):
     fix = FixFSType(ufo_font)
     fix.fix()
     assert ufo_font.info.openTypeOS2Type == []
+
+# FixWidthMeta
+def test_fix_ttf_width_meta(static_font):
+    from gftools.fix import FixWidthMeta
+    for glyph in static_font['hmtx'].metrics:
+        static_font['hmtx'].metrics[glyph] = (500, 500)
+    fix = FixWidthMeta(static_font)
+    fix.fix()
+    assert static_font['post'].isFixedPitch == 1
+    assert static_font['OS/2'].panose.bFamilyType == 2
+    assert static_font['OS/2'].panose.bProportion == 9
+
+
+def test_fix_glyphs_width_meta(glyphs_font):
+    from gftools.fix import FixWidthMeta
+    for glyph in glyphs_font.glyphs:
+        for layer in glyph.layers:
+            layer.width = 500
+    fix = FixWidthMeta(glyphs_font)
+    fix.fix()
+    glyphs_font.customParameters['panose'] == [2, 0, 0, 9, 0, 0, 0, 0, 0, 0]
+
+
+def test_fix_ufo_width_meta(ufo_font):
+    from gftools.fix import FixWidthMeta
+    for glyph in ufo_font:
+        glyph.width = 500
+    fix = FixWidthMeta(ufo_font)
+    fix.fix()
+    ufo_font.info.openTypeOS2Panose == [2, 0, 0, 9, 0, 0, 0, 0, 0, 0]

@@ -56,8 +56,9 @@ class FixFonts:
         self.diff = {}
     
     def fix(self, produce_diffs=True):
-       for f in self.fixes:
-           fixer = f(self.font)
+        for fix in self.fixes:
+            for font in self.fonts:
+                fix(font)
 
 
 class BaseFix:
@@ -79,7 +80,7 @@ class BaseFix:
     
     def fix_ttf(self):
         self.skip_msg()
-    
+
     def fix_ufo(self):
         self.skip_msg()
     
@@ -99,7 +100,7 @@ class BaseFix:
 
     def _get_family_name(self):
         if self.format == "glyphs":
-            return self.font.familyName, self.font.styleName
+            return self.font.familyName, None
         elif self.format == "ufo":
             return self.font.info.familyName, self.font.info.styleName
         elif self.format == "sfnt":
@@ -121,7 +122,7 @@ class FixFSType(BaseFix):
         self.font['OS/2'].fsType = 0
     
     def fix_ufo(self):
-        self.font.info.openTypeOS2Type = 0
+        self.font.info.openTypeOS2Type = []
     
     def fix_glyphs(self):
         self.font.customParameters["fsType"] = []
@@ -773,6 +774,10 @@ class FixItalicAngle(BaseFix):
         for master in self.font.masters:
             if "Italic" not in master.name and master.italicAngle != 0:
                 master.italicAngle = 0
+    
+    def fix_ufo(self):
+        if "Italic" not in self.font.info.styleName and self.font.info.italicAngle != 0:
+            self.font.info.italicAngle = 0
 
 
 def fix_ascii_fontmetadata(font):
@@ -860,7 +865,7 @@ class FixWidthMeta(BaseFix):
 
     def fix_ttf(self):
         same_width = set()
-        glyph_metrics = ttfont['hmtx'].metrics
+        glyph_metrics = self.font['hmtx'].metrics
         for character in [chr(c) for c in range(65, 91)]:
             same_width.add(glyph_metrics[character][0])
 
@@ -870,7 +875,7 @@ class FixWidthMeta(BaseFix):
             self.font['OS/2'].panose.bFamilyType = 2
             self.font['OS/2'].panose.bProportion = 9
 
-        widths = [m[0] for m in ttfont['hmtx'].metrics.values() if m[0] > 0]
+        widths = [m[0] for m in self.font['hmtx'].metrics.values() if m[0] > 0]
         max_width = max(widths)
         self.font['hhea'].advanceWidthMax = max_width
         avg_width = int(sum(widths) / len(widths))
@@ -881,7 +886,7 @@ class FixWidthMeta(BaseFix):
         for g in self.font:
             g_unicodes = set(g.unicodes)
             if g_unicodes.issubset(set(range(65, 91))):
-                same_width |= g_unicodes
+                same_width.add(g.width)
         
         if len(same_width) == 1:
             self.font.info.postscriptIsFixedPitch = True
