@@ -82,3 +82,29 @@ def test_fix_ufo_width_meta(ufo_font):
     fix = FixWidthMeta(ufo_font)
     fix.fix()
     ufo_font.info.openTypeOS2Panose == [2, 0, 0, 9, 0, 0, 0, 0, 0, 0]
+
+
+# FixItalicAngle
+def test_fix_ttf_italic_angle(static_font):
+    from gftools.fix import FixItalicAngle
+    static_font['name'].setName("Regular", 2, 3, 1, 0x409)
+    static_font['name'].setName("Regular", 17, 3, 1, 0x409)
+    static_font["post"].italicAngle = 10
+    fix = FixItalicAngle(static_font)
+    fix.fix()
+    assert static_font['post'].italicAngle == 0
+
+def test_fix_glyphs_italic_angle(glyphs_font):
+    from gftools.fix import FixItalicAngle
+    for master in glyphs_font.instances:
+        master.italicAngle = 10
+    fix = FixItalicAngle(glyphs_font)
+    fix.fix()
+    assert set(m.italicAngle for m in glyphs_font.masters) == {0}
+
+def test_fix_ufo_italic_angle(ufo_font):
+    from gftools.fix import FixItalicAngle
+    ufo_font.info.italicAngle = 10
+    fix = FixItalicAngle(ufo_font)
+    fix.fix()
+    assert ufo_font.info.italicAngle == 0
