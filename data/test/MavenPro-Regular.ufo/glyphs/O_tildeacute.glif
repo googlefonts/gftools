@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="Otildeacute" format="2">
+  <advance width="719"/>
+  <unicode hex="1E4C"/>
+  <anchor x="367" y="0" name="bottom"/>
+  <anchor x="367" y="334" name="center"/>
+  <anchor x="665" y="10" name="ogonek"/>
+  <anchor x="415" y="1035" name="top"/>
+  <anchor x="13" y="667" name="topleft"/>
+  <anchor x="439" y="667" name="topright"/>
+  <outline>
+    <component base="O"/>
+    <component base="tildecomb.case" xOffset="121"/>
+    <component base="acutecomb.case" xOffset="289" yOffset="351"/>
+  </outline>
+</glyph>

@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="Gacute" format="2">
+  <advance width="687"/>
+  <unicode hex="01F4"/>
+  <anchor x="331" y="0" name="bottom"/>
+  <anchor x="412" y="852" name="top"/>
+  <outline>
+    <component base="G"/>
+    <component base="acutecomb.case" xOffset="286" yOffset="168"/>
+  </outline>
+</glyph>

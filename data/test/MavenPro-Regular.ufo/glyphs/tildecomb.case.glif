@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="tildecomb.case" format="2">
+  <anchor x="246" y="667" name="_top"/>
+  <anchor x="246" y="850" name="top"/>
+  <outline>
+    <component base="tilde" xOffset="56" yOffset="183"/>
+  </outline>
+  <lib>
+    <dict>
+      <key>com.schriftgestaltung.Glyphs.originalWidth</key>
+      <integer>507</integer>
+    </dict>
+  </lib>
+</glyph>

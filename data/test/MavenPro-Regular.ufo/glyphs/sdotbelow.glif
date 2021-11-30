@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="sdotbelow" format="2">
+  <advance width="456"/>
+  <unicode hex="1E63"/>
+  <anchor x="203" y="-129" name="bottom"/>
+  <anchor x="233" y="499" name="top"/>
+  <outline>
+    <component base="s"/>
+    <component base="dotbelowcmb" xOffset="113"/>
+  </outline>
+</glyph>

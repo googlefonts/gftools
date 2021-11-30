@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="llinebelow" format="2">
+  <advance width="232"/>
+  <unicode hex="1E3B"/>
+  <anchor x="116" y="-119" name="bottom"/>
+  <anchor x="256" y="320" name="center"/>
+  <anchor x="116" y="689" name="top"/>
+  <anchor x="207" y="499" name="topright"/>
+  <outline>
+    <component base="l"/>
+    <component base="macronbelowcomb" xOffset="-87"/>
+  </outline>
+</glyph>

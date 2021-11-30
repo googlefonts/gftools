@@ -129,15 +129,49 @@ class FixFSType(BaseFix):
 
 
 class FixStyleLinking(BaseFix):
+    """
+    ## Supported Styles
 
+    Google’s static fonts API supports up to 18 styles in one family: up to 9 weights (Thin–Black), + their matching Italics. The table below lists each style’s specific name table and bit settings.
+
+    `fontmake` doesn’t produce platform 1 (Mac) name entries any more. The respective columns below are for reference, but are optional.
+
+    | Filename                        | Family Name (ID 1, Win) | Subfamily Name (ID 2, Win) | *optional:* Family Name (ID 1, Mac) | *optional:* Subfamily Name (ID 2, Mac) | Typographic Family Name (ID 16) | Typo Subfamily Name (ID 17) | OS/2 usWeightClass | OS/2 fsSelection | head macStyle |
+    |---------------------------------|------------------------|---------------------------|------------------------|---------------------------|-------------------------------------|---------------------------------|--------------------|---------------------|----------------|
+    | FamilyName-Thin.ttf             | Family Name Thin       | Regular                   | Family Name            | Thin                      | Family Name                         | Thin                            | 100                | bit 6               |                |
+    | FamilyName-ExtraLight.ttf       | Family Name ExtraLight | Regular                   | Family Name            | ExtraLight                | Family Name                         | ExtraLight                      | 200                | bit 6               |                |
+    | FamilyName-Light.ttf            | Family Name Light      | Regular                   | Family Name            | Light                     | Family Name                         | Light                           | 300                | bit 6               |                |
+    | FamilyName-Regular.ttf          | Family Name            | Regular                   | Family Name            | Regular                   |                                     |                                 | 400                | bit 6               |                |
+    | FamilyName-Medium.ttf           | Family Name Medium     | Regular                   | Family Name            | Medium                    | Family Name                         | Medium                          | 500                | bit 6               |                |
+    | FamilyName-SemiBold.ttf         | Family Name SemiBold   | Regular                   | Family Name            | SemiBold                  | Family Name                         | SemiBold                        | 600                | bit 6               |                |
+    | FamilyName-Bold.ttf             | Family Name            | Bold                      | Family Name            | Bold                      |                                     |                                 | 700                | bit 5               | bit 0          |
+    | FamilyName-ExtraBold.ttf        | Family Name ExtraBold  | Regular                   | Family Name            | ExtraBold                 | Family Name                         | ExtraBold                       | 800                | bit 6               |                |
+    | FamilyName-Black.ttf            | Family Name Black      | Regular                   | Family Name            | Black                     | Family Name                         | Black                           | 900                | bit 6               |                |
+    |                                 |                        |                           |                        |                           |                                     |                                 |                    |                     |                |
+    | FamilyName-ThinItalic.ttf       | Family Name Thin       | Italic                    | Family Name            | Thin Italic               | Family Name                         | Thin Italic                     | 100                | bit 0               | bit 1          |
+    | FamilyName-ExtraLightItalic.ttf | Family Name ExtraLight | Italic                    | Family Name            | ExtraLight Italic         | Family Name                         | ExtraLight Italic               | 200                | bit 0               | bit 1          |
+    | FamilyName-LightItalic.ttf      | Family Name Light      | Italic                    | Family Name            | Light Italic              | Family Name                         | Light Italic                    | 300                | bit 0               | bit 1          |
+    | FamilyName-Italic.ttf           | Family Name            | Italic                    | Family Name            | Italic                    |                                     |                                 | 400                | bit 0               | bit 1          |
+    | FamilyName-MediumItalic.ttf     | Family Name Medium     | Italic                    | Family Name            | Medium Italic             | Family Name                         | Medium Italic                   | 500                | bit 0               | bit 1          |
+    | FamilyName-SemiBoldItalic.ttf   | Family Name SemiBold   | Italic                    | Family Name            | SemiBold Italic           | Family Name                         | SemiBold Italic                 | 600                | bit 0               | bit 1          |
+    | FamilyName-BoldItalic.ttf       | Family Name            | Bold Italic               | Family Name            | Bold Italic               |                                     |                                 | 700                | bit 5 + bit 0       | bit 0 + bit 1  |
+    | FamilyName-ExtraBoldItalic.ttf  | Family Name ExtraBold  | Italic                    | Family Name            | ExtraBold Italic          | Family Name                         | ExtraBold Italic                | 800                | bit 0               | bit 1          |
+    | FamilyName-BlackItalic.ttf      | Family Name Black      | Italic                    | Family Name            | Black Italic              | Family Name                         | Black Italic                    | 900                | bit 0               | bit 1          |
+
+
+    If a family has styles which are not in the above table, they should be released as a separate/new family. To do this, append any Unsupported style (e.g Condensed) to the family name, so it becomes part of the family name, rather than part of the style name. We frequently use this approach for [Condensed](https://fonts.google.com/?query=condensed) and [smallcap](https://fonts.google.com/?query=sc) sibling families.
+
+    For projects which use glyphsapp, we have an example [repository](https://github.com/davelab6/glyphs-export) which contains glyphs files that are set correctly.
+    """
     def fix_ttf(self):
         self._fix_ttf_fs_selection()
         self._fix_ttf_mac_style()
+        self._fix_ttf_weightclass()
     
     def _fix_ttf_fs_selection(self):
         stylename = font_stylename(self.font)
         tokens = set(stylename.split())
-        old_selection = fs_selection = ttFont["OS/2"].fsSelection
+        old_selection = fs_selection = self.font["OS/2"].fsSelection
 
         # turn off all bits except for bit 7 (USE_TYPO_METRICS)
         fs_selection &= 1 << 7
@@ -149,10 +183,10 @@ class FixStyleLinking(BaseFix):
         # enable Regular bit for all other styles
         if not tokens & set(["Bold", "Italic"]):
             fs_selection |= 1 << 6
-        ttFont["OS/2"].fsSelection = fs_selection
+        self.font["OS/2"].fsSelection = fs_selection
         return old_selection != fs_selection
 
-    def _fix_ttf_mac_style(ttFont):
+    def _fix_ttf_mac_style(self):
         """Fix the head table's macStyle so it conforms to GF's supported
         styles table:
         https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
@@ -160,17 +194,17 @@ class FixStyleLinking(BaseFix):
         Args:
             ttFont: a TTFont instance
         """
-        stylename = font_stylename(ttFont)
+        stylename = font_stylename(self.font)
         tokens = set(stylename.split())
         mac_style = 0
         if "Italic" in tokens:
             mac_style |= 1 << 1
         if "Bold" in tokens:
             mac_style |= 1 << 0
-        ttFont["head"].macStyle = mac_style
+        self.font["head"].macStyle = mac_style
 
     def fix_glyphs(self):
-            # fix instance names to pass gf spec
+        # fix instance names to pass gf spec
         for instance in self.font.instances:
             if 'Italic' in instance.name:
                 instance.isItalic = True
@@ -180,6 +214,7 @@ class FixStyleLinking(BaseFix):
                     instance.linkStyle = ''
             else:
                 instance.linkStyle = ''
+        self._fix_glyphs_weightclass()
     
     def fix_ufo(self):
         # Can infer these values if we set the Style Map Family Name
@@ -195,6 +230,35 @@ class FixStyleLinking(BaseFix):
             self.font.info.styleMapFamilyName = family
             style = "regular" if "Italic" not in style_name else "italic"
             self.font.info.styleMapStyleName = style
+        self._fix_ufo_weightclass()
+
+    def _fix_ttf_weightclass(self):
+        stylename = font_stylename(self.font)
+        tokens = stylename.split()
+        self.font['OS/2'].usWeightClass = self._get_weight_class(tokens)
+    
+    def _fix_glyphs_weightclass(self):
+        for instance in self.font.instances:
+            tokens = instance.name.split()
+            instance.weightClass = self._get_weight_class(tokens)
+    
+    def _fix_ufo_weightclass(self):
+        tokens = self.font.info.styleName.split()
+        self.font.info.openTypeOS2WeightClass = self._get_weight_class(tokens)
+    
+    def _get_weight_class(self, tokens):
+        # Order WEIGHT_NAMES so longest names are first
+        for style in sorted(WEIGHT_NAMES, key=lambda k: len(k), reverse=True):
+            if style in tokens:
+                return WEIGHT_NAMES[style]
+
+        if "Italic" in tokens:
+            return 400
+        raise ValueError(
+            f"Cannot determine usWeightClass because font style, '{stylename}' "
+            f"doesn't have a weight token which is in our known "
+            f"weights, '{WEIGHT_NAMES.keys()}'"
+        )
 
 
 def fix_family2(fonts):
@@ -325,71 +389,8 @@ class FixHinting(BaseFix):
         pass
 
 
-class FixWeightClass(BaseFix):
-
-    def fix_ttf(self):
-        stylename = font_stylename(self.font)
-        tokens = stylename.split()
-        self.font['OS/2'].usWeightClass = self._get_weight_class(tokens)
-    
-    def fix_glyphs(self):
-        for instance in self.font.instances:
-            tokens = instance.name.split()
-            instance.weightClass = self._get_weight_class(tokens)
-    
-    def fix_ufo(self):
-        tokens = self.font.info.styleName.split()
-        self.font.info.openTypeOS2WeightClass = self._get_weight_class(tokens)
-    
-    def _get_weight_class(self, tokens):
-        # Order WEIGHT_NAMES so longest names are first
-        for style in sorted(WEIGHT_NAMES, key=lambda k: len(k), reverse=True):
-            if style in tokens:
-                return WEIGHT_NAMES[style]
-
-        if "Italic" in tokens:
-            return 400
-        raise ValueError(
-            f"Cannot determine usWeightClass because font style, '{stylename}' "
-            f"doesn't have a weight token which is in our known "
-            f"weights, '{WEIGHT_NAMES.keys()}'"
-        )
-
-
 class FixInstances(BaseFix):
     """
-    ## Supported Styles
-
-    Google’s static fonts API supports up to 18 styles in one family: up to 9 weights (Thin–Black), + their matching Italics. The table below lists each style’s specific name table and bit settings.
-
-    `fontmake` doesn’t produce platform 1 (Mac) name entries any more. The respective columns below are for reference, but are optional.
-
-    | Filename                        | Family Name (ID 1, Win) | Subfamily Name (ID 2, Win) | *optional:* Family Name (ID 1, Mac) | *optional:* Subfamily Name (ID 2, Mac) | Typographic Family Name (ID 16) | Typo Subfamily Name (ID 17) | OS/2 usWeightClass | OS/2 fsSelection | head macStyle |
-    |---------------------------------|------------------------|---------------------------|------------------------|---------------------------|-------------------------------------|---------------------------------|--------------------|---------------------|----------------|
-    | FamilyName-Thin.ttf             | Family Name Thin       | Regular                   | Family Name            | Thin                      | Family Name                         | Thin                            | 100                | bit 6               |                |
-    | FamilyName-ExtraLight.ttf       | Family Name ExtraLight | Regular                   | Family Name            | ExtraLight                | Family Name                         | ExtraLight                      | 200                | bit 6               |                |
-    | FamilyName-Light.ttf            | Family Name Light      | Regular                   | Family Name            | Light                     | Family Name                         | Light                           | 300                | bit 6               |                |
-    | FamilyName-Regular.ttf          | Family Name            | Regular                   | Family Name            | Regular                   |                                     |                                 | 400                | bit 6               |                |
-    | FamilyName-Medium.ttf           | Family Name Medium     | Regular                   | Family Name            | Medium                    | Family Name                         | Medium                          | 500                | bit 6               |                |
-    | FamilyName-SemiBold.ttf         | Family Name SemiBold   | Regular                   | Family Name            | SemiBold                  | Family Name                         | SemiBold                        | 600                | bit 6               |                |
-    | FamilyName-Bold.ttf             | Family Name            | Bold                      | Family Name            | Bold                      |                                     |                                 | 700                | bit 5               | bit 0          |
-    | FamilyName-ExtraBold.ttf        | Family Name ExtraBold  | Regular                   | Family Name            | ExtraBold                 | Family Name                         | ExtraBold                       | 800                | bit 6               |                |
-    | FamilyName-Black.ttf            | Family Name Black      | Regular                   | Family Name            | Black                     | Family Name                         | Black                           | 900                | bit 6               |                |
-    |                                 |                        |                           |                        |                           |                                     |                                 |                    |                     |                |
-    | FamilyName-ThinItalic.ttf       | Family Name Thin       | Italic                    | Family Name            | Thin Italic               | Family Name                         | Thin Italic                     | 100                | bit 0               | bit 1          |
-    | FamilyName-ExtraLightItalic.ttf | Family Name ExtraLight | Italic                    | Family Name            | ExtraLight Italic         | Family Name                         | ExtraLight Italic               | 200                | bit 0               | bit 1          |
-    | FamilyName-LightItalic.ttf      | Family Name Light      | Italic                    | Family Name            | Light Italic              | Family Name                         | Light Italic                    | 300                | bit 0               | bit 1          |
-    | FamilyName-Italic.ttf           | Family Name            | Italic                    | Family Name            | Italic                    |                                     |                                 | 400                | bit 0               | bit 1          |
-    | FamilyName-MediumItalic.ttf     | Family Name Medium     | Italic                    | Family Name            | Medium Italic             | Family Name                         | Medium Italic                   | 500                | bit 0               | bit 1          |
-    | FamilyName-SemiBoldItalic.ttf   | Family Name SemiBold   | Italic                    | Family Name            | SemiBold Italic           | Family Name                         | SemiBold Italic                 | 600                | bit 0               | bit 1          |
-    | FamilyName-BoldItalic.ttf       | Family Name            | Bold Italic               | Family Name            | Bold Italic               |                                     |                                 | 700                | bit 5 + bit 0       | bit 0 + bit 1  |
-    | FamilyName-ExtraBoldItalic.ttf  | Family Name ExtraBold  | Italic                    | Family Name            | ExtraBold Italic          | Family Name                         | ExtraBold Italic                | 800                | bit 0               | bit 1          |
-    | FamilyName-BlackItalic.ttf      | Family Name Black      | Italic                    | Family Name            | Black Italic              | Family Name                         | Black Italic                    | 900                | bit 0               | bit 1          |
-
-
-    If a family has styles which are not in the above table, they should be released as a separate/new family. To do this, append any Unsupported style (e.g Condensed) to the family name, so it becomes part of the family name, rather than part of the style name. We frequently use this approach for [Condensed](https://fonts.google.com/?query=condensed) and [smallcap](https://fonts.google.com/?query=sc) sibling families.
-
-    For projects which use glyphsapp, we have an example [repository](https://github.com/davelab6/glyphs-export) which contains glyphs files that are set correctly.
     """
 
     def fix_ttf(self):

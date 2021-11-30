@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="Ubreve" format="2">
+  <advance width="692"/>
+  <unicode hex="016C"/>
+  <anchor x="346" y="0" name="bottom"/>
+  <anchor x="453" y="10" name="ogonek"/>
+  <anchor x="346" y="799" name="top"/>
+  <anchor x="599" y="559" name="topright"/>
+  <outline>
+    <component base="U"/>
+    <component base="brevecomb.case" xOffset="130" yOffset="10"/>
+  </outline>
+</glyph>

@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="adotbelow" format="2">
+  <advance width="534"/>
+  <unicode hex="1EA1"/>
+  <anchor x="271" y="0" name="bottom"/>
+  <anchor x="468" y="40" name="ogonek"/>
+  <anchor x="291" y="499" name="top"/>
+  <outline>
+    <contour>
+      <point x="241" y="-129" type="line"/>
+      <point x="320" y="-129" type="line"/>
+      <point x="320" y="-50" type="line"/>
+      <point x="241" y="-50" type="line"/>
+    </contour>
+    <component base="a"/>
+  </outline>
+</glyph>

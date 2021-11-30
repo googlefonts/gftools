@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="udotbelow" format="2">
+  <advance width="587"/>
+  <unicode hex="1EE5"/>
+  <outline>
+    <contour>
+      <point x="291" y="-9" type="curve" smooth="yes"/>
+      <point x="424" y="-9"/>
+      <point x="500" y="71"/>
+      <point x="500" y="209" type="curve" smooth="yes"/>
+      <point x="500" y="499" type="line"/>
+      <point x="428" y="499" type="line"/>
+      <point x="428" y="206" type="line" smooth="yes"/>
+      <point x="428" y="105"/>
+      <point x="385" y="58"/>
+      <point x="291" y="58" type="curve" smooth="yes"/>
+      <point x="198" y="58"/>
+      <point x="154" y="105"/>
+      <point x="154" y="206" type="curve" smooth="yes"/>
+      <point x="154" y="499" type="line"/>
+      <point x="82" y="499" type="line"/>
+      <point x="82" y="209" type="line" smooth="yes"/>
+      <point x="82" y="71"/>
+      <point x="158" y="-9"/>
+    </contour>
+    <contour>
+      <point x="252" y="-128" type="line"/>
+      <point x="331" y="-128" type="line"/>
+      <point x="331" y="-49" type="line"/>
+      <point x="252" y="-49" type="line"/>
+    </contour>
+  </outline>
+</glyph>

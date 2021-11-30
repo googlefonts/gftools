@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="ocircumflexacute" format="2">
+  <advance width="569"/>
+  <unicode hex="1ED1"/>
+  <anchor x="287" y="0" name="bottom"/>
+  <anchor x="287" y="250" name="center"/>
+  <anchor x="402" y="10" name="ogonek"/>
+  <anchor x="347" y="751" name="top"/>
+  <anchor x="415" y="522" name="topright"/>
+  <outline>
+    <component base="o"/>
+    <component base="circumflexcomb_acutecomb" xOffset="139"/>
+  </outline>
+  <lib>
+    <dict>
+      <key>com.schriftgestaltung.Glyphs.glyph.leftMetricsKey</key>
+      <string>o</string>
+      <key>com.schriftgestaltung.Glyphs.glyph.rightMetricsKey</key>
+      <string>o</string>
+      <key>public.markColor</key>
+      <string>0.97,1,0,1</string>
+    </dict>
+  </lib>
+</glyph>

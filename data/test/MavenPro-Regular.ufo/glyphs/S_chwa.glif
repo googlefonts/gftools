@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="Schwa" format="2">
+  <advance width="717"/>
+  <unicode hex="018F"/>
+  <outline>
+    <contour>
+      <point x="346" y="672" type="curve"/>
+      <point x="245" y="672"/>
+      <point x="155" y="645"/>
+      <point x="91" y="610" type="curve"/>
+      <point x="91" y="536" type="line"/>
+      <point x="142" y="569"/>
+      <point x="237" y="606"/>
+      <point x="342" y="606" type="curve"/>
+      <point x="493" y="606"/>
+      <point x="584" y="517"/>
+      <point x="584" y="340" type="curve"/>
+      <point x="584" y="116"/>
+      <point x="513" y="55"/>
+      <point x="358" y="55" type="curve"/>
+      <point x="208" y="55"/>
+      <point x="139" y="128"/>
+      <point x="135" y="284" type="curve"/>
+      <point x="107" y="274" type="line"/>
+      <point x="616" y="274" type="line"/>
+      <point x="621" y="340" type="line"/>
+      <point x="60" y="340" type="line"/>
+      <point x="58" y="139"/>
+      <point x="142" y="-11"/>
+      <point x="358" y="-11" type="curve"/>
+      <point x="542" y="-11"/>
+      <point x="657" y="99"/>
+      <point x="657" y="327" type="curve"/>
+      <point x="657" y="559"/>
+      <point x="537" y="672"/>
+    </contour>
+  </outline>
+  <lib>
+    <dict>
+      <key>com.schriftgestaltung.Glyphs.glyph.leftMetricsKey</key>
+      <string>O</string>
+      <key>com.schriftgestaltung.Glyphs.glyph.rightMetricsKey</key>
+      <string>O</string>
+    </dict>
+  </lib>
+</glyph>

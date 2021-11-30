@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="ruble" format="2">
+  <advance width="613"/>
+  <unicode hex="20BD"/>
+  <outline>
+    <component base="P"/>
+    <component base="strokeshortcomb" xOffset="-64" yOffset="-132"/>
+    <component base="strokeshortcomb" xOffset="-64" yOffset="36"/>
+  </outline>
+</glyph>

@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="peso" format="2">
+  <advance width="613"/>
+  <unicode hex="20B1"/>
+  <outline>
+    <contour>
+      <point x="20" y="481" type="line"/>
+      <point x="135" y="481" type="line"/>
+      <point x="135" y="534" type="line"/>
+      <point x="20" y="534" type="line"/>
+    </contour>
+    <contour>
+      <point x="488" y="481" type="line"/>
+      <point x="603" y="481" type="line"/>
+      <point x="603" y="534" type="line"/>
+      <point x="488" y="534" type="line"/>
+    </contour>
+    <contour>
+      <point x="20" y="354" type="line"/>
+      <point x="135" y="354" type="line"/>
+      <point x="135" y="407" type="line"/>
+      <point x="20" y="407" type="line"/>
+    </contour>
+    <contour>
+      <point x="488" y="354" type="line"/>
+      <point x="603" y="354" type="line"/>
+      <point x="603" y="407" type="line"/>
+      <point x="488" y="407" type="line"/>
+    </contour>
+    <component base="P"/>
+  </outline>
+</glyph>

@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="u" format="2">
+  <advance width="578"/>
+  <unicode hex="0075"/>
+  <anchor x="289" y="0" name="bottom"/>
+  <anchor x="410" y="10" name="ogonek"/>
+  <anchor x="289" y="499" name="top"/>
+  <anchor x="513" y="522" name="topright"/>
+  <outline>
+    <contour>
+      <point x="289" y="-15" type="curve"/>
+      <point x="422" y="-15"/>
+      <point x="498" y="56"/>
+      <point x="498" y="183" type="curve"/>
+      <point x="498" y="499" type="line"/>
+      <point x="426" y="499" type="line"/>
+      <point x="426" y="199" type="line"/>
+      <point x="426" y="98"/>
+      <point x="382" y="52"/>
+      <point x="289" y="52" type="curve"/>
+      <point x="195" y="52"/>
+      <point x="152" y="98"/>
+      <point x="152" y="199" type="curve"/>
+      <point x="152" y="499" type="line"/>
+      <point x="80" y="499" type="line"/>
+      <point x="80" y="183" type="line"/>
+      <point x="80" y="56"/>
+      <point x="156" y="-15"/>
+    </contour>
+  </outline>
+  <lib>
+    <dict>
+      <key>com.schriftgestaltung.Glyphs.glyph.leftMetricsKey</key>
+      <string>n</string>
+      <key>com.schriftgestaltung.Glyphs.glyph.rightMetricsKey</key>
+      <string>n</string>
+    </dict>
+  </lib>
+</glyph>

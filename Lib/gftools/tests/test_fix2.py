@@ -142,32 +142,34 @@ def test_fix_ufo_italic_angle(ufo_font):
     fix.fix()
     assert ufo_font.info.italicAngle == 0
 
-#FixWeightClass
+
+#FixStyleLinking
 @pytest.mark.parametrize(
     STYLE_HEADERS,
     STYLE_TABLE
 )
-def test_fix_ttf_weight_class(static_font, style, weight_class, fs_selection, mac_style):
-    from gftools.fix import FixWeightClass
+def test_fix_ttf_style_linking(static_font, style, weight_class, fs_selection, mac_style):
+    from gftools.fix import FixStyleLinking
     name = static_font["name"]
     name.setName(style, 2, 3, 1, 0x409)
     name.setName(style, 17, 3, 1, 0x409)
-    fix = FixWeightClass(static_font)
+    fix = FixStyleLinking(static_font)
     fix.fix()
     assert static_font["OS/2"].usWeightClass == weight_class
-
+    assert static_font["OS/2"].fsSelection & fs_selection == fs_selection
+    assert static_font["head"].macStyle == mac_style
 
 @pytest.mark.parametrize(
     STYLE_HEADERS,
     STYLE_TABLE
 )
-def test_fix_glyphs_weight_class(glyphs_font, style, weight_class, fs_selection, mac_style):
-    from gftools.fix import FixWeightClass
+def test_fix_glyphs_style_linking(glyphs_font, style, weight_class, fs_selection, mac_style):
+    from gftools.fix import FixStyleLinking
     from glyphsLib import GSInstance
     inst = GSInstance()
     inst.name = style
     glyphs_font.instances = [inst]
-    fix = FixWeightClass(glyphs_font)
+    fix = FixStyleLinking(glyphs_font)
     fix.fix()
     assert inst.weightClass == weight_class
 
@@ -176,9 +178,9 @@ def test_fix_glyphs_weight_class(glyphs_font, style, weight_class, fs_selection,
     STYLE_HEADERS,
     STYLE_TABLE
 )
-def test_fix_ufoweight_class(ufo_font, style, weight_class, fs_selection, mac_style):
-    from gftools.fix import FixWeightClass
+def test_fix_ufo_style_linking(ufo_font, style, weight_class, fs_selection, mac_style):
+    from gftools.fix import FixStyleLinking
     ufo_font.info.styleName = style
-    fix = FixWeightClass(ufo_font)
+    fix = FixStyleLinking(ufo_font)
     fix.fix()
     assert ufo_font.info.openTypeOS2WeightClass == weight_class

@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<glyph name="manat" format="2">
+  <advance width="692"/>
+  <unicode hex="20BC"/>
+  <anchor x="346" y="667" name="bottom"/>
+  <anchor x="239" y="657" name="ogonek"/>
+  <anchor x="346" y="0" name="top"/>
+  <anchor x="93" y="108" name="topright"/>
+  <outline>
+    <component base="U" xScale="-1" yScale="-1" xOffset="692" yOffset="667"/>
+    <component base="bar" xOffset="125" yOffset="97"/>
+  </outline>
+</glyph>
