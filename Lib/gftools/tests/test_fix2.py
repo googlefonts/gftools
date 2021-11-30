@@ -172,6 +172,7 @@ def test_fix_glyphs_style_linking(glyphs_font, style, weight_class, fs_selection
     fix = FixStyleLinking(glyphs_font)
     fix.fix()
     assert inst.weightClass == weight_class
+    # TODO check the other bits
 
 
 @pytest.mark.parametrize(
@@ -184,3 +185,81 @@ def test_fix_ufo_style_linking(ufo_font, style, weight_class, fs_selection, mac_
     fix = FixStyleLinking(ufo_font)
     fix.fix()
     assert ufo_font.info.openTypeOS2WeightClass == weight_class
+    # TODO Check the other bits
+
+
+def _get_fvar_instance_names(var_font):
+    inst_names = []
+    for inst in var_font['fvar'].instances:
+        inst_name = var_font['name'].getName(inst.subfamilyNameID, 3, 1, 0x409)
+        inst_names.append(inst_name.toUnicode())
+    return inst_names
+
+
+def test_fix_ttf_instances(var_font):
+    from copy import deepcopy
+    from gftools.fix import FixInstances
+    roman_instances = [
+        "ExtraLight",
+        "Light",
+        "Regular",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "ExtraBold",
+        "Black"
+    ]
+    italic_instances = [
+        "ExtraLight Italic",
+        "Light Italic",
+        "Italic",
+        "Medium Italic",
+        "SemiBold Italic",
+        "Bold Italic",
+        "ExtraBold Italic",
+        "Black Italic",
+    ]
+    var_font["fvar"].instances = []
+
+    fix = FixInstances(var_font)
+    fix.fix()
+    inst_names = _get_fvar_instance_names(var_font)
+    assert inst_names == roman_instances
+
+    # Let's rename the font style so the font becomes an Italic variant
+    var_font2 = deepcopy(var_font)
+    var_font2["name"].setName("Italic", 2, 3, 1, 0x409)
+    var_font2["name"].setName("Italic", 17, 3, 1, 0x409)
+
+    fix = FixInstances(var_font2)
+    fix.fix()
+    inst_names = _get_fvar_instance_names(var_font2)
+    assert inst_names == italic_instances
+
+    # Let's mock an ital axis so the font has both ital and wght axes
+    new_fvar = deepcopy(var_font["fvar"])
+    new_fvar.axes[1].axisTag = "ital"
+    new_fvar.axes[1].minValue = 0
+    new_fvar.axes[1].maxValue = 1
+    new_fvar.axes[1].defaultValue = 0
+
+    var_font3 = deepcopy(var_font)
+    var_font3['fvar'] = new_fvar
+    fix = FixInstances(var_font3)
+    fix.fix()
+    inst_names = _get_fvar_instance_names(var_font3)
+    assert inst_names == roman_instances + italic_instances
+
+
+def test_fix_glyphs_instances(glyphs_font):
+    from gftools.fix import FixInstances
+    from glyphsLib import GSInstance
+
+    reg_inst = GSInstance()
+    reg_inst.name = "Regular"
+    bad_inst = GSInstance()
+    bad_inst.name = "FooBar"
+    glyphs_font.instances = [reg_inst, bad_inst]
+    fix = FixInstances(glyphs_font)
+    fix.fix()
+    assert glyphs_font.instances == [reg_inst]
