@@ -7,6 +7,7 @@ TODO Perhaps this spec module should be its own repo?
 We could then import it into both gftools and fontbakery
 discuss with team first before doing this.
 """
+import re
 from fontTools.misc.fixedTools import otRound
 from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
@@ -330,8 +331,6 @@ class SpecHinting(BaseSpec):
 
     Static fonts should be hinted using the latest version of TTFAutohint. If the results look poor on Windows browsers, it's better to release the fonts unhinted with a GASP table set which is set to "grayscale / symmetric smoothing" (0x000A) across the full PPEM range. TTFAutohint often struggles to hint display or handwritten typefaces.
 
-    Once the fonts have been hinted, run the fonts through gftools fix-hinting. If the fonts are unhinted, run the fonts through gftools fix-nonhinting.
-
     ### VF Fonts:
 
     Variable Font hinting still doesn't have a clear policy. Marc Foley has been applying the following pattern:
@@ -435,10 +434,9 @@ class SpecInstances(BaseSpec):
     - We don't lock ourselves into an implementation we may want to change in the future. The specs are constantly evolving so it's best we wait for these to mature.
     - DTP applications do not properly support variable fonts yet. Variable font support is [experimental in Adobe applications](https://community.adobe.com/t5/indesign/variable-fonts-in-indesign/td-p/10718647).
     """
-    def fix_ttf(self):
+    def _expected_ttf_instances(self):
         if "fvar" not in self.font:
             return
-
         fvar = self.font["fvar"]
         default_axis_vals = {a.axisTag: a.defaultValue for a in fvar.axes}
 
@@ -464,10 +462,7 @@ class SpecInstances(BaseSpec):
 
                 coordinates = deepcopy(default_axis_vals)
                 coordinates["wght"] = wght_val
-
-                inst = NamedInstance()
-                inst.subfamilyNameID = nametable.addName(name)
-                inst.coordinates = coordinates
+                inst = {"subfamilyName": name, "coordinates": coordinates}
                 results.append(inst)
             return results
 
@@ -479,8 +474,38 @@ class SpecInstances(BaseSpec):
             instances += gen_instances(is_italic=True)
         else:
             instances += gen_instances(is_italic=False)
-        fvar.instances = instances
+        return instances
+
+    def check_ttf(self):
+        if "fvar" not in self.font:
+            return True, "Font is static. No instances to check"
+        nametbl = self.font['name']
+        current = [
+            {
+                "subfamilyName": nametbl.getName(i.subfamilyNameID, 3, 1, 0x409).toUnicode(),
+                "coordinates": i.coordinates
+            } for i in self.font['fvar'].instances]
+        expected = self._expected_ttf_instances()
+        if current != expected:
+            return False, f"fvar Instances are {current}. Expected {expected}"
+        return True, "fvar instances are correct"
     
+    def fix_ttf(self):
+        if "fvar" not in self.font:
+            return
+        expected = self._expected_ttf_instances()
+        fvar = self.font["fvar"]
+        nametable = self.font["name"]
+        instances = []
+        for i in expected:
+            inst = NamedInstance()
+            inst.subfamilyNameID = nametable.addName(i["subfamilyName"])
+            inst.coordinates = i["coordinates"]
+            instances.append(inst)
+        fvar.instances = instances
+
+    
+    # TODO check_glyphs
     def fix_glyphs(self):
         # Strip out instances which are not Thin-Black or Thin Italic-Black Italic.
         # We cannot generate these from scratch because we cannot infer how designer units
