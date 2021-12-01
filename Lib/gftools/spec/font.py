@@ -46,22 +46,6 @@ WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
 
 
-def load_fixers():
-    return [v for k,v in globals().items() if k.startswith("Spec") if k != "BaseSpec"]
-
-
-class FixFonts:
-    def __init__(self, fonts, fixes=load_fixers()):
-        self.fonts = fonts
-        self.fixes = fixes
-        self.report = []
-        self.diff = {}
-    
-    def fix(self, produce_diffs=True):
-        for fix in self.fixes:
-            for font in self.fonts:
-                fix(font)
-
 
 class BaseSpec:
 
@@ -918,7 +902,7 @@ def fix_pua(font):
     return True
 
 
-class SpecWidthMeta(BaseSpec):
+class SpecMonospace(BaseSpec):
     """
     ## Monospace fonts
 
