@@ -324,32 +324,24 @@ class SpecTables(BaseSpec):
         ]
     )
 
+    def _expected_ttf_tables(self):
+        tables = set(self.font.keys())
+        return tables - SpecTables.UNWANTED_TABLES
+    
+    def check_ttf(self):
+        current = set(self.font.keys())
+        expected = self._expected_ttf_tables()
+        redundant = current - expected
+        if redundant:
+            return False, f"Font contains redundant tables {redundant}"
+        return True, "Font has correct tables"
+
     def fix_ttf(self):
-        """Remove unwanted tables from a font. The unwanted tables must belong
-        to the UNWANTED_TABLES set.
-        """
-        tables_to_remove = self.UNWANTED_TABLES if not tables else frozenset(tables)
-        font_tables = frozenset(self.font.keys())
-
-        tables_not_in_font = tables_to_remove - font_tables
-        if tables_not_in_font:
-            log.warning(
-                f"Cannot remove tables '{list(tables_not_in_font)}' since they are "
-                f"not in the font."
-            )
-
-        required_tables = tables_to_remove - UNWANTED_TABLES
-        if required_tables:
-            log.warning(
-                f"Cannot remove tables '{list(required_tables)}' since they are required"
-            )
-
-        tables_to_remove = UNWANTED_TABLES & font_tables & tables_to_remove
-        if not tables_to_remove:
-            return
-        log.info(f"Removing tables '{list(tables_to_remove)}' from font")
-        for tbl in tables_to_remove:
-            del self.font[tbl]
+        current = set(self.font.keys())
+        expected = self._expected_ttf_tables()
+        redundant = current - expected
+        for t in redundant:
+            del self.font[t]
 
 
 class SpecHinting(BaseSpec):

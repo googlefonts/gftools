@@ -266,3 +266,12 @@ def test_fix_glyphs_instances(glyphs_font):
 
 
 # SpecTables
+def test_fix_ttf_tables(static_font):
+    from gftools.spec.font import SpecTables
+    from fontTools.ttLib import newTable
+
+    tsi_tbl = newTable("TSI1")
+    static_font["TSI1"] = tsi_tbl
+    spec = SpecTables(static_font)
+    spec.fix()
+    assert "TSI1" not in static_font.keys()
