@@ -263,3 +263,6 @@ def test_fix_glyphs_instances(glyphs_font):
     spec = SpecInstances(glyphs_font)
     spec.fix()
     assert glyphs_font.instances == [reg_inst]
+
+
+# SpecTables

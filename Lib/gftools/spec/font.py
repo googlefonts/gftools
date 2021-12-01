@@ -126,9 +126,12 @@ class SpecFSType(BaseSpec):
     More info is available at:
     https://docs.microsoft.com/en-us/typography/opentype/spec/os2#fstype
     """
+    # TODO Perhaps this spec module should be its own repo?
+    # We could then import it into both gftools and fontbakery
+    # discuss with team first before doing this.
     def _check(self, current, expected):
         if current != 0:
-            return False, f"OS/2.fsType is {current}. Expected f{expected}."
+            return False, f"OS/2.fsType is {current}. Expected {expected}."
         return True, "Font has correct OS/2.fsType"
     
     def check_ttf(self):
@@ -189,11 +192,31 @@ class SpecStyles(BaseSpec):
     For projects which use glyphsapp, we have an example [repository](https://github.com/davelab6/glyphs-export) which contains glyphs files that are set correctly.
     """
     def fix_ttf(self):
-        self._fix_ttf_fs_selection()
-        self._fix_ttf_mac_style()
-        self._fix_ttf_weightclass()
+        self.font["OS/2"].usWeightClass = self._expected_ttf_weightclass()
+        self.font["OS/2"].fsSelection = self._expected_ttf_fs_selection()
+        self.font["head"].macStyle = self._expected_ttf_mac_style()
     
-    def _fix_ttf_fs_selection(self):
+    def check_ttf(self):
+        fails = []
+        current_weightclass = self.font["OS/2"].usWeightClass
+        expected_weightclass = self._expected_ttf_weightclass()
+        if current_weightclass != expected_weightclass:
+            fails.append(f"OS/2.usWeightClass is {current_weightclass}. Expected {expected_weightclass}")
+        
+        current_fsselection = self.font["OS/2"].fsSelection
+        expected_fsselection = self._expected_ttf_fs_selection()
+        if current_fsselection != expected_fsselection:
+            fails.append(f"OS/2.fsSelection is {current_fsselection}. Expected {expected_fsselection}")
+        
+        current_macstyle = self.font["head"].macStyle
+        expected_macstyle = self._expected_ttf_mac_style()
+        if current_macstyle != expected_macstyle:
+            fails.append(f"head.macStyle is {current_macstyle}. Expected {expected_macstyle}")
+        if not fails:
+            return True, "Style linking bits are set correctly"
+        return False, "\n".join(fails)
+    
+    def _expected_ttf_fs_selection(self):
         stylename = font_stylename(self.font)
         tokens = set(stylename.split())
         old_selection = fs_selection = self.font["OS/2"].fsSelection
@@ -208,10 +231,9 @@ class SpecStyles(BaseSpec):
         # enable Regular bit for all other styles
         if not tokens & set(["Bold", "Italic"]):
             fs_selection |= 1 << 6
-        self.font["OS/2"].fsSelection = fs_selection
-        return old_selection != fs_selection
+        return fs_selection
 
-    def _fix_ttf_mac_style(self):
+    def _expected_ttf_mac_style(self):
         """Spec the head table's macStyle so it conforms to GF's supported
         styles table:
         https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
@@ -226,7 +248,7 @@ class SpecStyles(BaseSpec):
             mac_style |= 1 << 1
         if "Bold" in tokens:
             mac_style |= 1 << 0
-        self.font["head"].macStyle = mac_style
+        return mac_style
 
     def fix_glyphs(self):
         # fix instance names to pass gf spec
@@ -257,10 +279,10 @@ class SpecStyles(BaseSpec):
             self.font.info.styleMapStyleName = style
         self._fix_ufo_weightclass()
 
-    def _fix_ttf_weightclass(self):
+    def _expected_ttf_weightclass(self):
         stylename = font_stylename(self.font)
         tokens = stylename.split()
-        self.font['OS/2'].usWeightClass = self._get_weight_class(tokens)
+        return self._get_weight_class(tokens)
     
     def _fix_glyphs_weightclass(self):
         for instance in self.font.instances:
@@ -302,7 +324,7 @@ class SpecTables(BaseSpec):
         ]
     )
 
-    def fix_ttf(self, tables=None):
+    def fix_ttf(self):
         """Remove unwanted tables from a font. The unwanted tables must belong
         to the UNWANTED_TABLES set.
         """
@@ -367,7 +389,7 @@ class SpecHinting(BaseSpec):
     def fix_ttf(self):
         if "fpgm" not in self.font:
             self._fix_ttf_unhinted()
-        elif self._is_ttfa_hinted(self):
+        elif self._is_ttfa_hinted():
             self._fix_ttfa_hinting()
         else:
             self._fix_vtt_hinting()
