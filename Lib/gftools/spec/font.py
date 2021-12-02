@@ -36,6 +36,7 @@ from copy import deepcopy
 import logging
 from glyphsLib import GSFont
 from defcon import Font
+from datetime import datetime
 
 
 log = logging.getLogger(__name__)
@@ -58,10 +59,12 @@ class BaseSpec:
     TEXT = ""
     LINKS = []
 
-    def __init__(self, font):
+    def __init__(self, font, license="ofl", repo=None):
         self.font = font
+        self.license = license
         self.format = self._get_format()
         self.family_name, self.style_name = self._get_family_name()
+        self.repo = repo
     
     def _get_format(self):
         if isinstance(self.font, TTFont):
@@ -81,7 +84,19 @@ class BaseSpec:
     
     def fix_glyphs(self):
         self.skip_msg()
-    
+
+    def check_ttf(self):
+        self.skip_msg()
+        return True, ""
+
+    def check_ufo(self):
+        self.skip_msg()
+        return True, ""
+
+    def check_glyphs(self):
+        self.skip_msg()
+        return True, ""
+
     def skip_msg(self):
         log.info(f"Skipping {self.__class__} since a fix doesn't exist for {self.format}")
     
@@ -116,18 +131,18 @@ class SpecFSType(BaseSpec):
     LINKS = ["https://docs.microsoft.com/en-us/typography/opentype/spec/os2#fstype"]
 
     def _check(self, current, expected):
-        if current != 0:
+        if current != expected:
             return False, f"OS/2.fsType is {current}. Expected {expected}."
         return True, "Font has correct OS/2.fsType"
-    
+
     def check_ttf(self):
         fs_type = self.font['OS/2'].fsType
         return self._check(fs_type, 0)
-    
+
     def check_ufo(self):
         fs_type = self.font.info.openTypeOS2Type
         return self._check(fs_type, [])
-    
+
     def check_glyphs(self):
         fs_type = None if "fsType" not in self.font.customParameters else self.font.customParameters["fsType"]
         return self._check(fs_type, [])
@@ -285,6 +300,48 @@ class SpecStyles(BaseSpec):
             f"weights, '{WEIGHT_NAMES.keys()}'"
         )
 
+
+class SpecNameTable(BaseSpec):
+    OFL_LICENSE_URL = "http://scripts.sil.org/OFL"
+    OFL_LICENSE = (
+        "This Font Software is licensed under the SIL Open Font License, Version 1.1. "
+        "This license is available with a FAQ at: https://scripts.sil.org/OFL"
+    )
+
+    def _expected_copyright(self):
+        if self.license == "ofl":
+            # TODO inherit old copyright date and possible RFN if it exists
+            year = datetime.now().year
+            rfn = None
+            s = f"Copyright {year} The {self.family_name} Project Authors"
+            if self.repo:
+                s += f" ({self.repo})"
+            if rfn:
+                s += f". {rfn}"
+            return s
+
+    def check_glyphs(self):
+        fails = []
+        if self.license == "ofl":
+            expected_copyright = self._expected_copyright()
+            if self.font.copyright != expected_copyright:
+                fails.append(f"Copyright should be {expected_copyright}")
+            if "license" not in self.font.customParameters or \
+                self.font.customParameters["license"] != self.OFL_LICENSE:
+                fails.append(f"font license Custom Parameter should be {self.OFL_LICENSE}")
+            if "licenseURL" not in self.font.customParameters or \
+                self.font.customParameters["licenseURL"] != self.OFL_LICENSE_URL:
+                fails.append(f"font licenseURL CustomParameter should be {self.OFL_LICENSE_URL}")
+        if fails:
+            return False, "\n".join(fails)
+
+    def fix_glyphs(self):
+        if self.license == "ofl":
+            self.font.copyright = self._expected_copyright()
+            self.font.customParameters["license"] = self.OFL_LICENSE
+            self.font.custoParameters["licenseURL"] = self.OFL_LICENSE_URL
+
+
 class SpecTables(BaseSpec):
     TITLE = "Unwanted Tables"
 
@@ -393,18 +450,18 @@ class SpecHinting(BaseSpec):
         # TODO check if TSI tables are in font, if so, compile them
         self._add_gasp_tbl(self.VTT_GASP)
 
-    def fix_ufo(self):
-        # idk if there's hinting in ufo2ft yet
-        # this pr, https://github.com/googlefonts/ufo2ft/pull/335 was reverted
-        # dama just store their vtt instructions in the ufo's data dir
-        # let's just treat ufos as unhinted for the time being
-        self.font.info.openTypeGaspRangeRecords = [
-            {'rangeGaspBehavior': [0, 1, 2, 3], 'rangeMaxPPEM': 65535}
-        ]
-    
-    def fix_glyphs(self):
-        # Glyphsapp's gasp panel is broken
-        pass
+#    def fix_ufo(self):
+#        # idk if there's hinting in ufo2ft yet
+#        # this pr, https://github.com/googlefonts/ufo2ft/pull/335 was reverted
+#        # dama just store their vtt instructions in the ufo's data dir
+#        # let's just treat ufos as unhinted for the time being
+#        self.font.info.openTypeGaspRangeRecords = [
+#            {'rangeGaspBehavior': [0, 1, 2, 3], 'rangeMaxPPEM': 65535}
+#        ]
+#    
+#    def fix_glyphs(self):
+#        # Glyphsapp's gasp panel is broken
+#        pass
 
 
 class SpecInstances(BaseSpec):

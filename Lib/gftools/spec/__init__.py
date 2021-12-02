@@ -12,9 +12,10 @@ def load_specs():
 
 
 class FixFonts:
-    def __init__(self, fonts, specs=load_specs()):
+    def __init__(self, fonts, specs=load_specs(), license="ofl"):
         self.fonts = fonts
         self.specs = specs
+        self.license = license
         self.report = []
         self.diff = {}
     
