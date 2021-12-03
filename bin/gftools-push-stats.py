@@ -63,6 +63,7 @@ def get_commits(repo):
                 "author": author,
                 "status": status,
                 "kind": kind,
+                "id": str(current_commit.id),
             }
         )
     return res
@@ -75,7 +76,7 @@ def get_issues(repo):
         if i.pull_request:  # ignore prs
             continue
         d = {
-            "date": i.created_at.isoformat(),
+            "date": i.created_at.isoformat().split("T")[0],
             "title": i.title,
             "closed": True if i.closed_at else False,
         }

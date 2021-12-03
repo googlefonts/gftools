@@ -14,9 +14,10 @@
         margin-top: 48pt;
         }
         .nav {
-        position: fixed;
-        right: 30pt;
-        top: 30pt;
+            z-index: 1;
+            position: fixed;
+            right: 30pt;
+            top: 30pt;
         }
         .chart {
             width: 50%;
@@ -34,6 +35,30 @@
             display: inline-block;
             width: 49%;
             min-width: 400px;
+        }
+        .table {
+            margin-top: 30pt;
+            font-family: Arial, Helvetica, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+            max-height: 300pt;
+            overflow: scroll;
+        }
+
+        .table td, .table th {
+            padding: 8px;
+        }
+        .table tr:nth-child(even){background-color: #f2f2f2;}
+
+        .table tr:hover {background-color: #ddd;}
+
+        .table th {
+            position: sticky;
+            top: 0;
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-align: left;
+            background-color: white;
         }
         </style>
     </head>
@@ -61,6 +86,9 @@
         </div>
         <div class="half">
             <canvas id="contributors-chart" width="800" height="650"></canvas>
+        </div>
+
+        <div class="table" id="commits-table">
         </div>
 
         <h2>Issues</h2>
@@ -297,8 +325,6 @@ commitsTotalsGraphData = (commits) => {
     for (i in sorted) {
         data.push(sorted[i][1]);
     }
-    console.log(labels);
-    console.log(data);
     return {
     type: 'pie',
     data: {
@@ -384,6 +410,8 @@ commitsTotalsChart = null;
 contributorsChart = null;
 issuesChart = null;
 
+commitsTable = null;
+
 
 buildCharts = (start, end, duration) => {
     var commits = filterCommits(data['commits'], start, end);
@@ -401,6 +429,43 @@ buildCharts = (start, end, duration) => {
     issuesChart = new Chart(document.getElementById("issues-chart"), issuesGraphData(issues, duration));
 }
 
+buildTables = (start, end) => {
+    var commits = filterCommits(data['commits'], start, end);
+
+    if (commitsTable != null) {
+        document.getElementById("commits-table").childNodes[1].remove()
+    }
+    commitsTable = buildTable("commits-table", commits);
+}
+
+buildTable = (elemName, data) => {
+    var elem = document.getElementById(elemName);
+    var table = document.createElement("table");
+    // make table header
+    var header = table.insertRow(0);
+    for (i in Object.keys(data[0])) {
+        var cell = header.insertCell();
+        cell.outerHTML = `<th>${Object.keys(data[0])[i]}</th>`
+    }
+
+    // make rows
+    for (i in data) {
+        var row = table.insertRow();
+        for (k in data[i]) {
+            var cell = row.insertCell();
+            if (k === "id") {
+                var text = `<a href="https://github.com/google/fonts/commit/${data[i][k]}">${data[i][k].slice(0, 7)}</a>`
+            } else {
+                var text = data[i][k];
+            }
+            cell.innerHTML = text;
+        }
+    }
+
+    elem.appendChild(table)
+    return true
+}
+
 const buttons = document.querySelectorAll('button');
 buttons.forEach(elem => elem.addEventListener("click", function() {
     duration = elem.dataset.duration;
@@ -411,14 +476,17 @@ startDateBtn = document.getElementsByName("start-date")[0]
 startDateBtn.addEventListener("change", function() {
     startDate = document.getElementsByName("start-date")[0].value;
     buildCharts(startDate, endDate, duration)
+    buildTables(startDate, endDate)
 }, false);
 endDateBtn = document.getElementsByName("end-date")[0]
 endDateBtn.addEventListener("change", function() {
     endDate = document.getElementsByName("end-date")[0].value;
     buildCharts(startDate, endDate, duration)
+    buildTables(startDate, endDate)
 }, false);
 
 buildCharts(startDate, endDate, duration);
+buildTables(startDate, endDate)
 
 </script>
 </html>
