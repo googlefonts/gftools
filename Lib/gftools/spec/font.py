@@ -762,100 +762,6 @@ def fix_filename(ttFont):
     return f"{family_name}-{style_name}{ext}".replace(" ", "")
 
 
-class BaseRegressionSpec(BaseSpec):
-    def __init__(self, font):
-        super().__init__(font=font)
-        self.on_googlefonts = Google_Fonts_has_family(self.family_name)
-        if not self.on_googlefonts:
-            log.warning(f"Family is not on Google Fonts")
-            return
-        gf_family = download_family_from_Google_Fonts(self.family_name)
-        self.gf_ttFonts = [TTFont(f) for f in gf_family]
-        self.gf_font = self.match_font()
-        self.gf_regular_font = self.gf_regular_style()
-
-    def match_font(self):
-        for gf_ttFont in self.gf_ttFonts:
-            gf_styles = self._styles_in_ttFont(gf_ttFont)
-
-            if self.format == "sfnt":
-                styles = self._styles_in_ttFont(self.font)
-            elif self.format == "ufo":
-                styles = set([self.font.info.styleName])
-            elif self.format == "glyphs":
-                styles = set(i.name for i in self.font.instances)
-            
-            matching = styles & gf_styles
-            if matching:
-                return gf_ttFont
-        # TODO return Regular instead
-        log.warning(f"{self.style_name} isn't on Google Fonts. Using Regular font instead")
-        return self.gf_regular_style()
-
-    def _styles_in_ttFont(self, ttFont):
-        name_tbl = ttFont['name']
-        if "fvar" in ttFont:
-            res = set()
-            for inst in ttFont['fvar'].instances:
-                res.add(
-                    name_tbl.getName(inst.subfamilyNameID, 3, 1, 0x409).toUnicode()
-                )
-            return res
-        return set([font_stylename(ttFont)])
-    
-    def gf_regular_style(self):
-        for gf_ttFont in self.gf_ttFonts:
-            styles = self._style_in_ttFont(gf_ttFont)
-            if "Regular" in styles:
-                return gf_ttFont
-        return self.gf_ttFonts[0]
- 
-
-class SpecInheritVerticalMetrics(BaseRegressionSpec):
-    # TODO Adjust by upm vals
-    
-    def fix_ttf(self):
-        self.font['OS/2'].usWinAscent = self.gf_font['OS/2'].usWinAscent
-        self.font['OS/2'].usWinDescent = self.gf_font['OS/2'].usWinDescent
-        self.font['OS/2'].sTypoAscender = self.gf_font['OS/2'].sTypoAscender
-        self.font['OS/2'].sTypoDescender = self.gf_font['OS/2'].sTypoDescender
-        self.font['OS/2'].sTypoLineGap = self.gf_font['OS/2'].sTypoLineGap
-        self.font['hhea'].ascender = self.gf_font['hhea'].ascender
-        self.font['hhea'].descender = self.gf_font['hhea'].descender
-        self.font['hhea'].lineGap = self.gf_font['hhea'].lineGap
-        if typo_metrics_enabled(self.gf_font):
-            self.font["OS/2"].fsSelection |= 1 << 7
-    
-    def fix_ufo(self):
-        self.font.info.openTypeOS2WinAscent = self.gf_font['OS/2'].usWinAscent
-        self.font.info.openTypeOS2WinDescent = self.gf_font['OS/2'].usWinDescent
-        self.font.info.openTypeOS2TypoAscender = self.gf_font['OS/2'].sTypoAscender
-        self.font.info.openTypeOS2TypoDescender = self.gf_font['OS/2'].sTypoDescender
-        self.font.info.openTypeOS2TypoLineGap = self.gf_font['OS/2'].sTypoLineGap
-        self.font.info.openTypeHheaAscender = self.gf_font['hhea'].ascender
-        self.font.info.openTypeHheaDescender = self.gf_font['hhea'].descender
-        self.font.info.openTypeHheaLineGap = self.gf_font['hhea'].lineGap
-        if typo_metrics_enabled(self.gf_font):
-            if self.font.info.openTypeOS2Selection == None:
-                self.font.info.openTypeOS2Selection = []
-            if 7 not in self.font.info.openTypeOS2Selection:
-                self.font.info.openTypeOS2Selection.append(7)
-    
-    def fix_glyphs(self):
-        for master in self.font.masters:
-            master.winAscent = self.gf_font['OS/2'].usWinAscent
-            master.winDescent = self.gf_font['OS/2'].usWinDescent
-            master.typoAscender = self.gf_font['OS/2'].sTypoAscender
-            master.typoDescender = self.gf_font['OS/2'].sTypoDescender
-            master.typoLineGap = self.gf_font['OS/2'].sTypoLineGap
-            master.hheaAscender = self.gf_font["hhea"].ascender
-            master.hheaDescender = self.gf_font['hhea'].descender
-            master.hheaLineGap = self.gf_font['hhea'].lineGap
-        for inst in self.font.instances:
-            if typo_metrics_enabled(self.gf_font):
-                inst.customParameters
-
-
 class SpecDesignspace(BaseSpec):
 
     def fix_glyphs(self):
@@ -873,31 +779,89 @@ class SpecVerticalMetrics(BaseSpec):
         ttFonts: a list of TTFont instances which belong to a family
     """
     
+    def _expected(self):
+        if not self.gf_regular:
+            return
+        results = {}
+        src_font = self.gf_regular
+        # TODO scale with upm
+        if not typo_metrics_enabled(self.gf_regular):
+            results['TypoAscender'] = self.gf_regular["OS/2"].usWinAscent
+            results['TypoDescender'] = -abs(self.gf_regular["OS/2"].usWinDescent)
+            results["TypoLineGap"] = 0
+        else:
+            results["TypoAscender"] = self.gf_regular["OS/2"].sTypoAscender
+            results["TypoDescender"] = self.gf_regular["OS/2"].sTypoDescender
+            results["TypoLineGap"] = self.gf_regular["OS/2"].sTypoLineGap
+        results["hheaAscender"] = results["TypoAscender"]
+        results["hheaDescender"] = results["TypoDescender"]
+        results["hheaLineGap"] = 0
+        results["WinDescent"], results["WinAscent"] = family_bounding_box([self.font]+self.siblings)
+        return results
+    
+    def check_ttf(self):
+        expected = self._expected()
+        fails = []
+        os2 = self.font["OS/2"]
+        hhea = self.font["hhea"]
+
+        def _check(name, current, expected):
+            if current != expected:
+                fails.append(f"{name} is {current}. Expected {expected}")
+
+        _check("OS/2.usWinAscent", os2.usWinAscent, expected["WinAscent"])
+        _check("OS/2.usWinDescent", os2.usWinDescent, expected["WinDescent"])
+        _check("OS/2.sTypoAscender", os2.sTypoAscender, expected["TypoAscender"])
+        _check("OS/2.sTypoDescender", os2.sTypoDescender, expected["TypoDescender"])
+        _check("OS/2.sTypoLineGap", os2.sTypoLineGap, expected["TypoLineGap"])
+        _check("hhea.ascent", hhea.ascent, expected["hheaAscender"])
+        _check("hhea.descent", hhea.descent, expected["hheaDescender"])
+        _check("hhea.lineGap", hhea.lineGap, expected["hheaLineGap"])
+
+        if fails:
+            return True, fails
+        return False, "Vertical metrics are set correctly"
+        
+
     def fix_ttf(self):
-        src_font = self.gf_regular_font
-
-        # TODO (Marc F) CJK Fonts?
-
-        # If OS/2.fsSelection bit 7 isn't enabled, enable it and set the typo metrics
-        # to the previous win metrics.
-        if not typo_metrics_enabled(src_font):
-            src_font["OS/2"].fsSelection |= 1 << 7  # enable USE_TYPO_METRICS
-            src_font["OS/2"].sTypoAscender = src_font["OS/2"].usWinAscent
-            src_font["OS/2"].sTypoDescender = -src_font["OS/2"].usWinDescent
-            src_font["OS/2"].sTypoLineGap = 0
-
-        # Set the hhea metrics so they are the same as the typo
-        src_font["hhea"].ascent = src_font["OS/2"].sTypoAscender
-        src_font["hhea"].descent = src_font["OS/2"].sTypoDescender
-        src_font["hhea"].lineGap = src_font["OS/2"].sTypoLineGap
-
-        # Set the win Ascent and win Descent to match the family's bounding box
-        win_desc, win_asc = family_bounding_box(ttFonts)
-        src_font["OS/2"].usWinAscent = win_asc
-        src_font["OS/2"].usWinDescent = abs(win_desc)
-
-        # Set all fonts vertical metrics so they match the src_font
-        ttFont["OS/2"].fsSelection |= 1 << 7
+        expected = self._expected()
+        self.font['OS/2'].usWinAscent = expected["WinAscent"]
+        self.font['OS/2'].usWinDescent = expected["WinDescent"]
+        self.font['OS/2'].sTypoAscender = expected["TypoAscender"]
+        self.font['OS/2'].sTypoDescender = expected["TypoDescender"]
+        self.font['OS/2'].sTypoLineGap = expected["TypoLineGap"]
+        self.font['hhea'].ascender = expected["hheaAscender"]
+        self.font['hhea'].descender = expected["hheaDescender"]
+        self.font['hhea'].lineGap = expected["hheaLinegap"]
+        self.font["OS/2"].fsSelection |= 1 << 7
+    
+    def fix_ufo(self):
+        expected = self._expected()
+        self.font.info.openTypeOS2WinAscent = expected["WinAscent"]
+        self.font.info.openTypeOS2WinDescent = expected["WinDescent"]
+        self.font.info.openTypeOS2TypoAscender = expected["TypoAscender"]
+        self.font.info.openTypeOS2TypoDescender = expected["TypoDescender"]
+        self.font.info.openTypeOS2TypoLineGap = expected["TypoLineGap"]
+        self.font.info.openTypeHheaAscender = expected["hheaAscender"]
+        self.font.info.openTypeHheaDescender = expected["hheaDescender"]
+        self.font.info.openTypeHheaLineGap = expected["hheaLineGap"]
+        if self.font.info.openTypeOS2Selection == None:
+            self.font.info.openTypeOS2Selection = []
+        if 7 not in self.font.info.openTypeOS2Selection:
+            self.font.info.openTypeOS2Selection.append(7)
+    
+    def fix_glyphs(self):
+        expected = self._expected()
+        for master in self.font.masters:
+            master.winAscent = expected["WinAscent"]
+            master.winDescent = expected["WinDescent"]
+            master.typoAscender = expected["TypoAscender"]
+            master.typoDescender = expected["TypoDescender"]
+            master.typoLineGap = expected["TypoLineGap"]
+            master.hheaAscender = expected["hheaAscender"]
+            master.hheaDescender = expected["hheaDescender"]
+            master.hheaLineGap = expected["hheaLineGap"]
+            # TODO usetypometrics
 
 
 class SpecItalicAngle(BaseSpec):
