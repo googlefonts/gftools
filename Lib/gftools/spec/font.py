@@ -17,6 +17,7 @@ from gftools.util.google_fonts import _KNOWN_WEIGHTS
 from gftools.utils import (
     download_family_from_Google_Fonts,
     Google_Fonts_has_family,
+    find_regular_styles,
     font_stylename,
     font_familyname,
     family_bounding_box,
@@ -59,12 +60,16 @@ class BaseSpec:
     TEXT = ""
     LINKS = []
 
-    def __init__(self, font, license="ofl", repo=None):
+    def __init__(self, font, siblings=[], license="ofl", repo=None):
         self.font = font
+        self.siblings = siblings
         self.license = license
         self.format = self._get_format()
         self.family_name, self.style_name = self._get_family_name()
         self.repo = repo
+        self.gf_family = self._get_gf_family()
+        self.gf_regular = find_regular_styles(self.gf_family)
+        self.gf_regular = None if not self.gf_regular else self.gf_regular[0]
     
     def _get_format(self):
         if isinstance(self.font, TTFont):
@@ -76,6 +81,13 @@ class BaseSpec:
         else:
             raise NotImplementedError(f"Current font format isn't supported")
     
+    def _get_gf_family(self):
+        try:
+            fonts = download_family_from_Google_Fonts(self.family_name)
+            return [TTFont(f) for f in fonts]
+        except:
+            return None
+
     def fix_ttf(self):
         self.skip_msg()
 
