@@ -8,6 +8,7 @@ We could then import it into both gftools and fontbakery
 discuss with team first before doing this.
 """
 import re
+import math
 from fontTools.misc.fixedTools import otRound
 from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
@@ -780,23 +781,37 @@ class SpecVerticalMetrics(BaseSpec):
     """
     
     def _expected(self):
+        def sc(val):
+            if self.format == "sfnt":
+                c_upm = self.font['head'].unitsPerEm
+            elif self.format == "glyphs":
+                c_upm = self.font.upm
+            elif self.format == "ufo":
+                c_upm = self.font.info.unitsPerEm
+            return val * (c_upm / self.gf_regular['head'].unitsPerEm)
+    
         if not self.gf_regular:
             return
         results = {}
         src_font = self.gf_regular
         # TODO scale with upm
         if not typo_metrics_enabled(self.gf_regular):
-            results['TypoAscender'] = self.gf_regular["OS/2"].usWinAscent
-            results['TypoDescender'] = -abs(self.gf_regular["OS/2"].usWinDescent)
+            results['TypoAscender'] = sc(self.gf_regular["OS/2"].usWinAscent)
+            results['TypoDescender'] = sc(-abs(self.gf_regular["OS/2"].usWinDescent))
             results["TypoLineGap"] = 0
         else:
-            results["TypoAscender"] = self.gf_regular["OS/2"].sTypoAscender
-            results["TypoDescender"] = self.gf_regular["OS/2"].sTypoDescender
-            results["TypoLineGap"] = self.gf_regular["OS/2"].sTypoLineGap
+            results["TypoAscender"] = sc(self.gf_regular["OS/2"].sTypoAscender)
+            results["TypoDescender"] = sc(self.gf_regular["OS/2"].sTypoDescender)
+            results["TypoLineGap"] = sc(self.gf_regular["OS/2"].sTypoLineGap)
         results["hheaAscender"] = results["TypoAscender"]
         results["hheaDescender"] = results["TypoDescender"]
         results["hheaLineGap"] = 0
-        results["WinDescent"], results["WinAscent"] = family_bounding_box([self.font]+self.siblings)
+        if self.format == "sfnt":
+            results["WinDescent"], results["WinAscent"] = family_bounding_box([self.font]+self.siblings)
+        elif self.format == "glyphs":
+            results["WinDescent"], results["WinAscent"] = self.glyphs_family_bounding_box()
+        elif self.format == "ufo":
+            results["WinDescent"], results["WinAscent"] = self.ufo_family_bounding_box()
         return results
     
     def check_ttf(self):
@@ -862,6 +877,31 @@ class SpecVerticalMetrics(BaseSpec):
             master.hheaDescender = expected["hheaDescender"]
             master.hheaLineGap = expected["hheaLineGap"]
             # TODO usetypometrics
+    
+    def glyphs_family_bounding_box(self):
+        '''find the tallest and shortest glyphs in all masters from a list.
+        If no list is given, search all glyphs.'''
+        lowest = 0
+        highest = 0
+        for font in self.siblings + [self.font]:
+            masters_count = len(font.masters)
+            for glyph in font.glyphs:
+                for i in range(masters_count):
+                    glyph_ymin = glyph.layers[i].bounds[0][-1]
+                    glyph_ymax = glyph.layers[i].bounds[-1][-1] + glyph.layers[i].bounds[0][-1]
+                    lowest = min(glyph_ymin, lowest)
+                    highest = max(glyph_ymax, highest)
+        return int(math.ceil(lowest)), int(math.ceil(highest))
+
+    def ufo_family_bounding_box(self):
+        lowest = 0
+        highest = 0
+        for font in self.siblings + [self.font]:
+            for glyph in font:
+                _, bottom, _, top = glyph.bounds
+                lowest = min(bottom, lowest)
+                highest = max(top, highest)
+        return int(math.ceil(lowest)), int(math.ceil(highest))
 
 
 class SpecItalicAngle(BaseSpec):
