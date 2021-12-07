@@ -42,6 +42,18 @@ from datetime import datetime
 import operator
 
 
+__all__ = [
+    "SpecFSType",
+    "SpecStyles",
+    "SpecNameTable",
+    "SpecTables",
+    "SpecHinting",
+    "SpecInstances",
+    "SpecVerticalMetrics",
+    "SpecMonospace"
+]
+
+
 op = {
     "==": operator.eq,
     "!=": operator.ne,
@@ -62,8 +74,6 @@ del WEIGHT_NAMES[""]
 WEIGHT_NAMES["Hairline"] = 1
 WEIGHT_NAMES["ExtraBlack"] = 1000
 WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
-
-
 
 
 class BaseSpec:

@@ -1,10 +1,6 @@
 from gftools.spec.font import __doc__ as header
-from gftools.spec.font import (
-    SpecFSType,
-    SpecHinting,
-    SpecInstances,
-    SpecMonospace,
-)
+from gftools.spec.font import *
+
 
 def load_specs():
     return [v for k,v in globals().items() if k.startswith("Spec") if k != "BaseSpec"]
