@@ -16,7 +16,7 @@ import argparse
 import logging
 import os
 from fontTools.ttLib import TTFont
-from gftools.fix import *
+from gftools.spec import FixFonts
 
 
 log = logging.getLogger(__name__)

@@ -43,6 +43,7 @@ import operator
 
 
 __all__ = [
+    "SpecDesignspace",
     "SpecFSType",
     "SpecStyles",
     "SpecNameTable",
@@ -50,7 +51,7 @@ __all__ = [
     "SpecHinting",
     "SpecInstances",
     "SpecVerticalMetrics",
-    "SpecMonospace"
+    "SpecMonospace",
 ]
 
 
@@ -90,8 +91,7 @@ class BaseSpec:
         self.family_name, self.style_name = self._get_family_name()
         self.repo = repo
         self.gf_family = self._get_gf_family()
-        self.gf_regular = find_regular_styles(self.gf_family)
-        self.gf_regular = None if not self.gf_regular else self.gf_regular[0]
+        self.gf_regular = None if not self.gf_family else find_regular_styles(self.gf_family)[0]
 
         self.fails = []
     
@@ -147,6 +147,9 @@ class BaseSpec:
     def _check(self, name, op, current, expected):
         if not op(current, expected):
             self.fails.append(f"{name} is {current}. Expected {expected}")
+    
+    def _prompt_user(self, msg):
+        print(msg)
 
     def check(self):
         self.fails = []
@@ -324,7 +327,7 @@ class SpecStyles(BaseSpec):
     def _fix_glyphs_weightclass(self):
         for instance in self.font.instances:
             tokens = instance.name.split()
-            instance.weightClass = self._get_weight_class(tokens)
+            instance.weightClass = self._get_weight_class([instance.weight])
     
     def _fix_ufo_weightclass(self):
         tokens = self.font.info.styleName.split()
@@ -339,7 +342,7 @@ class SpecStyles(BaseSpec):
         if "Italic" in tokens:
             return 400
         raise ValueError(
-            f"Cannot determine usWeightClass because font style, '{stylename}' "
+            f"Cannot determine usWeightClass because font style, '{tokens}' "
             f"doesn't have a weight token which is in our known "
             f"weights, '{WEIGHT_NAMES.keys()}'"
         )
@@ -384,11 +387,18 @@ class SpecNameTable(BaseSpec):
                 license_url = self.font.customParameters["licenseURL"]
             self._check("font.customParameters['licenseURL']", op["=="], license_url, self.OFL_LICENSE_URL)
 
+            if "description" not in self.font.customParameters:
+                desc = self.font.customParameters["description"]
+            else:
+                desc = None
+            self._check("font.customParameters['description']", op["=="], desc, None)
+
     def fix_glyphs(self):
         if self.license == "ofl":
             self.font.copyright = self._expected_copyright()
             self.font.customParameters["license"] = self.OFL_LICENSE
-            self.font.custoParameters["licenseURL"] = self.OFL_LICENSE_URL
+            self.font.customParameters["licenseURL"] = self.OFL_LICENSE_URL
+            del self.font.customParameters["description"]
 
 
 class SpecTables(BaseSpec):
@@ -792,7 +802,40 @@ class SpecDesignspace(BaseSpec):
         """
         Check if designspace is orthogonal.
         """
-        pass
+        expected_axes = self._expected_glyphs_axes()
+        self.font.customParameters["Axes"] = expected_axes
+        if "Axis Mappings" not in self.font.customParameters:
+            self._prompt_user(
+                "Font is missing the Axis Mapping customParameter!\nIn order "
+                "for variable fonts to generate correctly, it must be included.\n\n"
+                "Unfortunately we cannot generate this automatically because we\n"
+                "are not able to infer the mapping between designer to font units"
+            )
+        # Drop Axis Locations because the implementation will not generate AVAR tables!
+        for master in self.font.masters:
+            if "Axis Location" in master.customParameters:
+                del master.customParameters["Axis Location"]
+
+            
+    def _expected_glyphs_axes(self):
+        """We always want to ensure that the Axes customParameter is defined"""
+        from collections import defaultdict
+        if not self.font.customParameters["Axes"]:
+            results = []
+            axes = defaultdict(set)
+            for inst in self.font.instances:
+                axes["wght"].add(inst.weightValue)
+                axes["wdth"].add(inst.widthValue)
+            
+            if len(axes["wght"]) > 1:
+                results.append({'Name': 'Weight', 'Tag': 'wght'})
+            if len(axes["wdth"]) > 1:
+                results.append({'Name': 'Width', 'Tag': 'wdth'})
+        # If the user has already defined an Axes customParameter, everything should be fine. It is also
+        # the only way to get more than 2 axes
+        else:
+            results = self.font.customParameters["Axes"]
+        return results
 
 
 class SpecVerticalMetrics(BaseSpec):
@@ -814,6 +857,7 @@ class SpecVerticalMetrics(BaseSpec):
             return int(val * (c_upm / self.gf_regular['head'].unitsPerEm))
     
         if not self.gf_regular:
+            # TODO make metrics from scratch if they don't already exist
             return {}
         results = {}
         src_font = self.gf_regular
@@ -856,6 +900,8 @@ class SpecVerticalMetrics(BaseSpec):
 
     def fix_ttf(self):
         expected = self._expected()
+        if not expected:
+            return
         self.font['OS/2'].usWinAscent = expected["WinAscent"]
         self.font['OS/2'].usWinDescent = expected["WinDescent"]
         self.font['OS/2'].sTypoAscender = expected["TypoAscender"]
@@ -868,6 +914,8 @@ class SpecVerticalMetrics(BaseSpec):
     
     def fix_ufo(self):
         expected = self._expected()
+        if not expected:
+            return
         self.font.info.openTypeOS2WinAscent = expected["WinAscent"]
         self.font.info.openTypeOS2WinDescent = expected["WinDescent"]
         self.font.info.openTypeOS2TypoAscender = expected["TypoAscender"]
@@ -883,6 +931,8 @@ class SpecVerticalMetrics(BaseSpec):
     
     def fix_glyphs(self):
         expected = self._expected()
+        if not expected:
+            return
         for master in self.font.masters:
             master.winAscent = expected["WinAscent"]
             master.winDescent = expected["WinDescent"]
