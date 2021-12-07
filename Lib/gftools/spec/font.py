@@ -876,7 +876,7 @@ class SpecVerticalMetrics(BaseSpec):
             master.hheaAscender = expected["hheaAscender"]
             master.hheaDescender = expected["hheaDescender"]
             master.hheaLineGap = expected["hheaLineGap"]
-            # TODO usetypometrics
+        self.font.customParameters["Use Typo Metrics"] = True
     
     def glyphs_family_bounding_box(self):
         '''find the tallest and shortest glyphs in all masters from a list.
