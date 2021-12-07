@@ -39,6 +39,17 @@ import logging
 from glyphsLib import GSFont
 from defcon import Font
 from datetime import datetime
+import operator
+
+
+op = {
+    "==": operator.eq,
+    "!=": operator.ne,
+    ">": operator.gt,
+    ">=": operator.ge,
+    "<": operator.lt,
+    "<=": operator.le,
+}
 
 
 log = logging.getLogger(__name__)
@@ -71,6 +82,8 @@ class BaseSpec:
         self.gf_family = self._get_gf_family()
         self.gf_regular = find_regular_styles(self.gf_family)
         self.gf_regular = None if not self.gf_regular else self.gf_regular[0]
+
+        self.fails = []
     
     def _get_format(self):
         if isinstance(self.font, TTFont):
@@ -121,13 +134,22 @@ class BaseSpec:
         elif self.format == "ufo":
             self.fix_ufo()
     
+    def _check(self, name, op, current, expected):
+        if not op(current, expected):
+            self.fails.append(f"{name} is {current}. Expected {expected}")
+
     def check(self):
+        self.fails = []
         if self.format == "sfnt":
-            return self.check_ttf()
+            self.check_ttf()
         elif self.format == "glyphs":
-            return self.check_glyphs()
+            self.check_glyphs()
         elif self.format == "ufo":
-            return self.check_ufo()
+            self.check_ufo()
+
+        if self.fails:
+            return True, "\n".join(self.fails)
+        return f"{self.Title}: no issues found"
 
     def _get_family_name(self):
         if self.format == "glyphs":
@@ -143,22 +165,17 @@ class SpecFSType(BaseSpec):
     TEXT = "Must be set to 0 (Installable embedding)"
     LINKS = ["https://docs.microsoft.com/en-us/typography/opentype/spec/os2#fstype"]
 
-    def _check(self, current, expected):
-        if current != expected:
-            return False, f"OS/2.fsType is {current}. Expected {expected}."
-        return True, "Font has correct OS/2.fsType"
-
     def check_ttf(self):
         fs_type = self.font['OS/2'].fsType
-        return self._check(fs_type, 0)
+        self._check("OS/2.fsType", op["=="], fs_type, 0)
 
     def check_ufo(self):
         fs_type = self.font.info.openTypeOS2Type
-        return self._check(fs_type, [])
+        self._check("font.info.openTypeOS2Type", op["=="], fs_type, [])
 
     def check_glyphs(self):
         fs_type = None if "fsType" not in self.font.customParameters else self.font.customParameters["fsType"]
-        return self._check(fs_type, [])
+        self._check("font.customParameters['fsType']", op["=="], fs_type, [])
 
     def fix_ttf(self):
         self.font['OS/2'].fsType = 0
@@ -210,24 +227,17 @@ class SpecStyles(BaseSpec):
         self.font["head"].macStyle = self._expected_ttf_mac_style()
     
     def check_ttf(self):
-        fails = []
         current_weightclass = self.font["OS/2"].usWeightClass
         expected_weightclass = self._expected_ttf_weightclass()
-        if current_weightclass != expected_weightclass:
-            fails.append(f"OS/2.usWeightClass is {current_weightclass}. Expected {expected_weightclass}")
-        
+        self._check("OS/2.usWeightClass", op["=="], current_weightclass, expected_weightclass)
+
         current_fsselection = self.font["OS/2"].fsSelection
         expected_fsselection = self._expected_ttf_fs_selection()
-        if current_fsselection != expected_fsselection:
-            fails.append(f"OS/2.fsSelection is {current_fsselection}. Expected {expected_fsselection}")
-        
+        self._check("OS/2.fsSelection", op["=="], current_fsselection, expected_fsselection)
+
         current_macstyle = self.font["head"].macStyle
         expected_macstyle = self._expected_ttf_mac_style()
-        if current_macstyle != expected_macstyle:
-            fails.append(f"head.macStyle is {current_macstyle}. Expected {expected_macstyle}")
-        if not fails:
-            return True, "Style linking bits are set correctly"
-        return False, "\n".join(fails)
+        self._check("head.macStyle", op["=="], current_macstyle, expected_macstyle)
     
     def _expected_ttf_fs_selection(self):
         stylename = font_stylename(self.font)
@@ -322,8 +332,11 @@ class SpecNameTable(BaseSpec):
     )
 
     def _expected_copyright(self):
+        from gftools.utils import get_name_record
+        if self.gf_regular:
+            return get_name_record(self.gf_regular, 0)
+
         if self.license == "ofl":
-            # TODO inherit old copyright date and possible RFN if it exists
             year = datetime.now().year
             rfn = None
             s = f"Copyright {year} The {self.family_name} Project Authors"
@@ -334,19 +347,21 @@ class SpecNameTable(BaseSpec):
             return s
 
     def check_glyphs(self):
-        fails = []
         if self.license == "ofl":
             expected_copyright = self._expected_copyright()
-            if self.font.copyright != expected_copyright:
-                fails.append(f"Copyright should be {expected_copyright}")
-            if "license" not in self.font.customParameters or \
-                self.font.customParameters["license"] != self.OFL_LICENSE:
-                fails.append(f"font license Custom Parameter should be {self.OFL_LICENSE}")
-            if "licenseURL" not in self.font.customParameters or \
-                self.font.customParameters["licenseURL"] != self.OFL_LICENSE_URL:
-                fails.append(f"font licenseURL CustomParameter should be {self.OFL_LICENSE_URL}")
-        if fails:
-            return False, "\n".join(fails)
+            self._check("font.copyright", op["=="], self.font.copyright, expected_copyright)
+
+            if "license" not in self.font.customParameters:
+                license = None
+            else:
+                license = self.font.customParmeters["license"]
+            self._check("font.customParamters['license']", op["=="], license, self.OFL_LICENSE)
+
+            if "licenseURL" not in self.font.customParameters:
+                license_url = None
+            else:
+                license_url = self.font.customParameters["licenseURL"]
+            self._check("font.customParameters['licenseURL']", op["=="], license_url, self.OFL_LICENSE_URL)
 
     def fix_glyphs(self):
         if self.license == "ofl":
@@ -381,15 +396,13 @@ class SpecTables(BaseSpec):
         current = set(self.font.keys())
         expected = self._expected_ttf_tables()
         unwanted = current - expected
-        if unwanted:
-            return False, f"Font contains redundant tables {unwanted}"
-        return True, "Font has correct tables"
+        self._check("ttf tables", current, expected)
 
     def fix_ttf(self):
         current = set(self.font.keys())
         expected = self._expected_ttf_tables()
-        redundant = current - expected
-        for t in redundant:
+        unwanted = current - expected
+        for t in unwanted:
             del self.font[t]
 
 
@@ -556,9 +569,7 @@ class SpecInstances(BaseSpec):
                 "coordinates": i.coordinates
             } for i in self.font['fvar'].instances]
         expected = self._expected_ttf_instances()
-        if current != expected:
-            return False, f"fvar Instances are {current}. Expected {expected}"
-        return True, "fvar instances are correct"
+        self._check("fvar.instances", op["=="], current, expected)
     
     def fix_ttf(self):
         if "fvar" not in self.font:
@@ -788,10 +799,10 @@ class SpecVerticalMetrics(BaseSpec):
                 c_upm = self.font.upm
             elif self.format == "ufo":
                 c_upm = self.font.info.unitsPerEm
-            return val * (c_upm / self.gf_regular['head'].unitsPerEm)
+            return int(val * (c_upm / self.gf_regular['head'].unitsPerEm))
     
         if not self.gf_regular:
-            return
+            return {}
         results = {}
         src_font = self.gf_regular
         # TODO scale with upm
@@ -814,29 +825,23 @@ class SpecVerticalMetrics(BaseSpec):
             results["WinDescent"], results["WinAscent"] = self.ufo_family_bounding_box()
         return results
     
+
     def check_ttf(self):
         expected = self._expected()
+        if not expected:
+            return
         fails = []
         os2 = self.font["OS/2"]
         hhea = self.font["hhea"]
 
-        def _check(name, current, expected):
-            if current != expected:
-                fails.append(f"{name} is {current}. Expected {expected}")
-
-        _check("OS/2.usWinAscent", os2.usWinAscent, expected["WinAscent"])
-        _check("OS/2.usWinDescent", os2.usWinDescent, expected["WinDescent"])
-        _check("OS/2.sTypoAscender", os2.sTypoAscender, expected["TypoAscender"])
-        _check("OS/2.sTypoDescender", os2.sTypoDescender, expected["TypoDescender"])
-        _check("OS/2.sTypoLineGap", os2.sTypoLineGap, expected["TypoLineGap"])
-        _check("hhea.ascent", hhea.ascent, expected["hheaAscender"])
-        _check("hhea.descent", hhea.descent, expected["hheaDescender"])
-        _check("hhea.lineGap", hhea.lineGap, expected["hheaLineGap"])
-
-        if fails:
-            return True, fails
-        return False, "Vertical metrics are set correctly"
-        
+        self._check("OS/2.usWinAscent", op[">="], os2.usWinAscent, expected["WinAscent"])
+        self._check("OS/2.usWinDescent", op["<="], os2.usWinDescent, expected["WinDescent"])
+        self._check("OS/2.sTypoAscender", op["=="], os2.sTypoAscender, expected["TypoAscender"])
+        self._check("OS/2.sTypoDescender", op["=="], os2.sTypoDescender, expected["TypoDescender"])
+        self._check("OS/2.sTypoLineGap", op["=="], os2.sTypoLineGap, expected["TypoLineGap"])
+        self._check("hhea.ascent", op["=="], hhea.ascent, expected["hheaAscender"])
+        self._check("hhea.descent", op["=="], hhea.descent, expected["hheaDescender"])
+        self._check("hhea.lineGap", op["=="], hhea.lineGap, expected["hheaLineGap"])
 
     def fix_ttf(self):
         expected = self._expected()
