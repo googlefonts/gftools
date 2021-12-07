@@ -383,6 +383,10 @@ class SpecNameTable(BaseSpec):
 
 class SpecTables(BaseSpec):
     TITLE = "Unwanted Tables"
+    TEXT = """
+        Fonts must not contain the following tables:
+        FFTM, TTFA, TSI0, TSI1, TSI2, TSI3, prop, MVAR, Debg
+    """
 
     UNWANTED_TABLES = frozenset(
         [
@@ -423,7 +427,7 @@ class SpecHinting(BaseSpec):
     """
     ### Static Fonts:
 
-    Static fonts should be hinted using the latest version of TTFAutohint. If the results look poor on Windows browsers, it's better to release the fonts unhinted with a GASP table set which is set to "grayscale / symmetric smoothing" (0x000A) across the full PPEM range. TTFAutohint often struggles to hint display or handwritten typefaces.
+    Static fonts should be hinted using the latest version of TTFAutohint. If the results look poor on Windows browsers, it's better to release the fonts unhinted with a GASP table which is set to "grayscale / symmetric smoothing" (0x000A) across the full PPEM range. TTFAutohint often struggles to hint display or handwritten typefaces.
 
     ### VF Fonts:
 
@@ -486,19 +490,6 @@ class SpecHinting(BaseSpec):
     def _fix_vtt_hinting(self):
         # TODO check if TSI tables are in font, if so, compile them
         self._add_gasp_tbl(self.VTT_GASP)
-
-#    def fix_ufo(self):
-#        # idk if there's hinting in ufo2ft yet
-#        # this pr, https://github.com/googlefonts/ufo2ft/pull/335 was reverted
-#        # dama just store their vtt instructions in the ufo's data dir
-#        # let's just treat ufos as unhinted for the time being
-#        self.font.info.openTypeGaspRangeRecords = [
-#            {'rangeGaspBehavior': [0, 1, 2, 3], 'rangeMaxPPEM': 65535}
-#        ]
-#    
-#    def fix_glyphs(self):
-#        # Glyphsapp's gasp panel is broken
-#        pass
 
 
 class SpecInstances(BaseSpec):
@@ -835,7 +826,6 @@ class SpecVerticalMetrics(BaseSpec):
         elif self.format == "ufo":
             results["WinDescent"], results["WinAscent"] = self.ufo_family_bounding_box()
         return results
-    
 
     def check_ttf(self):
         expected = self._expected()
