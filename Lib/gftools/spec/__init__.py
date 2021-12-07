@@ -3,7 +3,6 @@ from gftools.spec.font import (
     SpecFSType,
     SpecHinting,
     SpecInstances,
-    SpecItalicAngle,
     SpecMonospace,
 )
 

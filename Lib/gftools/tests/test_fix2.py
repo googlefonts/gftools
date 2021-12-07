@@ -115,34 +115,6 @@ def test_fix_ufo_monospace(ufo_font):
     ufo_font.info.openTypeOS2Panose == [2, 0, 0, 9, 0, 0, 0, 0, 0, 0]
 
 
-# SpecItalicAngle
-def test_fix_ttf_italic_angle(static_font):
-    from gftools.spec.font import SpecItalicAngle
-    static_font['name'].setName("Regular", 2, 3, 1, 0x409)
-    static_font['name'].setName("Regular", 17, 3, 1, 0x409)
-    static_font["post"].italicAngle = 10
-    spec = SpecItalicAngle(static_font)
-    spec.fix()
-    assert static_font['post'].italicAngle == 0
-
-
-def test_fix_glyphs_italic_angle(glyphs_font):
-    from gftools.spec.font import SpecItalicAngle
-    for master in glyphs_font.instances:
-        master.italicAngle = 10
-    spec = SpecItalicAngle(glyphs_font)
-    spec.fix()
-    assert set(m.italicAngle for m in glyphs_font.masters) == {0}
-
-
-def test_fix_ufo_italic_angle(ufo_font):
-    from gftools.spec.font import SpecItalicAngle
-    ufo_font.info.italicAngle = 10
-    spec = SpecItalicAngle(ufo_font)
-    spec.fix()
-    assert ufo_font.info.italicAngle == 0
-
-
 #SpecStyles
 @pytest.mark.parametrize(
     STYLE_HEADERS,

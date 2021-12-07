@@ -225,6 +225,10 @@ class SpecStyles(BaseSpec):
         self.font["OS/2"].usWeightClass = self._expected_ttf_weightclass()
         self.font["OS/2"].fsSelection = self._expected_ttf_fs_selection()
         self.font["head"].macStyle = self._expected_ttf_mac_style()
+
+        style_name = font_stylename(self.font)
+        if "Italic" not in style_name and self.font["post"].italicAngle != 0:
+            self.font["post"].italicAngle = 0
     
     def check_ttf(self):
         current_weightclass = self.font["OS/2"].usWeightClass
@@ -278,6 +282,10 @@ class SpecStyles(BaseSpec):
             else:
                 instance.linkStyle = ''
         self._fix_glyphs_weightclass()
+
+        for master in self.font.masters:
+            if "Italic" not in master.name and master.italicAngle != 0:
+                master.italicAngle = 0
     
     def fix_ufo(self):
         # Can infer these values if we set the Style Map Family Name
@@ -294,6 +302,9 @@ class SpecStyles(BaseSpec):
             style = "regular" if "Italic" not in style_name else "italic"
             self.font.info.styleMapStyleName = style
         self._fix_ufo_weightclass()
+
+        if "Italic" not in self.font.info.styleName and self.font.info.italicAngle != 0:
+            self.font.info.italicAngle = 0
 
     def _expected_ttf_weightclass(self):
         stylename = font_stylename(self.font)
@@ -907,23 +918,6 @@ class SpecVerticalMetrics(BaseSpec):
                 lowest = min(bottom, lowest)
                 highest = max(top, highest)
         return int(math.ceil(lowest)), int(math.ceil(highest))
-
-
-class SpecItalicAngle(BaseSpec):
-    # TODO (Marc F) implement for italic fonts
-    def fix_ttf(self):
-        style_name = font_stylename(self.font)
-        if "Italic" not in style_name and self.font["post"].italicAngle != 0:
-            self.font["post"].italicAngle = 0
-    
-    def fix_glyphs(self):
-        for master in self.font.masters:
-            if "Italic" not in master.name and master.italicAngle != 0:
-                master.italicAngle = 0
-    
-    def fix_ufo(self):
-        if "Italic" not in self.font.info.styleName and self.font.info.italicAngle != 0:
-            self.font.info.italicAngle = 0
 
 
 def fix_ascii_fontmetadata(font):
