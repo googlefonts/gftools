@@ -131,7 +131,7 @@ def _GetExemplarFont(family):
   return family.fonts[0]
 
 
-def _AddLanguageSupportMetadata(metadata_path, languages, scripts, line_to_lang_name):
+def AddLanguageSupportMetadata(metadata_path, languages, scripts, line_to_lang_name):
   family = _ReadProto(fonts_public_pb2.FamilyProto(), metadata_path)
   if len(family.languages) > 0:
     return
@@ -256,7 +256,7 @@ def main(argv):
       line = 'languages: "{code}"'.format(code=languages[l].id)
       line_to_lang_name[line] = languages[l].name
     for path in argv[1:]:
-      _AddLanguageSupportMetadata(path, languages, scripts, line_to_lang_name)
+      AddLanguageSupportMetadata(path, languages, scripts, line_to_lang_name)
 
 
 if __name__ == '__main__':
