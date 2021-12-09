@@ -40,3 +40,26 @@ def test_gen_static_font_custom_names(var_font):
     assert _name_record(static_font, 16) == "Custom Family"
     assert _name_record(static_font, 17) == "Black"
 
+
+def test_gen_static_font_custom_names_without_declaring_wght(var_font):
+    static_font = gen_static_font(var_font, {"wght": 900}, "Custom Family", "8pt SemiCondensed")
+    assert _name_record(static_font, 1) == "Custom Family 8pt SemiCondensed"
+    assert _name_record(static_font, 2) == "Regular"
+    assert _name_record(static_font, 16) == None
+    assert _name_record(static_font, 17) == None
+
+
+def test_gen_static_font_custom_names_ribbi(var_font):
+    static_font = gen_static_font(var_font, {"wght": 900}, "Custom Family", "8pt SemiCondensed Bold Italic")
+    assert _name_record(static_font, 1) == "Custom Family 8pt SemiCondensed"
+    assert _name_record(static_font, 2) == "Bold Italic"
+    assert _name_record(static_font, 16) == None
+    assert _name_record(static_font, 17) == None
+
+
+def test_gen_static_font_custom_names_non_ribbi(var_font):
+    static_font = gen_static_font(var_font, {"wght": 900}, "Custom Family", "8pt SemiCondensed Medium")
+    assert _name_record(static_font, 1) == "Custom Family 8pt SemiCondensed Medium"
+    assert _name_record(static_font, 2) == "Regular"
+    assert _name_record(static_font, 16) == "Custom Family 8pt SemiCondensed"
+    assert _name_record(static_font, 17) == "Medium"

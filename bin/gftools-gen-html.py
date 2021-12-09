@@ -24,11 +24,7 @@ gftools gen-html diff -fb ./fonts_before/font1.ttf -fa ./fonts_after/font1.ttf
 """
 from pkg_resources import resource_filename
 from gftools.html import HtmlProof, HtmlDiff
-from fontTools.ttLib import TTFont
-from glob import glob
-import os
 import argparse
-import shutil
 
 
 def main():

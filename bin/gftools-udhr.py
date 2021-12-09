@@ -12,7 +12,6 @@ import enum
 import os
 import ssl
 import tempfile
-from typing import Sequence
 from urllib import request
 from lxml import etree
 import zipfile

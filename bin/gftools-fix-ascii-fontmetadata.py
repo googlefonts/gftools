@@ -17,8 +17,6 @@
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
 #
 import argparse
-import unicodedata
-from unidecode import unidecode
 from fontTools import ttLib
 from gftools.fix import fix_ascii_fontmetadata
 

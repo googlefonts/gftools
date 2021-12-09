@@ -31,7 +31,6 @@ gftools push-status /path/to/google/fonts/repo --lint
 """
 import json
 import requests
-import os
 from pathlib import Path
 import argparse
 from gftools.utils import read_proto

@@ -54,7 +54,8 @@ setup(
                       'template.upstream.yaml',
                       "axisregistry/*.textproto",
                       "udhr_all.txt",
-                      "templates/*.html"
+                      "templates/*.html",
+                      "push-templates/*.html"
                   ]
                  },
     scripts=gftools_scripts(),
@@ -68,7 +69,8 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'
     ],
-    setup_requires=['setuptools_scm'],
+    python_requires=">=3.7",
+    setup_requires=['setuptools_scm>=4,<6.1'],
     # Dependencies needed for gftools qa.
     extras_require={"qa": ['fontbakery', 'fontdiffenator', 'gfdiffbrowsers']},
     install_requires=[
@@ -77,7 +79,6 @@ setup(
 #                      see: https://github.com/fontforge/fontforge/issues/2048
         'setuptools',
         'FontTools[ufo]',
-        'Flask',
         'absl-py',
         'glyphsLib',
         'PyGithub',
@@ -99,8 +100,6 @@ setup(
         'brotli',
         'browserstack-local==1.2.2',
         'pybrowserstack-screenshots==0.1',
-        'pandas',
-        'xlrd',
-        'openpyxl',
+        'jinja2'
     ]
     )
