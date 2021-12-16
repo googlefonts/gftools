@@ -2,6 +2,7 @@
 import json
 import requests
 from pathlib import Path
+from dataclasses import dataclass
 from gftools.utils import read_proto
 import gftools.fonts_public_pb2 as fonts_pb2
 
@@ -19,17 +20,27 @@ Existing families, last pushed:
 """
 
 
+@dataclass
+class PushItem:
+    path: Path
+    type: str
+
+
 def parse_server_file(fp):
-    """Skip comments in server files"""
     results = []
     with open(fp) as doc:
         lines = doc.read().split("\n")
+        category = "Unknown"
         for line in lines:
-            if line.startswith("#") or not line:
+            if not line:
                 continue
-            if "#" in line:
+            if line.startswith("#"):
+                category = line[1:].strip()
+            elif "#" in line:
                 line = line.split("#")[0].strip()
-            results.append(Path(line))
+            else:
+                item = PushItem(Path(line), category)
+                results.append(item)
     return results
 
 
@@ -51,7 +62,7 @@ def gf_server_metadata(url):
 
 
 def server_push_status(fp, url):
-    dirs = [fp.parent / p for p in parse_server_file(fp)]
+    dirs = [fp.parent / p.path for p in parse_server_file(fp)]
     family_dirs = [d for d in dirs if is_family_dir(d)]
     family_names = [family_dir_name(d) for d in family_dirs]
 
@@ -83,7 +94,7 @@ def push_report(fp):
 
 
 def missing_paths(fp):
-    paths = [fp.parent / p for p in parse_server_file(fp)]
+    paths = [fp.parent / p.path for p in parse_server_file(fp)]
     axis_files = [p for p in paths if p.name.endswith("textproto")]
     dirs = [p for p in paths if p not in axis_files]
 
