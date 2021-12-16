@@ -9,6 +9,7 @@ The report contains information regarding:
 Usage:
 gftools push-stats path/to/google/fonts/repo out.html
 """
+from gftools.push import parse_server_file
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pkg_resources import resource_filename
 from datetime import datetime
@@ -84,6 +85,7 @@ def get_issues(repo):
     return res
 
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("repo_path")
@@ -105,11 +107,26 @@ def main():
     repo = github.get_repo("google/fonts")
     issues = get_issues(repo)
 
+    print("Getting server files")
+    sb_path = os.path.join(args.repo_path, "to_sandbox.txt")
+    sb_families = parse_server_file(sb_path)
+    prod_path = os.path.join(args.repo_path, "to_production.txt")
+    prod_families = parse_server_file(prod_path)
+
     template = env.get_template("index.html")
     with open(args.out, "w") as doc:
         doc.write(
             template.render(
-                commit_data=json.dumps({"issues": issues, "commits": commits}),
+                commit_data=json.dumps(
+                    {
+                        "issues": issues,
+                        "commits": commits,
+                        "pushes": {
+                            "sandbox": [i.to_json() for i in sb_families],
+                            "production": [i.to_json() for i in prod_families],
+                        }
+                    }
+                ),
                 current_year=datetime.now().year,
             )
         )

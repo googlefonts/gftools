@@ -95,6 +95,14 @@
         <div class="full">
             <canvas id="issues-chart" width="800" height="450"></canvas>
         </div>
+
+        <h2>Server Pushes</h2>
+        <h3>Going to sandbox server:</h3>
+        <div class="table" id="sandbox-push-table"></div>
+
+        <h3>Going to production server:</h3>
+        <div class="table" id="production-push-table"></div>
+        
     </div>
 
     </body>
@@ -411,7 +419,8 @@ contributorsChart = null;
 issuesChart = null;
 
 commitsTable = null;
-
+sandboxTable = null;
+productionTable = null;
 
 buildCharts = (start, end, duration) => {
     var commits = filterCommits(data['commits'], start, end);
@@ -431,11 +440,22 @@ buildCharts = (start, end, duration) => {
 
 buildTables = (start, end) => {
     var commits = filterCommits(data['commits'], start, end);
+    var sandboxPushes = data["pushes"]["sandbox"]
+    var productionPushes = data["pushes"]["production"]
 
     if (commitsTable != null) {
         document.getElementById("commits-table").childNodes[1].remove()
     }
     commitsTable = buildTable("commits-table", commits);
+
+    if (sandboxTable != null) {
+        document.getElementById("sandbox-push-table").childNodes[1].remove()
+    }
+    if (productionTable != null) {
+        document.getElementById("production-push-table").childNodes[1].remove()
+    }
+    sandboxTable = buildTable("sandbox-push-table", sandboxPushes)
+    sandboxTable = buildTable("production-push-table", productionPushes)
 }
 
 buildTable = (elemName, data) => {
@@ -454,7 +474,9 @@ buildTable = (elemName, data) => {
         for (k in data[i]) {
             var cell = row.insertCell();
             if (k === "id") {
-                var text = `<a href="https://github.com/google/fonts/commit/${data[i][k]}">${data[i][k].slice(0, 7)}</a>`
+                var text = `<a href="https://github.com/google/fonts/commit/${data[i][k]}" target="_blank">${data[i][k].slice(0, 7)}</a>`
+            } else if (k === "path") {
+                var text = `<a href="https://github.com/google/fonts/tree/main/${data[i][k]}" target="_blank">${data[i][k]}</a>`
             } else {
                 var text = data[i][k];
             }
