@@ -25,6 +25,9 @@ class PushItem:
     path: Path
     type: str
 
+    def to_json(self):
+        return {"path": str(self.path), "type": self.type}
+
 
 def parse_server_file(fp):
     results = []
