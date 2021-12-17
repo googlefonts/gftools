@@ -132,12 +132,13 @@ def _MakeMetadata(fontdir, is_new):
     with open(old_metadata_file, 'rb') as old_meta:
       text_format.Parse(old_meta.read(), old_metadata)
       metadata.designer = old_metadata.designer
-      metadata.category = old_metadata.category
+      for cat in old_metadata.category:
+        metadata.category.append(cat)
       metadata.date_added = old_metadata.date_added
       subsets = set(old_metadata.subsets) | set(subsets_in_font)
   else:
     metadata.designer = 'UNKNOWN'
-    metadata.category = 'SANS_SERIF'
+    metadata.category.append('SANS_SERIF')
     metadata.date_added = time.strftime('%Y-%m-%d')
     subsets = ['menu'] + subsets_in_font
 
