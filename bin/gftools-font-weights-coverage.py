@@ -31,7 +31,7 @@ import os
 from os import listdir
 import sys
 from absl import app
-from gftools.util import google_fonts as fonts
+from glyphsets.codepoints import CodepointsInFont
 
 
 def main(argv):
@@ -41,10 +41,10 @@ def main(argv):
   dirpath = argv[1]
   cps = set()
   for f in _GetFontFiles(dirpath):
-    cps.update(fonts.CodepointsInFont(os.path.join(dirpath, f)))
+    cps.update(CodepointsInFont(os.path.join(dirpath, f)))
 
   for f in _GetFontFiles(dirpath):
-    diff = cps - fonts.CodepointsInFont(os.path.join(dirpath, f))
+    diff = cps - CodepointsInFont(os.path.join(dirpath, f))
     if bool(diff):
       print('%s failed' % (f))
       for c in diff:

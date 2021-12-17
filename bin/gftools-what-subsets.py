@@ -21,7 +21,7 @@ from __future__ import print_function
 import os
 
 from absl import flags
-from gftools.util import google_fonts as fonts
+from glyphsets.codepoints import SubsetsInFont
 from absl import app
 
 FLAGS = flags.FLAGS
@@ -36,7 +36,7 @@ flags.DEFINE_integer('min_pct_ext', 0,
 
 def main(argv):
   for arg in argv[1:]:
-    subsets = fonts.SubsetsInFont(arg, FLAGS.min_pct, FLAGS.min_pct_ext)
+    subsets = SubsetsInFont(arg, FLAGS.min_pct, FLAGS.min_pct_ext)
     for (subset, available, total) in subsets:
       print('%s %s %d/%d' % (os.path.basename(arg), subset, available, total))
 

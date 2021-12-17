@@ -53,6 +53,7 @@ from absl import flags
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
+from glyphsets.codepoints import SubsetsInFont
 from absl import app
 from google.protobuf import text_format
 
@@ -122,7 +123,7 @@ def _MakeMetadata(fontdir, is_new):
   metadata = fonts_pb2.FamilyProto()
   metadata.name = file_family_style_weights[0].family
 
-  subsets_in_font = [s[0] for s in fonts.SubsetsInFont(
+  subsets_in_font = [s[0] for s in SubsetsInFont(
     first_file, FLAGS.min_pct, FLAGS.min_pct_ext
   )]
 

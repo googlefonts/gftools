@@ -40,8 +40,9 @@ import os
 from fontTools.ttLib import TTFont
 from fontTools.unicode import Unicode
 import codecs
-from gftools.util import google_fonts
 from gftools.util import filter_lists
+from glyphsets.codepoints import GetCodepointFromLine
+
 if sys.version[0] == '3':
     unichr = chr
 
@@ -102,7 +103,7 @@ def _reformat_namelist(f, out=None):
         entry = None
         if line.startswith('0x'):
             # uni chr
-            codepoint = google_fonts.get_codepoint_from_line(line)
+            codepoint = GetCodepointFromLine(line)
             entry = (codepoint, None, line)
         elif line.startswith('      '):
             # unencoded name
@@ -136,7 +137,7 @@ def _names_generator(filename):
             line = line.rstrip()
             if line.startswith('0x'):
                 # uni chr
-                codepoint = google_fonts.get_codepoint_from_line(line)
+                codepoint = GetCodepointFromLine(line)
                 name = filter_lists.get_name_by_unicode(codepoint)
                 if name is None:
                     prefix = 'u' if codepoint > 0xFFFF else 'uni'

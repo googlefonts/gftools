@@ -81,6 +81,7 @@ setup(
         'FontTools[ufo]',
         'absl-py',
         'glyphsLib',
+        'glyphsets>=0.2.1',
         'PyGithub',
         'pillow',
         'protobuf',
