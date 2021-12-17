@@ -21,9 +21,9 @@ gftools add-glyphs -l ./lang/ -r ./ofl/noto*/METADATA.pb
 from absl import app
 from absl import flags
 from gftools import fonts_public_pb2
-from gftools.util import google_fonts as fonts
 from gftools.util import unicode_sections
 from google.protobuf import text_format
+from glyphsets.codepoints import CodepointsInFont
 import glob
 import os
 
@@ -62,7 +62,7 @@ def _Ordinal(char):
 
 
 def _GetSampleGlyphs(fontfile):
-  codepoints = fonts.CodepointsInFont(fontfile)
+  codepoints = CodepointsInFont(fontfile)
   for section in unicode_sections.DATA:
     supported = []
     for codepoint in unicode_sections.DATA[section]:
@@ -71,6 +71,7 @@ def _GetSampleGlyphs(fontfile):
         supported.append(codepoint)
     if len(supported) > 0:
       yield section, ' '.join(supported)
+
 
 def _AddGlyphMetadata(metadata_path):
   family = _ReadProto(fonts_public_pb2.FamilyProto(), metadata_path)

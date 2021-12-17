@@ -19,6 +19,8 @@ import os
 import sys
 from absl import flags, app
 from gftools.util import google_fonts as fonts
+from glyphsets.codepoints import (CodepointsInFont,
+                                  CodepointsInSubset)
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('max_diff_cps', 5,
@@ -60,7 +62,7 @@ def _LeastSimilarCoverage(files, subset):
     3 tuple of (file1, file2, number of codepoints difference)
   """
   worst = (None, None, 0)
-  subsetcps = fonts.CodepointsInSubset(subset, True)
+  subsetcps = CodepointsInSubset(subset, True)
   for pair in itertools.combinations(files, 2):
     inconsistency = _InconsistentSubsetSupport(pair[0], pair[1], subsetcps)
     if inconsistency > worst[2]:
@@ -78,8 +80,8 @@ def _InconsistentSubsetSupport(file1, file2, subsetcps):
   Returns:
     Difference in number of codepoints between file1 and file2.
   """
-  supportcps1 = len(subsetcps.intersection(fonts.CodepointsInFont(file1)))
-  supportcps2 = len(subsetcps.intersection(fonts.CodepointsInFont(file2)))
+  supportcps1 = len(subsetcps.intersection(CodepointsInFont(file1)))
+  supportcps2 = len(subsetcps.intersection(CodepointsInFont(file2)))
   return abs(supportcps1 - supportcps2)
 
 
