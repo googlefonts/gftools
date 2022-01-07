@@ -43,6 +43,7 @@ from functools import cmp_to_key
 import contextlib
 import errno
 import glob
+import re
 import os
 import sys
 import time
@@ -56,6 +57,7 @@ from gftools.utils import cmp
 from glyphsets.codepoints import SubsetsInFont
 from absl import app
 from google.protobuf import text_format
+from pkg_resources import resource_filename
 
 FLAGS = flags.FLAGS
 
@@ -66,6 +68,7 @@ flags.DEFINE_integer('min_pct', 50,
 flags.DEFINE_float('min_pct_ext', 0.01,
                    'What percentage of subset codepoints have to be supported'
                    ' for a -ext subset.')
+flags.DEFINE_string('lang', resource_filename("gftools", "lang"), 'Path to lang metadata package', short_name='l')
 
 
 def _FileFamilyStyleWeights(fontdir):
@@ -136,6 +139,8 @@ def _MakeMetadata(fontdir, is_new):
         metadata.category.append(cat)
       metadata.date_added = old_metadata.date_added
       subsets = set(old_metadata.subsets) | set(subsets_in_font)
+      for lang in old_metadata.languages:
+        metadata.languages.append(lang)
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category.append('SANS_SERIF')
@@ -164,6 +169,16 @@ def _MakeMetadata(fontdir, is_new):
     font_metadata.full_name = fonts.ExtractName(fontfile, fonts.NAME_FULLNAME,
                                                 default_fullname)
     font_metadata.copyright = font_copyright
+
+  if not metadata.languages:
+    exemplar_font_fp = os.path.join(
+      fontdir, fonts.GetExemplarFont(metadata).filename
+    )
+    exemplar_font = ttLib.TTFont(exemplar_font_fp)
+    languages = fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
+    supported_languages = fonts.SupportedLanguages(exemplar_font, languages)
+    supported_languages = sorted([l.id for l in supported_languages])
+    metadata.languages.extend(supported_languages)
 
   axes_info_from_font_files \
     = {_AxisInfo(f.file) for f in file_family_style_weights}
