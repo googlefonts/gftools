@@ -159,9 +159,9 @@ def main(argv):
         os.path.dirname(path), fonts.GetExemplarFont(family_metadata).filename
       )
       exemplar_font = TTFont(exemplar_font_fp)
-      languages = fonts.SupportedLanguages(exemplar_font, languages)
-      languages = sorted([l.id for l in languages])
-      family_metadata.languages.extend(languages)
+      supported_languages = fonts.SupportedLanguages(exemplar_font, languages)
+      supported_languages = sorted([l.id for l in supported_languages])
+      family_metadata.languages.extend(supported_languages)
       fonts.WriteProto(family_metadata, path, comments=language_comments)
 
 
