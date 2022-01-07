@@ -28,8 +28,7 @@ import csv
 import os
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')
-flags.mark_flag_as_required('lang')
+flags.DEFINE_string('lang', resource_filename("gftools", "lang"), 'Path to lang metadata package', short_name='l')
 flags.DEFINE_bool('report', False, 'Whether to output a report of lang metadata insights', short_name='r')
 flags.DEFINE_bool('sample_text_audit', False, 'Whether to run the sample text audit', short_name='s')
 flags.DEFINE_string('out', None, 'Path to output directory for report', short_name='o')
