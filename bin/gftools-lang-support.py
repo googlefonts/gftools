@@ -24,6 +24,7 @@ from fontTools.ttLib import TTFont
 from gftools import fonts_public_pb2
 from gftools.util import google_fonts as fonts
 from google.protobuf import text_format
+from pkg_resources import resource_filename
 import csv
 import os
 
