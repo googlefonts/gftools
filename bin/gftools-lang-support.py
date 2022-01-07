@@ -22,10 +22,9 @@ from absl import app
 from absl import flags
 from fontTools.ttLib import TTFont
 from gftools import fonts_public_pb2
+from gftools.util import google_fonts as fonts
 from google.protobuf import text_format
-from hyperglot import parse
 import csv
-import glob
 import os
 
 FLAGS = flags.FLAGS
@@ -57,66 +56,6 @@ def _WriteCsv(path, rows):
                         quoting=csv.QUOTE_MINIMAL)
     for row in rows:
       writer.writerow(row)
-
-
-def _LoadLanguages(languages_dir):
-  languages = {}
-  for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      language = text_format.Parse(f.read(), fonts_public_pb2.LanguageProto())
-      languages[language.id] = language
-  return languages
-
-
-def _LoadScripts(scripts_dir):
-  scripts = {}
-  for textproto_file in glob.iglob(os.path.join(scripts_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      script = text_format.Parse(f.read(), fonts_public_pb2.ScriptProto())
-      scripts[script.id] = script
-  return scripts
-
-
-def _LoadRegions(regions_dir):
-  regions = {}
-  for textproto_file in glob.iglob(os.path.join(regions_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      region = text_format.Parse(f.read(), fonts_public_pb2.RegionProto())
-      regions[region.id] = region
-  return regions
-
-
-def SupportedLanguages(
-  ttFont,
-  languages=_LoadLanguages(resource_filename("gftools", "lang/languages"))
-  ):
-  """Get languages supported by given ttFont.
-
-  Languages are pulled from the given set. Based on whether exemplar character
-  sets are present in the given font.
-
-  Logic based on Hyperglot: https://github.com/rosettatype/hyperglot/blob/3172061ca05a62c0ff330eb802a17d4fad8b1a4d/lib/hyperglot/language.py#L273-L301
-  """
-  chars = [chr(c) for c in ttFont["cmap"].getBestCmap()]
-  supported = []
-  for lang in languages.values():
-    if not lang.HasField('exemplar_chars') or not lang.exemplar_chars.HasField('base'):
-      continue
-    base = parse.parse_chars(lang.exemplar_chars.base,
-                             decompose=False,
-                             retainDecomposed=False)
-    if set(base).issubset(chars):
-      supported.append(lang)
-  return supported
-
-
-def GetExemplarFont(family):
-  assert len(family.fonts) > 0, 'Unable to select exemplar in family with no fonts: ' + family.name
-  for font in family.fonts:
-    if font.style == 'normal' and font.weight == 400:
-      # Prefer default style (Regular, not Italic)
-      return font
-  return family.fonts[0]
 
 
 def _WriteReport(metadata_paths, out_dir, languages):
@@ -203,9 +142,9 @@ def _SampleTextAudit(out_dir, languages, scripts, unused_scripts=[]):
 
 
 def main(argv):
-  languages = _LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
-  scripts = _LoadScripts(os.path.join(FLAGS.lang, 'scripts'))
-  regions = _LoadRegions(os.path.join(FLAGS.lang, 'regions'))
+  languages = fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
+  scripts = fonts.LoadScripts(os.path.join(FLAGS.lang, 'scripts'))
+  regions = fonts.LoadRegions(os.path.join(FLAGS.lang, 'regions'))
 
   if FLAGS.report:
     assert len(argv) > 1, 'No METADATA.pb files specified'
@@ -236,10 +175,10 @@ def main(argv):
       if len(family_metadata.languages) > 0:
         continue
       exemplar_font_fp = os.path.join(
-        os.path.dirname(path), GetExemplarFont(family_metadata).filename
+        os.path.dirname(path), fonts.GetExemplarFont(family_metadata).filename
       )
       exemplar_font = TTFont(exemplar_font_fp)
-      languages = SupportedLanguages(exemplar_font, languages)
+      languages = fonts.SupportedLanguages(exemplar_font, languages)
       languages = sorted([l.id for l in languages])
       family_metadata.languages.extend(languages)
       _WriteProto(family_metadata, path, comments=line_to_lang_name)
