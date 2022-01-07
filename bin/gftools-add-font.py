@@ -131,16 +131,12 @@ def _MakeMetadata(fontdir, is_new):
   )]
 
   if not is_new:
-    old_metadata = fonts_pb2.FamilyProto()
-    with open(old_metadata_file, 'rb') as old_meta:
-      text_format.Parse(old_meta.read(), old_metadata)
-      metadata.designer = old_metadata.designer
-      for cat in old_metadata.category:
-        metadata.category.append(cat)
-      metadata.date_added = old_metadata.date_added
-      subsets = set(old_metadata.subsets) | set(subsets_in_font)
-      for lang in old_metadata.languages:
-        metadata.languages.append(lang)
+    old_metadata = fonts.ReadProto(fonts_pb2.FamilyProto(), old_metadata_file)
+    metadata.designer = old_metadata.designer
+    metadata.category[:] = old_metadata.category
+    metadata.date_added = old_metadata.date_added
+    subsets = set(old_metadata.subsets) | set(subsets_in_font)
+    metadata.languages[:] = old_metadata.languages
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category.append('SANS_SERIF')
@@ -271,17 +267,17 @@ def main(argv):
   if os.path.isfile(old_metadata_file):
     is_new = False
 
+  language_comments = fonts.language_comments(
+    fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
+  )
   metadata = _MakeMetadata(fontdir, is_new)
-  text_proto = text_format.MessageToString(metadata, as_utf8=True)
+  fonts.WriteProto(metadata, os.path.join(fontdir, 'METADATA.pb'), comments=language_comments)
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
   if os.path.isfile(desc):
     print('DESCRIPTION.en_us.html exists')
   else:
     _WriteTextFile(desc, 'N/A')
-
-  _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
-
 
 
 if __name__ == '__main__':

@@ -35,21 +35,6 @@ flags.DEFINE_bool('sample_text_audit', False, 'Whether to run the sample text au
 flags.DEFINE_string('out', None, 'Path to output directory for report', short_name='o')
 
 
-def _ReadProto(proto, path):
-  with open(path, 'r', encoding='utf-8') as f:
-    proto = text_format.Parse(f.read(), proto)
-    return proto
-
-
-def _WriteProto(proto, path, comments = None):
-  with open(path, 'w', newline='') as f:
-    textproto = text_format.MessageToString(proto, as_utf8=True)
-    if comments is not None:
-      lines = [s if s not in comments else s + '  # ' + comments[s] for s in textproto.split('\n')]
-      textproto = '\n'.join(lines)
-    f.write(textproto)
-
-
 def _WriteCsv(path, rows):
   with open(path, 'w', newline='') as csvfile:
     writer = csv.writer(csvfile, delimiter='\t', quotechar='"',
@@ -70,7 +55,7 @@ def _WriteReport(metadata_paths, out_dir, languages):
   without_sample_text = []
   supported_without_sample_text = {}
   for metadata_path in metadata_paths:
-    family = _ReadProto(fonts_public_pb2.FamilyProto(), metadata_path)
+    family = fonts.ReadProto(fonts_public_pb2.FamilyProto(), metadata_path)
     if len(family.languages) == 0:
       without_lang.append(family.name)
     else:
@@ -156,7 +141,7 @@ def main(argv):
     seen_scripts = set()
     unused_scripts = set()
     for path in argv[1:]:
-      family = _ReadProto(fonts_public_pb2.FamilyProto(), path)
+      family = fonts.ReadProto(fonts_public_pb2.FamilyProto(), path)
       for l in family.languages:
         seen_scripts.add(languages[l].script)
     for s in scripts:
@@ -165,12 +150,9 @@ def main(argv):
     _SampleTextAudit(FLAGS.out, languages, scripts, unused_scripts)
   else:
     assert len(argv) > 1, 'No METADATA.pb files specified'
-    line_to_lang_name = {}
-    for l in languages:
-      line = 'languages: "{code}"'.format(code=languages[l].id)
-      line_to_lang_name[line] = languages[l].name
+    language_comments = fonts.language_comments(languages)
     for path in argv[1:]:
-      family_metadata = _ReadProto(fonts_public_pb2.FamilyProto(), path)
+      family_metadata = fonts.ReadProto(fonts_public_pb2.FamilyProto(), path)
       if len(family_metadata.languages) > 0:
         continue
       exemplar_font_fp = os.path.join(
@@ -180,7 +162,7 @@ def main(argv):
       languages = fonts.SupportedLanguages(exemplar_font, languages)
       languages = sorted([l.id for l in languages])
       family_metadata.languages.extend(languages)
-      _WriteProto(family_metadata, path, comments=line_to_lang_name)
+      fonts.WriteProto(family_metadata, path, comments=language_comments)
 
 
 

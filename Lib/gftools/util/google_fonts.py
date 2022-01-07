@@ -522,3 +522,25 @@ def GetExemplarFont(family):
       return font
   return family.fonts[0]
 
+
+def language_comments(languages):
+  line_to_lang_name = {}
+  for language in languages.values():
+    line = f'languages: "{language.id}"'
+    line_to_lang_name[line] = language.name
+  return line_to_lang_name
+
+
+def ReadProto(proto, path):
+  with open(path, 'r', encoding='utf-8') as f:
+    proto = text_format.Parse(f.read(), proto)
+    return proto
+
+
+def WriteProto(proto, path, comments = None):
+  with open(path, 'w', newline='') as f:
+    textproto = text_format.MessageToString(proto, as_utf8=True)
+    if comments is not None:
+      lines = [s if s not in comments else s + '  # ' + comments[s] for s in textproto.split('\n')]
+      textproto = '\n'.join(lines)
+    f.write(textproto)
