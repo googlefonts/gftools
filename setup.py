@@ -55,7 +55,8 @@ setup(
                       "axisregistry/*.textproto",
                       "udhr_all.txt",
                       "templates/*.html",
-                      "push-templates/*.html"
+                      "push-templates/*.html",
+                      "lang/*",
                   ]
                  },
     scripts=gftools_scripts(),
