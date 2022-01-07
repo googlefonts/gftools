@@ -22,3 +22,4 @@ tabulate
 unidecode
 skia-pathops
 jinja2
+hyperglot

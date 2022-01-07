@@ -101,6 +101,7 @@ setup(
         'brotli',
         'browserstack-local==1.2.2',
         'pybrowserstack-screenshots==0.1',
-        'jinja2'
+        'jinja2',
+        'hyperglot',
     ]
     )
