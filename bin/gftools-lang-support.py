@@ -86,28 +86,18 @@ def _LoadRegions(regions_dir):
   return regions
 
 
-def _ParseFontChars(path):
-  """
-  Open the provided font path and extract the codepoints encoded in the font
-  @return list of characters
-  """
-  font = TTFont(path, lazy=True)
-  cmap = font["cmap"].getBestCmap()
-  font.close()
-
-  # The cmap keys are int codepoints
-  return [chr(c) for c in cmap.keys()]
-
-
-def _SupportedLanguages(fontfile, languages):
-  """Get languages supported by given fontfile.
+def SupportedLanguages(
+  ttFont,
+  languages=_LoadLanguages(resource_filename("gftools", "lang/languages"))
+  ):
+  """Get languages supported by given ttFont.
 
   Languages are pulled from the given set. Based on whether exemplar character
   sets are present in the given font.
 
   Logic based on Hyperglot: https://github.com/rosettatype/hyperglot/blob/3172061ca05a62c0ff330eb802a17d4fad8b1a4d/lib/hyperglot/language.py#L273-L301
   """
-  chars = _ParseFontChars(fontfile)
+  chars = [chr(c) for c in ttFont["cmap"].getBestCmap()]
   supported = []
   for lang in languages.values():
     if not lang.HasField('exemplar_chars') or not lang.exemplar_chars.HasField('base'):
@@ -117,29 +107,16 @@ def _SupportedLanguages(fontfile, languages):
                              retainDecomposed=False)
     if set(base).issubset(chars):
       supported.append(lang)
-
   return supported
 
 
-def _GetExemplarFont(family):
+def GetExemplarFont(family):
   assert len(family.fonts) > 0, 'Unable to select exemplar in family with no fonts: ' + family.name
   for font in family.fonts:
     if font.style == 'normal' and font.weight == 400:
       # Prefer default style (Regular, not Italic)
       return font
   return family.fonts[0]
-
-
-def AddLanguageSupportMetadata(metadata_path, languages, scripts, line_to_lang_name):
-  family = _ReadProto(fonts_public_pb2.FamilyProto(), metadata_path)
-  if len(family.languages) > 0:
-    return
-  font = _GetExemplarFont(family)
-  fontfile = os.path.join(os.path.dirname(metadata_path), font.filename)
-  supported_languages = _SupportedLanguages(fontfile, languages)
-  supported_languages = [l.id for l in supported_languages]
-  family.languages.extend(sorted(supported_languages))
-  _WriteProto(family, metadata_path, comments=line_to_lang_name)
 
 
 def _WriteReport(metadata_paths, out_dir, languages):
@@ -255,7 +232,18 @@ def main(argv):
       line = 'languages: "{code}"'.format(code=languages[l].id)
       line_to_lang_name[line] = languages[l].name
     for path in argv[1:]:
-      AddLanguageSupportMetadata(path, languages, scripts, line_to_lang_name)
+      family_metadata = _ReadProto(fonts_public_pb2.FamilyProto(), path)
+      if len(family_metadata.languages) > 0:
+        continue
+      exemplar_font_fp = os.path.join(
+        os.path.dirname(path), GetExemplarFont(family_metadata).filename
+      )
+      exemplar_font = TTFont(exemplar_font_fp)
+      languages = SupportedLanguages(exemplar_font, languages)
+      languages = sorted([l.id for l in languages])
+      family_metadata.languages.extend(languages)
+      _WriteProto(family_metadata, path, comments=line_to_lang_name)
+
 
 
 if __name__ == '__main__':
