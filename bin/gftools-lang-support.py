@@ -144,7 +144,6 @@ def _SampleTextAudit(out_dir, languages, scripts, unused_scripts=[]):
 def main(argv):
   languages = fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
   scripts = fonts.LoadScripts(os.path.join(FLAGS.lang, 'scripts'))
-  regions = fonts.LoadRegions(os.path.join(FLAGS.lang, 'regions'))
 
   if FLAGS.report:
     assert len(argv) > 1, 'No METADATA.pb files specified'
