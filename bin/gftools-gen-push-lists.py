@@ -13,6 +13,7 @@ pull requests must use labels.
 Usage:
 gftools gen-push-lists /path/to/google/fonts
 """
+from gftools.push import parse_server_file
 from github import Github
 from collections import defaultdict
 import os
@@ -54,6 +55,7 @@ def main():
         raise ValueError("Traffic Jam column has been deleted or renamed")
     columns = traffic_jam.get_columns()
 
+    seen_directories = set()
     print("Analysing pull requests in traffic jam. This may take a while!")
     for col in columns:
         if col.name not in set(
@@ -72,6 +74,7 @@ def main():
             directories = pr_directories(pr)
             if "-- blocked" in labels or "--- Live" in labels:
                 continue
+            seen_directories |= directories
             if "II Font Upgrade" in labels or "III VF Replacement" in labels:
                 cat = "Upgrade"
             elif "II New Font" in labels:
@@ -88,12 +91,24 @@ def main():
                 to_production[cat] |= directories
 
     gf_repo_path = sys.argv[1]
-
     sb_path = os.path.join(gf_repo_path, "to_sandbox.txt")
+    prod_path = os.path.join(gf_repo_path, "to_production.txt")
+
+    # Keep paths which have been entered manually which do not belong to
+    # a label. These need to be manually deleted as well.
+    existing_sandbox = parse_server_file(sb_path)
+    for i in existing_sandbox:
+        if str(i.path) not in seen_directories:
+            to_sandbox[i.type].add(str(i.path))
+
+    existing_production = parse_server_file(prod_path)
+    for i in existing_production:
+        if str(i.path) not in seen_directories:
+            to_production[i.type].add(str(i.path))
+
     with open(sb_path, "w") as sb_doc:
         sb_doc.write(write_server_file(to_sandbox))
 
-    prod_path = os.path.join(gf_repo_path, "to_production.txt")
     with open(prod_path, "w") as prod_doc:
         prod_doc.write(write_server_file(to_production))
 
