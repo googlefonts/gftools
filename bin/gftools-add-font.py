@@ -46,12 +46,14 @@ import glob
 import os
 import sys
 import time
+import re
 from fontTools import ttLib
 
 
 from absl import flags
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
+from gftools.util import templates
 from gftools.utils import cmp
 from glyphsets.codepoints import SubsetsInFont
 from absl import app
@@ -262,10 +264,28 @@ def main(argv):
   if os.path.isfile(desc):
     print('DESCRIPTION.en_us.html exists')
   else:
-    _WriteTextFile(desc, 'N/A')
+    html = '''<p>$DESCRIPTION</p>
+
+<p>To contribute, see <a href="$UPSTREAMREPO">$UPSTREAMREPO_WITHOUT_HTTP</a>.</p>
+'''
+    if metadata.fonts and metadata.fonts[0].copyright:
+      p = re.compile(r'.+\((.+?)\).*')
+      s = p.search(metadata.fonts[0].copyright)
+      if s:
+        repo = s.groups(0)[0]
+        html = html.replace('$UPSTREAMREPO_WITHOUT_HTTP', repo.replace('https://', '').replace('http://', ''))
+        html = html.replace('$UPSTREAMREPO', repo)
+    _WriteTextFile(desc, html)
 
   _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
 
+  if metadata.fonts and metadata.fonts[0].copyright and metadata.license == 'OFL':
+    ofl = os.path.join(fontdir, 'OFL.txt')
+    if os.path.isfile(ofl):
+      print('OFL.txt exists')
+    else:
+      ofl_text = templates.ofl_text.replace('{{ copyright_string }}', metadata.fonts[0].copyright)
+      _WriteTextFile(ofl, ofl_text)
 
 
 if __name__ == '__main__':
