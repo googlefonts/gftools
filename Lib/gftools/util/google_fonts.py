@@ -523,7 +523,21 @@ def GetExemplarFont(family):
   return family.fonts[0]
 
 
-def language_comments(languages):
+def LanguageComments(languages):
+  """Generate a mapping for METADATA.pb language field comments.
+  Every language field in a METADATA.pb has a comment which is the language's name e.g
+    languages: "xh_Latn"  # Xhosa
+
+  Args:
+    languages: a dict with keys for lang tags and values for fonts_public_pb2.LanguageProto objects e.g
+      languages={"kr_Arab": <class 'fonts_public_pb2.LanguageProto'>}
+  Returns:
+    A dict with keys for the language field entry and values for the comment.
+        {
+        'languages: "kr_Arab"': 'Kanuri',
+        'languages: "fi_Latn"': 'Finnish'
+      }
+  """
   line_to_lang_name = {}
   for language in languages.values():
     line = f'languages: "{language.id}"'

@@ -150,7 +150,7 @@ def main(argv):
     _SampleTextAudit(FLAGS.out, languages, scripts, unused_scripts)
   else:
     assert len(argv) > 1, 'No METADATA.pb files specified'
-    language_comments = fonts.language_comments(languages)
+    language_comments = fonts.LanguageComments(languages)
     for path in argv[1:]:
       family_metadata = fonts.ReadProto(fonts_public_pb2.FamilyProto(), path)
       if len(family_metadata.languages) > 0:

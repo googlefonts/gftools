@@ -267,7 +267,7 @@ def main(argv):
   if os.path.isfile(old_metadata_file):
     is_new = False
 
-  language_comments = fonts.language_comments(
+  language_comments = fonts.LanguageComments(
     fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
   )
   metadata = _MakeMetadata(fontdir, is_new)
