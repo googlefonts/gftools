@@ -651,7 +651,7 @@ def _upstream_conf_from_yaml_metadata(
     #       branch, files
     upstream_conf.update({
       'designer': metadata.designer or None,
-      'category': metadata.category or None,
+      'category': list(metadata.category) or None,
       'name': metadata.name  or None,
       # we won't get this just now in most cases!
       'repository_url': metadata.source.repository_url or None,
@@ -674,10 +674,7 @@ def _upstream_conf_from_yaml_metadata(
                                        , allow_flow_style=True)
   for k,v in upstream_conf.items():
     if v is None: continue
-    if k == "category":
-      upstream_conf_yaml[k] = v._values
-    else:
-      upstream_conf_yaml[k] = v
+    upstream_conf_yaml[k] = v
 
   upstream_yaml_text = upstream_conf_yaml.as_yaml()
   assert upstream_yaml_text is not None
@@ -921,10 +918,8 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
     font.name = upstream_conf['name']
   metadata.designer = upstream_conf['designer']
 
-  while metadata.category:
-    metadata.category.pop()
-  for cat in upstream_conf['category']:
-    metadata.category.append(cat)
+  metadata.ClearField('category')
+  metadata.category[:] = upstream_conf['category']
 
   # metadata.date_added # is handled well
 
