@@ -23,6 +23,7 @@ import urllib.parse
 import pygit2 # type: ignore
 from strictyaml import ( # type: ignore
                         Map,
+                        UniqueSeq,
                         MapPattern,
                         Enum,
                         Str,
@@ -199,9 +200,11 @@ def _git_tree_walk(path, tree, topdown=True):
   yield from _git_tree_iterate(path.split(os.sep), tree[path], topdown)
 
 def get_github_blob(repo_owner, repo_name, file_sha):
+  github_api_token = _get_github_api_token()
   url = f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/git/blobs/{file_sha}'
   headers = {
-    'Accept': 'application/vnd.github.v3.raw'
+    'Accept': 'application/vnd.github.v3.raw',
+    'Authorization': f'bearer {github_api_token}'
   }
   response = requests.get(url, headers=headers)
   # print(f'response headers: {pprint.pformat(response.headers, indent=2)}')
@@ -241,7 +244,7 @@ upstream_yaml_schema = Map({
     'name': Str(),
     'repository_url': Str(), # TODO: custom validation please
     'branch': Str(),
-    'category': Enum(CATEGORIES),
+    'category': UniqueSeq(Enum(CATEGORIES)),
     'designer': Str(),
     Optional('build', default=''): EmptyNone() | Str(),
     # allowing EmptyDict here, even though we need files in here,
@@ -259,7 +262,7 @@ upstream_yaml_template_schema = Map({
     Optional('name', default=''): EmptyNone() | Str(),
     Optional('repository_url', default=''): EmptyNone() | Str(), # TODO: custom validation please
     'branch': EmptyNone() | Str(),
-    Optional('category', default=None):  EmptyNone() | Enum(CATEGORIES),
+    Optional('category', default=None):  EmptyNone() | UniqueSeq(Enum(CATEGORIES)),
     Optional('designer', default=''): EmptyNone() |Str(),
     Optional('build', default=''): EmptyNone() | Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
@@ -648,7 +651,7 @@ def _upstream_conf_from_yaml_metadata(
     #       branch, files
     upstream_conf.update({
       'designer': metadata.designer or None,
-      'category': metadata.category or None,
+      'category': list(metadata.category) or None,
       'name': metadata.name  or None,
       # we won't get this just now in most cases!
       'repository_url': metadata.source.repository_url or None,
@@ -914,7 +917,9 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
   for font in metadata.fonts:
     font.name = upstream_conf['name']
   metadata.designer = upstream_conf['designer']
-  metadata.category = upstream_conf['category']
+
+  metadata.category[:] = upstream_conf['category']
+
   # metadata.date_added # is handled well
 
   if no_source:

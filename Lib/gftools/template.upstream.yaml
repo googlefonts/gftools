@@ -14,8 +14,14 @@ repository_url:
 # The branch name used to update google fonts. e.g.: `main`
 branch: main
 
-# Choose one of: {CATEGORIES}
+# Choose multiple of: {CATEGORIES}. Currently, the last item will be used
+# by Google Fonts
 category:
+  # - SANS_SERIF
+  # - SERIF
+  # - DISPLAY
+  # - MONOSPACE
+  # - HANDWRITING
 
 # Full name of the type designer(s) or foundry who designed the fonts.
 designer:
