@@ -137,6 +137,7 @@ def _MakeMetadata(fontdir, is_new):
     metadata.date_added = old_metadata.date_added
     subsets = set(old_metadata.subsets) | set(subsets_in_font)
     metadata.languages[:] = old_metadata.languages
+    metadata.fallbacks.extend(old_metadata.fallbacks)
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category.append('SANS_SERIF')
