@@ -918,7 +918,6 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
     font.name = upstream_conf['name']
   metadata.designer = upstream_conf['designer']
 
-  metadata.ClearField('category')
   metadata.category[:] = upstream_conf['category']
 
   # metadata.date_added # is handled well
