@@ -43,6 +43,7 @@ from functools import cmp_to_key
 import contextlib
 import errno
 import glob
+import re
 import os
 import sys
 import time
@@ -56,6 +57,7 @@ from gftools.utils import cmp
 from glyphsets.codepoints import SubsetsInFont
 from absl import app
 from google.protobuf import text_format
+from pkg_resources import resource_filename
 
 FLAGS = flags.FLAGS
 
@@ -66,6 +68,7 @@ flags.DEFINE_integer('min_pct', 50,
 flags.DEFINE_float('min_pct_ext', 0.01,
                    'What percentage of subset codepoints have to be supported'
                    ' for a -ext subset.')
+flags.DEFINE_string('lang', resource_filename("gftools", "lang"), 'Path to lang metadata package', short_name='l')
 
 
 def _FileFamilyStyleWeights(fontdir):
@@ -128,14 +131,12 @@ def _MakeMetadata(fontdir, is_new):
   )]
 
   if not is_new:
-    old_metadata = fonts_pb2.FamilyProto()
-    with open(old_metadata_file, 'rb') as old_meta:
-      text_format.Parse(old_meta.read(), old_metadata)
-      metadata.designer = old_metadata.designer
-      for cat in old_metadata.category:
-        metadata.category.append(cat)
-      metadata.date_added = old_metadata.date_added
-      subsets = set(old_metadata.subsets) | set(subsets_in_font)
+    old_metadata = fonts.ReadProto(fonts_pb2.FamilyProto(), old_metadata_file)
+    metadata.designer = old_metadata.designer
+    metadata.category[:] = old_metadata.category
+    metadata.date_added = old_metadata.date_added
+    subsets = set(old_metadata.subsets) | set(subsets_in_font)
+    metadata.languages[:] = old_metadata.languages
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category.append('SANS_SERIF')
@@ -164,6 +165,16 @@ def _MakeMetadata(fontdir, is_new):
     font_metadata.full_name = fonts.ExtractName(fontfile, fonts.NAME_FULLNAME,
                                                 default_fullname)
     font_metadata.copyright = font_copyright
+
+  if not metadata.languages:
+    exemplar_font_fp = os.path.join(
+      fontdir, fonts.GetExemplarFont(metadata).filename
+    )
+    exemplar_font = ttLib.TTFont(exemplar_font_fp)
+    languages = fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
+    supported_languages = fonts.SupportedLanguages(exemplar_font, languages)
+    supported_languages = sorted([l.id for l in supported_languages])
+    metadata.languages.extend(supported_languages)
 
   axes_info_from_font_files \
     = {_AxisInfo(f.file) for f in file_family_style_weights}
@@ -256,17 +267,17 @@ def main(argv):
   if os.path.isfile(old_metadata_file):
     is_new = False
 
+  language_comments = fonts.LanguageComments(
+    fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
+  )
   metadata = _MakeMetadata(fontdir, is_new)
-  text_proto = text_format.MessageToString(metadata, as_utf8=True)
+  fonts.WriteProto(metadata, os.path.join(fontdir, 'METADATA.pb'), comments=language_comments)
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
   if os.path.isfile(desc):
     print('DESCRIPTION.en_us.html exists')
   else:
     _WriteTextFile(desc, 'N/A')
-
-  _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
-
 
 
 if __name__ == '__main__':

@@ -29,6 +29,8 @@ import errno
 import os
 import re
 import sys
+import glob
+from pkg_resources import resource_filename
 
 if __name__ == '__main__':
   # some of the imports here wouldn't work otherwise
@@ -39,6 +41,7 @@ import gftools.fonts_public_pb2 as fonts_pb2
 from fontTools import ttLib
 from glyphsets.subsets import SUBSETS
 from google.protobuf import text_format
+from hyperglot import parse
 
 
 # See https://www.microsoft.com/typography/otspec/name.htm.
@@ -459,3 +462,99 @@ def LicenseFromPath(path):
   """
   return _EntryForEndOfPath(path, _KNOWN_LICENSE_DIRS)
 
+
+def LoadLanguages(languages_dir):
+  languages = {}
+  for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
+    with open(textproto_file, 'r', encoding='utf-8') as f:
+      language = text_format.Parse(f.read(), fonts_pb2.LanguageProto())
+      languages[language.id] = language
+  return languages
+
+
+def LoadScripts(scripts_dir):
+  scripts = {}
+  for textproto_file in glob.iglob(os.path.join(scripts_dir, '*.textproto')):
+    with open(textproto_file, 'r', encoding='utf-8') as f:
+      script = text_format.Parse(f.read(), fonts_pb2.ScriptProto())
+      scripts[script.id] = script
+  return scripts
+
+
+def LoadRegions(regions_dir):
+  regions = {}
+  for textproto_file in glob.iglob(os.path.join(regions_dir, '*.textproto')):
+    with open(textproto_file, 'r', encoding='utf-8') as f:
+      region = text_format.Parse(f.read(), fonts_pb2.RegionProto())
+      regions[region.id] = region
+  return regions
+
+
+def SupportedLanguages(
+  ttFont,
+  languages=LoadLanguages(resource_filename("gftools", "lang/languages"))
+  ):
+  """Get languages supported by given ttFont.
+
+  Languages are pulled from the given set. Based on whether exemplar character
+  sets are present in the given font.
+
+  Logic based on Hyperglot: https://github.com/rosettatype/hyperglot/blob/3172061ca05a62c0ff330eb802a17d4fad8b1a4d/lib/hyperglot/language.py#L273-L301
+  """
+  chars = [chr(c) for c in ttFont["cmap"].getBestCmap()]
+  supported = []
+  for lang in languages.values():
+    if not lang.HasField('exemplar_chars') or not lang.exemplar_chars.HasField('base'):
+      continue
+    base = parse.parse_chars(lang.exemplar_chars.base,
+                             decompose=False,
+                             retainDecomposed=False)
+    if set(base).issubset(chars):
+      supported.append(lang)
+  return supported
+
+
+def GetExemplarFont(family):
+  assert len(family.fonts) > 0, 'Unable to select exemplar in family with no fonts: ' + family.name
+  for font in family.fonts:
+    if font.style == 'normal' and font.weight == 400:
+      # Prefer default style (Regular, not Italic)
+      return font
+  return family.fonts[0]
+
+
+def LanguageComments(languages):
+  """Generate a mapping for METADATA.pb language field comments.
+  Every language field in a METADATA.pb has a comment which is the language's name e.g
+    languages: "xh_Latn"  # Xhosa
+
+  Args:
+    languages: a dict with keys for lang tags and values for fonts_public_pb2.LanguageProto objects e.g
+      languages={"kr_Arab": <class 'fonts_public_pb2.LanguageProto'>}
+  Returns:
+    A dict with keys for the language field entry and values for the comment.
+        {
+        'languages: "kr_Arab"': 'Kanuri',
+        'languages: "fi_Latn"': 'Finnish'
+      }
+  """
+  line_to_lang_name = {}
+  for language in languages.values():
+    line = f'languages: "{language.id}"'
+    line_to_lang_name[line] = language.name
+  return line_to_lang_name
+
+
+def ReadProto(proto, path):
+  with open(path, 'r', encoding='utf-8') as f:
+    proto = text_format.Parse(f.read(), proto)
+    return proto
+
+
+def WriteProto(proto, path, comments = None):
+  with open(path, 'w', newline='') as f:
+    textproto = text_format.MessageToString(proto, as_utf8=True)
+    if comments is not None:
+      lines = [s if s not in comments else s + '  # ' + comments[s] for s in textproto.split('\n')]
+      textproto = '\n'.join(lines)
+    f.write(textproto)
