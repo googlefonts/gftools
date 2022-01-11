@@ -56,7 +56,7 @@ setup(
                       "udhr_all.txt",
                       "templates/*.html",
                       "push-templates/*.html",
-                      "lang/*",
+                      "lang/*/*.textproto",
                   ]
                  },
     scripts=gftools_scripts(),
