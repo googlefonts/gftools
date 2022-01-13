@@ -463,7 +463,10 @@ def LicenseFromPath(path):
   return _EntryForEndOfPath(path, _KNOWN_LICENSE_DIRS)
 
 
-def LoadLanguages(languages_dir):
+def LoadLanguages(languages_dir=resource_filename(
+  "gftools",
+  os.path.join("lang", "languages"))
+):
   languages = {}
   for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
     with open(textproto_file, 'r', encoding='utf-8') as f:
@@ -490,10 +493,7 @@ def LoadRegions(regions_dir):
   return regions
 
 
-def SupportedLanguages(
-  ttFont,
-  languages=LoadLanguages(resource_filename("gftools", "lang/languages"))
-  ):
+def SupportedLanguages(ttFont, languages=LoadLanguages()):
   """Get languages supported by given ttFont.
 
   Languages are pulled from the given set. Based on whether exemplar character
