@@ -1125,7 +1125,7 @@ def _git_tree_from_dir(repo: pygit2.Repository, tmp_package_family_dir: str) -> 
   return trees['.']
 
 def _git_write_file(repo: pygit2.Repository, tree_builder: pygit2.TreeBuilder,
-                                        file_path: str, data: bytes) -> None:
+                                        file_path: str, data: str) -> None:
   blob_id = repo.create_blob(data)
   return _git_makedirs_write(repo, tree_builder, PurePath(file_path).parts,
                             blob_id, pygit2.GIT_FILEMODE_BLOB)
