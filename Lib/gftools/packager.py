@@ -38,6 +38,7 @@ from strictyaml import ( # type: ignore
 import functools
 from hashlib import sha1
 from fontTools.ttLib import TTFont # type: ignore
+from gftools.util import google_fonts as fonts
 
 # ignore type because mypy error: Module 'google.protobuf' has no
 # attribute 'text_format'
@@ -929,9 +930,8 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
     metadata.source.repository_url = upstream_conf['repository_url']
     metadata.source.commit = upstream_commit_sha
 
-  text_proto = text_format.MessageToString(metadata, as_utf8=True)
-  with open(metadata_file_name, 'w') as f:
-    f.write(text_proto)
+  language_comments = fonts.LanguageComments(fonts.LoadLanguages())
+  fonts.WriteProto(metadata, metadata_file_name, comments=language_comments)
 
 def _create_package_content(package_target_dir: str, repos_dir: str,
         upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
