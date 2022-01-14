@@ -25,7 +25,7 @@ jobs:
       - name: Install packages
         run: |
           pip install .
-          pip install mypy==0.812 pytest
+          pip install mypy pytest
       - name: Run Tests
         run: |
           pytest ./Lib/gftools/tests/test_usage.py
@@ -33,4 +33,4 @@ jobs:
           pytest ./Lib/gftools/tests/test_stat.py
           pytest ./Lib/gftools/tests/test_html.py
           pytest ./Lib/gftools/tests/test_instancer.py
-          mypy ./Lib/gftools/packager.py
+          mypy --install-types --non-interactive ./Lib/gftools/packager.py
