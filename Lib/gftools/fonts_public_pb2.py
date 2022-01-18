@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=b'\n\026com.google.fonts.protoB\013FontsPublic',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x12\x66onts_public.proto\x12\x13google.fonts_public\"\xcb\x05\n\x0b\x46\x61milyProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x65signer\x18\x02 \x02(\t\x12\x0f\n\x07license\x18\x03 \x02(\t\x12\x10\n\x08\x63\x61tegory\x18\x04 \x03(\t\x12\x12\n\ndate_added\x18\x05 \x02(\t\x12-\n\x05\x66onts\x18\x06 \x03(\x0b\x32\x1e.google.fonts_public.FontProto\x12\x0f\n\x07\x61liases\x18\x07 \x03(\t\x12\x0f\n\x07subsets\x18\x08 \x03(\t\x12\x19\n\x11ttf_autohint_args\x18\t \x01(\t\x12\x33\n\x04\x61xes\x18\n \x03(\x0b\x32%.google.fonts_public.AxisSegmentProto\x12\x62\n\x1aregistry_default_overrides\x18\x0b \x03(\x0b\x32>.google.fonts_public.FamilyProto.RegistryDefaultOverridesEntry\x12\x30\n\x06source\x18\x0c \x01(\x0b\x32 .google.fonts_public.SourceProto\x12\x0f\n\x07is_noto\x18\r \x01(\x08\x12\x11\n\tlanguages\x18\x0e \x03(\t\x12;\n\tfallbacks\x18\x0f \x03(\x0b\x32(.google.fonts_public.FamilyFallbackProto\x12;\n\rsample_glyphs\x18\x10 \x03(\x0b\x32$.google.fonts_public.GlyphGroupProto\x12\x39\n\x0bsample_text\x18\x11 \x01(\x0b\x32$.google.fonts_public.SampleTextProto\x12\x14\n\x0c\x64isplay_name\x18\x12 \x01(\t\x1a?\n\x1dRegistryDefaultOverridesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x02:\x02\x38\x01\"\x8a\x01\n\tFontProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\r\n\x05style\x18\x02 \x02(\t\x12\x0e\n\x06weight\x18\x03 \x02(\x05\x12\x10\n\x08\x66ilename\x18\x04 \x02(\t\x12\x18\n\x10post_script_name\x18\x05 \x02(\t\x12\x11\n\tfull_name\x18\x06 \x02(\t\x12\x11\n\tcopyright\x18\x07 \x01(\t\"Z\n\x10\x41xisSegmentProto\x12\x0b\n\x03tag\x18\x01 \x01(\t\x12\x11\n\tmin_value\x18\x02 \x01(\x02\x12\x11\n\tmax_value\x18\x04 \x01(\x02J\x04\x08\x03\x10\x04R\rdefault_value\"5\n\x0bSourceProto\x12\x16\n\x0erepository_url\x18\x01 \x01(\t\x12\x0e\n\x06\x63ommit\x18\x02 \x01(\t\"H\n\x0bTargetProto\x12\x39\n\x0btarget_type\x18\x01 \x01(\x0e\x32$.google.fonts_public.TargetTypeProto\"\xcc\x01\n\x13\x46\x61milyFallbackProto\x12:\n\x0b\x61xis_target\x18\x01 \x03(\x0b\x32%.google.fonts_public.AxisSegmentProto\x12\x30\n\x06target\x18\x02 \x03(\x0b\x32 .google.fonts_public.TargetProto\x12\x17\n\x0fsize_adjust_pct\x18\x03 \x01(\x02\x12\x1b\n\x13\x61scent_override_pct\x18\x05 \x01(\x02\x12\x11\n\tlocal_src\x18\x04 \x03(\t\"Q\n\x0bRegionProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x12\n\npopulation\x18\x03 \x01(\x05\x12\x14\n\x0cregion_group\x18\x04 \x03(\t\"\'\n\x0bScriptProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"\xa8\x02\n\rLanguageProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x10\n\x08language\x18\x02 \x01(\t\x12\x0e\n\x06script\x18\x03 \x01(\t\x12\x0c\n\x04name\x18\x04 \x01(\t\x12\x16\n\x0epreferred_name\x18\x05 \x01(\t\x12\x0f\n\x07\x61utonym\x18\x06 \x01(\t\x12\x12\n\npopulation\x18\x07 \x01(\x05\x12\x0e\n\x06region\x18\x08 \x03(\t\x12?\n\x0e\x65xemplar_chars\x18\t \x01(\x0b\x32\'.google.fonts_public.ExemplarCharsProto\x12\x39\n\x0bsample_text\x18\n \x01(\x0b\x32$.google.fonts_public.SampleTextProto\x12\x12\n\nhistorical\x18\x0b \x01(\x08\"z\n\x12\x45xemplarCharsProto\x12\x0c\n\x04\x62\x61se\x18\x01 \x01(\t\x12\x11\n\tauxiliary\x18\x02 \x01(\t\x12\r\n\x05marks\x18\x03 \x01(\t\x12\x10\n\x08numerals\x18\x04 \x01(\t\x12\x13\n\x0bpunctuation\x18\x05 \x01(\t\x12\r\n\x05index\x18\x06 \x01(\t\"\x84\x02\n\x0fSampleTextProto\x12\x15\n\rmasthead_full\x18\x01 \x01(\t\x12\x18\n\x10masthead_partial\x18\x02 \x01(\t\x12\x0e\n\x06styles\x18\x03 \x01(\t\x12\x0e\n\x06tester\x18\x04 \x01(\t\x12\x11\n\tposter_sm\x18\x05 \x01(\t\x12\x11\n\tposter_md\x18\x06 \x01(\t\x12\x11\n\tposter_lg\x18\x07 \x01(\t\x12\x13\n\x0bspecimen_48\x18\x08 \x01(\t\x12\x13\n\x0bspecimen_36\x18\t \x01(\t\x12\x13\n\x0bspecimen_32\x18\n \x01(\t\x12\x13\n\x0bspecimen_21\x18\x0b \x01(\t\x12\x13\n\x0bspecimen_16\x18\x0c \x01(\t\"/\n\x0fGlyphGroupProto\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06glyphs\x18\x02 \x01(\t*\x92\x01\n\x0fTargetTypeProto\x12\x16\n\x12TARGET_UNSPECIFIED\x10\x00\x12\x15\n\x11TARGET_OS_WINDOWS\x10\x01\x12\x11\n\rTARGET_OS_MAC\x10\x02\x12\x13\n\x0fTARGET_OS_LINUX\x10\x03\x12\x15\n\x11TARGET_OS_ANDROID\x10\x04\x12\x11\n\rTARGET_OS_IOS\x10\x05\x42%\n\x16\x63om.google.fonts.protoB\x0b\x46ontsPublic'
+  serialized_pb=b'\n\x12\x66onts_public.proto\x12\x13google.fonts_public\"\x89\x06\n\x0b\x46\x61milyProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x65signer\x18\x02 \x02(\t\x12\x0f\n\x07license\x18\x03 \x02(\t\x12\x10\n\x08\x63\x61tegory\x18\x04 \x03(\t\x12\x12\n\ndate_added\x18\x05 \x02(\t\x12-\n\x05\x66onts\x18\x06 \x03(\x0b\x32\x1e.google.fonts_public.FontProto\x12\x0f\n\x07\x61liases\x18\x07 \x03(\t\x12\x0f\n\x07subsets\x18\x08 \x03(\t\x12\x19\n\x11ttf_autohint_args\x18\t \x01(\t\x12\x33\n\x04\x61xes\x18\n \x03(\x0b\x32%.google.fonts_public.AxisSegmentProto\x12\x62\n\x1aregistry_default_overrides\x18\x0b \x03(\x0b\x32>.google.fonts_public.FamilyProto.RegistryDefaultOverridesEntry\x12\x30\n\x06source\x18\x0c \x01(\x0b\x32 .google.fonts_public.SourceProto\x12\x0f\n\x07is_noto\x18\r \x01(\x08\x12\x11\n\tlanguages\x18\x0e \x03(\t\x12;\n\tfallbacks\x18\x0f \x03(\x0b\x32(.google.fonts_public.FamilyFallbackProto\x12;\n\rsample_glyphs\x18\x10 \x03(\x0b\x32$.google.fonts_public.GlyphGroupProto\x12\x39\n\x0bsample_text\x18\x11 \x01(\x0b\x32$.google.fonts_public.SampleTextProto\x12\x14\n\x0c\x64isplay_name\x18\x12 \x01(\t\x12<\n\x0bsource_type\x18\x13 \x01(\x0e\x32\x1d.google.fonts_public.FontType:\x08TYPE_TTF\x1a?\n\x1dRegistryDefaultOverridesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x02:\x02\x38\x01\"\x8a\x01\n\tFontProto\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\r\n\x05style\x18\x02 \x02(\t\x12\x0e\n\x06weight\x18\x03 \x02(\x05\x12\x10\n\x08\x66ilename\x18\x04 \x02(\t\x12\x18\n\x10post_script_name\x18\x05 \x02(\t\x12\x11\n\tfull_name\x18\x06 \x02(\t\x12\x11\n\tcopyright\x18\x07 \x01(\t\"Z\n\x10\x41xisSegmentProto\x12\x0b\n\x03tag\x18\x01 \x01(\t\x12\x11\n\tmin_value\x18\x02 \x01(\x02\x12\x11\n\tmax_value\x18\x04 \x01(\x02J\x04\x08\x03\x10\x04R\rdefault_value\"5\n\x0bSourceProto\x12\x16\n\x0erepository_url\x18\x01 \x01(\t\x12\x0e\n\x06\x63ommit\x18\x02 \x01(\t\"H\n\x0bTargetProto\x12\x39\n\x0btarget_type\x18\x01 \x01(\x0e\x32$.google.fonts_public.TargetTypeProto\"\xcc\x01\n\x13\x46\x61milyFallbackProto\x12:\n\x0b\x61xis_target\x18\x01 \x03(\x0b\x32%.google.fonts_public.AxisSegmentProto\x12\x30\n\x06target\x18\x02 \x03(\x0b\x32 .google.fonts_public.TargetProto\x12\x17\n\x0fsize_adjust_pct\x18\x03 \x01(\x02\x12\x1b\n\x13\x61scent_override_pct\x18\x05 \x01(\x02\x12\x11\n\tlocal_src\x18\x04 \x03(\t\"Q\n\x0bRegionProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x12\n\npopulation\x18\x03 \x01(\x05\x12\x14\n\x0cregion_group\x18\x04 \x03(\t\"\'\n\x0bScriptProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"\xa8\x02\n\rLanguageProto\x12\n\n\x02id\x18\x01 \x01(\t\x12\x10\n\x08language\x18\x02 \x01(\t\x12\x0e\n\x06script\x18\x03 \x01(\t\x12\x0c\n\x04name\x18\x04 \x01(\t\x12\x16\n\x0epreferred_name\x18\x05 \x01(\t\x12\x0f\n\x07\x61utonym\x18\x06 \x01(\t\x12\x12\n\npopulation\x18\x07 \x01(\x05\x12\x0e\n\x06region\x18\x08 \x03(\t\x12?\n\x0e\x65xemplar_chars\x18\t \x01(\x0b\x32\'.google.fonts_public.ExemplarCharsProto\x12\x39\n\x0bsample_text\x18\n \x01(\x0b\x32$.google.fonts_public.SampleTextProto\x12\x12\n\nhistorical\x18\x0b \x01(\x08\"z\n\x12\x45xemplarCharsProto\x12\x0c\n\x04\x62\x61se\x18\x01 \x01(\t\x12\x11\n\tauxiliary\x18\x02 \x01(\t\x12\r\n\x05marks\x18\x03 \x01(\t\x12\x10\n\x08numerals\x18\x04 \x01(\t\x12\x13\n\x0bpunctuation\x18\x05 \x01(\t\x12\r\n\x05index\x18\x06 \x01(\t\"\x84\x02\n\x0fSampleTextProto\x12\x15\n\rmasthead_full\x18\x01 \x01(\t\x12\x18\n\x10masthead_partial\x18\x02 \x01(\t\x12\x0e\n\x06styles\x18\x03 \x01(\t\x12\x0e\n\x06tester\x18\x04 \x01(\t\x12\x11\n\tposter_sm\x18\x05 \x01(\t\x12\x11\n\tposter_md\x18\x06 \x01(\t\x12\x11\n\tposter_lg\x18\x07 \x01(\t\x12\x13\n\x0bspecimen_48\x18\x08 \x01(\t\x12\x13\n\x0bspecimen_36\x18\t \x01(\t\x12\x13\n\x0bspecimen_32\x18\n \x01(\t\x12\x13\n\x0bspecimen_21\x18\x0b \x01(\t\x12\x13\n\x0bspecimen_16\x18\x0c \x01(\t\"/\n\x0fGlyphGroupProto\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06glyphs\x18\x02 \x01(\t*\x92\x01\n\x0fTargetTypeProto\x12\x16\n\x12TARGET_UNSPECIFIED\x10\x00\x12\x15\n\x11TARGET_OS_WINDOWS\x10\x01\x12\x11\n\rTARGET_OS_MAC\x10\x02\x12\x13\n\x0fTARGET_OS_LINUX\x10\x03\x12\x15\n\x11TARGET_OS_ANDROID\x10\x04\x12\x11\n\rTARGET_OS_IOS\x10\x05*o\n\x08\x46ontType\x12\x0c\n\x08TYPE_TTF\x10\x00\x12\x0c\n\x08TYPE_EOT\x10\x01\x12\x0c\n\x08TYPE_SVG\x10\x02\x12\r\n\tTYPE_WOFF\x10\x03\x12\x0e\n\nTYPE_WOFF2\x10\x05\x12\x0c\n\x08TYPE_SWF\x10\x04\x12\x0c\n\x08TYPE_OTF\x10\x06\x42%\n\x16\x63om.google.fonts.protoB\x0b\x46ontsPublic'
 )
 
 _TARGETTYPEPROTO = _descriptor.EnumDescriptor(
@@ -63,18 +63,76 @@ _TARGETTYPEPROTO = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=2190,
-  serialized_end=2336,
+  serialized_start=2252,
+  serialized_end=2398,
 )
 _sym_db.RegisterEnumDescriptor(_TARGETTYPEPROTO)
 
 TargetTypeProto = enum_type_wrapper.EnumTypeWrapper(_TARGETTYPEPROTO)
+_FONTTYPE = _descriptor.EnumDescriptor(
+  name='FontType',
+  full_name='google.fonts_public.FontType',
+  filename=None,
+  file=DESCRIPTOR,
+  create_key=_descriptor._internal_create_key,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='TYPE_TTF', index=0, number=0,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='TYPE_EOT', index=1, number=1,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='TYPE_SVG', index=2, number=2,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='TYPE_WOFF', index=3, number=3,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='TYPE_WOFF2', index=4, number=5,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='TYPE_SWF', index=5, number=4,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='TYPE_OTF', index=6, number=6,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+  ],
+  containing_type=None,
+  serialized_options=None,
+  serialized_start=2400,
+  serialized_end=2511,
+)
+_sym_db.RegisterEnumDescriptor(_FONTTYPE)
+
+FontType = enum_type_wrapper.EnumTypeWrapper(_FONTTYPE)
 TARGET_UNSPECIFIED = 0
 TARGET_OS_WINDOWS = 1
 TARGET_OS_MAC = 2
 TARGET_OS_LINUX = 3
 TARGET_OS_ANDROID = 4
 TARGET_OS_IOS = 5
+TYPE_TTF = 0
+TYPE_EOT = 1
+TYPE_SVG = 2
+TYPE_WOFF = 3
+TYPE_WOFF2 = 5
+TYPE_SWF = 4
+TYPE_OTF = 6
 
 
 
@@ -112,8 +170,8 @@ _FAMILYPROTO_REGISTRYDEFAULTOVERRIDESENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=696,
-  serialized_end=759,
+  serialized_start=758,
+  serialized_end=821,
 )
 
 _FAMILYPROTO = _descriptor.Descriptor(
@@ -250,6 +308,13 @@ _FAMILYPROTO = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='source_type', full_name='google.fonts_public.FamilyProto.source_type', index=18,
+      number=19, type=14, cpp_type=8, label=1,
+      has_default_value=True, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -263,7 +328,7 @@ _FAMILYPROTO = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=44,
-  serialized_end=759,
+  serialized_end=821,
 )
 
 
@@ -336,8 +401,8 @@ _FONTPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=762,
-  serialized_end=900,
+  serialized_start=824,
+  serialized_end=962,
 )
 
 
@@ -382,8 +447,8 @@ _AXISSEGMENTPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=902,
-  serialized_end=992,
+  serialized_start=964,
+  serialized_end=1054,
 )
 
 
@@ -421,8 +486,8 @@ _SOURCEPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=994,
-  serialized_end=1047,
+  serialized_start=1056,
+  serialized_end=1109,
 )
 
 
@@ -453,8 +518,8 @@ _TARGETPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1049,
-  serialized_end=1121,
+  serialized_start=1111,
+  serialized_end=1183,
 )
 
 
@@ -513,8 +578,8 @@ _FAMILYFALLBACKPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1124,
-  serialized_end=1328,
+  serialized_start=1186,
+  serialized_end=1390,
 )
 
 
@@ -566,8 +631,8 @@ _REGIONPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1330,
-  serialized_end=1411,
+  serialized_start=1392,
+  serialized_end=1473,
 )
 
 
@@ -605,8 +670,8 @@ _SCRIPTPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1413,
-  serialized_end=1452,
+  serialized_start=1475,
+  serialized_end=1514,
 )
 
 
@@ -707,8 +772,8 @@ _LANGUAGEPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1455,
-  serialized_end=1751,
+  serialized_start=1517,
+  serialized_end=1813,
 )
 
 
@@ -774,8 +839,8 @@ _EXEMPLARCHARSPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1753,
-  serialized_end=1875,
+  serialized_start=1815,
+  serialized_end=1937,
 )
 
 
@@ -883,8 +948,8 @@ _SAMPLETEXTPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1878,
-  serialized_end=2138,
+  serialized_start=1940,
+  serialized_end=2200,
 )
 
 
@@ -922,8 +987,8 @@ _GLYPHGROUPPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2140,
-  serialized_end=2187,
+  serialized_start=2202,
+  serialized_end=2249,
 )
 
 _FAMILYPROTO_REGISTRYDEFAULTOVERRIDESENTRY.containing_type = _FAMILYPROTO
@@ -934,6 +999,7 @@ _FAMILYPROTO.fields_by_name['source'].message_type = _SOURCEPROTO
 _FAMILYPROTO.fields_by_name['fallbacks'].message_type = _FAMILYFALLBACKPROTO
 _FAMILYPROTO.fields_by_name['sample_glyphs'].message_type = _GLYPHGROUPPROTO
 _FAMILYPROTO.fields_by_name['sample_text'].message_type = _SAMPLETEXTPROTO
+_FAMILYPROTO.fields_by_name['source_type'].enum_type = _FONTTYPE
 _TARGETPROTO.fields_by_name['target_type'].enum_type = _TARGETTYPEPROTO
 _FAMILYFALLBACKPROTO.fields_by_name['axis_target'].message_type = _AXISSEGMENTPROTO
 _FAMILYFALLBACKPROTO.fields_by_name['target'].message_type = _TARGETPROTO
@@ -952,6 +1018,7 @@ DESCRIPTOR.message_types_by_name['ExemplarCharsProto'] = _EXEMPLARCHARSPROTO
 DESCRIPTOR.message_types_by_name['SampleTextProto'] = _SAMPLETEXTPROTO
 DESCRIPTOR.message_types_by_name['GlyphGroupProto'] = _GLYPHGROUPPROTO
 DESCRIPTOR.enum_types_by_name['TargetTypeProto'] = _TARGETTYPEPROTO
+DESCRIPTOR.enum_types_by_name['FontType'] = _FONTTYPE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 FamilyProto = _reflection.GeneratedProtocolMessageType('FamilyProto', (_message.Message,), {
