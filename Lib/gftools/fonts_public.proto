@@ -27,6 +27,7 @@ message FamilyProto {
   repeated GlyphGroupProto sample_glyphs = 16;
   optional SampleTextProto sample_text = 17;
   optional string display_name = 18;
+  optional FontType source_type = 19 [default = TYPE_TTF];
 
   // Next = 19
 }
@@ -147,3 +148,12 @@ message GlyphGroupProto {
   optional string glyphs = 2;
 }
 
+enum FontType {
+  TYPE_TTF = 0;
+  TYPE_EOT = 1;
+  TYPE_SVG = 2;
+  TYPE_WOFF = 3;
+  TYPE_WOFF2 = 5;
+  TYPE_SWF = 4;
+  TYPE_OTF = 6;
+}
