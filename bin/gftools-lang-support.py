@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 """
-gftools lang
+gftools lang-support
 
-Generates Language/Region metadata.
-
-CLDR info is supplemented with Hyperglot
-(https://github.com/rosettatype/hyperglot), which pulls from other data sources
-and consequently has a more complete set of language metadata.
+Adds language support metadata to METADATA.pb files.
 
 Usage:
 
-# Standard usage. Output lang metadata to a dir. Does not overwrite existing data.
-gftools lang -l ./lang/ ./ofl/noto*/METADATA.pb
+# Standard usage. Does not overwrite existing data.
+gftools lang-support -l ./lang/ ./ofl/noto*/METADATA.pb
 
 # Generate a report with insights about data and potential metadata holes.
-gftools lang -l ./lang/ -r ./ofl/noto*/METADATA.pb
+gftools lang-support -l ./lang/ -r ./ofl/noto*/METADATA.pb
 
 """
 
