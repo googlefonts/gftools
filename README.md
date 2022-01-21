@@ -8,7 +8,7 @@ The tools and files under this directory are available under the Apache License 
 
 This repo also contains definitions of glyph sets useful for type designers:
 
-<https://github.com/googlefonts/gftools/tree/main/Lib/gftools/encodings/GF%20Glyph%20Sets>
+<https://github.com/googlefonts/glyphsets/tree/main/Lib/glyphsets/encodings/GF%20Glyph%20Sets>
 
 ## Tool Usage Examples
 
