@@ -42,6 +42,7 @@ fallback {
   name: "Ultra Expanded"
   value: 200
 }
+ui_type: 2
 description:
   "Adjust the style from narrower to wider, by varying the proportions of"
   " counters, stems, and other forms including overall spacinig and kerning."

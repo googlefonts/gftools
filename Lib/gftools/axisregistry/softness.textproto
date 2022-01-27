@@ -17,4 +17,5 @@ fallback {
   name: "SuperSoft"
   value: 100
 }
+ui_type: 2
 description: "Letterforms become more soft and rounded."

@@ -29,10 +29,36 @@ message AxisProto {
   // Short descriptive paragraph
   optional string description = 8;
 
-  // Next = 9
+  // UI type
+  optional AxisUITypeProto ui_type = 9;
+
+  // Next = 10
 }
 
 message FallbackProto {
   optional string name = 1;
   optional float value = 2;
+  optional string display_name = 3;
+}
+
+// The UI type of an axis when presenting in Front End
+enum AxisUITypeProto {
+  // A two-state controller. When turned on, it will be set to its max number,
+  // and when turned off, it will be set to its min number.
+  TOGGLE = 0;
+  // For an axis that only has three or four states. Each radio button will have
+  // the fallback display name as its label and when being chosen, the axis
+  // value will be set to the corresponding fallback value.
+  RADIO_BUTTON = 1;
+  // For an axis that has more than four possible values. The slider will start
+  // with its min value and end with its max value. A slider will always come
+  // with a fallback dropdown. All fallback values will be shown in the dropdown
+  // as options.
+  SLIDER = 2;
+  // Optical Size is different from all other three types since
+  // 1) it has a new checkbox, and the label and value is not associated with
+  // the value of the Optical Size itself, 2) when the checkbox is on, Optical
+  // Size will also listen to the font size, which is not happening in any other
+  // axes.
+  OPSZ = 3;
 }

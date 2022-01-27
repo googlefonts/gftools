@@ -9,6 +9,7 @@ fallback {
   name: "Default"
   value: 0
 }
+ui_type: 2
 description:
   "Adjust the style from upright to slanted, also known to typographers"
   " as an 'oblique' style. Rarely, slant can work in the other direction,"
