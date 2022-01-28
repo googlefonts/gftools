@@ -67,7 +67,7 @@ AUTOHINT_SCRIPTS = [
 
 def autohint_script_tag(ttFont):
     script_count = Counter()
-    for x in font.getBestCmap().keys():
+    for x in ttFont.getBestCmap().keys():
         for script in unicodedata.script_extension(chr(x)):
             if script[0] != "Z":
                 script_count[script] += 1
@@ -92,6 +92,5 @@ def autohint(infile, outfile, args=None):
         script = autohint_script_tag(font)
         if script:
             args.append("-D" + script)
-    print(args)
 
     ttfautohint(**ttfautohint_parse_args([infile, outfile, *args]))
