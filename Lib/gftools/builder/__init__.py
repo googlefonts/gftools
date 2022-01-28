@@ -103,6 +103,7 @@ from fontTools.otlLib.builder import buildStatTable
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.woff2 import main as woff2_main
 from gftools.builder.schema import schema
+from gftools.builder.autohint import autohint
 from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.utils import font_is_italic, font_familyname, font_stylename
@@ -469,18 +470,12 @@ class GFBuilder:
     def post_process_ttf(self, filename):
         if self.config["autohintTTF"]:
             self.logger.debug("Autohinting")
-            self.autohint(filename)
+            autohint(filename, filename)
         self.post_process(filename)
         if self.config["buildWebfont"]:
             self.logger.debug("Building webfont")
             woff2_main(["compress", filename])
             self.move_webfont(filename)
-
-    def autohint(self, filename):
-        from ttfautohint.options import parse_args as ttfautohint_parse_args
-        from ttfautohint import ttfautohint
-
-        ttfautohint(**ttfautohint_parse_args([filename, filename]))
 
     def build_vtt(self, font_dir):
         for font, vtt_source in self.config['vttSources'].items():
