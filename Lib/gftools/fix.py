@@ -240,6 +240,12 @@ def fix_fs_selection(ttFont):
     # enable Regular bit for all other styles
     if not tokens & set(["Bold", "Italic"]):
         fs_selection |= 1 << 6
+
+    # set WWS bit if no name ID 21 and 22
+    name = ttFont['name']
+    if name.getDebugName(21) is None and name.getDebugName(22) is None:
+        fs_selection |= 1 << 8
+
     ttFont["OS/2"].fsSelection = fs_selection
     return old_selection != fs_selection
 
