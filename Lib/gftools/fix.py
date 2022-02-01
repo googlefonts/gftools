@@ -190,6 +190,16 @@ def fix_weight_class(ttFont):
         ttFont: a TTFont instance
     """
     old_weight_class = ttFont["OS/2"].usWeightClass
+
+    if 'fvar' in ttFont:
+        fvar = ttFont['fvar']
+        default_axis_values = {a.axisTag: a.defaultValue for a in fvar.axes}
+        v = default_axis_values.get('wght', None)
+
+        if isinstance(v, int) or isinstance(v, float):
+            ttFont["OS/2"].usWeightClass = int(v)
+            return ttFont["OS/2"].usWeightClass != old_weight_class
+
     stylename = font_stylename(ttFont)
     tokens = stylename.split()
     # Order WEIGHT_NAMES so longest names are first
