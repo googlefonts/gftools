@@ -240,7 +240,6 @@ def fix_fs_selection(ttFont):
     # enable Regular bit for all other styles
     if not tokens & set(["Bold", "Italic"]):
         fs_selection |= 1 << 6
-
     ttFont["OS/2"].fsSelection = fs_selection
     return old_selection != fs_selection
 
