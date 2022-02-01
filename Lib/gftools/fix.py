@@ -196,7 +196,7 @@ def fix_weight_class(ttFont):
         default_axis_values = {a.axisTag: a.defaultValue for a in fvar.axes}
         v = default_axis_values.get('wght', None)
 
-        if isinstance(v, int) or isinstance(v, float):
+        if v is not None:
             ttFont["OS/2"].usWeightClass = int(v)
             return ttFont["OS/2"].usWeightClass != old_weight_class
 
