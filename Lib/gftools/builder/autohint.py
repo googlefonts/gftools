@@ -85,12 +85,13 @@ def autohint_script_tag(ttFont):
             return script
 
 
-def autohint(infile, outfile, args=None):
+def autohint(infile, outfile, args=None, add_script=False):
     font = TTFont(infile)
     if not args:
         args = []
-        script = autohint_script_tag(font)
-        if script:
-            args.append("-D" + script)
+        if add_script:
+            script = autohint_script_tag(font)
+            if script:
+                args.append("-D" + script)
 
     ttfautohint(**ttfautohint_parse_args([infile, outfile, *args]))

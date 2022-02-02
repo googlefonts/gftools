@@ -88,8 +88,9 @@ required, all others have sensible defaults:
 * ``ttDir``: Where to put TrueType static fonts. Defaults to ``$outputDir/ttf``.
 * ``otDir``: Where to put CFF static fonts. Defaults to ``$outputDir/otf``.
 * ``woffDir``: Where to put WOFF2 static fonts. Defaults to ``$outputDir/webfonts``.
-* ``cleanUp`: Whether or not to remove temporary files. Defaults to ``true``.
-* ``autohintTTF`: Whether or not to autohint TTF files. Defaults to ``true``.
+* ``cleanUp``: Whether or not to remove temporary files. Defaults to ``true``.
+* ``autohintTTF``: Whether or not to autohint TTF files. Defaults to ``true``.
+* ``ttfaUseScript``: Whether or not to detect a font's primary script and add a ``-D<script>`` flag to ttfautohint. Defaults to ``false``.
 * ``axisOrder``: STAT table axis order. Defaults to fvar order.
 * ``familyName``: Family name for variable fonts. Defaults to family name of first source file.
 * ``flattenComponents``: Whether to flatten components on export. Defaults to ``true``.
@@ -258,6 +259,8 @@ class GFBuilder:
             self.config["buildWebfont"] = self.config["buildStatic"]
         if "autohintTTF" not in self.config:
             self.config["autohintTTF"] = True
+        if "ttfaUseScript" not in self.config:
+            self.config["ttfaUseScript"] = False
         if "logLevel" not in self.config:
             self.config["logLevel"] = "INFO"
         if "cleanUp" not in self.config:
@@ -470,7 +473,7 @@ class GFBuilder:
     def post_process_ttf(self, filename):
         if self.config["autohintTTF"]:
             self.logger.debug("Autohinting")
-            autohint(filename, filename)
+            autohint(filename, filename, add_script=self.config["ttfaUseScript"])
         self.post_process(filename)
         if self.config["buildWebfont"]:
             self.logger.debug("Building webfont")
