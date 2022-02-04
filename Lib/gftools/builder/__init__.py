@@ -88,8 +88,9 @@ required, all others have sensible defaults:
 * ``ttDir``: Where to put TrueType static fonts. Defaults to ``$outputDir/ttf``.
 * ``otDir``: Where to put CFF static fonts. Defaults to ``$outputDir/otf``.
 * ``woffDir``: Where to put WOFF2 static fonts. Defaults to ``$outputDir/webfonts``.
-* ``cleanUp`: Whether or not to remove temporary files. Defaults to ``true``.
-* ``autohintTTF`: Whether or not to autohint TTF files. Defaults to ``true``.
+* ``cleanUp``: Whether or not to remove temporary files. Defaults to ``true``.
+* ``autohintTTF``: Whether or not to autohint TTF files. Defaults to ``true``.
+* ``ttfaUseScript``: Whether or not to detect a font's primary script and add a ``-D<script>`` flag to ttfautohint. Defaults to ``false``.
 * ``axisOrder``: STAT table axis order. Defaults to fvar order.
 * ``familyName``: Family name for variable fonts. Defaults to family name of first source file.
 * ``flattenComponents``: Whether to flatten components on export. Defaults to ``true``.
@@ -103,6 +104,7 @@ from fontTools.otlLib.builder import buildStatTable
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.woff2 import main as woff2_main
 from gftools.builder.schema import schema
+from gftools.builder.autohint import autohint
 from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.utils import font_is_italic, font_familyname, font_stylename
@@ -257,6 +259,8 @@ class GFBuilder:
             self.config["buildWebfont"] = self.config["buildStatic"]
         if "autohintTTF" not in self.config:
             self.config["autohintTTF"] = True
+        if "ttfaUseScript" not in self.config:
+            self.config["ttfaUseScript"] = False
         if "logLevel" not in self.config:
             self.config["logLevel"] = "INFO"
         if "cleanUp" not in self.config:
@@ -469,18 +473,12 @@ class GFBuilder:
     def post_process_ttf(self, filename):
         if self.config["autohintTTF"]:
             self.logger.debug("Autohinting")
-            self.autohint(filename)
+            autohint(filename, filename, add_script=self.config["ttfaUseScript"])
         self.post_process(filename)
         if self.config["buildWebfont"]:
             self.logger.debug("Building webfont")
             woff2_main(["compress", filename])
             self.move_webfont(filename)
-
-    def autohint(self, filename):
-        from ttfautohint.options import parse_args as ttfautohint_parse_args
-        from ttfautohint import ttfautohint
-
-        ttfautohint(**ttfautohint_parse_args([filename, filename]))
 
     def build_vtt(self, font_dir):
         for font, vtt_source in self.config['vttSources'].items():
