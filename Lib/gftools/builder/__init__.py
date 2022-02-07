@@ -138,6 +138,7 @@ class GFBuilder:
         else:
             self.config = config
         self.logger = logging.getLogger("GFBuilder")
+        self.outputs = set()  # A list of files we created
         self.fill_config_defaults()
 
     def load_config(self, configfile):
@@ -434,6 +435,7 @@ class GFBuilder:
                     )
                     static_font.save(dst)
                     postprocessor(dst)
+                    self.outputs.add(dst)
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
@@ -452,6 +454,7 @@ class GFBuilder:
             for fontfile in self.run_fontmake(source, args):
                 self.logger.info("Created static font %s" % fontfile)
                 postprocessor(fontfile)
+                self.outputs.add(fontfile)
 
     def rm(self, fp):
         if os.path.isdir(fp):
