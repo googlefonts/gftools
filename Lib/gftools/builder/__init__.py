@@ -285,10 +285,13 @@ class GFBuilder:
             args["output_path"] = os.path.join(
                 self.config["vfDir"], sourcebase + "-VF.ttf",
             )
-            output_files = self.run_fontmake(source, args)
-            newname = self.rename_variable(output_files[0])
-            ttFont = TTFont(newname)
-            ttFonts.append(ttFont)
+            try:
+                output_files = self.run_fontmake(source, args)
+                newname = self.rename_variable(output_files[0])
+                ttFont = TTFont(newname)
+                ttFonts.append(ttFont)
+            except Exception as e:
+                self.logger.error("Could not build variable font: %s" % e)
 
         if not ttFonts:
             return
@@ -298,6 +301,7 @@ class GFBuilder:
         # because these tables are needed in order to fix the name tables.
         for ttFont in ttFonts:
             self.post_process(ttFont.reader.file.name)
+            self.outputs.add(ttFont.reader.file.name)
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:
