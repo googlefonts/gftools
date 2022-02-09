@@ -138,6 +138,7 @@ class GFBuilder:
         else:
             self.config = config
         self.logger = logging.getLogger("GFBuilder")
+        self.outputs = set()  # A list of files we created
         self.fill_config_defaults()
 
     def load_config(self, configfile):
@@ -284,10 +285,13 @@ class GFBuilder:
             args["output_path"] = os.path.join(
                 self.config["vfDir"], sourcebase + "-VF.ttf",
             )
-            output_files = self.run_fontmake(source, args)
-            newname = self.rename_variable(output_files[0])
-            ttFont = TTFont(newname)
-            ttFonts.append(ttFont)
+            try:
+                output_files = self.run_fontmake(source, args)
+                newname = self.rename_variable(output_files[0])
+                ttFont = TTFont(newname)
+                ttFonts.append(ttFont)
+            except Exception as e:
+                self.logger.error("Could not build variable font: %s" % e)
 
         if not ttFonts:
             return
@@ -297,6 +301,7 @@ class GFBuilder:
         # because these tables are needed in order to fix the name tables.
         for ttFont in ttFonts:
             self.post_process(ttFont.reader.file.name)
+            self.outputs.add(ttFont.reader.file.name)
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:
@@ -434,6 +439,7 @@ class GFBuilder:
                     )
                     static_font.save(dst)
                     postprocessor(dst)
+                    self.outputs.add(dst)
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
@@ -452,6 +458,7 @@ class GFBuilder:
             for fontfile in self.run_fontmake(source, args):
                 self.logger.info("Created static font %s" % fontfile)
                 postprocessor(fontfile)
+                self.outputs.add(fontfile)
 
     def rm(self, fp):
         if os.path.isdir(fp):
