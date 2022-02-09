@@ -17,5 +17,4 @@ fallback {
   name: "SuperSoft"
   value: 100
 }
-fallback_only: false
 description: "Letterforms become more soft and rounded."
