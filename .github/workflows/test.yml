@@ -33,4 +33,4 @@ jobs:
           pytest ./Lib/gftools/tests/test_stat.py
           pytest ./Lib/gftools/tests/test_html.py
           pytest ./Lib/gftools/tests/test_instancer.py
-          mypy --install-types --non-interactive ./Lib/gftools/packager.py
+          mypy  --ignore-missing-imports ./Lib/gftools/packager.py
