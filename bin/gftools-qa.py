@@ -186,7 +186,7 @@ class FontQA:
         out = os.path.join(self.out, "Fontbakery")
         mkdir(out)
         cmd = (
-            ["fontbakery", "check-googlefonts", "-l", "INFO"]
+            ["fontbakery", "check-googlefonts", "-l", "INFO", "--succinct"]
             + [f.reader.file.name for f in self.fonts]
             + ["-C"]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
