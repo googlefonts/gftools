@@ -897,8 +897,7 @@ def _copy_upstream_files_from_dir(source_dir: str, files: dict,
 
 def _create_or_update_metadata_pb(upstream_conf: YAML,
                                   tmp_package_family_dir:str,
-                                  upstream_commit_sha:str,
-                                  no_source: bool) -> None:
+                                  upstream_commit_sha:str) -> None:
   metadata_file_name = os.path.join(tmp_package_family_dir, 'METADATA.pb')
   try:
     subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
@@ -923,19 +922,15 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
 
   # metadata.date_added # is handled well
 
-  if no_source:
-    # remove in case it is present
-    metadata.ClearField('source')
-  else:
-    metadata.source.repository_url = upstream_conf['repository_url']
-    metadata.source.commit = upstream_commit_sha
+  metadata.source.repository_url = upstream_conf['repository_url']
+  metadata.source.commit = upstream_commit_sha
 
   language_comments = fonts.LanguageComments(fonts.LoadLanguages())
   fonts.WriteProto(metadata, metadata_file_name, comments=language_comments)
 
 def _create_package_content(package_target_dir: str, repos_dir: str,
         upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
-        no_source: bool, allow_build: bool, yes: bool, quiet: bool,
+        allow_build: bool, yes: bool, quiet: bool,
         no_allowlist: bool = False) -> str:
   print(f'Creating package with \n{_format_upstream_yaml(upstream_conf_yaml)}')
   upstream_conf = upstream_conf_yaml.data
@@ -1043,18 +1038,12 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
 
   # create/update METADATA.pb
   _create_or_update_metadata_pb(upstream_conf, package_family_dir,
-                                upstream_commit_sha, no_source)
+                                upstream_commit_sha)
 
   # create/update upstream.yaml
   # Remove keys that are also in METADATA.pb googlefonts/gftools#233
   # and also clear all comments.
   redundant_keys = {'name', 'category', 'designer', 'repository_url'}
-  if no_source:
-    # source is NOT in METADATA.pb so we want to keep it in upstream_conf
-    # NOTE: there's another position where this has to be considered
-    # i.e. in case of git as target when making a commit.
-    redundant_keys.remove('repository_url')
-
   upstream_conf_stripped = OrderedDict((k, v) for k, v in upstream_conf.items() \
                                                   if k not in redundant_keys)
   # Don't keep an empty build key.
@@ -1421,7 +1410,7 @@ def _git_get_path(tree: pygit2.Tree, path: str) -> pygit2.Object:
 def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
           yes: bool, quiet: bool, local_branch: str, remote_name: str,
           base_remote_branch: str, tmp_package_family_dir: str,
-          family_dir: str, no_source: bool):
+          family_dir: str):
   base_commit = None
   if add_commit:
     try:
@@ -1458,41 +1447,6 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
           [base_commit.id] # parents
   )
 
-  if no_source:
-    # remove source from METADATA.pb in an extra new commit, this will make it
-    # easy to track these changes and to revert them when feasible.
-    treeBuilder = repo.TreeBuilder(new_tree)
-    # read METADATA.pb
-    metadata_filename = os.path.join(family_dir, 'METADATA.pb')
-    metadata_blob = _git_get_path(new_tree, metadata_filename)
-    metadata = fonts_pb2.FamilyProto()
-    text_format.Parse(metadata_blob.data, metadata)
-    # delete source fields
-    repository_url = metadata.source.repository_url
-    metadata.ClearField('source')
-    # write METADATA.pb
-    text_proto = text_format.MessageToString(metadata, as_utf8=True)
-    _git_write_file(repo, treeBuilder, metadata_filename, text_proto)
-    # read upstream.yaml
-    upstream_filename = os.path.join(family_dir, 'upstream.yaml')
-    upstream_text = _git_get_path(new_tree, upstream_filename).data.decode('utf-8')
-    upstream_conf_yaml = dirty_load(upstream_text, upstream_yaml_stripped_schema,
-                                                    allow_flow_style=True)
-    # preserve the info: transfer from METADATA.pb
-    upstream_conf_yaml['repository_url'] = repository_url
-    # write upstream.yaml
-    _git_write_file(repo, treeBuilder, upstream_filename, upstream_conf_yaml.as_yaml())
-    # commit
-    new_tree_id = treeBuilder.write()
-    commit_id = repo.create_commit(
-            None,
-            author, committer,
-            f'[gftools-packager] {family_dir} remove METADATA "source".  google/fonts#2587',
-            new_tree_id,
-            [commit_id] # parents
-    )
-
-
   commit = repo.get(commit_id)
   # create branch or add to an existing one if add_commit
   while True:
@@ -1528,7 +1482,7 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
 
 def _packagage_to_git(tmp_package_family_dir: str, target: str, family_dir: str,
                      branch: str, force:bool, yes: bool, quiet: bool,
-                     add_commit: bool, no_source: bool) -> None:
+                     add_commit: bool) -> None:
 
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
@@ -1539,7 +1493,7 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str, family_dir: str,
 
   _git_make_commit(repo, add_commit, force, yes, quiet, branch,
                    remote_name, base_remote_branch, tmp_package_family_dir,
-                   family_dir, no_source)
+                   family_dir)
 
 
 def _dispatch_git(target: str, target_branch: str,pr_upstream: str,
@@ -1626,8 +1580,7 @@ def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
 def _packages_to_target(tmp_package_dir: str, family_dirs: typing.List[str],
                         target: str, is_gf_git: bool,
                         branch: str, force: bool,
-                        yes: bool, quiet: bool, add_commit: bool,
-                        no_source: bool) ->None:
+                        yes: bool, quiet: bool, add_commit: bool) ->None:
   for i, family_dir in enumerate(family_dirs):
     tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
     # NOTE: if there are any files outside of family_dir that need moving
@@ -1638,7 +1591,7 @@ def _packages_to_target(tmp_package_dir: str, family_dirs: typing.List[str],
       if i > 0:
         add_commit = True
       _packagage_to_git(tmp_package_family_dir, target, family_dir,
-                               branch, force, yes, quiet, add_commit, no_source)
+                               branch, force, yes, quiet, add_commit)
     else:
       _packagage_to_dir(tmp_package_family_dir, target, family_dir,
                                force, yes, quiet)
@@ -1714,7 +1667,7 @@ def _output_upstream_yaml(file_or_family: typing.Union[str, None], target: str,
 def make_package(file_or_families: typing.List[str], target: str, yes: bool,
                  quiet: bool, no_allowlist: bool, is_gf_git: bool, force: bool,
                  add_commit: bool, pr: bool, pr_upstream: str,
-                 push_upstream: str, upstream_yaml: bool, no_source: bool,
+                 push_upstream: str, upstream_yaml: bool,
                  allow_build: bool, branch: typing.Union[str, None]=None):
 
   if upstream_yaml:
@@ -1756,11 +1709,8 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
         try:
           family_dir = _create_package_content(tmp_package_dir, tmp_repos_dir,
                                 upstream_conf_yaml, license_dir,
-                                gf_dir_content,
-                                # if is_gf_git source is removed in an
-                                # extra commit
-                                no_source and not is_gf_git,
-                                allow_build, yes, quiet, no_allowlist)
+                                gf_dir_content, allow_build, yes, quiet,
+                                no_allowlist)
           family_dirs.append(family_dir)
         except UserAbortError as e:
           # The user aborted already, no need to bother any further.
@@ -1813,7 +1763,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
       if not branch:
         target_branch = _branch_name_from_family_dirs(family_dirs)
     _packages_to_target(tmp_package_dir, family_dirs, target, is_gf_git,
-                        target_branch, force, yes, quiet, add_commit, no_source)
+                        target_branch, force, yes, quiet, add_commit)
 
   if pr and is_gf_git:
     _dispatch_git(target, target_branch, pr_upstream, push_upstream)
