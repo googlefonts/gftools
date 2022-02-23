@@ -35,7 +35,11 @@ def set_ufo_attrib(obj, path, val):
     while stack:
         item, path = stack.pop()
         if len(path) == 1:
-            setattr(item, path[0], json.loads(val))
+            try:
+                parsed_val = json.loads(val)
+            except:
+                parsed_val = val
+            setattr(item, path[0], parsed_val)
             return
         current = path.pop(0)
         if hasattr(item, current):
