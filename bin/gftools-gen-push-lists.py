@@ -75,13 +75,13 @@ def main():
             if "-- blocked" in labels or "--- Live" in labels:
                 continue
             seen_directories |= directories
-            if "II Font Upgrade" in labels or "III VF Replacement" in labels:
+            if "I Font Upgrade" in labels or "III VF Replacement" in labels:
                 cat = "Upgrade"
-            elif "II New Font" in labels:
+            elif "I New Font" in labels:
                 cat = "New"
-            elif "II Description/Metadata/OFL" in labels:
+            elif "I Description/Metadata/OFL" in labels:
                 cat = "Metadata/desc/OFL"
-            elif "II Designer profile" in labels:
+            elif "I Designer profile" in labels:
                 cat = "Designer profile"
             else:
                 cat = "Small fix/other"
