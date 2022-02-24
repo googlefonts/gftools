@@ -16,6 +16,7 @@ gftools ufo-setter --ufos ufo1.ufo ufo2.ufo ufo3.ufo --attribs \
     info.openTypeOS2TypoDescender=-250 \
     info.openTypeOS2TypoLineGap=0
 """
+# TODO this could be generalised for all font formats
 import argparse
 from defcon import Font
 import json
