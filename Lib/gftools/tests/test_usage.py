@@ -103,9 +103,6 @@ class TestGFToolsScripts(unittest.TestCase):
     def test_compare_font(self):
         self.check_script(['python', self.get_path('compare-font'), self.example_font, self.example_font])
 
-    def test_dump_names(self):
-        self.check_script(['python', self.get_path('dump-names'), self.example_font])
-
     def test_find_features(self):
         self.check_script(['python', self.get_path('find-features'), self.example_font])
 
@@ -114,9 +111,6 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def test_fix_cmap(self):
         self.check_script(['python', self.get_path('fix-cmap'), self.example_font])
-
-    def test_fix_dsig(self):
-        self.check_script(['python', self.get_path('fix-dsig'), self.example_font])
 
     def test_fix_familymetadata(self):
         self.check_script(['python', self.get_path('fix-familymetadata'), self.example_font])
