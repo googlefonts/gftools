@@ -11,6 +11,7 @@ import os
 from pathlib import PurePath
 import shutil
 from tempfile import TemporaryDirectory, mkstemp
+import zipfile
 import subprocess
 import requests
 import pprint
@@ -40,7 +41,11 @@ from hashlib import sha1
 from fontTools.ttLib import TTFont # type: ignore
 from gflanguages import LoadLanguages
 from gftools.util import google_fonts as fonts
+<<<<<<< HEAD
 from gftools.github import GitHubClient
+=======
+from gftools.utils import download_file
+>>>>>>> aca2234 (packager: get files from archives)
 
 # ignore type because mypy error: Module 'google.protobuf' has no
 # attribute 'text_format'
@@ -204,6 +209,7 @@ upstream_yaml_schema = Map({
     'name': Str(),
     'repository_url': Str(), # TODO: custom validation please
     'branch': Str(),
+    Optional('archive', default=''): EmptyNone() | Str(),
     'category': UniqueSeq(Enum(CATEGORIES)),
     'designer': Str(),
     Optional('build', default=''): EmptyNone() | Str(),
@@ -222,6 +228,7 @@ upstream_yaml_template_schema = Map({
     Optional('name', default=''): EmptyNone() | Str(),
     Optional('repository_url', default=''): EmptyNone() | Str(), # TODO: custom validation please
     'branch': EmptyNone() | Str(),
+    Optional('archive', default=''): EmptyNone() | Str(),
     Optional('category', default=None):  EmptyNone() | UniqueSeq(Enum(CATEGORIES)),
     Optional('designer', default=''): EmptyNone() |Str(),
     Optional('build', default=''): EmptyNone() | Str(),
@@ -232,6 +239,7 @@ upstream_yaml_stripped_schema = Map({ # TODO: custom validation please
     # Only optional until it can be in METADATA.pb
     Optional('repository_url', default=''): Str(),
     'branch': EmptyNone() | Str(),
+    Optional('archive', default=''): EmptyNone() | Str(),
     Optional('build', default=''): EmptyNone() | Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
 })
@@ -915,59 +923,70 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
     .replace('.', '_') \
     .replace('\\', '_')
 
-  local_repo_path_marker = 'local://'
-  if upstream_conf['repository_url'].startswith(local_repo_path_marker):
-    print(f'WARNING using "local://" hack for repository_url: {upstream_conf["repository_url"]}')
-    local_path = upstream_conf['repository_url'][len(local_repo_path_marker):]
-    upstream_dir = os.path.expanduser(local_path)
-  else:
-    upstream_dir = os.path.join(repos_dir, upstream_dir_target)
-    if not os.path.exists(upstream_dir):
-      # for super families it's likely that we can reuse the same clone
-      # of the repository for all members
-      _shallow_clone_git(upstream_dir, upstream_conf['repository_url']
-                                    , upstream_conf['branch'])
-  repo = pygit2.Repository(upstream_dir)
-
-  upstream_commit = repo.revparse_single(upstream_conf['branch'])
-  upstream_commit_sha = upstream_commit.hex
-
-  # Copy all files from upstream_conf['files'] to package_family_dir
-  # We are strict about what to allow, unexpected files
-  # are not copied. Instead print a warning an suggest filing an
-  # issue if the file is legitimate. A flag to explicitly
-  # skip the allowlist check (--no_allowlist)
-  # enables making packages even when new, yet unknown files are required).
-  # Do we have a Font Bakery check for expected/allowed files? Would
-  # be a good complement.
-  if upstream_conf['build']:
-
-    print(f'Found build command:\n  $ {upstream_conf["build"]}')
-    if not allow_build:
-      answer = user_input(f'Can\'t execute build command without explicit '
-              'permission. Don\'t allow this lightly '
-              'and review build command, build process and its dependencies prior. '
-              'This support for building from sources is provisional, a '
-              'discussion can be found at https://github.com/googlefonts/gftools/issues/231',
-              OrderedDict(b='build',
-                          q='quit program'),
-              default='q', yes=yes, quiet=quiet)
-      if answer == 'q':
-        raise UserAbortError('Can\'t execute required build command. '
-                              'Use --allow-build to allow explicitly.')
+  if upstream_conf['archive']:
+    print("Downloading release archive...")
     with TemporaryDirectory() as tmp:
-      print(f'Building...')
-      subprocess.run(['git', 'clone', upstream_dir, tmp], check=True)
-      subprocess.run(['bash', '-c', upstream_conf['build']]
-                       , cwd=tmp
-                       , check=True)
-      print(f'DONE building!')
+      archive_path = os.path.join(tmp, 'archive.zip')
+      download_file(upstream_conf['archive'], archive_path)
+      with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+        zip_ref.extractall(tmp)
+      print('DONE downloading and unzipping!')
       skipped = _copy_upstream_files_from_dir(tmp, upstream_conf['files'],
                         write_file_to_package, no_allowlist=no_allowlist)
+    upstream_commit_sha = upstream_conf['archive']
   else:
-    skipped = _copy_upstream_files_from_git(upstream_conf['branch'],
-                    upstream_conf['files'], repo, write_file_to_package,
-                    no_allowlist=no_allowlist)
+    local_repo_path_marker = 'local://'
+    if upstream_conf['repository_url'].startswith(local_repo_path_marker):
+      print(f'WARNING using "local://" hack for repository_url: {upstream_conf["repository_url"]}')
+      local_path = upstream_conf['repository_url'][len(local_repo_path_marker):]
+      upstream_dir = os.path.expanduser(local_path)
+    else:
+      upstream_dir = os.path.join(repos_dir, upstream_dir_target)
+      if not os.path.exists(upstream_dir):
+        # for super families it's likely that we can reuse the same clone
+        # of the repository for all members
+        _shallow_clone_git(upstream_dir, upstream_conf['repository_url']
+                                      , upstream_conf['branch'])
+    repo = pygit2.Repository(upstream_dir)
+
+    upstream_commit = repo.revparse_single(upstream_conf['branch'])
+    upstream_commit_sha = upstream_commit.hex
+
+    # Copy all files from upstream_conf['files'] to package_family_dir
+    # We are strict about what to allow, unexpected files
+    # are not copied. Instead print a warning an suggest filing an
+    # issue if the file is legitimate. A flag to explicitly
+    # skip the allowlist check (--no_allowlist)
+    # enables making packages even when new, yet unknown files are required).
+    # Do we have a Font Bakery check for expected/allowed files? Would
+    # be a good complement.
+    if upstream_conf['build']:
+      print(f'Found build command:\n  $ {upstream_conf["build"]}')
+      if not allow_build:
+        answer = user_input(f'Can\'t execute build command without explicit '
+                'permission. Don\'t allow this lightly '
+                'and review build command, build process and its dependencies prior. '
+                'This support for building from sources is provisional, a '
+                'discussion can be found at https://github.com/googlefonts/gftools/issues/231',
+                OrderedDict(b='build',
+                            q='quit program'),
+                default='q', yes=yes, quiet=quiet)
+        if answer == 'q':
+          raise UserAbortError('Can\'t execute required build command. '
+                                'Use --allow-build to allow explicitly.')
+      with TemporaryDirectory() as tmp:
+        print(f'Building...')
+        subprocess.run(['git', 'clone', upstream_dir, tmp], check=True)
+        subprocess.run(['bash', '-c', upstream_conf['build']]
+                        , cwd=tmp
+                        , check=True)
+        print(f'DONE building!')
+        skipped = _copy_upstream_files_from_dir(tmp, upstream_conf['files'],
+                          write_file_to_package, no_allowlist=no_allowlist)
+    else:
+      skipped = _copy_upstream_files_from_git(upstream_conf['branch'],
+                      upstream_conf['files'], repo, write_file_to_package,
+                      no_allowlist=no_allowlist)
   if skipped:
     message = ['Some files from upstream_conf could not be copied.']
     for reason, items in skipped.items():
