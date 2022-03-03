@@ -16,6 +16,9 @@ gftools lang --out . -l
 # Generate a report with insights about data and potential metadata holes.
 gftools lang --out . -r
 
+
+Note:      This module uses hyperglot, which is licensed GPLv3
+See also:  https://github.com/googlefonts/gftools/issues/498
 """
 
 from absl import app
@@ -23,6 +26,8 @@ from absl import flags
 from collections import defaultdict
 from collections import deque
 from fontTools.ttLib import TTFont
+from gflanguages import (LoadLanguages,
+                         LoadScripts)
 from gftools import fonts_public_pb2
 from gftools.util.udhr import Udhr
 from google.protobuf import text_format
@@ -627,40 +632,6 @@ def _IsHistorical(cldr_lang, hg_lang):
   return False
 
 
-def _LoadLanguages(languages_dir):
-  languages = {}
-  for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      language = text_format.Parse(f.read(), fonts_public_pb2.LanguageProto())
-      languages[language.id] = language
-  return languages
-
-
-def _LoadScripts(scripts_dir):
-  scripts = {}
-  for textproto_file in glob.iglob(os.path.join(scripts_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      script = text_format.Parse(f.read(), fonts_public_pb2.ScriptProto())
-      scripts[script.id] = script
-  return scripts
-
-
-def _SupportedLanguages(font_path, languages):
-  chars = _ParseFontChars(font_path)
-
-  supported = []
-  for lang in languages.values():
-    if not lang.HasField('exemplar_chars') or not lang.exemplar_chars.HasField('base'):
-      continue
-    base = parse.parse_chars(lang.exemplar_chars.base,
-                             decompose=False,
-                             retainDecomposed=False)
-    if set(base).issubset(chars):
-      supported.append(lang)
-
-  return supported
-
-
 def _ParseFontChars(path):
   """
   Open the provided font path and extract the codepoints encoded in the font
@@ -760,7 +731,7 @@ def _WriteLanguageMetadata(cldr, out_dir):
 
 
 def _OverwriteSampleText(cldr, out_dir):
-  languages = _LoadLanguages(out_dir)
+  languages = LoadLanguages(base_dir=out_dir)
   with UdhrTranslations() as udhrs:
     udhr_map = {u.iso639_3 + '_' + u.iso15924: u for u in udhrs.GetUdhrs()}
     for l in languages.values():
@@ -777,8 +748,8 @@ def _OverwriteSampleText(cldr, out_dir):
 def _WriteReport(out_dir):
   rows = [['Language', '(name)', 'No name', 'No autonym', 'No exemplar chars', 'No sample text', 'Sample text fallback', '(name)']]
 
-  languages = _LoadLanguages(os.path.join(out_dir, 'languages'))
-  scripts = _LoadScripts(os.path.join(out_dir, 'scripts'))
+  languages = LoadLanguages(base_dir=out_dir)
+  scripts = LoadScripts(base_dir=out_dir)
   for lang in languages.values():
     row = [
       lang.id,
@@ -830,7 +801,7 @@ def _WriteReport(out_dir):
 
 
 def _MarkHistoricalLanguages():
-  langs = _LoadLanguages(os.path.join(FLAGS.out, 'languages'))
+  langs = LoadLanguages(base_dir=FLAGS.out)
   hyperglot_languages = languages.Languages()
   with Cldr() as cldr:
     for lang in langs.values():
@@ -845,15 +816,6 @@ def _MarkHistoricalLanguages():
       if historical:
         lang.historical = True
         _WriteProto(lang, os.path.join(FLAGS.out, 'languages', lang.id + '.textproto'))
-
-
-def _LoadLanguages(languages_dir):
-  langs = {}
-  for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      language = text_format.Parse(f.read(), fonts_public_pb2.LanguageProto())
-      langs[language.id] = language
-  return langs
 
 
 def main(argv):
