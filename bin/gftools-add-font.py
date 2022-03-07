@@ -54,6 +54,7 @@ from absl import flags
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
+from gftools.axisreg import axis_registry
 from glyphsets.codepoints import SubsetsInFont
 from absl import app
 from google.protobuf import text_format
@@ -190,7 +191,33 @@ def _MakeMetadata(fontdir, is_new):
         var_axes.min_value = axes[1]
         var_axes.max_value = axes[2]
 
+  registry_overrides = _RegistryOverrides(axes_info_from_font_files)
+  if registry_overrides:
+    for k, v in registry_overrides.items():
+      metadata.registry_default_overrides[k] = v
   return metadata
+
+
+def _RegistryOverrides(axes_info):
+  """Get registry default value overrides for family axes.
+  
+  Args:
+    axes_info: set of Variable axes info
+  
+  Returns:
+    A dict structured {axis_tag: font_axis_default_value}
+  """
+  res = {}
+  for font in axes_info:
+    for axis_tag, min_val, max_val, dflt_val in font:
+      default_val = axis_registry[axis_tag].default_value
+      if default_val >= min_val and default_val <= max_val:
+        continue
+      if axis_tag not in res:
+        res[axis_tag] = dflt_val
+      else:
+        res[axis_tag] = min(res[axis_tag], dflt_val)
+  return res
 
 
 def _AxisInfo(fontfile):
@@ -208,7 +235,7 @@ def _AxisInfo(fontfile):
     else:
       fvar = font['fvar']
       axis_info = [
-          (a.axisTag, a.minValue, a.maxValue) for a in fvar.axes
+          (a.axisTag, a.minValue, a.maxValue, a.defaultValue) for a in fvar.axes
       ]
       return tuple(sorted(axis_info))
 
