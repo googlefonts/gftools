@@ -10,6 +10,7 @@ gftools ufo-fix-instances family.designspace
 from fontTools.designspaceLib import DesignSpaceDocument, InstanceDescriptor
 from copy import deepcopy
 from gftools.fix import WEIGHT_VALUES
+from gftools.axisreg import axis_registry as axis_reg
 import sys
 
 
@@ -20,10 +21,21 @@ def build_instances(ds):
     wght_axis = next((a for a in axes if a.tag == "wght"), None)
     wght_vals = list(range(int(wght_axis.minimum), int(wght_axis.maximum + 100), 100))
     italic_axis = next((a for a in axes if a.tag in ["slnt", "ital"]), None)
+
+    dflt_coords = {}
+    for axis in axes:
+        if axis.tag not in axis_reg or (
+            axis_reg[axis.tag].default_value < axis.minimum
+            or axis_reg[axis.tag].default_value > axis.maximum
+        ):
+            dflt_coords[axis.tag] = axis.map_forward(axis.default)
+        else:
+            dflt_coords[axis.tag] = axis.map_forward(axis_reg[axis.tag].default_value)
+
     for wght in wght_vals:
         inst = InstanceDescriptor()
-        coords = {a.tag: a.default for a in axes}
-        coords["wght"] = float(wght)
+        coords = deepcopy(dflt_coords)
+        coords["wght"] = wght_axis.map_forward(wght)
         inst.location = coords
         inst.styleName = WEIGHT_VALUES[wght]
         instances.append(inst)
@@ -34,7 +46,9 @@ def build_instances(ds):
             inst.styleName = f"{inst.styleName} Italic".replace(
                 "Regular Italic", "Italic"
             )
-            inst.location[italic_axis.tag] = italic_axis.minimum
+            inst.location[italic_axis.tag] = italic_axis.map_forward(
+                italic_axis.minimum
+            )
         instances += italics
     return instances
 
