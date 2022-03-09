@@ -52,7 +52,6 @@ setup(
                       "encodings/*.nam",
                       "encodings/GF Glyph Sets/*.nam",
                       'template.upstream.yaml',
-                      "axisregistry/*.textproto",
                       "udhr_all.txt",
                       "templates/*.html",
                       "push-templates/*.html",
@@ -80,6 +79,7 @@ setup(
 #                      see: https://github.com/fontforge/fontforge/issues/2048
         'setuptools',
         'FontTools[ufo]',
+        'axisregistry>=0.2.0', # API update removed fallback names pre-processing
         'absl-py',
         'glyphsLib',
         'glyphsets>=0.2.1',

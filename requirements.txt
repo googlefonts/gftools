@@ -1,5 +1,6 @@
 fonttools[ufo]
 #google-apputils
+axisregistry>=0.2.0
 absl-py
 protobuf
 PyGithub
