@@ -38,6 +38,7 @@ from strictyaml import ( # type: ignore
 import functools
 from hashlib import sha1
 from fontTools.ttLib import TTFont # type: ignore
+from gflanguages import LoadLanguages
 from gftools.util import google_fonts as fonts
 
 # ignore type because mypy error: Module 'google.protobuf' has no
@@ -925,7 +926,7 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
   metadata.source.repository_url = upstream_conf['repository_url']
   metadata.source.commit = upstream_commit_sha
 
-  language_comments = fonts.LanguageComments(fonts.LoadLanguages())
+  language_comments = fonts.LanguageComments(LoadLanguages())
   fonts.WriteProto(metadata, metadata_file_name, comments=language_comments)
 
 def _create_package_content(package_target_dir: str, repos_dir: str,

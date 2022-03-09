@@ -39,9 +39,11 @@ if __name__ == '__main__':
 
 import gftools.fonts_public_pb2 as fonts_pb2
 from fontTools import ttLib
+from gflanguages import LoadLanguages
 from glyphsets.subsets import SUBSETS
 from google.protobuf import text_format
 from hyperglot import parse
+
 
 
 # See https://www.microsoft.com/typography/otspec/name.htm.
@@ -463,36 +465,8 @@ def LicenseFromPath(path):
   return _EntryForEndOfPath(path, _KNOWN_LICENSE_DIRS)
 
 
-def LoadLanguages(languages_dir=resource_filename(
-  "gftools",
-  os.path.join("lang", "languages"))
-):
-  languages = {}
-  for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      language = text_format.Parse(f.read(), fonts_pb2.LanguageProto())
-      languages[language.id] = language
-  return languages
-
-
-def LoadScripts(scripts_dir):
-  scripts = {}
-  for textproto_file in glob.iglob(os.path.join(scripts_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      script = text_format.Parse(f.read(), fonts_pb2.ScriptProto())
-      scripts[script.id] = script
-  return scripts
-
-
-def LoadRegions(regions_dir):
-  regions = {}
-  for textproto_file in glob.iglob(os.path.join(regions_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      region = text_format.Parse(f.read(), fonts_pb2.RegionProto())
-      regions[region.id] = region
-  return regions
-
-
+# Note:      This function uses hyperglot, which is licensed GPLv3
+# See also:  https://github.com/googlefonts/gftools/issues/498
 def SupportedLanguages(ttFont, languages=LoadLanguages()):
   """Get languages supported by given ttFont.
 

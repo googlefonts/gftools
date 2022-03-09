@@ -17,6 +17,8 @@ gftools lang-support -l ./lang/ -r ./ofl/noto*/METADATA.pb
 from absl import app
 from absl import flags
 from fontTools.ttLib import TTFont
+from gflanguages import (LoadLanguages,
+                         LoadScripts)
 from gftools import fonts_public_pb2
 from gftools.util import google_fonts as fonts
 from google.protobuf import text_format
@@ -26,8 +28,7 @@ import os
 from pkg_resources import resource_filename
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('lang', resource_filename("gftools", "lang"), 'Path to lang metadata package', short_name='l')
-flags.mark_flag_as_required('lang')
+flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')
 flags.DEFINE_bool('report', False, 'Whether to output a report of lang metadata insights', short_name='r')
 flags.DEFINE_bool('sample_text_audit', False, 'Whether to run the sample text audit', short_name='s')
 flags.DEFINE_string('out', None, 'Path to output directory for report', short_name='o')
@@ -125,8 +126,8 @@ def _SampleTextAudit(out_dir, languages, scripts, unused_scripts=[]):
 
 
 def main(argv):
-  languages = fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
-  scripts = fonts.LoadScripts(os.path.join(FLAGS.lang, 'scripts'))
+  languages = LoadLanguages(base_dir=FLAGS.lang)
+  scripts = LoadScripts(base_dir=FLAGS.lang)
 
   if FLAGS.report:
     assert len(argv) > 1, 'No METADATA.pb files specified'

@@ -49,14 +49,11 @@ setup(
               'gftools.builder'],
     package_data={'gftools.util': ["GlyphsInfo/*.xml", "UnicodeSections/*.json"],
                   'gftools': [
-                      "encodings/*.nam",
-                      "encodings/GF Glyph Sets/*.nam",
                       'template.upstream.yaml',
                       "axisregistry/*.textproto",
                       "udhr_all.txt",
                       "templates/*.html",
-                      "push-templates/*.html",
-                      "lang/*/*.textproto",
+                      "push-templates/*.html"
                   ]
                  },
     scripts=gftools_scripts(),
@@ -82,6 +79,7 @@ setup(
         'FontTools[ufo]',
         'absl-py',
         'glyphsLib',
+        'gflanguages>=0.4.0',
         'glyphsets>=0.2.1',
         'PyGithub',
         'pillow',

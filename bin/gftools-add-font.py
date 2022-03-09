@@ -51,6 +51,7 @@ from fontTools import ttLib
 
 
 from absl import flags
+from gflanguages import LoadLanguages
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
@@ -69,7 +70,7 @@ flags.DEFINE_integer('min_pct', 50,
 flags.DEFINE_float('min_pct_ext', 0.01,
                    'What percentage of subset codepoints have to be supported'
                    ' for a -ext subset.')
-flags.DEFINE_string('lang', resource_filename("gftools", "lang"), 'Path to lang metadata package', short_name='l')
+flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')
 
 
 def _FileFamilyStyleWeights(fontdir):
@@ -173,7 +174,7 @@ def _MakeMetadata(fontdir, is_new):
       fontdir, fonts.GetExemplarFont(metadata).filename
     )
     exemplar_font = ttLib.TTFont(exemplar_font_fp)
-    languages = fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
+    languages = LoadLanguages(base_dir=FLAGS.lang)
     supported_languages = fonts.SupportedLanguages(exemplar_font, languages)
     supported_languages = sorted([l.id for l in supported_languages])
     metadata.languages.extend(supported_languages)
@@ -296,7 +297,7 @@ def main(argv):
     is_new = False
 
   language_comments = fonts.LanguageComments(
-    fonts.LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
+    LoadLanguages(base_dir=FLAGS.lang)
   )
   metadata = _MakeMetadata(fontdir, is_new)
   fonts.WriteProto(metadata, os.path.join(fontdir, 'METADATA.pb'), comments=language_comments)
