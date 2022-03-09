@@ -147,7 +147,7 @@ def get_gh_gf_family_entry(family_name):
   family_name_normal = _family_name_normal(family_name)
   variables = _get_query_variables('google','fonts', family_name_normal)
 
-  result = _run_gh_graphql_query(GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables)
+  result = GitHubClient("google", "fonts")._run_graphql(GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables)
   return result
 
 def _git_tree_iterate(path, tree, topdown):

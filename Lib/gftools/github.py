@@ -52,17 +52,17 @@ class GitHubClient:
         return base_url
 
     def get_blob(self, file_sha):
-        url = self._rest_repo_url + f'/git/blobs/{file_sha}'
+        url = self.rest_url(f'git/blobs/{file_sha}')
         headers = {
             'Accept': 'application/vnd.github.v3.raw',
-            'Authorization': f'bearer {github_api_token}'
+            'Authorization': f'bearer {self.gh_token}'
         }
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         return response
     
     def open_prs(self, pr_head: str, pr_base_branch: str) -> typing.List:
-        return self._get(self.rest_url("pulls", state="open"))
+        return self._get(self.rest_url("pulls", state="open", head=pr_head, base=pr_base_branch))
     
     def create_pr(self, title: str, body: str, head: str, base: str):
         return self._post(
