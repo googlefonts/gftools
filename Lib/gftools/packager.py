@@ -40,6 +40,7 @@ from hashlib import sha1
 from fontTools.ttLib import TTFont # type: ignore
 from gflanguages import LoadLanguages
 from gftools.util import google_fonts as fonts
+from gftools.github import GitHubClient
 
 # ignore type because mypy error: Module 'google.protobuf' has no
 # attribute 'text_format'
@@ -63,13 +64,6 @@ with open(resource_filename('gftools', 'template.upstream.yaml')) as f:
   # without adding them to the call to format (KeyError).
   upstream_yaml_template = upstream_yaml_template.replace('{CATEGORIES}', ', '.join(CATEGORIES))
 
-
-
-# GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
-GITHUB_REPO_SSH_URL = 'git@github.com:{repo_name_with_owner}.git'.format
-
-GITHUB_GRAPHQL_API = 'https://api.github.com/graphql'
-GITHUB_V3_REST_API = 'https://api.github.com'
 
 GIT_NEW_BRANCH_PREFIX = 'gftools_packager_'
 # Using object(expression:$rev), we query all three license folders
@@ -143,29 +137,6 @@ def _get_query_variables(repo_owner, repo_name, family_name, reference='refs/hea
     'uflDir': f'{reference}:ufl/{family_name}'
   }
 
-def _get_github_api_token() -> str:
-  # $ export GH_TOKEN={the GitHub API token}
-  return os.environ['GH_TOKEN']
-
-def _post_github(url: str, payload: typing.Dict):
-  github_api_token = _get_github_api_token()
-  headers = {'Authorization': f'bearer {github_api_token}'}
-  response = requests.post(url, json=payload, headers=headers)
-  if response.status_code == requests.codes.unprocessable:
-    # has a helpful response.json with an 'errors' key.
-    pass
-  else:
-    response.raise_for_status()
-  json = response.json()
-  if 'errors' in json:
-    errors = pprint.pformat(json['errors'], indent=2)
-    raise Exception(f'GitHub POST query failed to url {url}:\n {errors}')
-  return json
-
-def _run_gh_graphql_query(query, variables):
-  payload = {'query': query, 'variables': variables}
-  return _post_github(GITHUB_GRAPHQL_API, payload)
-
 def _family_name_normal(family_name: str) -> str:
   return family_name.lower()\
       .replace(' ', '')\
@@ -177,7 +148,7 @@ def get_gh_gf_family_entry(family_name):
   family_name_normal = _family_name_normal(family_name)
   variables = _get_query_variables('google','fonts', family_name_normal)
 
-  result = _run_gh_graphql_query(GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables)
+  result = GitHubClient("google", "fonts")._run_graphql(GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables)
   return result
 
 def _git_tree_iterate(path, tree, topdown):
@@ -201,21 +172,8 @@ def _git_tree_iterate(path, tree, topdown):
 def _git_tree_walk(path, tree, topdown=True):
   yield from _git_tree_iterate(path.split(os.sep), tree[path], topdown)
 
-def get_github_blob(repo_owner, repo_name, file_sha):
-  github_api_token = _get_github_api_token()
-  url = f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/git/blobs/{file_sha}'
-  headers = {
-    'Accept': 'application/vnd.github.v3.raw',
-    'Authorization': f'bearer {github_api_token}'
-  }
-  response = requests.get(url, headers=headers)
-  # print(f'response headers: {pprint.pformat(response.headers, indent=2)}')
-  # raises requests.exceptions.HTTPError
-  response.raise_for_status()
-  return response
-
 def get_github_gf_blob(file_sha):
-  return get_github_blob('google', 'fonts', file_sha)
+  return GitHubClient('google', 'fonts').get_blob(file_sha)
 
 def _shallow_clone_git(target_dir, git_url, branch_or_tag='main'):
   """
@@ -1199,53 +1157,8 @@ def _push(repo: pygit2.Repository, url: str, local_branch_name: str,
   #if callbacks.rejected_push_message is not None:
   #  raise Exception(callbacks.rejected_push_message)
 
-def get_github_open_pull_requests(repo_owner: str, repo_name: str,
-                pr_head: str, pr_base_branch: str) -> typing.Union[typing.List]:
-  url = (f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/pulls?state=open'
-         f'&head={urllib.parse.quote(pr_head)}'
-         f'&base={urllib.parse.quote(pr_base_branch)}')
-  github_api_token = _get_github_api_token()
-  headers = {'Authorization': f'bearer {github_api_token}'}
+GITHUB_REPO_SSH_URL = 'git@github.com:{repo_name_with_owner}.git'.format
 
-  response = requests.get(url, headers=headers)
-  # print(f'response headers: {pprint.pformat(response.headers, indent=2)}')
-  # raises requests.exceptions.HTTPError
-  response.raise_for_status()
-  json = response.json()
-  if 'errors' in json:
-    errors = pprint.pformat(json['errors'], indent=2)
-    raise Exception(f'GitHub REST query failed:\n {errors}')
-  return json
-
-def create_github_pull_request(repo_owner: str, repo_name: str, pr_head: str,
-                               pr_base_branch: str, title: str, body: str):
-  url = f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/pulls'
-  payload = {
-    'title': title,
-    'body': body,
-    'head': pr_head,
-    'base': pr_base_branch,
-    'maintainer_can_modify': True
-  }
-  return _post_github(url, payload)
-
-def create_github_issue_comment(repo_owner: str, repo_name: str,
-                                issue_number: int, pr_comment_body: str):
-  url = (f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/issues'
-          f'/{issue_number}/comments')
-  payload = {
-    'body': pr_comment_body
-  }
-  return _post_github(url, payload)
-
-def create_github_issue(repo_owner: str, repo_name: str,
-                        pr_title: str, pr_body: str):
-  url = (f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/issues')
-  payload = {
-    'title': pr_title,
-    'body': pr_body
-  }
-  return _post_github(url, payload)
 
 def _make_pr(repo: pygit2.Repository, local_branch_name: str,
                                   pr_upstream: str, push_upstream: str,
@@ -1285,20 +1198,18 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
     #_updateUpstream(prRemoteName, prRemoteRef))
     #// NOTE: at this point the PUSH was already successful, so the branch
     #// of the PR exists or if it existed it has changed.
-  open_prs = get_github_open_pull_requests(pr_owner, pr_repo, pr_head,
-                                           pr_base_branch)
+  client = GitHubClient(pr_owner, pr_repo)
+  open_prs = client.open_prs(pr_head, pr_base_branch)
 
   if not len(open_prs):
     # No open PRs, creating …
-    result = create_github_pull_request(pr_owner, pr_repo, pr_head,
-                                pr_base_branch, pr_title, pr_message_body)
+    result = client.create_pr(pr_title, pr_message_body, pr_head, pr_base_branch)
     print(f'Created a PR #{result["number"]} {result["html_url"]}')
   else:
     # found open PR
     pr_issue_number = open_prs[0]['number']
     pr_comment_body = f'Updated\n\n## {pr_title}\n\n---\n{pr_message_body}'
-    result = create_github_issue_comment(pr_owner, pr_repo, pr_issue_number,
-                                                        pr_comment_body)
+    result = client.create_issue_comment(pr_issue_number, pr_comment_body)
     print(f'Created a comment in PR #{pr_issue_number} {result["html_url"]}')
 
 def _get_root_commit(repo: pygit2.Repository, base_remote_branch:str,

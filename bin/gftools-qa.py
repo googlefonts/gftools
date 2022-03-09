@@ -43,10 +43,7 @@ except ModuleNotFoundError:
     raise ModuleNotFoundError(("gftools was installed without the QA "
         "dependencies. To install the dependencies, see the ReadMe, "
         "https://github.com/googlefonts/gftools#installation"))
-from gftools.packager import (
-    create_github_issue_comment,
-    create_github_issue
-)
+from gftools.github import GitHubClient
 
 __version__ = "2.1.3"
 logger = logging.getLogger(__name__)
@@ -265,17 +262,15 @@ class FontQA:
                 "Cannot Post Github message because no Fontbakery report exists"
             )
             return
+        
+        client = GitHubClient(repo_owner, repo_name)
 
         with open(fontbakery_report) as doc:
             msg = doc.read()
             if issue_number:
-                create_github_issue_comment(
-                    repo_owner, repo_name, issue_number, msg
-                )
+                client.create_issue_comment(issue_number, msg)
             else:
-                create_github_issue(
-                    repo_owner, repo_name, "Google Font QA report", msg
-                )
+                client.create_issue("Google Font QA report", msg)
 
 
 def family_name_from_fonts(fonts):
