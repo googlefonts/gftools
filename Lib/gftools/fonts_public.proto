@@ -54,6 +54,7 @@ message AxisSegmentProto {
 message SourceProto {
   optional string repository_url = 1;
   optional string commit = 2;
+  optional string archive_url = 3;
 }
 
 enum TargetTypeProto {
