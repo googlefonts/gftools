@@ -50,7 +50,6 @@ setup(
     package_data={'gftools.util': ["GlyphsInfo/*.xml", "UnicodeSections/*.json"],
                   'gftools': [
                       'template.upstream.yaml',
-                      "axisregistry/*.textproto",
                       "udhr_all.txt",
                       "templates/*.html",
                       "push-templates/*.html"
@@ -77,6 +76,7 @@ setup(
 #                      see: https://github.com/fontforge/fontforge/issues/2048
         'setuptools',
         'FontTools[ufo]',
+        'axisregistry>=0.2.0', # API update removed fallback names pre-processing
         'absl-py',
         'glyphsLib',
         'gflanguages>=0.4.0',
