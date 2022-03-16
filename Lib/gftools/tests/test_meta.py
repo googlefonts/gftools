@@ -1,7 +1,7 @@
 import pytest
 import os
 from glob import glob
-from gftools.meta import gen_meta_table
+from gftools.meta import gen_meta_table, _validate_scriptlangtag
 from fontTools.ttLib import TTFont
 
 
@@ -36,3 +36,10 @@ def test_meta_where_one_present():
         "slng": "en-Latn, es-Arab-RS-spanglis, tur-Hang-IT",
         "dlng": "en-Latn-AZ"
     }
+
+
+def test_validity():
+    assert not _validate_scriptlangtag("Cyrl-Serbia")
+    assert not _validate_scriptlangtag("zh-zho-Hans")
+    assert not _validate_scriptlangtag("eng-Latn")
+

@@ -51,7 +51,7 @@ def _language_list_to_string(values):
 
 def _validate_scriptlangtag(value):
     try:
-        code = Language.get(value)
+        code = Language.get(value, normalize=False)
     except LanguageTagError:
         log.warning(f"Skipping unparsable script/lang tag '{value}'")
         return False
@@ -69,8 +69,14 @@ def _validate_scriptlangtag(value):
         log.warning(f"Invalid script code '{code.script}' in '{value}'")
     if code.territory and not VALIDITY.fullmatch(code.territory):
         log.warning(f"Invalid territory code '{code.territory}' in '{value}'")
+    if code.extlangs:
+        for extlang in code.extlangs:
+            if not VALIDITY.fullmatch(extlang):
+                log.warning(f"Invalid extended language code '{extlang}' in '{value}'")
+                return False
     if code.variants:
         for variant in code.variants:
             if not VALIDITY.fullmatch(variant):
                 log.warning(f"Invalid variant code '{variant}' in '{value}'")
+                return False
     return code.is_valid()
