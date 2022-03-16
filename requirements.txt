@@ -23,6 +23,6 @@ strictyaml
 tabulate
 unidecode
 skia-pathops
-langcodes
+langcodes>=3.2.1
 jinja2
 hyperglot
