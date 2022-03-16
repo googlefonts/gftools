@@ -1,5 +1,4 @@
 """Helper functions for creating/checking the server push files."""
-import json
 import requests
 from pathlib import Path
 from dataclasses import dataclass
@@ -60,7 +59,7 @@ def family_dir_name(path):
 def gf_server_metadata(url):
     """Get family json data from a Google Fonts metadata url"""
     # can't do requests.get("url").json() since request text starts with ")]}'"
-    info = json.loads(requests.get(url).text[5:])
+    info = requests.get(url).json()
     return {i["family"]: i for i in info["familyMetadataList"]}
 
 

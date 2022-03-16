@@ -53,8 +53,7 @@ def Google_Fonts_has_family(name):
     # This endpoint is private and may change at some point
     # TODO (MF) if another function needs this data, refactor it into a
     # function and use a lru cache
-    r = requests.get("https://fonts.google.com/metadata/fonts")
-    data = json.loads(r.text[5:])
+    data = requests.get("https://fonts.google.com/metadata/fonts").json()
     family_names = set(i["family"] for i in data["familyMetadataList"])
     return name in family_names
 
