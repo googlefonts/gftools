@@ -26,11 +26,13 @@ def gen_meta_table(ttFont, config):
         config: a dictionary containing ``slng``/``dlng`` keys
     """
     assert isinstance(config, dict)
+    has_value = False
     if "meta" in ttFont:
         meta = ttFont["meta"]
         log.warning("meta table already found; merging configuration values!")
+        has_value = True
     else:
-        ttFont["meta"] = meta = newTable("meta")
+        meta = newTable("meta")
     for key in ["slng", "dlng"]:
         if key not in config:
             continue
@@ -40,7 +42,13 @@ def gen_meta_table(ttFont, config):
         if key in meta.data:
             values.extend(re.split(r",\s*", meta.data[key]))
         value = _language_list_to_string(values)
-        meta.data[key] = value
+        if value:
+            meta.data[key] = value
+            has_value = True
+    if has_value:
+        ttFont["meta"] = meta
+    else:
+        log.warning("No relevant data; no meta table written")
 
 
 def _language_list_to_string(values):
