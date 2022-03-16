@@ -9,7 +9,9 @@ from fontFeatures import FontFeatures, Routine, Substitution
 from fontFeatures.feaLib import FeaParser
 
 logger = logging.getLogger("ufomerge")
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
+# I don't care about ambiguous glyph names that look like ranges
+logging.getLogger("fontTools.feaLib.parser").setLevel(logging.ERROR)
 
 parser = ArgumentParser(description=__doc__)
 
@@ -159,6 +161,7 @@ else:
                 # we have on the left hand side need to be copied into UFO1
                 if not any(g in glyphs for g in flat_outputs):
                     continue
+                logging.debug("Adding rule '%s'", rule.asFea())
             newroutine.rules.append(rule)
         if newroutine.rules:
             # Was it in a feature?
@@ -245,7 +248,7 @@ def close_components(glyphs, g):
             # Also not a problem
             glyphs.add(comp.baseGlyph)
             close_components(glyphs, comp.baseGlyph)
-        else:
+        elif comp.baseGlyph in ufo1:
             # Oh bother.
             logger.warning(
                 f"New glyph {g} used component {comp.baseGlyph} which already exists in font; not replacing it, as you have not specified --replace-existing"
@@ -258,7 +261,7 @@ for g in list(glyphs):  # list() avoids "Set changed size during iteration" erro
 # Now do the add
 for g in glyphs:
     if args.skip_existing and g in ufo1:
-        logger.info("Skipping glyph '%s' already present in UFO 1" % g)
+        logger.info("Skipping glyph '%s' already present in target file" % g)
         continue
 
     merge_set(ufo1, ufo2, "public.glyphOrder", g, create_if_not_in_ufo1=False)
