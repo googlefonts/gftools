@@ -43,6 +43,7 @@ from functools import cmp_to_key
 import contextlib
 import errno
 import glob
+import re
 import os
 import sys
 import time
@@ -50,11 +51,15 @@ from fontTools import ttLib
 
 
 from absl import flags
+from gflanguages import LoadLanguages
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
+from gftools.axisreg import axis_registry
+from glyphsets.codepoints import SubsetsInFont
 from absl import app
 from google.protobuf import text_format
+from pkg_resources import resource_filename
 
 FLAGS = flags.FLAGS
 
@@ -65,6 +70,7 @@ flags.DEFINE_integer('min_pct', 50,
 flags.DEFINE_float('min_pct_ext', 0.01,
                    'What percentage of subset codepoints have to be supported'
                    ' for a -ext subset.')
+flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')
 
 
 def _FileFamilyStyleWeights(fontdir):
@@ -122,21 +128,21 @@ def _MakeMetadata(fontdir, is_new):
   metadata = fonts_pb2.FamilyProto()
   metadata.name = file_family_style_weights[0].family
 
-  subsets_in_font = [s[0] for s in fonts.SubsetsInFont(
+  subsets_in_font = [s[0] for s in SubsetsInFont(
     first_file, FLAGS.min_pct, FLAGS.min_pct_ext
   )]
 
   if not is_new:
-    old_metadata = fonts_pb2.FamilyProto()
-    with open(old_metadata_file, 'rb') as old_meta:
-      text_format.Parse(old_meta.read(), old_metadata)
-      metadata.designer = old_metadata.designer
-      metadata.category = old_metadata.category
-      metadata.date_added = old_metadata.date_added
-      subsets = set(old_metadata.subsets) | set(subsets_in_font)
+    old_metadata = fonts.ReadProto(fonts_pb2.FamilyProto(), old_metadata_file)
+    metadata.designer = old_metadata.designer
+    metadata.category[:] = old_metadata.category
+    metadata.date_added = old_metadata.date_added
+    subsets = set(old_metadata.subsets) | set(subsets_in_font)
+    metadata.languages[:] = old_metadata.languages
+    metadata.fallbacks.extend(old_metadata.fallbacks)
   else:
     metadata.designer = 'UNKNOWN'
-    metadata.category = 'SANS_SERIF'
+    metadata.category.append('SANS_SERIF')
     metadata.date_added = time.strftime('%Y-%m-%d')
     subsets = ['menu'] + subsets_in_font
 
@@ -163,6 +169,16 @@ def _MakeMetadata(fontdir, is_new):
                                                 default_fullname)
     font_metadata.copyright = font_copyright
 
+  if not metadata.languages:
+    exemplar_font_fp = os.path.join(
+      fontdir, fonts.GetExemplarFont(metadata).filename
+    )
+    exemplar_font = ttLib.TTFont(exemplar_font_fp)
+    languages = LoadLanguages(base_dir=FLAGS.lang)
+    supported_languages = fonts.SupportedLanguages(exemplar_font, languages)
+    supported_languages = sorted([l.id for l in supported_languages])
+    metadata.languages.extend(supported_languages)
+
   axes_info_from_font_files \
     = {_AxisInfo(f.file) for f in file_family_style_weights}
   if len(axes_info_from_font_files) != 1:
@@ -176,7 +192,33 @@ def _MakeMetadata(fontdir, is_new):
         var_axes.min_value = axes[1]
         var_axes.max_value = axes[2]
 
+  registry_overrides = _RegistryOverrides(axes_info_from_font_files)
+  if registry_overrides:
+    for k, v in registry_overrides.items():
+      metadata.registry_default_overrides[k] = v
   return metadata
+
+
+def _RegistryOverrides(axes_info):
+  """Get registry default value overrides for family axes.
+  
+  Args:
+    axes_info: set of Variable axes info
+  
+  Returns:
+    A dict structured {axis_tag: font_axis_default_value}
+  """
+  res = {}
+  for font in axes_info:
+    for axis_tag, min_val, max_val, dflt_val in font:
+      default_val = axis_registry[axis_tag].default_value
+      if default_val >= min_val and default_val <= max_val:
+        continue
+      if axis_tag not in res:
+        res[axis_tag] = dflt_val
+      else:
+        res[axis_tag] = min(res[axis_tag], dflt_val)
+  return res
 
 
 def _AxisInfo(fontfile):
@@ -194,7 +236,7 @@ def _AxisInfo(fontfile):
     else:
       fvar = font['fvar']
       axis_info = [
-          (a.axisTag, a.minValue, a.maxValue) for a in fvar.axes
+          (a.axisTag, a.minValue, a.maxValue, a.defaultValue) for a in fvar.axes
       ]
       return tuple(sorted(axis_info))
 
@@ -254,17 +296,17 @@ def main(argv):
   if os.path.isfile(old_metadata_file):
     is_new = False
 
+  language_comments = fonts.LanguageComments(
+    LoadLanguages(base_dir=FLAGS.lang)
+  )
   metadata = _MakeMetadata(fontdir, is_new)
-  text_proto = text_format.MessageToString(metadata, as_utf8=True)
+  fonts.WriteProto(metadata, os.path.join(fontdir, 'METADATA.pb'), comments=language_comments)
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
   if os.path.isfile(desc):
     print('DESCRIPTION.en_us.html exists')
   else:
     _WriteTextFile(desc, 'N/A')
-
-  _WriteTextFile(os.path.join(fontdir, 'METADATA.pb'), text_proto)
-
 
 
 if __name__ == '__main__':

@@ -18,12 +18,9 @@
 
 """
 from __future__ import print_function
-import contextlib
 import os
 import sys
 from fontTools.ttLib import TTFont
-from gftools.util import google_fonts as fonts
-from absl import app
 
 
 def ListFeatures(font):

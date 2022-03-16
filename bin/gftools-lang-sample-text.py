@@ -13,11 +13,11 @@ gftools lang-sample-text -l ./languages/en.textproto ./udhr_translations/en.xml
 
 from absl import app
 from absl import flags
-from fontTools.ttLib import TTFont
+from gflanguages import (LoadLanguages,
+                         LoadRegions)
 from gftools import fonts_public_pb2
 from gftools.util.udhr import Udhr
 from google.protobuf import text_format
-from hyperglot import parse
 from lxml import etree
 import csv
 import glob
@@ -27,7 +27,6 @@ import yaml
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')
-flags.mark_flag_as_required('lang')
 flags.DEFINE_string('udhrs', None, 'Path to UDHR translations (XML)', short_name='u')
 flags.DEFINE_string('samples', None, 'Path to per-family samples from noto-data-dev repo', short_name='s')
 
@@ -44,24 +43,6 @@ def _WriteProto(proto, path, comments = None):
       lines = [s if s not in comments else s + '  # ' + comments[s] for s in textproto.split('\n')]
       textproto = '\n'.join(lines)
     f.write(textproto)
-
-
-def _LoadLanguages(languages_dir):
-  languages = {}
-  for textproto_file in glob.iglob(os.path.join(languages_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      language = text_format.Parse(f.read(), fonts_public_pb2.LanguageProto())
-      languages[language.id] = language
-  return languages
-
-
-def _LoadRegions(regions_dir):
-  regions = {}
-  for textproto_file in glob.iglob(os.path.join(regions_dir, '*.textproto')):
-    with open(textproto_file, 'r', encoding='utf-8') as f:
-      region = text_format.Parse(f.read(), fonts_public_pb2.RegionProto())
-      regions[region.id] = region
-  return regions
 
 
 def _GetLanguageForUdhr(languages, udhr):
@@ -111,8 +92,8 @@ def _ReplaceInSampleText(languages):
 
 
 def main(argv):
-  languages = _LoadLanguages(os.path.join(FLAGS.lang, 'languages'))
-  regions = _LoadRegions(os.path.join(FLAGS.lang, 'regions'))
+  languages = LoadLanguages(base_dir=FLAGS.lang)
+  regions = LoadRegions(base_dir=FLAGS.lang)
 
   if FLAGS.samples:
     assert len(argv) > 1, 'No METADATA.pb files specified'

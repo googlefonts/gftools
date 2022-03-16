@@ -61,7 +61,10 @@ which looks like this::
       - coordinates:
           wght: 700
         ...
-      ...
+    vttSources:
+      Texturina[wght].ttf: vtt-roman.ttx
+      Texturina-Italic[wght].ttf: vtt-italic.ttx
+    ...
 
 To build a font family from the command line, use:
 
@@ -94,8 +97,9 @@ required, all others have sensible defaults:
 * ``ttDir``: Where to put TrueType static fonts. Defaults to ``$outputDir/ttf``.
 * ``otDir``: Where to put CFF static fonts. Defaults to ``$outputDir/otf``.
 * ``woffDir``: Where to put WOFF2 static fonts. Defaults to ``$outputDir/webfonts``.
-* ``cleanUp`: Whether or not to remove temporary files. Defaults to ``true``.
-* ``autohintTTF`: Whether or not to autohint TTF files. Defaults to ``true``.
+* ``cleanUp``: Whether or not to remove temporary files. Defaults to ``true``.
+* ``autohintTTF``: Whether or not to autohint TTF files. Defaults to ``true``.
+* ``ttfaUseScript``: Whether or not to detect a font's primary script and add a ``-D<script>`` flag to ttfautohint. Defaults to ``false``.
 * ``axisOrder``: STAT table axis order. Defaults to fvar order.
 * ``familyName``: Family name for variable fonts. Defaults to family name of first source file.
 * ``flattenComponents``: Whether to flatten components on export. Defaults to ``true``.
@@ -103,13 +107,13 @@ required, all others have sensible defaults:
 
 """
 
-from babelfont import Babelfont
 from fontmake.font_project import FontProject
 from fontTools import designspaceLib
 from fontTools.otlLib.builder import buildStatTable
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.woff2 import main as woff2_main
 from gftools.builder.schema import schema
+from gftools.builder.autohint import autohint
 from gftools.fix import fix_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.meta import gen_meta_table
@@ -118,9 +122,13 @@ from gftools.instancer import gen_static_font
 from strictyaml import load, YAMLError
 from strictyaml.exceptions import YAMLValidationError
 from ufo2ft import CFFOptimization
-from ufo2ft.filters import loadFilterFromString
+from ufo2ft.filters.flattenComponents import FlattenComponentsFilter
+from ufo2ft.filters.decomposeTransformedComponents import DecomposeTransformedComponentsFilter
+from vttLib.transfer import merge_from_file as merge_vtt_hinting
+from vttLib import compile_instructions as compile_vtt_hinting
 import difflib
 import glyphsLib
+from defcon import Font
 import logging
 import os
 import re
@@ -139,8 +147,8 @@ class GFBuilder:
                 os.chdir(os.path.dirname(configfile))
         else:
             self.config = config
-        self.masters = {}
         self.logger = logging.getLogger("GFBuilder")
+        self.outputs = set()  # A list of files we created
         self.fill_config_defaults()
 
     def load_config(self, configfile):
@@ -186,8 +194,13 @@ class GFBuilder:
 
         if self.config["buildVariable"]:
             self.build_variable()
+            # transfer vf vtt hints now in case static fonts are instantiated
+            if "vttSources" in self.config:
+                self.build_vtt(self.config['vfDir'])
         if self.config["buildStatic"]:
             self.build_static()
+            if "vttSources" in self.config:
+                self.build_vtt(self.config['ttDir'])
         # All done
         self.logger.info(
             "Building %s completed. All done!" % (
@@ -208,40 +221,32 @@ class GFBuilder:
             for file_ in files_added_during_build:
                 self.rm(file_)
 
-    def load_masters(self):
-        if self.masters:
-            return
-        for src in self.config["sources"]:
-            if src.endswith("glyphs"):
-                gsfont = glyphsLib.GSFont(src)
-                self.masters[src] = []
-                for master in gsfont.masters:
-                    self.masters[src].append(Babelfont.open(src, master=master.name))
-            elif src.endswith("designspace"):
-                continue
+    def get_family_name(self):
+        """Ensure that all source files have the same family name"""
+        names = set()
+        for fp in self.config["sources"]:
+            if fp.endswith("glyphs"):
+                src = glyphsLib.GSFont(fp)
+                names.add(src.familyName)
+            elif fp.endswith("ufo"):
+                src = Font(fp)
+                names.add(src.info.familyName)
+            elif fp.endswith("designspace"):
+                ds = designspaceLib.DesignSpaceDocument.fromfile(self.config["sources"][0])
+                names.add(ds.sources[0].familyName)
             else:
-                self.masters[src] = [Babelfont.open(src)]
+                raise ValueError(f"{fp} not a supported source file!")
+
+        if len(names) > 1:
+            raise ValueError(
+                f"Inconsistent family names in sources {names}. Set familyName in config instead"
+            )
+        return list(names)[0]
 
     def fill_config_defaults(self):
         if "familyName" not in self.config:
             self.logger.info("Deriving family name (this takes a while)")
-            if  self.config["sources"][0].endswith("designspace"):
-                designspace = designspaceLib.DesignSpaceDocument.fromfile(self.config["sources"][0])
-                self.config["familyName"] = designspace.sources[0].familyName
-            else:
-                self.load_masters()
-
-                familynames = set()
-                for masters in self.masters.values():
-                    for master in masters:
-                        familynames.add(master.info.familyName)
-
-                if len(familynames) != 1:
-                    raise ValueError(
-                        "Inconsistent family names in sources (%s). Set familyName in config instead"
-                        % familynames
-                    )
-                self.config["familyName"] = list(familynames)[0]
+            self.config["familyName"] = self.get_family_name()
         if "outputDir" not in self.config:
             self.config["outputDir"] = "../fonts"
         if "vfDir" not in self.config:
@@ -265,6 +270,8 @@ class GFBuilder:
             self.config["buildWebfont"] = self.config["buildStatic"]
         if "autohintTTF" not in self.config:
             self.config["autohintTTF"] = True
+        if "ttfaUseScript" not in self.config:
+            self.config["ttfaUseScript"] = False
         if "logLevel" not in self.config:
             self.config["logLevel"] = "INFO"
         if "cleanUp" not in self.config:
@@ -288,10 +295,16 @@ class GFBuilder:
             args["output_path"] = os.path.join(
                 self.config["vfDir"], sourcebase + "-VF.ttf",
             )
-            output_files = self.run_fontmake(source, args)
-            newname = self.rename_variable(output_files[0])
-            ttFont = TTFont(newname)
-            ttFonts.append(ttFont)
+            try:
+                output_files = self.run_fontmake(source, args)
+                newname = self.rename_variable(output_files[0])
+                ttFont = TTFont(newname)
+                ttFonts.append(ttFont)
+            except Exception as e:
+                self.logger.error("Could not build variable font: %s" % e)
+
+        if not ttFonts:
+            return
 
         self.gen_stat(ttFonts)
         self.gen_meta(ttFonts)
@@ -299,6 +312,7 @@ class GFBuilder:
         # because these tables are needed in order to fix the name tables.
         for ttFont in ttFonts:
             self.post_process(ttFont.reader.file.name)
+            self.outputs.add(ttFont.reader.file.name)
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:
@@ -313,12 +327,12 @@ class GFBuilder:
             filters = args.get("filters", [])
             if self.config["flattenComponents"]:
                 filters.append(
-                    loadFilterFromString("FlattenComponentsFilter")
+                    FlattenComponentsFilter(pre=True)
                 )
 
             if self.config["decomposeTransformedComponents"]:
                 filters.append(
-                    loadFilterFromString("DecomposeTransformedComponentsFilter")
+                    DecomposeTransformedComponentsFilter(pre=True)
                 )
             args["filters"] = filters
 
@@ -436,6 +450,7 @@ class GFBuilder:
                     )
                     static_font.save(dst)
                     postprocessor(dst)
+                    self.outputs.add(dst)
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
@@ -454,6 +469,7 @@ class GFBuilder:
             for fontfile in self.run_fontmake(source, args):
                 self.logger.info("Created static font %s" % fontfile)
                 postprocessor(fontfile)
+                self.outputs.add(fontfile)
 
     def rm(self, fp):
         if os.path.isdir(fp):
@@ -476,18 +492,30 @@ class GFBuilder:
     def post_process_ttf(self, filename):
         if self.config["autohintTTF"]:
             self.logger.debug("Autohinting")
-            self.autohint(filename)
+            autohint(filename, filename, add_script=self.config["ttfaUseScript"])
         self.post_process(filename)
         if self.config["buildWebfont"]:
             self.logger.debug("Building webfont")
             woff2_main(["compress", filename])
             self.move_webfont(filename)
 
-    def autohint(self, filename):
-        from ttfautohint.options import parse_args as ttfautohint_parse_args
-        from ttfautohint import ttfautohint
+    def build_vtt(self, font_dir):
+        for font, vtt_source in self.config['vttSources'].items():
+            if font not in os.listdir(font_dir):
+                continue
+            self.logger.debug(f"Compiling hint file {vtt_source} into {font}")
+            font_path = os.path.join(font_dir, font)
+            font = TTFont(font_path)
+            merge_vtt_hinting(font, vtt_source, keep_cvar=True)
+            compile_vtt_hinting(font, ship=True)
 
-        ttfautohint(**ttfautohint_parse_args([filename, filename]))
+            # Add a gasp table which is optimised for VTT hinting
+            # https://googlefonts.github.io/how-to-hint-variable-fonts/
+            gasp_tbl = newTable("gasp")
+            gasp_tbl.gaspRange = {8: 10, 65535: 15}
+            gasp_tbl.version = 1
+            font['gasp'] = gasp_tbl
+            font.save(font.reader.file.name)
 
     def move_webfont(self, filename):
         wf_filename = filename.replace(".ttf", ".woff2")

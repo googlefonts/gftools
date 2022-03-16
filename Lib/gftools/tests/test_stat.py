@@ -373,7 +373,7 @@ def test_gen_stat_tables_from_config(var_fonts):
         - name: Italic
           value: 1
     """
-    config = yaml.load(config_text)
+    config = yaml.load(config_text, Loader=yaml.SafeLoader)
     gen_stat_tables_from_config(config, var_fonts)
     roman, italic = var_fonts
 

@@ -130,13 +130,6 @@ parser.add_argument(
                  'be used regularly. Instead file an issue to add new '
                  'files to the allowlist.')
 parser.add_argument(
-            '--no-source',
-            action='store_true',
-            help='Don\'t add the "source" key to METADATA.pb. Use this temporarily '
-            'until all back-end systems have been updated. '
-            'See https://github.com/google/fonts/issues/2587'
-            )
-parser.add_argument(
             '-B', '--allow-build',
             action='store_true',
             help='Allow executing the bash command stored in the "build" '

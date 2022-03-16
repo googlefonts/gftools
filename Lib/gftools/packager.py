@@ -23,10 +23,10 @@ import urllib.parse
 import pygit2 # type: ignore
 from strictyaml import ( # type: ignore
                         Map,
+                        UniqueSeq,
                         MapPattern,
                         Enum,
                         Str,
-                        Any,
                         EmptyNone,
                         EmptyDict,
                         Optional,
@@ -38,6 +38,9 @@ from strictyaml import ( # type: ignore
 import functools
 from hashlib import sha1
 from fontTools.ttLib import TTFont # type: ignore
+from gflanguages import LoadLanguages
+from gftools.util import google_fonts as fonts
+from gftools.github import GitHubClient
 
 # ignore type because mypy error: Module 'google.protobuf' has no
 # attribute 'text_format'
@@ -61,13 +64,6 @@ with open(resource_filename('gftools', 'template.upstream.yaml')) as f:
   # without adding them to the call to format (KeyError).
   upstream_yaml_template = upstream_yaml_template.replace('{CATEGORIES}', ', '.join(CATEGORIES))
 
-
-
-# GITHUB_REPO_HTTPS_URL = 'https://github.com/{gh_repo_name_with_owner}.git'.format
-GITHUB_REPO_SSH_URL = 'git@github.com:{repo_name_with_owner}.git'.format
-
-GITHUB_GRAPHQL_API = 'https://api.github.com/graphql'
-GITHUB_V3_REST_API = 'https://api.github.com'
 
 GIT_NEW_BRANCH_PREFIX = 'gftools_packager_'
 # Using object(expression:$rev), we query all three license folders
@@ -141,29 +137,6 @@ def _get_query_variables(repo_owner, repo_name, family_name, reference='refs/hea
     'uflDir': f'{reference}:ufl/{family_name}'
   }
 
-def _get_github_api_token() -> str:
-  # $ export GH_TOKEN={the GitHub API token}
-  return os.environ['GH_TOKEN']
-
-def _post_github(url: str, payload: typing.Dict):
-  github_api_token = _get_github_api_token()
-  headers = {'Authorization': f'bearer {github_api_token}'}
-  response = requests.post(url, json=payload, headers=headers)
-  if response.status_code == requests.codes.unprocessable:
-    # has a helpful response.json with an 'errors' key.
-    pass
-  else:
-    response.raise_for_status()
-  json = response.json()
-  if 'errors' in json:
-    errors = pprint.pformat(json['errors'], indent=2)
-    raise Exception(f'GitHub POST query failed to url {url}:\n {errors}')
-  return json
-
-def _run_gh_graphql_query(query, variables):
-  payload = {'query': query, 'variables': variables}
-  return _post_github(GITHUB_GRAPHQL_API, payload)
-
 def _family_name_normal(family_name: str) -> str:
   return family_name.lower()\
       .replace(' ', '')\
@@ -175,7 +148,7 @@ def get_gh_gf_family_entry(family_name):
   family_name_normal = _family_name_normal(family_name)
   variables = _get_query_variables('google','fonts', family_name_normal)
 
-  result = _run_gh_graphql_query(GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables)
+  result = GitHubClient("google", "fonts")._run_graphql(GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables)
   return result
 
 def _git_tree_iterate(path, tree, topdown):
@@ -199,19 +172,8 @@ def _git_tree_iterate(path, tree, topdown):
 def _git_tree_walk(path, tree, topdown=True):
   yield from _git_tree_iterate(path.split(os.sep), tree[path], topdown)
 
-def get_github_blob(repo_owner, repo_name, file_sha):
-  url = f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/git/blobs/{file_sha}'
-  headers = {
-    'Accept': 'application/vnd.github.v3.raw'
-  }
-  response = requests.get(url, headers=headers)
-  # print(f'response headers: {pprint.pformat(response.headers, indent=2)}')
-  # raises requests.exceptions.HTTPError
-  response.raise_for_status()
-  return response
-
 def get_github_gf_blob(file_sha):
-  return get_github_blob('google', 'fonts', file_sha)
+  return GitHubClient('google', 'fonts').get_blob(file_sha)
 
 def _shallow_clone_git(target_dir, git_url, branch_or_tag='main'):
   """
@@ -242,7 +204,7 @@ upstream_yaml_schema = Map({
     'name': Str(),
     'repository_url': Str(), # TODO: custom validation please
     'branch': Str(),
-    'category': Enum(CATEGORIES),
+    'category': UniqueSeq(Enum(CATEGORIES)),
     'designer': Str(),
     Optional('build', default=''): EmptyNone() | Str(),
     # allowing EmptyDict here, even though we need files in here,
@@ -260,7 +222,7 @@ upstream_yaml_template_schema = Map({
     Optional('name', default=''): EmptyNone() | Str(),
     Optional('repository_url', default=''): EmptyNone() | Str(), # TODO: custom validation please
     'branch': EmptyNone() | Str(),
-    Optional('category', default=None):  EmptyNone() | Enum(CATEGORIES),
+    Optional('category', default=None):  EmptyNone() | UniqueSeq(Enum(CATEGORIES)),
     Optional('designer', default=''): EmptyNone() |Str(),
     Optional('build', default=''): EmptyNone() | Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
@@ -649,7 +611,7 @@ def _upstream_conf_from_yaml_metadata(
     #       branch, files
     upstream_conf.update({
       'designer': metadata.designer or None,
-      'category': metadata.category or None,
+      'category': list(metadata.category) or None,
       'name': metadata.name  or None,
       # we won't get this just now in most cases!
       'repository_url': metadata.source.repository_url or None,
@@ -894,8 +856,7 @@ def _copy_upstream_files_from_dir(source_dir: str, files: dict,
 
 def _create_or_update_metadata_pb(upstream_conf: YAML,
                                   tmp_package_family_dir:str,
-                                  upstream_commit_sha:str,
-                                  no_source: bool) -> None:
+                                  upstream_commit_sha:str) -> None:
   metadata_file_name = os.path.join(tmp_package_family_dir, 'METADATA.pb')
   try:
     subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
@@ -915,23 +876,20 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
   for font in metadata.fonts:
     font.name = upstream_conf['name']
   metadata.designer = upstream_conf['designer']
-  metadata.category = upstream_conf['category']
+
+  metadata.category[:] = upstream_conf['category']
+
   # metadata.date_added # is handled well
 
-  if no_source:
-    # remove in case it is present
-    metadata.ClearField('source')
-  else:
-    metadata.source.repository_url = upstream_conf['repository_url']
-    metadata.source.commit = upstream_commit_sha
+  metadata.source.repository_url = upstream_conf['repository_url']
+  metadata.source.commit = upstream_commit_sha
 
-  text_proto = text_format.MessageToString(metadata, as_utf8=True)
-  with open(metadata_file_name, 'w') as f:
-    f.write(text_proto)
+  language_comments = fonts.LanguageComments(LoadLanguages())
+  fonts.WriteProto(metadata, metadata_file_name, comments=language_comments)
 
 def _create_package_content(package_target_dir: str, repos_dir: str,
         upstream_conf_yaml: YAML, license_dir: str, gf_dir_content:dict,
-        no_source: bool, allow_build: bool, yes: bool, quiet: bool,
+        allow_build: bool, yes: bool, quiet: bool,
         no_allowlist: bool = False) -> str:
   print(f'Creating package with \n{_format_upstream_yaml(upstream_conf_yaml)}')
   upstream_conf = upstream_conf_yaml.data
@@ -1039,18 +997,12 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
 
   # create/update METADATA.pb
   _create_or_update_metadata_pb(upstream_conf, package_family_dir,
-                                upstream_commit_sha, no_source)
+                                upstream_commit_sha)
 
   # create/update upstream.yaml
   # Remove keys that are also in METADATA.pb googlefonts/gftools#233
   # and also clear all comments.
   redundant_keys = {'name', 'category', 'designer', 'repository_url'}
-  if no_source:
-    # source is NOT in METADATA.pb so we want to keep it in upstream_conf
-    # NOTE: there's another position where this has to be considered
-    # i.e. in case of git as target when making a commit.
-    redundant_keys.remove('repository_url')
-
   upstream_conf_stripped = OrderedDict((k, v) for k, v in upstream_conf.items() \
                                                   if k not in redundant_keys)
   # Don't keep an empty build key.
@@ -1121,7 +1073,7 @@ def _git_tree_from_dir(repo: pygit2.Repository, tmp_package_family_dir: str) -> 
   return trees['.']
 
 def _git_write_file(repo: pygit2.Repository, tree_builder: pygit2.TreeBuilder,
-                                        file_path: str, data: bytes) -> None:
+                                        file_path: str, data: str) -> None:
   blob_id = repo.create_blob(data)
   return _git_makedirs_write(repo, tree_builder, PurePath(file_path).parts,
                             blob_id, pygit2.GIT_FILEMODE_BLOB)
@@ -1205,53 +1157,8 @@ def _push(repo: pygit2.Repository, url: str, local_branch_name: str,
   #if callbacks.rejected_push_message is not None:
   #  raise Exception(callbacks.rejected_push_message)
 
-def get_github_open_pull_requests(repo_owner: str, repo_name: str,
-                pr_head: str, pr_base_branch: str) -> typing.Union[typing.List]:
-  url = (f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/pulls?state=open'
-         f'&head={urllib.parse.quote(pr_head)}'
-         f'&base={urllib.parse.quote(pr_base_branch)}')
-  github_api_token = _get_github_api_token()
-  headers = {'Authorization': f'bearer {github_api_token}'}
+GITHUB_REPO_SSH_URL = 'git@github.com:{repo_name_with_owner}.git'.format
 
-  response = requests.get(url, headers=headers)
-  # print(f'response headers: {pprint.pformat(response.headers, indent=2)}')
-  # raises requests.exceptions.HTTPError
-  response.raise_for_status()
-  json = response.json()
-  if 'errors' in json:
-    errors = pprint.pformat(json['errors'], indent=2)
-    raise Exception(f'GitHub REST query failed:\n {errors}')
-  return json
-
-def create_github_pull_request(repo_owner: str, repo_name: str, pr_head: str,
-                               pr_base_branch: str, title: str, body: str):
-  url = f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/pulls'
-  payload = {
-    'title': title,
-    'body': body,
-    'head': pr_head,
-    'base': pr_base_branch,
-    'maintainer_can_modify': True
-  }
-  return _post_github(url, payload)
-
-def create_github_issue_comment(repo_owner: str, repo_name: str,
-                                issue_number: int, pr_comment_body: str):
-  url = (f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/issues'
-          f'/{issue_number}/comments')
-  payload = {
-    'body': pr_comment_body
-  }
-  return _post_github(url, payload)
-
-def create_github_issue(repo_owner: str, repo_name: str,
-                        pr_title: str, pr_body: str):
-  url = (f'{GITHUB_V3_REST_API}/repos/{repo_owner}/{repo_name}/issues')
-  payload = {
-    'title': pr_title,
-    'body': pr_body
-  }
-  return _post_github(url, payload)
 
 def _make_pr(repo: pygit2.Repository, local_branch_name: str,
                                   pr_upstream: str, push_upstream: str,
@@ -1291,20 +1198,18 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
     #_updateUpstream(prRemoteName, prRemoteRef))
     #// NOTE: at this point the PUSH was already successful, so the branch
     #// of the PR exists or if it existed it has changed.
-  open_prs = get_github_open_pull_requests(pr_owner, pr_repo, pr_head,
-                                           pr_base_branch)
+  client = GitHubClient(pr_owner, pr_repo)
+  open_prs = client.open_prs(pr_head, pr_base_branch)
 
   if not len(open_prs):
     # No open PRs, creating …
-    result = create_github_pull_request(pr_owner, pr_repo, pr_head,
-                                pr_base_branch, pr_title, pr_message_body)
+    result = client.create_pr(pr_title, pr_message_body, pr_head, pr_base_branch)
     print(f'Created a PR #{result["number"]} {result["html_url"]}')
   else:
     # found open PR
     pr_issue_number = open_prs[0]['number']
     pr_comment_body = f'Updated\n\n## {pr_title}\n\n---\n{pr_message_body}'
-    result = create_github_issue_comment(pr_owner, pr_repo, pr_issue_number,
-                                                        pr_comment_body)
+    result = client.create_issue_comment(pr_issue_number, pr_comment_body)
     print(f'Created a comment in PR #{pr_issue_number} {result["html_url"]}')
 
 def _get_root_commit(repo: pygit2.Repository, base_remote_branch:str,
@@ -1417,7 +1322,7 @@ def _git_get_path(tree: pygit2.Tree, path: str) -> pygit2.Object:
 def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
           yes: bool, quiet: bool, local_branch: str, remote_name: str,
           base_remote_branch: str, tmp_package_family_dir: str,
-          family_dir: str, no_source: bool):
+          family_dir: str):
   base_commit = None
   if add_commit:
     try:
@@ -1454,41 +1359,6 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
           [base_commit.id] # parents
   )
 
-  if no_source:
-    # remove source from METADATA.pb in an extra new commit, this will make it
-    # easy to track these changes and to revert them when feasible.
-    treeBuilder = repo.TreeBuilder(new_tree)
-    # read METADATA.pb
-    metadata_filename = os.path.join(family_dir, 'METADATA.pb')
-    metadata_blob = _git_get_path(new_tree, metadata_filename)
-    metadata = fonts_pb2.FamilyProto()
-    text_format.Parse(metadata_blob.data, metadata)
-    # delete source fields
-    repository_url = metadata.source.repository_url
-    metadata.ClearField('source')
-    # write METADATA.pb
-    text_proto = text_format.MessageToString(metadata, as_utf8=True)
-    _git_write_file(repo, treeBuilder, metadata_filename, text_proto)
-    # read upstream.yaml
-    upstream_filename = os.path.join(family_dir, 'upstream.yaml')
-    upstream_text = _git_get_path(new_tree, upstream_filename).data.decode('utf-8')
-    upstream_conf_yaml = dirty_load(upstream_text, upstream_yaml_stripped_schema,
-                                                    allow_flow_style=True)
-    # preserve the info: transfer from METADATA.pb
-    upstream_conf_yaml['repository_url'] = repository_url
-    # write upstream.yaml
-    _git_write_file(repo, treeBuilder, upstream_filename, upstream_conf_yaml.as_yaml())
-    # commit
-    new_tree_id = treeBuilder.write()
-    commit_id = repo.create_commit(
-            None,
-            author, committer,
-            f'[gftools-packager] {family_dir} remove METADATA "source".  google/fonts#2587',
-            new_tree_id,
-            [commit_id] # parents
-    )
-
-
   commit = repo.get(commit_id)
   # create branch or add to an existing one if add_commit
   while True:
@@ -1524,7 +1394,7 @@ def _git_make_commit(repo: pygit2.Repository, add_commit: bool, force: bool,
 
 def _packagage_to_git(tmp_package_family_dir: str, target: str, family_dir: str,
                      branch: str, force:bool, yes: bool, quiet: bool,
-                     add_commit: bool, no_source: bool) -> None:
+                     add_commit: bool) -> None:
 
   repo = pygit2.Repository(target)
   # we checked that it exists earlier!
@@ -1535,7 +1405,7 @@ def _packagage_to_git(tmp_package_family_dir: str, target: str, family_dir: str,
 
   _git_make_commit(repo, add_commit, force, yes, quiet, branch,
                    remote_name, base_remote_branch, tmp_package_family_dir,
-                   family_dir, no_source)
+                   family_dir)
 
 
 def _dispatch_git(target: str, target_branch: str,pr_upstream: str,
@@ -1622,8 +1492,7 @@ def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
 def _packages_to_target(tmp_package_dir: str, family_dirs: typing.List[str],
                         target: str, is_gf_git: bool,
                         branch: str, force: bool,
-                        yes: bool, quiet: bool, add_commit: bool,
-                        no_source: bool) ->None:
+                        yes: bool, quiet: bool, add_commit: bool) ->None:
   for i, family_dir in enumerate(family_dirs):
     tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
     # NOTE: if there are any files outside of family_dir that need moving
@@ -1634,7 +1503,7 @@ def _packages_to_target(tmp_package_dir: str, family_dirs: typing.List[str],
       if i > 0:
         add_commit = True
       _packagage_to_git(tmp_package_family_dir, target, family_dir,
-                               branch, force, yes, quiet, add_commit, no_source)
+                               branch, force, yes, quiet, add_commit)
     else:
       _packagage_to_dir(tmp_package_family_dir, target, family_dir,
                                force, yes, quiet)
@@ -1710,7 +1579,7 @@ def _output_upstream_yaml(file_or_family: typing.Union[str, None], target: str,
 def make_package(file_or_families: typing.List[str], target: str, yes: bool,
                  quiet: bool, no_allowlist: bool, is_gf_git: bool, force: bool,
                  add_commit: bool, pr: bool, pr_upstream: str,
-                 push_upstream: str, upstream_yaml: bool, no_source: bool,
+                 push_upstream: str, upstream_yaml: bool,
                  allow_build: bool, branch: typing.Union[str, None]=None):
 
   if upstream_yaml:
@@ -1752,11 +1621,8 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
         try:
           family_dir = _create_package_content(tmp_package_dir, tmp_repos_dir,
                                 upstream_conf_yaml, license_dir,
-                                gf_dir_content,
-                                # if is_gf_git source is removed in an
-                                # extra commit
-                                no_source and not is_gf_git,
-                                allow_build, yes, quiet, no_allowlist)
+                                gf_dir_content, allow_build, yes, quiet,
+                                no_allowlist)
           family_dirs.append(family_dir)
         except UserAbortError as e:
           # The user aborted already, no need to bother any further.
@@ -1809,7 +1675,7 @@ def make_package(file_or_families: typing.List[str], target: str, yes: bool,
       if not branch:
         target_branch = _branch_name_from_family_dirs(family_dirs)
     _packages_to_target(tmp_package_dir, family_dirs, target, is_gf_git,
-                        target_branch, force, yes, quiet, add_commit, no_source)
+                        target_branch, force, yes, quiet, add_commit)
 
   if pr and is_gf_git:
     _dispatch_git(target, target_branch, pr_upstream, push_upstream)

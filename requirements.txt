@@ -1,5 +1,6 @@
 fonttools[ufo]
 #google-apputils
+axisregistry>=0.2.0
 absl-py
 protobuf
 PyGithub
@@ -12,7 +13,9 @@ fontmake
 brotli
 browserstack-local==1.2.2
 pybrowserstack-screenshots==0.1
+gflanguages>=0.4.0
 glyphslib
+glyphsets>=0.2.1
 opentype-sanitizer
 pygit2
 requests
@@ -20,7 +23,6 @@ strictyaml
 tabulate
 unidecode
 skia-pathops
-pandas
-xlrd
-openpyxl
 langcodes
+jinja2
+hyperglot

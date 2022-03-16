@@ -21,7 +21,6 @@ import argparse
 import os
 import sys
 import requests
-import json
 from gftools.fonts_public_pb2 import FamilyProto
 from google.protobuf import text_format
 

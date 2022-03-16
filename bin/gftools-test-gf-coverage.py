@@ -17,15 +17,15 @@
 from __future__ import print_function
 import os
 import sys
-from gftools.util.google_fonts import (CodepointsInFont,
-                                       CodepointsInNamelist)
-from pkg_resources import resource_filename
+from glyphsets.codepoints import (CodepointsInFont,
+                                  CodepointsInNamelist,
+                                  nam_dir)
 
 
-NAM_DIR = os.path.join(
-    resource_filename("gftools", "encodings"), "GF Glyph Sets"
-)
-NAM_FILES = [os.path.join(NAM_DIR, f) for f in os.listdir(NAM_DIR)]
+NAM_DIR = os.path.join(nam_dir, "GF Glyph Sets")
+NAM_FILES = [os.path.join(NAM_DIR, f)
+             for f in os.listdir(NAM_DIR)
+             if f.endswith(".nam")]
 
 
 def main():

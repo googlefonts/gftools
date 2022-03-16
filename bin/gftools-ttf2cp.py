@@ -22,11 +22,11 @@ Prints codepoints supported by the font, one per line, in hex (0xXXXX).
 import os
 import sys
 import unicodedata
+from absl import (app,
+                  flags)
+from glyphsets.codepoints import (CodepointsInFont,
+                                  SubsetsForCodepoint)
 
-from absl import flags
-from gftools.util import google_fonts as fonts
-from absl import app
-import sys
 if sys.version[0] == '3':
     unichr = chr
 
@@ -44,7 +44,7 @@ def main(argv):
   for filename in argv[1:]:
     if not os.path.isfile(filename):
       sys.exit('%s is not a file' % filename)
-    cps |= fonts.CodepointsInFont(filename)
+    cps |= CodepointsInFont(filename)
 
   for cp in sorted(cps):
     show_char = ''
@@ -53,7 +53,7 @@ def main(argv):
                    unicodedata.name(unichr(cp), ''))
     show_subset = ''
     if FLAGS.show_subsets:
-      show_subset = ' subset:%s' % ','.join(fonts.SubsetsForCodepoint(cp))
+      show_subset = ' subset:%s' % ','.join(SubsetsForCodepoint(cp))
 
     print(u'0x%04X%s%s' % (cp, show_char, show_subset))
 

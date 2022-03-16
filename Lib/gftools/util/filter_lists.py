@@ -4,11 +4,9 @@
 # for the glyphsLib dependency do: pip install GlyphsLib
 
 from __future__ import print_function, unicode_literals
-from fontTools.misc.py23 import unichr, byteord
 import sys, os, subprocess
 import re
 import codecs
-import logging as log
 import unittest
 from collections import Counter
 

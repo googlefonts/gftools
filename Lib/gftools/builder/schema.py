@@ -2,14 +2,12 @@
 This schema represents all known key/value pairs for the builder config file.
 """
 from strictyaml import (
-                        load,
                         Map,
                         MapPattern,
                         Str,
                         Int,
                         Float,
                         Seq,
-                        YAMLError,
                         Optional,
                         Bool
                         )
@@ -57,6 +55,7 @@ instance_schema = MapPattern(Str(), Seq(
 schema = Map(
     {
         "sources": Seq(Str()),
+        Optional("vttSources"): MapPattern(Str(), Str()),
         Optional("logLevel"): Str(),
         Optional("stylespaceFile"): Str(),
         Optional("stat"): stat_schema | MapPattern(Str(), stat_schema),
@@ -80,5 +79,7 @@ schema = Map(
         Optional("autohintTTF"): Bool(),
         Optional("axisOrder"): Seq(Str()),
         Optional("flattenComponents"): Bool(),
+        Optional("decomposeTransformedComponents"): Bool(),
+        Optional("ttfaUseScript"): Bool(),
     }
 )

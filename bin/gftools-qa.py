@@ -24,39 +24,26 @@ from fontTools.ttLib import TTFont
 import argparse
 import shutil
 import os
-from glob import glob
 import subprocess
 import logging
-from uuid import uuid4
 import re
-import requests
-from io import BytesIO
-import json
-from zipfile import ZipFile
 from gftools.utils import (
     download_family_from_Google_Fonts,
     download_files_in_github_pr,
     download_files_in_github_dir,
-    download_file,
     Google_Fonts_has_family,
-    load_Google_Fonts_api_key,
     mkdir,
 )
 from gftools.html import HtmlProof, HtmlDiff
 try:
     from diffenator.diff import DiffFonts
     from diffenator.font import DFont
-    from diffbrowsers.diffbrowsers import DiffBrowsers
-    from diffbrowsers.browsers import test_browsers
     from diffbrowsers.utils import load_browserstack_credentials as bstack_creds
 except ModuleNotFoundError:
     raise ModuleNotFoundError(("gftools was installed without the QA "
         "dependencies. To install the dependencies, see the ReadMe, "
         "https://github.com/googlefonts/gftools#installation"))
-from gftools.packager import (
-    create_github_issue_comment,
-    create_github_issue
-)
+from gftools.github import GitHubClient
 
 __version__ = "2.1.3"
 logger = logging.getLogger(__name__)
@@ -196,7 +183,7 @@ class FontQA:
         out = os.path.join(self.out, "Fontbakery")
         mkdir(out)
         cmd = (
-            ["fontbakery", "check-googlefonts", "-l", "WARN"]
+            ["fontbakery", "check-googlefonts", "-l", "INFO", "--succinct"]
             + [f.reader.file.name for f in self.fonts]
             + ["-C"]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
@@ -275,17 +262,15 @@ class FontQA:
                 "Cannot Post Github message because no Fontbakery report exists"
             )
             return
+        
+        client = GitHubClient(repo_owner, repo_name)
 
         with open(fontbakery_report) as doc:
             msg = doc.read()
             if issue_number:
-                create_github_issue_comment(
-                    repo_owner, repo_name, issue_number, msg
-                )
+                client.create_issue_comment(issue_number, msg)
             else:
-                create_github_issue(
-                    repo_owner, repo_name, "Google Font QA report", msg
-                )
+                client.create_issue("Google Font QA report", msg)
 
 
 def family_name_from_fonts(fonts):

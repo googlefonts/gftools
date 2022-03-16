@@ -22,9 +22,9 @@ from gftools.utils import (
     validate_family,
     unique_name,
 )
-from gftools.util.styles import (get_stylename, is_regular, is_bold, is_italic)
+from gftools.stat import gen_stat_tables
 
-from os.path import basename
+from os.path import basename, splitext
 from copy import deepcopy
 import logging
 
@@ -55,6 +55,8 @@ __all__ = [
     "drop_superfluous_mac_names",
     "fix_font",
     "fix_family",
+    "rename_font",
+    "fix_filename"
 ]
 
 
@@ -78,6 +80,7 @@ UNWANTED_TABLES = frozenset(
         "TSI5",
         "prop",
         "MVAR",
+        "Debg",
     ]
 )
 
@@ -187,6 +190,16 @@ def fix_weight_class(ttFont):
         ttFont: a TTFont instance
     """
     old_weight_class = ttFont["OS/2"].usWeightClass
+
+    if 'fvar' in ttFont:
+        fvar = ttFont['fvar']
+        default_axis_values = {a.axisTag: a.defaultValue for a in fvar.axes}
+        v = default_axis_values.get('wght', None)
+
+        if v is not None:
+            ttFont["OS/2"].usWeightClass = int(v)
+            return ttFont["OS/2"].usWeightClass != old_weight_class
+
     stylename = font_stylename(ttFont)
     tokens = stylename.split()
     # Order WEIGHT_NAMES so longest names are first
@@ -364,24 +377,20 @@ def update_nametable(ttFont, family_name=None, style_name=None):
     if not style_name:
         style_name = font_stylename(ttFont)
 
-    is_ribbi = style_name in ("Regular", "Bold", "Italic", "Bold Italic")
+    ribbi = ("Regular", "Bold", "Italic", "Bold Italic")
+    tokens = family_name.split() + style_name.split()
 
-    nameids = {}
-    if is_ribbi:
-        nameids[1] = family_name
-        nameids[2] = style_name
-    else:
-        tokens = style_name.split()
-        family_name_suffix = " ".join([t for t in tokens if t not in ["Italic"]])
-        nameids[1] = f"{family_name} {family_name_suffix}".strip()
-        nameids[2] = "Regular" if "Italic" not in tokens else "Italic"
-
-        typo_family_suffix = " ".join(
-            t for t in tokens if t not in list(WEIGHT_NAMES) + ["Italic"]
-        )
-        nameids[16] = f"{family_name} {typo_family_suffix}".strip()
-        typo_style = " ".join(t for t in tokens if t in list(WEIGHT_NAMES) + ["Italic"])
-        nameids[17] = typo_style
+    nameids = {
+        1: " ".join(t for t in tokens if t not in ribbi),
+        2: " ".join(t for t in tokens if t in ribbi) or "Regular",
+        16: " ".join(t for t in tokens if t not in list(WEIGHT_NAMES) + ['Italic']),
+        17: " ".join(t for t in tokens if t in list(WEIGHT_NAMES) + ['Italic']) or "Regular"
+    }
+    # Remove typo name if they match since they're redundant
+    if nameids[16] == nameids[1]:
+        del nameids[16]
+    if nameids[17] == nameids[2]:
+        del nameids[17]
 
     family_name = nameids.get(16) or nameids.get(1)
     style_name = nameids.get(17) or nameids.get(2)
@@ -430,6 +439,55 @@ def fix_nametable(ttFont):
     family_name = font_familyname(ttFont)
     style_name = font_stylename(ttFont)
     update_nametable(ttFont, family_name, style_name)
+
+
+def rename_font(font, new_name):
+    nametable = font["name"]
+    current_name = font_familyname(font)
+    if not current_name:
+        raise Exception(
+            "Name table does not contain nameID 1 or nameID 16. "
+            "This tool does not work on webfonts."
+        )
+    log.info("Updating font name records")
+    for record in nametable.names:
+        record_string = record.toUnicode()
+
+        no_space = current_name.replace(" ", "")
+        hyphenated = current_name.replace(" ", "-")
+        if " " not in record_string:
+            new_string = record_string.replace(no_space, new_name.replace(" ", ""))
+        else:
+            new_string = record_string.replace(current_name, new_name)
+
+        if new_string is not record_string:
+            record_info = (
+                record.nameID,
+                record.platformID,
+                record.platEncID,
+                record.langID
+            )
+            log.info(
+                "Updating {}: '{}' to '{}'".format(
+                    record_info,
+                    record_string,
+                    new_string,
+                )
+            )
+            record.string = new_string
+
+
+def fix_filename(ttFont):
+    ext = splitext(ttFont.reader.file.name)[1]
+    family_name = font_familyname(ttFont)
+    style_name = font_stylename(ttFont)
+
+    if "fvar" in ttFont:
+        axes = ",".join([a.axisTag for a in ttFont['fvar'].axes])
+        if "Italic" in style_name:
+            return f"{family_name}-Italic[{axes}]{ext}".replace(" ", "")
+        return f"{family_name}[{axes}]{ext}".replace(" ", "")
+    return f"{family_name}-{style_name}{ext}".replace(" ", "")
 
 
 def inherit_vertical_metrics(ttFonts, family_name=None):
@@ -704,10 +762,10 @@ def drop_mac_names(ttfont):
     return changed
 
 
-def fix_font(font, include_source_fixes=False):
+def fix_font(font, include_source_fixes=False, new_family_name=None):
+    if new_family_name:
+        rename_font(font, new_family_name)
     font["OS/2"].version = 4
-    if "DSIG" not in font:
-        add_dummy_dsig(font)
 
     if "fpgm" in font:
         fix_hinted_font(font)
@@ -732,18 +790,19 @@ def fix_font(font, include_source_fixes=False):
 
         if "fvar" in font:
             fix_fvar_instances(font)
-            # TODO (Marc F) add gen-stat once merged
-            # https://github.com/googlefonts/gftools/pull/263
 
 
-def fix_family(fonts, include_source_fixes=False):
+def fix_family(fonts, include_source_fixes=False, new_family_name=None):
     """Fix all fonts in a family"""
     validate_family(fonts)
-    family_name = font_familyname(fonts[0])
 
     for font in fonts:
-        fix_font(font, include_source_fixes=include_source_fixes)
-
+        fix_font(
+            font,
+            include_source_fixes=include_source_fixes,
+            new_family_name=new_family_name
+        )
+    family_name = font_familyname(fonts[0])
     if include_source_fixes:
         try:
             if Google_Fonts_has_family(family_name):
@@ -759,6 +818,8 @@ def fix_family(fonts, include_source_fixes=False):
                 "fix fonts. See Repo readme to add keys."
             )
         fix_vertical_metrics(fonts)
+        if all(["fvar" in f for f in fonts]):
+            gen_stat_tables(fonts, ["opsz", "wdth", "wght", "ital", "slnt"])
 
 
 class FontFixer():

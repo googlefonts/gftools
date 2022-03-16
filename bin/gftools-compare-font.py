@@ -69,7 +69,8 @@ import sys
 from fontTools.ttLib import sfnt
 from absl import flags, app
 from gftools.util import google_fonts as fonts
-
+from glyphsets.codepoints import (CodepointsInFont,
+                                  CodepointsInSubset)
 
 FLAGS = flags.FLAGS
 flags.DEFINE_boolean('diff_tables', True, 'Whether to print table size diffs')
@@ -157,11 +158,11 @@ def DiffCoverage(font_filename1, font_filename2, subset):
     font_filename2: The second font to compare.
     subset: The lowercase name of the subset to compare coverage of.
   """
-  f1cps = fonts.CodepointsInFont(font_filename1)
-  f2cps = fonts.CodepointsInFont(font_filename2)
+  f1cps = CodepointsInFont(font_filename1)
+  f2cps = CodepointsInFont(font_filename2)
 
   if subset != 'all':
-    subset_cps = fonts.CodepointsInSubset(subset)
+    subset_cps = CodepointsInSubset(subset)
     f1cps &= subset_cps
     f2cps &= subset_cps
   else:

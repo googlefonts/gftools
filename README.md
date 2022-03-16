@@ -8,7 +8,7 @@ The tools and files under this directory are available under the Apache License 
 
 This repo also contains definitions of glyph sets useful for type designers:
 
-<https://github.com/googlefonts/gftools/tree/main/Lib/gftools/encodings/GF%20Glyph%20Sets>
+<https://github.com/googlefonts/glyphsets/tree/main/Lib/glyphsets/encodings/GF%20Glyph%20Sets>
 
 ## Tool Usage Examples
 
@@ -47,15 +47,20 @@ Package and PR a family update to google/fonts. Much more detailed [documentatio
 
 ## Tool Installation
 
+
+**Please note that gftools requires [Python 3.7](http://www.python.org/download/) or later.**
+
 Please install these tools using pip:
 
     pip install gftools
+
+(Mac OS users on M1 chips will need to upgrade pip first to support universal wheels: `pip install -U pip`.)
 
 If you need to use `gftools qa`, you will need to install Harfbuzz, Cairo, FreeType and pkg-config. These can be installed on OS X using homebrew:
 
     brew install cairo freetype harfbuzz pkg-config
 
-Once You have installed these system packages, install gftools using the following command:
+Once you have installed these system packages, install gftools using the following command:
 
     pip install 'gftools[qa]'
 

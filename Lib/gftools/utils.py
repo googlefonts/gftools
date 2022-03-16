@@ -13,24 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from fontTools import ttLib
 import requests
 from io import BytesIO
 from zipfile import ZipFile
 import sys
 import os
-import re
 import shutil
 import unicodedata
 from unidecode import unidecode
-import browserstack_screenshots
 from collections import namedtuple
 from github import Github
 from pkg_resources import resource_filename
 from google.protobuf import text_format
-import time
 import json
-from browserstack.local import Local
 from PIL import Image
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
@@ -53,18 +48,15 @@ def download_family_from_Google_Fonts(family, dst=None):
     return fonts_from_zip(fonts_zip)
 
 
-def Google_Fonts_has_family(family):
+def Google_Fonts_has_family(name):
     """Check if Google Fonts has the specified font family"""
-    gf_api_key = load_Google_Fonts_api_key() or os.environ.get("GF_API_KEY")
-    if not gf_api_key:
-        raise FileNotFoundError("~/.gf-api-key or env not found. See ReadMe to create one")
-    api_url = 'https://www.googleapis.com/webfonts/v1/webfonts?key={}'.format(gf_api_key)
-    r = requests.get(api_url)
-    families_on_gf = [f['family'] for f in r.json()['items']]
-
-    if family in families_on_gf:
-        return True
-    return False
+    # This endpoint is private and may change at some point
+    # TODO (MF) if another function needs this data, refactor it into a
+    # function and use a lru cache
+    r = requests.get("https://fonts.google.com/metadata/fonts")
+    data = json.loads(r.text[5:])
+    family_names = set(i["family"] for i in data["familyMetadataList"])
+    return name in family_names
 
 
 def load_Google_Fonts_api_key():

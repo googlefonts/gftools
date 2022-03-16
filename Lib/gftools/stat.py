@@ -12,17 +12,16 @@ following properties:
 - All fonts contain the same amount of fvar axes
 - All fvar axes have the same ranges
 """
-from fontTools.ttLib import TTFont
+from axisregistry import AxisRegistry
 from fontTools.otlLib.builder import buildStatTable
 from gftools.utils import font_stylename, font_familyname, font_is_italic
-from gftools.axisreg import axis_registry
 import os
 import logging
 
 
 __all__ = ["gen_stat_tables", "gen_stat_tables_from_config", "ELIDABLE_AXIS_VALUE_NAME"]
 
-
+axis_registry = AxisRegistry()
 log = logging.getLogger(__name__)
 
 
@@ -158,7 +157,7 @@ def _append_non_fvar_axes_to_stat(
         else:
             style_name = font_axes_in_namerecords[axis]
             value = next(
-                (i.value for i in axis_reg[axis].fallback if i.name == style_name),
+                (f.value for f in axis_reg[axis].fallback if f.name == style_name),
                 None,
             )
             axis_value = _add_axis_value(style_name, value)
@@ -367,6 +366,7 @@ def gen_stat_tables(
         stat_table = [stat_table[axis] for axis in axis_order]
         _update_fvar_nametable_records(ttFont, stat_table)
         buildStatTable(ttFont, stat_table)
+
 
 def gen_stat_tables_from_config(stat, varfonts, has_italic=None, locations=None):
     """
