@@ -102,5 +102,6 @@ setup(
         'pybrowserstack-screenshots==0.1',
         'jinja2',
         'hyperglot',
+        'fontFeatures',
     ]
     )
