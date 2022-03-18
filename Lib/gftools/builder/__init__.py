@@ -130,6 +130,8 @@ import tempfile
 
 
 class GFBuilder:
+    schema = schema
+
     def __init__(self, configfile=None, config=None):
         if configfile:
             self.config = self.load_config(configfile)
@@ -145,7 +147,7 @@ class GFBuilder:
         with open(configfile) as f:
             unprocessed_yaml = f.read()
         try:
-            return load(unprocessed_yaml, schema).data
+            return load(unprocessed_yaml, self.schema).data
         except YAMLValidationError as e:
             if "unexpected key not in schema" in e.problem:
                 bad_key = str(e.problem)
