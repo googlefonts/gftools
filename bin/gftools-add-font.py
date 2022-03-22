@@ -55,11 +55,13 @@ from gflanguages import LoadLanguages
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
-from gftools.axisreg import axis_registry
+from axisregistry import AxisRegistry
 from glyphsets.codepoints import SubsetsInFont
 from absl import app
 from google.protobuf import text_format
 from pkg_resources import resource_filename
+
+axis_registry = AxisRegistry()
 
 FLAGS = flags.FLAGS
 
