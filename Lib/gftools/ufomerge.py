@@ -16,8 +16,12 @@ def merge_ufos(
     layout_handling="subset",
     existing_handling="replace",
 ):
+    if glyphs is None:
+        glyphs = []
     if exclude_glyphs:
         glyphs = set(glyphs) - set(exclude_glyphs)
+
+    glyphs = set(glyphs)
 
     if codepoints:
         cp2glyph = {}
