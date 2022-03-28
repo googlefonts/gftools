@@ -83,6 +83,10 @@ def main():
                 cat = "Metadata/desc/OFL"
             elif "I Designer profile" in labels:
                 cat = "Designer profile"
+            elif "I Knowledge" in labels:
+                cat = "Knowledge"
+            elif "I Axis Registry" in labels:
+                cat = "Knowledge"
             else:
                 cat = "Small fix/other"
             if "--- to sandbox" in labels:
