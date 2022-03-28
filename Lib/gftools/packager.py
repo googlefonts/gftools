@@ -41,11 +41,8 @@ from hashlib import sha1
 from fontTools.ttLib import TTFont # type: ignore
 from gflanguages import LoadLanguages
 from gftools.util import google_fonts as fonts
-<<<<<<< HEAD
 from gftools.github import GitHubClient
-=======
 from gftools.utils import download_file
->>>>>>> aca2234 (packager: get files from archives)
 
 # ignore type because mypy error: Module 'google.protobuf' has no
 # attribute 'text_format'
@@ -864,7 +861,8 @@ def _copy_upstream_files_from_dir(source_dir: str, files: dict,
 
 def _create_or_update_metadata_pb(upstream_conf: YAML,
                                   tmp_package_family_dir:str,
-                                  upstream_commit_sha:str) -> None:
+                                  upstream_commit_sha:str=None,
+                                  upstream_archive_url:str=None) -> None:
   metadata_file_name = os.path.join(tmp_package_family_dir, 'METADATA.pb')
   try:
     subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
@@ -890,7 +888,10 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
   # metadata.date_added # is handled well
 
   metadata.source.repository_url = upstream_conf['repository_url']
-  metadata.source.commit = upstream_commit_sha
+  if upstream_commit_sha:
+    metadata.source.commit = upstream_commit_sha
+  if upstream_archive_url:
+    metadata.source.archive_url = upstream_archive_url
 
   language_comments = fonts.LanguageComments(LoadLanguages())
   fonts.WriteProto(metadata, metadata_file_name, comments=language_comments)
@@ -933,7 +934,7 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
       print('DONE downloading and unzipping!')
       skipped = _copy_upstream_files_from_dir(tmp, upstream_conf['files'],
                         write_file_to_package, no_allowlist=no_allowlist)
-    upstream_commit_sha = upstream_conf['archive']
+      upstream_archive_url = upstream_conf['archive']
   else:
     local_repo_path_marker = 'local://'
     if upstream_conf['repository_url'].startswith(local_repo_path_marker):
@@ -1016,7 +1017,7 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
 
   # create/update METADATA.pb
   _create_or_update_metadata_pb(upstream_conf, package_family_dir,
-                                upstream_commit_sha)
+                                upstream_commit_sha, upstream_archive_url)
 
   # create/update upstream.yaml
   # Remove keys that are also in METADATA.pb googlefonts/gftools#233
