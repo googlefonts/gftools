@@ -16,9 +16,6 @@
 # limitations under the License.
 #
 """Drop hints from a font."""
-
-__author__ = "roozbeh@google.com (Roozbeh Pournader)"
-
 import argparse
 import sys
 from fontTools.ttLib import TTFont
@@ -49,7 +46,7 @@ def drop_tables(font, tables):
 def main():
     """Drop the hints from the first file specified and save as second."""
     args = parser.parse_args()
-    font = ttLib.TTFont(args.input)
+    font = TTFont(args.input)
 
     drop_hints_from_glyphs(font)
     drop_tables(font, ["cvt ", "fpgm", "hdmx", "LTSH", "prep", "VDMX"])
