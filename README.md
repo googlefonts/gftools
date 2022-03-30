@@ -1,3 +1,6 @@
+[![CI Build Status](https://github.com/googlefonts/gftools/workflows/Test/badge.svg?branch=main)](https://github.com/googlefonts/gftools/actions/workflows/ci.yml?query=workflow%3ATest+branch%3Amain)
+[![PyPI](https://img.shields.io/pypi/v/gftools.svg)](https://pypi.org/project/gftools/)
+
 # Google Fonts Tools
 
 This project contains tools used for working with the Google Fonts collection, plus **Google Fonts Glyph Set Documentation** in the [/encodings](https://github.com/googlefonts/gftools/tree/main/Lib/gftools/encodings) subdirectory. While these tools are primarily intended for contributors to the Google Fonts project, anyone who works with fonts could find them useful.
