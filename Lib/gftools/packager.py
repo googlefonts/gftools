@@ -936,6 +936,7 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
                         write_file_to_package, no_allowlist=no_allowlist)
       upstream_archive_url = upstream_conf['archive']
   else:
+    upstream_archive_url = None
     local_repo_path_marker = 'local://'
     if upstream_conf['repository_url'].startswith(local_repo_path_marker):
       print(f'WARNING using "local://" hack for repository_url: {upstream_conf["repository_url"]}')
