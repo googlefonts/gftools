@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     for source in sources:
         this_version = get_version(os.path.join("sources", source))
-        if current_version and current_version != this_version:
+        if current_version and format_tag(current_version) != format_tag(this_version):
             print(
                 "Version mismatch: {} in {} != {}".format(
                     format_tag(current_version), source, format_tag(this_version)
