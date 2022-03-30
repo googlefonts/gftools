@@ -75,5 +75,6 @@ schema = Map(
         Optional("flattenComponents"): Bool(),
         Optional("decomposeTransformedComponents"): Bool(),
         Optional("ttfaUseScript"): Bool(),
+        Optional("googleFonts"): Bool(),
     }
 )
