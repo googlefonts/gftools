@@ -45,6 +45,7 @@ setup(
     author_email='dave@lab6.com',
     package_dir={'': 'Lib'},
     packages=['gftools',
+              'gftools.actions',
               'gftools.util',
               'gftools.builder'],
     package_data={'gftools.util': ["GlyphsInfo/*.xml", "UnicodeSections/*.json"],
@@ -103,5 +104,6 @@ setup(
         'jinja2',
         'hyperglot',
         'fontFeatures',
+        'bumpfontversion',
     ]
     )
