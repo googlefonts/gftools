@@ -11,6 +11,10 @@ name:
 # this https://github.com/{owner}/{repo}.git
 repository_url:
 
+# Optional, to get font from a tagged 'release':
+# https://github.com/{owner}/{repo}/releases/download/{version}/project.zip
+archive:
+
 # The branch name used to update google fonts. e.g.: `main`
 branch: main
 
