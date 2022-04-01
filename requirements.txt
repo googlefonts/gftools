@@ -26,4 +26,5 @@ skia-pathops
 jinja2
 hyperglot
 fontFeatures>=1.6.2
+vharfbuzz
 bumpfontversion

@@ -104,6 +104,7 @@ setup(
         'jinja2',
         'hyperglot',
         'fontFeatures',
+        'vharfbuzz',
         'bumpfontversion',
     ]
     )
