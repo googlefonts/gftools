@@ -92,7 +92,7 @@ def main():
     parser.add_argument("out")
     args = parser.parse_args()
 
-    push_template_dir = resource_filename("gftools", "push-templates")
+    push_template_dir = resource_filename("gftools", "templates")
     env = Environment(
         loader=FileSystemLoader(push_template_dir),
         autoescape=select_autoescape(),
@@ -113,7 +113,7 @@ def main():
     prod_path = os.path.join(args.repo_path, "to_production.txt")
     prod_families = parse_server_file(prod_path)
 
-    template = env.get_template("index.html")
+    template = env.get_template(os.path.join("push", "index.html"))
     with open(args.out, "w") as doc:
         doc.write(
             template.render(
