@@ -53,7 +53,6 @@ setup(
                       'template.upstream.yaml',
                       "udhr_all.txt",
                       "templates/*.html",
-                      "push-templates/*.html"
                   ]
                  },
     scripts=gftools_scripts(),
