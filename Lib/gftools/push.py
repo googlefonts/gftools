@@ -97,14 +97,12 @@ def push_report(fp):
 
 def missing_paths(fp):
     paths = [fp.parent / p.path for p in parse_server_file(fp)]
-    axis_files = [p for p in paths if p.name.endswith("textproto")]
-    axis_illustration_files = [p for p in paths if p.name.endswith("svg")]
+    axis_files = [p for p in paths if p.name.endswith(("textproto", "svg"))]
     dirs = [p for p in paths if p not in axis_files]
 
     missing_dirs = [p for p in dirs if not p.is_dir()]
     missing_axis_files = [p for p in axis_files if not p.is_file()]
-    missing_axis_illustration_files = [p for p in axis_illustration_files if not p.is_file()]
-    return missing_dirs + missing_axis_files + missing_axis_illustration_files
+    return missing_dirs + missing_axis_files
 
 
 def lint_server_files(fp):
