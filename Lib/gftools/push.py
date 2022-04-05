@@ -97,7 +97,7 @@ def push_report(fp):
 
 def missing_paths(fp):
     paths = [fp.parent / p.path for p in parse_server_file(fp)]
-    axis_files = [p for p in paths if p.name.endswith("textproto")]
+    axis_files = [p for p in paths if p.name.endswith(("textproto", "svg"))]
     dirs = [p for p in paths if p not in axis_files]
 
     missing_dirs = [p for p in dirs if not p.is_dir()]
