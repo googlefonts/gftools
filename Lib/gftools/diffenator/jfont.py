@@ -38,9 +38,10 @@ def serialise_fvar_table(obj, root):
     instances = {
         nametbl.getName(i.subfamilyNameID, 3, 1, 0x409).toUnicode(): {
             "coordinates": i.coordinates,
-            "postscriptName": nametbl.getName(
-                i.postscriptNameID, 3, 1, 0x409
-            ).toUnicode(),
+            # todo get ps name
+#            "postscriptName": None if i.postscriptNameID == None else nametbl.getName(
+#                i.postscriptNameID, 3, 1, 0x409
+#            ).toUnicode(),
             "flags": i.flags,
         }
         for i in obj.instances
@@ -57,6 +58,8 @@ def serialise_stat_table(obj, root):
         }
         for d in obj.table.DesignAxisRecord.Axis
     }
+    if not obj.table.AxisValueArray:
+        return {"design axis records": design_records}
     axis_values = {
         nametbl.getName(a.ValueNameID, 3, 1, 0x409).toUnicode(): {
             "format": a.Format,

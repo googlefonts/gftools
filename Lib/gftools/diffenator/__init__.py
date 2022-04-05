@@ -31,6 +31,10 @@ from pkg_resources import resource_filename
 FT_BITS = ft.raw.FT_LOAD_NO_HINTING | ft.raw.FT_LOAD_RENDER
 
 
+# todo add more
+OPTIONAL_FEATURES = set(["case, ""dnom", "frac", "numr", "ordn", "zero", "locl", "ccmp", "liga"])
+
+
 # Use dataclass instead of namedtuple. Override __eq__ method.
 @dataclass
 class Buffer:
@@ -132,6 +136,7 @@ class DFont:
         self.ttFont: TTFont = TTFont(self.path, recalcTimestamp=False)
         self.ftFont: ft.Face = ft.Face(self.path)
         self.jFont = jfont.TTJ(self.ttFont)
+        self.glyph_combinator = GlyphCombinator(self.ttFont)
 
         self.font_size: int = font_size
         self.set_font_size(self.font_size)
@@ -171,21 +176,33 @@ class DFont:
         shared = set(glyphs_rev) & set(other_glyphs_rev)
         mapping = {glyphs_rev[i]: other_glyphs_rev[i] for i in shared}
         PostProcessor.rename_glyphs(self.ttFont, mapping)
+        glyphs = self.ttFont.getGlyphNames()
 
     # populate glyphs, kerns, marks etc
     def build(self):
         self.build_glyphs()
 
     def build_glyphs(self):
-        # TODO improve glyph combinator and loop through all the features/langs in the font
-        combo = GlyphCombinator(self.ttFont)
-        combo.get_combinations()
-        for name, chars in combo.glyphs.items():
-            gids = [combo.reverse_gids[n] for n in name.split("-")]
-            buffer = Buffer(
-                name, chars, gids, contextual=True if "-" in name else False
-            )
-            self.glyphs[name] = buffer
+        optional_features = OPTIONAL_FEATURES & set(self.glyph_combinator.ff.features.keys())
+        for script, langs in self.glyph_combinator.languageSystems.items():
+            for lang in langs:
+                for feat in ["", "case"]:
+                    self.glyph_combinator.get_combinations({"liga": True, "kern": True, feat: True}, script, lang)
+                    for name, chars in self.glyph_combinator.glyphs.items():
+                        gids = [self.glyph_combinator.reverse_gids[n] for n in name.split("-")]
+                        if name in self.glyphs:
+                            continue
+                        buffer = Buffer(
+                            name=name,
+                            characters=chars,
+                            indexes=gids,
+                            features=feat, # fix this
+                            script=script,
+                            lang=lang,
+                            contextual=True if "-" in name else False,
+
+                        )
+                        self.glyphs[name] = buffer
 
 
 # Key feature of diffenator is to compare a static font against a VF instance.
@@ -204,7 +221,7 @@ def match_fonts(old_font: DFont, new_font: DFont, variations: dict = None):
 
 class DiffFonts:
     def __init__(
-        self, old_font: DFont, new_font: DFont, scale_upm=True, rename_glyphs=False
+        self, old_font: DFont, new_font: DFont, scale_upm=True, rename_glyphs=True
     ):
         self.diff = defaultdict(dict)
         # self.diff = {
@@ -224,13 +241,12 @@ class DiffFonts:
         
         # renaming was another key feature we need to retain
         if rename_glyphs:
-            self.old_font.set_glyph_names_from_font(self.new_font)
-        
-        # If we've scaled the font or renamed the glyphs, we'll need to save it as a new temp file
-        # we need to do this because of FT.
-        if scale_upm or rename_glyphs:
             import tempfile
             with tempfile.NamedTemporaryFile(suffix=".ttf") as modded_old_font:
+                # see https://github.com/googlefonts/ufo2ft/issues/485 for this mess
+                self.old_font.ttFont.save(modded_old_font.name)
+                self.old_font.ttFont = TTFont(modded_old_font.name)
+                self.old_font.set_glyph_names_from_font(self.new_font)
                 self.old_font.ttFont.save(modded_old_font.name)
                 self.old_font = DFont(modded_old_font.name)
 
