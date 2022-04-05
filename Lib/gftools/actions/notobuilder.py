@@ -13,17 +13,12 @@ import os
 import re
 import sys
 from pathlib import Path
-from strictyaml import (
-    Map,
-    Str,
-    HexInt,
-    Seq,
-    Optional,
-)
 
+import pygit2
+import ufoLib2
 from fontTools import designspaceLib
 from glyphsets.codepoints import CodepointsInSubset
-import ufoLib2
+from strictyaml import HexInt, Map, Optional, Seq, Str
 
 from gftools.builder import GFBuilder
 from gftools.builder.autohint import autohint
@@ -54,6 +49,7 @@ class NotoBuilder(GFBuilder):
         self.config["vfDir"] = "../fonts/unhinted/variable-ttf"
         self.config["otDir"] = "../fonts/unhinted/otf"
         self.config["ttDir"] = "../fonts/unhinted/ttf"
+        self.config["autohintTTF"] = False  # We take care of it ourselves
         self.outputs = set()
         self.logger = logging.getLogger("GFBuilder")
         self.fill_config_defaults()
@@ -151,8 +147,10 @@ class NotoBuilder(GFBuilder):
 
     def obtain_noto_ufo(self, font_name, mapping):
         if font_name == "Noto Sans":
-            path = "../subset-files/noto-sans/sources/NotoSans-MM.glyphs"
+            self.clone_for_subsetting("latin-greek-cyrillic")
+            path = "../subset-files/latin-greek-cyrillic/sources/NotoSans-MM.glyphs"
         if font_name == "Noto Sans Devanagari":
+            self.clone_for_subsetting("devanagari")
             path = "../subset-files/devanagari/sources/NotoSansDevanagari.glyphs"
 
         if path.endswith(".glyphs"):
@@ -167,6 +165,17 @@ class NotoBuilder(GFBuilder):
         if not regs:
             regs = [source_ds.sources[0].path]
         return ufoLib2.Font.open(regs[0])
+
+    def clone_for_subsetting(self, repo):
+        dest = "../subset-files/" + repo
+        if os.path.exists(dest):
+            return
+        if not os.path.exists("../subset-files"):
+            os.mkdir("../subset-files")
+        print(f"Cloning notofonts/{repo}")
+        pygit2.clone_repository(f"https://github.com/notofonts/{repo}", dest)
+
+
 
 
 if __name__ == "__main__":
