@@ -209,7 +209,6 @@ class NotoBuilder(GFBuilder):
             self.logger.info(f"Adding subset from {target} for location {location}")
             return target
         self.logger.error(f"Could not find master in {font_name} for location {location}")
-        import IPython;IPython.embed()
         raise ValueError("Could not add subset")
 
     def clone_for_subsetting(self, repo):
