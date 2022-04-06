@@ -12,6 +12,7 @@ What should be checked:
 Output:
 - A single html page. No images, just pure html and js.
 """
+from difflib import HtmlDiff
 from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
 from ufo2ft.postProcessor import PostProcessor
@@ -251,6 +252,12 @@ class DiffFonts:
                 self.old_font = DFont(modded_old_font.name)
 
         self.tables = jfont.Diff(self.old_font.jFont, self.new_font.jFont)
+        # todo this seems bolted on
+        self.features = HtmlDiff(wrapcolumn=80).make_file(
+            self.old_font.glyph_combinator.ff.asFea().split("\n"),
+            self.new_font.glyph_combinator.ff.asFea().split("\n"),
+        )
+
 
     def build(self):
         # TODO could make this dynamic use something like dir() to get funcs then call em
