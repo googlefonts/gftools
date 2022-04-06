@@ -70,9 +70,11 @@ class NotoBuilder(GFBuilder):
         hinted = filename.replace("unhinted", "hinted")
         try:
             autohint(filename, hinted, add_script=True)
-            self.outputs.add(hinted)
         except Exception as e:
             self.logger.error("Couldn't autohint %s: %s" % (filename, e))
+            # We just copy it and pretend.
+            shutil.copy(filename, hinted)
+        self.outputs.add(hinted)
 
     def post_process(self, filename):
         super().post_process(filename)
