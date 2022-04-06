@@ -51,6 +51,7 @@ class NotoBuilder(GFBuilder):
         self.config["vfDir"] = "../fonts/unhinted/variable-ttf"
         self.config["otDir"] = "../fonts/unhinted/otf"
         self.config["ttDir"] = "../fonts/unhinted/ttf"
+        self.config["buildWebfont"] = False
         self.config["autohintTTF"] = False  # We take care of it ourselves
         self.outputs = set()
         self.logger = logging.getLogger("GFBuilder")
