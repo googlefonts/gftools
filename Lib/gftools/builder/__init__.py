@@ -174,6 +174,7 @@ class GFBuilder:
                 "ufo2ft.filters",
                 "ufo2ft.postProcessor",
                 "fontTools.varLib",
+                "fontTools.feaLib.parser",
                 "cu2qu.ufo",
                 "glyphsLib.builder.builders.UFOBuilder",
             ]:
