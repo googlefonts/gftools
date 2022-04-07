@@ -138,7 +138,7 @@ class NotoBuilder(GFBuilder):
                 master.path = newpath
 
                 for subset in self.config["includeSubsets"]:
-                    self.add_subset(master, subset)
+                    self.add_subset(ds, master, subset)
             # # Set instance filenames to temporary
             for instance in ds.instances:
                 instance.filename = instance.path = os.path.join(new_ds_file_dir.name, os.path.basename(instance.filename))
@@ -154,7 +154,7 @@ class NotoBuilder(GFBuilder):
         super().build()
         # Temporaries should get cleaned here.
 
-    def add_subset(self, ds_source, subset):
+    def add_subset(self, ds, ds_source, subset):
         if "name" in subset:
             # Resolve to glyphset
             unicodes = CodepointsInSubset(subset["name"])
@@ -163,7 +163,10 @@ class NotoBuilder(GFBuilder):
             for r in subset["ranges"]:
                 for cp in range(r["start"], r["end"] + 1):
                     unicodes.append(cp)
-        source_ufo = self.obtain_noto_ufo(subset["from"], ds_source.location)
+        location = dict(ds_source.location)
+        for axis in ds.axes:
+            location[axis.name] = axis.map_backward(location[axis.name])
+        source_ufo = self.obtain_noto_ufo(subset["from"], location)
         target_ufo = ufoLib2.Font.open(ds_source.path)
         merge_ufos(
             target_ufo, source_ufo, codepoints=unicodes, existing_handling="skip",
