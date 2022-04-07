@@ -28,6 +28,12 @@ import os
 import shutil
 from gftools.diffenator import jfont
 from pkg_resources import resource_filename
+import logging
+import pprint
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 FT_BITS = ft.raw.FT_LOAD_NO_HINTING | ft.raw.FT_LOAD_RENDER
 
@@ -176,6 +182,7 @@ class DFont:
         other_glyphs_rev = {v: k for k, v in font.glyphs.items()}
         shared = set(glyphs_rev) & set(other_glyphs_rev)
         mapping = {glyphs_rev[i]: other_glyphs_rev[i] for i in shared}
+        logger.debug(f"{self} renaming glyphs {pprint.pformat(mapping)}")
         PostProcessor.rename_glyphs(self.ttFont, mapping)
         glyphs = self.ttFont.getGlyphNames()
 
@@ -184,6 +191,7 @@ class DFont:
         self.build_glyphs()
 
     def build_glyphs(self):
+        logger.info(f"{self}: building glyphs")
         optional_features = OPTIONAL_FEATURES & set(self.glyph_combinator.ff.features.keys())
         for script, langs in self.glyph_combinator.languageSystems.items():
             for lang in langs:
@@ -204,11 +212,15 @@ class DFont:
 
                         )
                         self.glyphs[name] = buffer
+    
+    def __repr__(self):
+        return f"<DFont: {self.path}>"
 
 
 # Key feature of diffenator is to compare a static font against a VF instance.
 # We need to retain this
 def match_fonts(old_font: DFont, new_font: DFont, variations: dict = None):
+    logger.info(f"Matching {os.path.basename(old_font.path)} to {os.path.basename(new_font.path)}")
     if old_font.is_variable() and new_font.is_variable():
         # todo allow user to specify coords
         return old_font, new_font
@@ -365,6 +377,7 @@ class Reporter:
         )
         report_out = os.path.join(fp, "report.html")
         with open(report_out, "w") as f:
+            logger.info(f"Saving {report_out}")
             f.write(doc)
 
 
