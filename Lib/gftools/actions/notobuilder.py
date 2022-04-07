@@ -48,9 +48,10 @@ class NotoBuilder(GFBuilder):
         self.config = self.load_config(config)
         if os.path.dirname(config):
             os.chdir(os.path.dirname(config))
-        self.config["vfDir"] = "../fonts/unhinted/variable-ttf"
-        self.config["otDir"] = "../fonts/unhinted/otf"
-        self.config["ttDir"] = "../fonts/unhinted/ttf"
+        family_dir = self.get_family_name().replace(" ", "")
+        self.config["vfDir"] = "../fonts/%s/unhinted/variable-ttf" % family_dir
+        self.config["otDir"] = "../fonts/%s/unhinted/otf" % family_dir
+        self.config["ttDir"] = "../fonts/%s/unhinted/ttf" % family_dir
         self.config["buildWebfont"] = False
         self.config["autohintTTF"] = False  # We take care of it ourselves
         self.outputs = set()
