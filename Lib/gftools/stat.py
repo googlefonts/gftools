@@ -263,7 +263,10 @@ def _update_fvar_nametable_records(ttFont, stat_table):
     fvar = ttFont["fvar"]
     family_name = font_familyname(ttFont)
     axes_with_one_axis_value = [
-        a["values"][0] for a in stat_table if len(a["values"]) == 1
+        a["values"][0] for a in stat_table
+        if len(a["values"]) == 1
+        # skip elided but include Regular
+        if ("flags" in a["values"][0] and a["values"][0]["flags"] != 0x2) or a["values"][0]["name"] == "Regular"
     ]
     tokens = [v["name"] for v in axes_with_one_axis_value]
     tokens = [t for t in tokens if t not in family_name.split()]
