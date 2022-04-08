@@ -313,11 +313,11 @@ class GFBuilder:
             tmpdir = tempfile.TemporaryDirectory()
             args["output_dir"] = tmpdir.name
 
+        filters = args.get("filters", [])
         if (
             self.config["flattenComponents"] or
             self.config["decomposeTransformedComponents"]
         ):
-            filters = args.get("filters", [])
             if self.config["flattenComponents"]:
                 filters.append(
                     FlattenComponentsFilter(pre=True)
@@ -327,7 +327,9 @@ class GFBuilder:
                 filters.append(
                     DecomposeTransformedComponentsFilter(pre=True)
                 )
-            args["filters"] = filters
+        # ... will run the filters in the ufo's lib,
+        # https://github.com/googlefonts/fontmake/issues/872
+        args["filters"] = [...] + filters
 
         if source.endswith(".glyphs"):
             FontProject().run_from_glyphs(source, **args)

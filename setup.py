@@ -92,7 +92,7 @@ setup(
         'vttlib',
         'pygit2',
         'strictyaml',
-        'fontmake>=2.4.0',
+        'fontmake>=3.3.0',
         'skia-pathops',
         'statmake',
         'PyYAML',
