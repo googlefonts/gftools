@@ -159,6 +159,14 @@ class GlyphCombinator:
                     perms = permutations(char_input)
                     for perm in perms:
                         string = "".join(perm)
+                        # XXX There is a problem here for rules which apply in the
+                        # middle of an orthographic cluster. For example, a rule
+                        # like "sub uni192A uni1922 by uni192A1922" should ligate
+                        # the two mark glyphs. However, since we are feeding the
+                        # two characters in alone without a preceding base glyph,
+                        # the shaper will first insert dotted circles before each
+                        # one, separating them into different clusters and causing
+                        # the rule not to fire.
                         hb_res = self.shape(string)
 
                         for g in hb_res:
