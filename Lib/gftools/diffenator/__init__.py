@@ -73,6 +73,10 @@ class Buffer(Renderable):
     def __hash__(self):
         return hash((self.characters, self.features, self.script, self.lang))
 
+    def to_image(self, font):
+        font.ftFont.load_glyph(self.indexes[0], FT_BITS)
+        return font.ftFont.glyph.bitmap.buffer
+
 
 @dataclass
 class BufferDiff(Renderable):
@@ -284,15 +288,15 @@ class DiffFonts:
         glyphs_b = {v: k for k, v in self.new_font.glyphs.items()}
         shared_glyphs = set(glyphs_a.keys()) & set(glyphs_b.keys())
         res = []
-        for glyph in shared_glyphs:
-            name_a = glyphs_a[glyph]
-            name_b = glyphs_b[glyph]
-            self.old_font.ftFont.load_glyph(self.old_font.glyphs[name_a].indexes[0], FT_BITS)
-            self.new_font.ftFont.load_glyph(self.new_font.glyphs[name_b].indexes[0], FT_BITS)
-            img_a = self.old_font.ftFont.glyph.bitmap.buffer
-            img_b = self.new_font.ftFont.glyph.bitmap.buffer
+        for glyph_a in shared_glyphs:
+            # This looks weird, but it gets us a buffer with the right
+            # indices for the other font, in case the new font has different
+            # glyph indices for equivalent characters.
+            glyph_b = self.new_font.glyphs[glyphs_b[glyph_a]]
+            img_a = glyph_a.to_image(self.old_font)
+            img_b = glyph_b.to_image(self.new_font)
             diff = img_diff(img_a, img_b)
-            d = BufferDiff(self.old_font.glyphs[name_a], self.new_font.glyphs[name_b], diff)
+            d = BufferDiff(glyph_a, glyph_b, diff)
             res.append(d)
         res.sort(key=lambda k: k.diff)
         res = [i for i in res if i.diff <= threshold if i.diff > 0]
