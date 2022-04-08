@@ -296,10 +296,9 @@ class DiffFonts:
             img_a = glyph_a.to_image(self.old_font)
             img_b = glyph_b.to_image(self.new_font)
             diff = img_diff(img_a, img_b)
-            d = BufferDiff(glyph_a, glyph_b, diff)
-            res.append(d)
+            if diff <= threshold and diff > 0:
+                res.append(BufferDiff(glyph_a, glyph_b, diff))
         res.sort(key=lambda k: k.diff)
-        res = [i for i in res if i.diff <= threshold if i.diff > 0]
         return res
 
     def modified_marks(self):
