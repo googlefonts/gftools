@@ -22,7 +22,7 @@ from gftools.diffenator.glyphs import GlyphCombinator
 import numpy as np
 from collections import defaultdict
 from gftools.diffenator.scale import scale_font
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, pass_environment
 from gftools import html
 import os
 import shutil
@@ -42,9 +42,17 @@ FT_BITS = ft.raw.FT_LOAD_NO_HINTING | ft.raw.FT_LOAD_RENDER
 OPTIONAL_FEATURES = set(["case, ""dnom", "frac", "numr", "ordn", "zero", "locl", "ccmp", "liga"])
 
 
+class Renderable:
+    @pass_environment
+    def render(self, jinja):
+        classname = self.__class__.__name__
+        template = jinja.get_template(os.path.join("diffenator", classname+".partial.html"))
+        return template.render(self.__dict__)
+
+
 # Use dataclass instead of namedtuple. Override __eq__ method.
 @dataclass
-class Buffer:
+class Buffer(Renderable):
     # A buffer should in theory cover all GSUB lookup types
     name: str
     characters: str  # characters used to assemble buffer e.g कि == [क] + [ ि]
@@ -65,39 +73,12 @@ class Buffer:
     def __hash__(self):
         return hash((self.characters, self.features, self.script, self.lang))
 
-    def render(self):
-        return f"""
-        <div class="cell">
-        <div class="tooltip">
-        {self.characters}
-        <span class="tooltiptext">
-            glyph: {self.name}<br>
-            gids: {self.indexes}<br>
-        </span>
-        </div>
-        </div>
-        """
-
 
 @dataclass
-class BufferDiff:
+class BufferDiff(Renderable):
     buffer_a: Buffer
     buffer_b: Buffer
     diff: float
-
-    def render(self):
-        return f"""
-        <div class="cell">
-        <div class="tooltip">
-        {self.buffer_b.characters}
-        <span class="tooltiptext">
-            glyph: {self.buffer_b.name}<br>
-            gids: {self.buffer_b.indexes}<br>
-            diff: {self.diff}
-        </span>
-        </div>
-        </div>
-        """
 
 
 @dataclass
