@@ -250,10 +250,13 @@ class DiffFonts:
 
         self.tables = jfont.Diff(self.old_font.jFont, self.new_font.jFont)
         # todo this seems bolted on
-        self.features = HtmlDiff(wrapcolumn=80).make_file(
-            self.old_font.glyph_combinator.ff.asFea().split("\n"),
-            self.new_font.glyph_combinator.ff.asFea().split("\n"),
-        )
+        old_fea = self.old_font.glyph_combinator.ff.asFea()
+        new_fea = self.new_font.glyph_combinator.ff.asFea()
+        if old_fea != new_fea:
+            self.features = HtmlDiff(wrapcolumn=80).make_file(
+                old_fea.split("\n"),
+                new_fea.split("\n"),
+            )
 
 
     def build(self):
