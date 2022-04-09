@@ -171,16 +171,6 @@ def _MakeMetadata(fontdir, is_new):
                                                 default_fullname)
     font_metadata.copyright = font_copyright
 
-  if not metadata.languages:
-    exemplar_font_fp = os.path.join(
-      fontdir, fonts.GetExemplarFont(metadata).filename
-    )
-    exemplar_font = ttLib.TTFont(exemplar_font_fp)
-    languages = LoadLanguages(base_dir=FLAGS.lang)
-    supported_languages = fonts.SupportedLanguages(exemplar_font, languages)
-    supported_languages = sorted([l.id for l in supported_languages])
-    metadata.languages.extend(supported_languages)
-
   axes_info_from_font_files \
     = {_AxisInfo(f.file) for f in file_family_style_weights}
   if len(axes_info_from_font_files) != 1:
