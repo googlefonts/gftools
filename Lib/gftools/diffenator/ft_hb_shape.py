@@ -6,7 +6,7 @@ import uharfbuzz as hb
 def draw_text(
     filename,
     text,
-    size=128,
+    size=64,
     features=None,
     script=None,
     lang=None,
