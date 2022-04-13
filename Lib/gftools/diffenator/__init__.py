@@ -86,6 +86,13 @@ class BufferDiff(Renderable):
     buffer_b: Buffer
     diff: float
 
+    def __init__(self, buffer_a, font_a, buffer_b, font_b):
+        self.buffer_a = buffer_a
+        self.buffer_b = buffer_b
+        img_a = buffer_a.to_image(font_a)
+        img_b = buffer_b.to_image(font_b)
+        self.diff = img_diff(img_a, img_b)
+
 
 @dataclass
 class Kern:
@@ -300,11 +307,9 @@ class DiffFonts:
             # indices for the other font, in case the new font has different
             # glyph indices for equivalent characters.
             glyph_b = self.new_font.glyphs[glyphs_b[glyph_a]]
-            img_a = glyph_a.to_image(self.old_font)
-            img_b = glyph_b.to_image(self.new_font)
-            diff = img_diff(img_a, img_b)
-            if diff > threshold:
-                res.append(BufferDiff(glyph_a, glyph_b, diff))
+            bd = BufferDiff(glyph_a, self.old_font, glyph_b, self.new_font)
+            if bd.diff > threshold:
+                res.append(bd)
         res.sort(key=lambda k: k.diff)
         return res
 
