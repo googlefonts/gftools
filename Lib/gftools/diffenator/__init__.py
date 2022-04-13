@@ -230,7 +230,8 @@ def match_fonts(old_font: DFont, new_font: DFont, variations: dict = None):
 
 class DiffFonts:
     def __init__(
-        self, old_font: DFont, new_font: DFont, scale_upm=True, rename_glyphs=True
+        self, old_font: DFont, new_font: DFont, scale_upm=True, rename_glyphs=True,
+        strings=None
     ):
         self.diff = defaultdict(dict)
         # self.diff = {
@@ -240,6 +241,7 @@ class DiffFonts:
         # }
         self.old_font = old_font
         self.new_font = new_font
+        self.strings  = strings
         # diffing fonts with different upms was in V1 so we should retain it.
         # previous implementation was rather messy. It is much easier to scale
         # the whole font
@@ -289,6 +291,16 @@ class DiffFonts:
         )
         if new_glyphs:
             self.diff["glyphs"]["new"] = new_glyphs
+
+        if self.strings:
+            diffstrings = []
+            for s in self.strings:
+                sbuf = Buffer(name=s, characters=s, indexes=[])
+                bd = BufferDiff(sbuf, self.old_font, sbuf, self.new_font)
+                if bd.diff > 1:
+                    diffstrings.append(bd)
+            if diffstrings:
+                self.diff["strings"]["differing"] = diffstrings
 
     def subtract(self, items_a, items_b):
         return items_a - items_b
