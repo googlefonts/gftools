@@ -103,6 +103,22 @@
             .leaf {
             font-weight: bold;
             }
+            .before .cell .after {
+            	display:  none;
+            }
+            .after .cell .before {
+            	display:  none;
+            }
+            .both .cell .before {
+            	opacity: 0.75;
+            	color:  red;
+            }
+            .both .cell .after {
+            	opacity: 0.75;
+            	position: absolute;
+            	top: 0;
+            	color:  green;
+            }
 
 	  {% for font_face in css_font_faces_before %}
 	    {{ font_face.render() }}
@@ -144,10 +160,11 @@
 </body>
 	<script>
 
-	POSITION = "after"
+	POSITION = "before"
 	fontToggle = document.getElementById("font-toggle")
 	function switchFonts() {
-	  items = document.getElementsByClassName("box")
+	  items = document.getElementsByClassName("box");
+	  console.log("Click from "+POSITION)
 	  
 	  if (POSITION === "before") {
 	  POSITION = "after"
@@ -156,6 +173,14 @@
             item.lastElementChild.className = item.lastElementChild.className.replace("before", "after")
 	    fontToggle.textContent = "After"
 	  }
+	  } else if (POSITION === "after") {
+	  POSITION = "both"
+	  for (item of items) {
+	    item.firstElementChild.textContent = item.firstElementChild.textContent.replace("after", "both")
+            item.lastElementChild.className = item.lastElementChild.className.replace("after", "both")
+	    fontToggle.textContent = "Both"
+	  }
+
 	  } else {
 	  POSITION = "before"
 	  for (item of items) {
