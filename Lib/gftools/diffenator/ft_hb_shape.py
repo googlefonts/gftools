@@ -1,6 +1,9 @@
 import freetype as ft
 import numpy as np
 import uharfbuzz as hb
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def draw_text(
@@ -35,6 +38,9 @@ def draw_text(
     if lang:
         buf.language = str(lang)
     hb.shape(hb_font, buf, features)
+    if not buf.glyph_infos or not buf.glyph_positions:
+        logger.error("Shaping failed for string '%s'", text)
+        return np.array([])
 
     for glyph, pos in zip(buf.glyph_infos, buf.glyph_positions):
         ft_face.load_glyph(glyph.codepoint, flags)
