@@ -18,16 +18,14 @@ MATRAS = [
 ]
 
 class GlyphCombinator:
-    def __init__(self, ttFont, features={"kern": True, "liga": True}):
+    def __init__(self, ttFont, hbFont, features={"kern": True, "liga": True}):
         self.ttFont = ttFont
+        self.hbFont = hbFont
 
         self.glyphs = {v: chr(k) for k, v in self.ttFont.getBestCmap().items()}
         self.reverse_glyphs = {chr(k): v for k,v in self.ttFont.getBestCmap().items()}
         self.gids = {idx: n for idx, n in enumerate(self.ttFont.getGlyphOrder())}
         self.reverse_gids = {n: idx for idx, n in enumerate(self.ttFont.getGlyphOrder())}
-        blob = hb.Blob.from_file_path(ttFont.reader.file.name)
-        face = hb.Face(blob)
-        self.hbFont = hb.Font(face)
         self.dotted_circle = self.reverse_glyphs.get("◌", "")
         self.routine_map = {}
         self.features = features 

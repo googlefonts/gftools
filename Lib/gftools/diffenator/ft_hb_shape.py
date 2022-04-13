@@ -31,9 +31,9 @@ def draw_text(
     buf.add_str(text)
     buf.guess_segment_properties()
     if script:
-        buf.script = script
+        buf.script = str(script)
     if lang:
-        buf.language = lang
+        buf.language = str(lang)
     hb.shape(hb_font, buf, features)
 
     for glyph, pos in zip(buf.glyph_infos, buf.glyph_positions):

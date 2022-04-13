@@ -20,6 +20,7 @@ import freetype as ft
 from dataclasses import dataclass
 from gftools.diffenator.glyphs import GlyphCombinator
 import numpy as np
+import uharfbuzz as hb
 from collections import defaultdict
 from gftools.diffenator.scale import scale_font
 from jinja2 import Environment, FileSystemLoader, pass_environment
@@ -27,6 +28,7 @@ from gftools import html
 import os
 import shutil
 from gftools.diffenator import jfont
+from gftools.diffenator.ft_hb_shape import draw_text
 from pkg_resources import resource_filename
 import logging
 import pprint
@@ -74,8 +76,8 @@ class Buffer(Renderable):
         return hash((self.characters, self.features, self.script, self.lang))
 
     def to_image(self, font):
-        font.ftFont.load_glyph(self.indexes[0], FT_BITS)
-        return font.ftFont.glyph.bitmap.buffer
+        nparray = draw_text(None, self.characters, features=self.features, script=self.script, lang=self.lang, ft_face=font.ftFont, hb_font=font.hbFont)
+        return nparray[::-1, ::1]
 
 
 @dataclass
@@ -127,8 +129,11 @@ class DFont:
         self.path = path
         self.ttFont: TTFont = TTFont(self.path, recalcTimestamp=False)
         self.ftFont: ft.Face = ft.Face(self.path)
+        with open(path, "rb") as fontfile:
+            fontdata = fontfile.read()
+        self.hbFont: hb.Font = hb.Font(hb.Face(fontdata))
         self.jFont = jfont.TTJ(self.ttFont)
-        self.glyph_combinator = GlyphCombinator(self.ttFont)
+        self.glyph_combinator = GlyphCombinator(self.ttFont, self.hbFont)
 
         self.font_size: int = font_size
         self.set_font_size(self.font_size)
@@ -168,7 +173,7 @@ class DFont:
         shared = set(glyphs_rev) & set(other_glyphs_rev)
         mapping = {glyphs_rev[i]: other_glyphs_rev[i] for i in shared}
         logger.debug(f"{self} renaming glyphs {pprint.pformat(mapping)}")
-        PostProcessor.rename_glyphs(self.ttFont, mapping)
+        # PostProcessor.rename_glyphs(self.ttFont, mapping)
         glyphs = self.ttFont.getGlyphNames()
 
     # populate glyphs, kerns, marks etc
@@ -286,7 +291,7 @@ class DiffFonts:
         return items_a & items_b
 
     # tiny amount is included so we skip details no one can see
-    def modified_glyphs(self, threshold=0.985):
+    def modified_glyphs(self, threshold=1):
         glyphs_a = {v: k for k, v in self.old_font.glyphs.items()}
         glyphs_b = {v: k for k, v in self.new_font.glyphs.items()}
         shared_glyphs = set(glyphs_a.keys()) & set(glyphs_b.keys())
@@ -299,7 +304,7 @@ class DiffFonts:
             img_a = glyph_a.to_image(self.old_font)
             img_b = glyph_b.to_image(self.new_font)
             diff = img_diff(img_a, img_b)
-            if diff <= threshold and diff > 0:
+            if diff > threshold:
                 res.append(BufferDiff(glyph_a, glyph_b, diff))
         res.sort(key=lambda k: k.diff)
         return res
@@ -379,4 +384,4 @@ def img_diff(img1, img2):
 
     img1_norm = np.resize(img1_norm, max(img1_norm.size, img2_norm.size))
     img2_norm = np.resize(img2_norm, max(img1_norm.size, img2_norm.size))
-    return np.sum(img1_norm * img2_norm)
+    return np.linalg.norm(img1_norm - img2_norm)
