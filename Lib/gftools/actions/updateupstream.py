@@ -30,7 +30,7 @@ def generate_upstream(config, url):
     repo = os.environ.get("GITHUB_REPOSITORY")
     if not repo:
         raise ValueError("Not being run from a GitHub action?")
-    if category not in config:
+    if "category" not in config:
         config["category"] = ["SANS_SERIF"]
 
     upstream = {
