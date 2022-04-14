@@ -147,16 +147,20 @@ class FontQA:
         html.build_pages(["glyphs.html"], pt_size=16)
         html.save_imgs()
 
-    def fontbakery(self):
+    def fontbakery(self, profile="googlefonts", html=False, extra_args=None):
         logger.info("Running Fontbakery")
         out = os.path.join(self.out, "Fontbakery")
         mkdir(out)
         cmd = (
-            ["fontbakery", "check-googlefonts", "-l", "INFO", "--succinct"]
+            ["fontbakery", "check-"+profile, "-l", "INFO", "--succinct"]
             + [f.reader.file.name for f in self.fonts]
             + ["-C"]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
         )
+        if html:
+            cmd.extend(["--html", os.path.join(out, "report.html")])
+        if extra_args:
+            cmd.extend(extra_args)
         subprocess.call(cmd)
 
     def plot_glyphs(self):
