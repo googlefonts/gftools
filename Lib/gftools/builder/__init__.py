@@ -96,6 +96,7 @@ required, all others have sensible defaults:
 * ``flattenComponents``: Whether to flatten components on export. Defaults to ``true``.
 * ``decomposeTransformedComponents``: Whether to decompose transformed components on export. Defaults to ``true``.
 * ``googleFonts``: Whether this font is destined for release on Google Fonts. Used by GitHub Actions. Defaults to ``false``.
+* ``category``: If this font is destined for release on Google Fonts, a list of the categories it should be catalogued under. Used by GitHub Actions. Must be set if ``googleFonts`` is set.
 
 """
 

@@ -11,6 +11,7 @@ from strictyaml import (
                         Optional,
                         Bool
                         )
+from gftools.packager import CATEGORIES
 
 
 stat_schema = Seq(
@@ -76,5 +77,6 @@ schema = Map(
         Optional("decomposeTransformedComponents"): Bool(),
         Optional("ttfaUseScript"): Bool(),
         Optional("googleFonts"): Bool(),
+        Optional("category"): UniqueSeq(Enum(CATEGORIES)),
     }
 )
