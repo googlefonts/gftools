@@ -67,6 +67,7 @@ with open(resource_filename('gftools', 'template.upstream.yaml')) as f:
   upstream_yaml_template = upstream_yaml_template.replace('{CATEGORIES}', ', '.join(CATEGORIES))
 
 
+NOTO_GITHUB_URL = "https://github.com/notofonts/"
 GIT_NEW_BRANCH_PREFIX = 'gftools_packager_'
 # Using object(expression:$rev), we query all three license folders
 # for family_name, but only the entry that exists will return a tree (directory).
@@ -892,6 +893,9 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
     metadata.source.commit = upstream_commit_sha
   if upstream_archive_url:
     metadata.source.archive_url = upstream_archive_url
+
+  if upstream_conf['repository_url'].startswith(NOTO_GITHUB_URL):
+    metadata.is_noto = True
 
   language_comments = fonts.LanguageComments(LoadLanguages())
   fonts.WriteProto(metadata, metadata_file_name, comments=language_comments)
