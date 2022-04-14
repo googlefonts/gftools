@@ -16,6 +16,7 @@ from fontTools.ttLib import TTFont
 
 parser = argparse.ArgumentParser(description="Process some integers.")
 parser.add_argument("url", help="URL of GitHub release")
+parser.add_argument("--family", help="Family name", required=False)
 
 
 def get_family_name(config):
@@ -91,10 +92,13 @@ def update_file_list(upstream):
 
 
 if __name__ == "__main__":
-    config = yaml.load(
-        open(os.path.join("sources", "config.yaml")), Loader=yaml.FullLoader
-    )
     args = parser.parse_args()
+    if args.family:
+        config = {"familyName": args.family}
+    else:
+        config = yaml.load(
+            open(os.path.join("sources", "config.yaml")), Loader=yaml.FullLoader
+        )
 
     if os.path.isfile("upstream.yaml"):
         try:
