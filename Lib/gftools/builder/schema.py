@@ -10,7 +10,8 @@ from strictyaml import (
                         Seq,
                         Optional,
                         Bool,
-                        UniqueSeq
+                        UniqueSeq,
+                        Enum
                         )
 from gftools.packager import CATEGORIES
 
