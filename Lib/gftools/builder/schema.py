@@ -9,8 +9,11 @@ from strictyaml import (
                         Float,
                         Seq,
                         Optional,
-                        Bool
+                        Bool,
+                        UniqueSeq,
+                        Enum
                         )
+from gftools.packager import CATEGORIES
 
 
 stat_schema = Seq(
@@ -76,5 +79,6 @@ schema = Map(
         Optional("decomposeTransformedComponents"): Bool(),
         Optional("ttfaUseScript"): Bool(),
         Optional("googleFonts"): Bool(),
+        Optional("category"): UniqueSeq(Enum(CATEGORIES)),
     }
 )
