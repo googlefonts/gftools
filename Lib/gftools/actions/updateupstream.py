@@ -81,7 +81,7 @@ def update_file_list(upstream):
             raise ValueError(
                 "No license file was found. Ensure OFL.txt is added the the release"
             )
-        if not description_found:
+        if not description_found and "Noto" not in upstream["name"]:
             raise ValueError(
                 "No description file was found. Ensure DESCRIPTION.en_us.html is added the the release"
             )
