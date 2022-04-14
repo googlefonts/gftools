@@ -5,6 +5,7 @@ import subprocess
 
 from gftools.github import GitHubClient
 from gftools.utils import mkdir
+from gftools.html import HtmlProof, HtmlDiff
 try:
     from diffenator.diff import DiffFonts
     from diffenator.font import DFont

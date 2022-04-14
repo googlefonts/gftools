@@ -32,10 +32,9 @@ from gftools.utils import (
     Google_Fonts_has_family,
     mkdir,
 )
-from gftools.html import HtmlProof, HtmlDiff
 from gftools.qa import FontQA
 
-__version__ = "2.1.3"
+__version__ = "2.2.0"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
