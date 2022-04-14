@@ -9,7 +9,8 @@ from strictyaml import (
                         Float,
                         Seq,
                         Optional,
-                        Bool
+                        Bool,
+                        UniqueSeq
                         )
 from gftools.packager import CATEGORIES
 
