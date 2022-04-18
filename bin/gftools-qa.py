@@ -29,6 +29,7 @@ from gftools.utils import (
     download_family_from_Google_Fonts,
     download_files_in_github_pr,
     download_files_in_github_dir,
+    download_files_from_archive,
     Google_Fonts_has_family,
     mkdir,
 )
@@ -87,6 +88,8 @@ def main():
         help="Get previous fonts from a Github pull request")
     font_before_input_group.add_argument("-ghb", "--github-dir-before",
         help="Get previous fonts from a Github dir")
+    font_before_input_group.add_argument("-arb", "--archive-before",
+        help="Get previous fonts from a zip file URL")
     font_before_input_group.add_argument(
         "-gfb",
         "--googlefonts-before",
@@ -196,7 +199,7 @@ def main():
 
     # Retrieve fonts_before and store in out dir
     fonts_before = None
-    if any([args.fonts_before, args.pull_request_before, args.github_dir_before]) or \
+    if any([args.fonts_before, args.pull_request_before, args.github_dir_before, args.archive_before]) or \
            (args.googlefonts_before and family_on_gf):
         fonts_before_dir = os.path.join(args.out, "fonts_before")
         mkdir(fonts_before_dir, overwrite=False)
@@ -212,6 +215,10 @@ def main():
     elif args.github_dir_before:
         fonts_before = download_files_in_github_dir(
             args.github_dir_before, fonts_before_dir
+        )
+    elif args.archive_before:
+        fonts_before = download_files_from_archive(
+            args.archive_before, fonts_before_dir
         )
     elif args.googlefonts_before and family_on_gf:
         fonts_before = download_family_from_Google_Fonts(
