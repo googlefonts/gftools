@@ -280,9 +280,9 @@ class GFBuilder:
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
-        args = {"output": ["variable"], "family_name": self.config["familyName"]}
         ttFonts = []
         for source in self.config["sources"]:
+            args = {"output": ["variable"], "family_name": self.config["familyName"]}
             if not source.endswith(".designspace") and not source.endswith("glyphs"):
                 continue
             self.logger.info("Creating variable fonts from %s" % source)
@@ -450,16 +450,13 @@ class GFBuilder:
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
-        args = {
-            "output": [format],
-            "output_dir": directory,
-            "optimize_cff": CFFOptimization.SUBROUTINIZE,
-        }
         for source in self.config["sources"]:
-            if source.endswith("ufo"):
-                if "interpolate" in args:
-                    del args["interpolate"]
-            else:
+            args = {
+                "output": [format],
+                "output_dir": directory,
+                "optimize_cff": CFFOptimization.SUBROUTINIZE,
+            }
+            if not source.endswith("ufo"):
                 args["interpolate"] = True
             self.logger.info("Creating static fonts from %s" % source)
             for fontfile in self.run_fontmake(source, args):
