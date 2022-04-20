@@ -75,7 +75,7 @@ def main():
         help="Get fonts from a Github directory")
     font_input_group.add_argument("-gf", "--googlefonts",
         help="Get fonts from Google Fonts")
-    font_before_input_group.add_argument("-ar", "--archive",
+    font_input_group.add_argument("-ar", "--archive",
         help="Get fonts from a zip file URL")
 
     font_before_group = parser.add_argument_group(title="Fonts before input")
