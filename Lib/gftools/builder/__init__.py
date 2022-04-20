@@ -455,10 +455,7 @@ class GFBuilder:
                 "output_dir": directory,
                 "optimize_cff": CFFOptimization.SUBROUTINIZE,
             }
-            if source.endswith("ufo"):
-                if "interpolate" in args:
-                    del args["interpolate"]
-            else:
+            if not source.endswith("ufo"):
                 args["interpolate"] = True
             self.logger.info("Creating static fonts from %s" % source)
             for fontfile in self.run_fontmake(source, args):
