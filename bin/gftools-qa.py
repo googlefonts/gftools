@@ -75,6 +75,8 @@ def main():
         help="Get fonts from a Github directory")
     font_input_group.add_argument("-gf", "--googlefonts",
         help="Get fonts from Google Fonts")
+    font_before_input_group.add_argument("-ar", "--archive",
+        help="Get fonts from a zip file URL")
 
     font_before_group = parser.add_argument_group(title="Fonts before input")
     font_before_input_group = font_before_group.add_mutually_exclusive_group(
@@ -185,6 +187,8 @@ def main():
         if not fonts:
             logger.info("No fonts found in github dir. Skipping")
             return
+    elif args.archive:
+        fonts = download_files_from_archive(args.archive, fonts_dir)
     elif args.googlefonts:
         fonts = download_family_from_Google_Fonts(args.googlefonts, fonts_dir)
 
