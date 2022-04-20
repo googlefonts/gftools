@@ -50,6 +50,7 @@ class TestGFToolsScripts(unittest.TestCase):
         self.example_vf_font = os.path.join("data", "test", 'Lora-Roman-VF.ttf')
         self.example_vf_stat = os.path.join("data", "test", 'lora_stat.yaml')
         self.example_builder_config = os.path.join("data", "test", 'builder_test.yaml')
+        self.example_builder_config_2_sources = os.path.join("data", "test", "Libre-Bodoni", "sources", "config.yaml")
         self.src_vtt_font = os.path.join("data", "test", "Inconsolata[wdth,wght].ttf")
         self.gf_family_dir = os.path.join('data', 'test', 'mock_googlefonts', 'ofl', 'abel')
         self.nam_file = os.path.join('data', 'test', 'arabic_unique-glyphs.nam')
@@ -237,6 +238,9 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def test_builder(self):
         self.check_script(['python', self.get_path('builder'), self.example_builder_config])
+    
+    def test_builder_2_sources(self):
+        self.check_script(["python", self.get_path("builder"), self.example_builder_config_2_sources])
 
 
 if __name__ == '__main__':
