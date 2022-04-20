@@ -197,6 +197,12 @@ def download_files_in_github_dir(
     return results
 
 
+def download_files_from_archive(url, dst):
+    zip_io = download_file(url)
+    with ZipFile(zip_io) as zip_file:
+        return fonts_from_zip(zip_file, dst)
+
+
 def download_file(url, dst_path=None):
     """Download a file from a url. If no dst_path is specified, store the file
     as a BytesIO object"""
