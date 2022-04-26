@@ -174,7 +174,7 @@ class DFont:
     def set_variations_from_font(self, font: any):
         # Parse static font into a variations dict
         # TODO improve this
-        coords = {"wght": font["OS/2"].usWeightClass, "wdth": font["OS/2"].usWidthClass}
+        coords = {"wght": font.ttFont["OS/2"].usWeightClass, "wdth": font.ttFont["OS/2"].usWidthClass}
         self.set_variations(coords)
 
     def set_glyph_names_from_font(self, font: any):
@@ -228,8 +228,7 @@ def match_fonts(old_font: DFont, new_font: DFont, variations: dict = None):
         new_font.set_variations_from_font(old_font)
     elif old_font.is_variable() and not new_font.is_variable():
         old_font.set_variations_from_font(new_font)
-    else:  # both are static
-        return old_font, new_font
+    return old_font, new_font
 
 
 class DiffFonts:
