@@ -1,0 +1,85 @@
+{% extends "_base.html" %}
+{% block title %}Glyphs{% endblock %}
+{% block style %}
+{{ super() }}
+.cell{
+  position: relative;
+  z-index: -1;
+  float: left;
+  background-color: #fcfcfc;
+  display: block;
+  text-align: center;
+  padding: 5pt;
+  margin: 5pt;
+  width: {{ pt_size | int * 1.5 }}px;
+  line-height: {{ pt_size | int * 1.5}}px;
+}
+.box-title-family{
+    width: {{ pt_size }}pt;
+    float: left;
+    font-size: 8pt;
+    font-weight: 700;
+    padding-top: 5px;
+    margin-bottom: 10pt;
+    display: block;
+}
+.wrapper_box{
+	display: flex;
+    padding: 5pt;
+    margin: 5pt;
+    width: 24px;
+    top: 240px;
+}
+.wrapper_title{
+	display: flex;
+    padding: 5pt;
+    margin: 5pt;
+    width: 24px;
+    /* position: fixed; */ 
+    top: 200px;
+}
+.wrapper_content{
+	display: block;
+}
+.title_rotated {
+    transform: rotate(-90deg);
+    white-space:nowrap;
+    display:block;
+}
+.error{
+    background-color: #D0342C;
+    color: #fcfcfc;
+}
+    
+{% endblock %}
+
+{% block content_name %}
+<div style="height: 200px">
+    <b>Font Family Overview</b>
+</div>
+{% endblock %}
+
+{% block content %}
+    <div class="wrapper_content">
+      <div class="wrapper_title">
+      {% for font_class in css_font_classes or css_font_classes_before or css_font_classes_after %}
+            <div class="{{ font_class.selector }} box cell title_rotated">{{ font_class.selector }}</div>
+        {% endfor %}
+      </div>
+      <div class="wrapper_box">
+      {% for font_class in css_font_classes or css_font_classes_before or css_font_classes_after %}
+          <div class="box">
+          <span class="{{ font_class.selector }}" style="font-size: {{ pt_size }}pt">
+            {% for glyph in glyphs %}
+                {% if glyph in encoded_glyphs[font_class] %}
+                    <div class="cell" title="{{ glyph }}">{{ glyph }}</div>
+                {% else %}
+                    <div class="cell error" title="{{ glyph }}">{{ glyph }}</div>
+                {% endif %}
+            {% endfor %}
+              </span>
+           </div>
+        {% endfor %}
+      <div>
+    </div>
+{% endblock %}
