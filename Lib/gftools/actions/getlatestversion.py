@@ -4,7 +4,12 @@ import os
 from github import Github
 import re
 
-def get_latest_release(user, repo, family):
+def get_latest_release(family, user=None, repo=None):
+    if not (user and repo):
+        repo_url = subprocess.check_output(["git", "remote", "get-url", "origin"]).decode("utf8").strip()
+        url_split = repo_url.split("/")
+        user, repo = url_split[3], url_split[4]
+
     g = Github(os.environ["GITHUB_TOKEN"])
     repo = g.get_repo(args.user + '/' + args.repo)
     for release in repo.get_releases():
@@ -28,12 +33,7 @@ if __name__ == "__main__":
     parser.add_argument('family', help='the font family name')
     args = parser.parse_args()
 
-    if not (args.user and args.repo):
-        repo_url = subprocess.check_output(["git", "remote", "get-url", "origin"]).decode("utf8").strip()
-        url_split = repo_url.split("/")
-        args.user, args.repo = url_split[3], url_split[4]
-
-    version, download_url = get_latest_release(args.user, args.repo, args.family)
+    version, download_url = get_latest_release(args.family, args.user, args.repo)
     if version and download_url:
         print(f"::set-output name=version::{version}")
         print(f"::set-output name=url::{download_url}")
