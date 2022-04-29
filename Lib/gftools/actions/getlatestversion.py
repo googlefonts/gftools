@@ -11,7 +11,7 @@ def get_latest_release(family, user=None, repo=None):
         user, repo = url_split[3], url_split[4]
 
     g = Github(os.environ["GITHUB_TOKEN"])
-    repo = g.get_repo(args.user + '/' + args.repo)
+    repo = g.get_repo(user + '/' + repo)
     for release in repo.get_releases():
         m = re.match(r"^(.*)-(v[\d.]+)", release.tag_name)
         if not m:
