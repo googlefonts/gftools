@@ -91,6 +91,7 @@ required, all others have sensible defaults:
 * ``cleanUp``: Whether or not to remove temporary files. Defaults to ``true``.
 * ``autohintTTF``: Whether or not to autohint TTF files. Defaults to ``true``.
 * ``ttfaUseScript``: Whether or not to detect a font's primary script and add a ``-D<script>`` flag to ttfautohint. Defaults to ``false``.
+* ``vttSources``: To patch a manual VTT hinting program (ttx format) to font binaries.
 * ``axisOrder``: STAT table axis order. Defaults to fvar order.
 * ``familyName``: Family name for variable fonts. Defaults to family name of first source file.
 * ``flattenComponents``: Whether to flatten components on export. Defaults to ``true``.
