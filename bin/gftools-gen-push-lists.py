@@ -24,7 +24,10 @@ def pr_directories(pr):
     results = set()
     files = pr.get_files()
     for f in files:
-        results.add(os.path.dirname(f.filename))
+        if f.filename.endswith(".textproto") and f.filename.startswith(("lang", "axisregistry")):
+            results.add(f.filename)
+        else:
+            results.add(os.path.dirname(f.filename))
     return results
 
 
