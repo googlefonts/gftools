@@ -22,6 +22,7 @@ from gftools.utils import (
     font_is_italic,
     partition,
     get_encoded_glyphs,
+    get_encoded_glyphs_from_fonts,
 )
 
 
@@ -496,7 +497,8 @@ class HtmlProof(HtmlTemplater):
         self.sample_text = " ".join(font_sample_text(self.ttFonts[0]))
         # TODO to collect unencoded glyphs, we need to make a better version
         # of hbinput
-        self.glyphs = get_encoded_glyphs(self.ttFonts[0])
+        self.glyphs = get_encoded_glyphs_from_fonts(self.ttFonts)
+        self.encoded_glyphs = {css_class: get_encoded_glyphs(self.ttFonts[i]) for i, css_class in enumerate(self.css_font_classes)}
 
     def partition(self):
         with tempfile.TemporaryDirectory() as tmp_out:
@@ -553,7 +555,7 @@ class HtmlDiff(HtmlTemplater):
         self.too_big_for_browserstack = len(self.css_font_classes_before) > 4
 
         self.sample_text = " ".join(font_sample_text(self.ttFonts_before[0]))
-        self.glyphs = get_encoded_glyphs(self.ttFonts_before[0])
+        self.glyphs = get_encoded_glyphs_fonts(self.ttFonts_before)
 
     def _match_css_font_classes(self):
         """Match css font classes by full names for static fonts and

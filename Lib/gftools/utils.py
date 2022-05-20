@@ -411,6 +411,12 @@ def get_encoded_glyphs(ttFont):
     """Collect all encoded glyphs"""
     return list(map(chr, ttFont.getBestCmap().keys()))
 
+def get_encoded_glyphs_from_fonts(ttFonts):
+    """Collect all encoded glyphs from a list of fonts"""
+    encoded_glyphs = set()
+    for ttFont in ttFonts:
+        encoded_glyphs.update(set(get_encoded_glyphs(ttFont)))
+    return sorted(encoded_glyphs)
 
 def get_unencoded_glyphs(font):
     """ Check if font has unencoded glyphs """
@@ -442,9 +448,13 @@ def has_mac_names(ttfont):
 
 
 def font_is_italic(ttfont):
-    """Check if the font has the word "Italic" in its stylename."""
-    stylename = ttfont["name"].getName(2, 3, 1, 0x409).toUnicode()
-    return True if "Italic" in stylename else False
+    try:
+        from fontbakery.profiles.shared_conditions import is_italic
+        return is_italic(ttfont)
+    except:
+        """Check if the font has the word "Italic" in its stylename."""
+        stylename = ttfont["name"].getName(2, 3, 1, 0x409).toUnicode()
+        return True if "Italic" in stylename else False
 
 
 def font_sample_text(ttFont):
@@ -513,3 +523,26 @@ def read_proto(fp, schema):
         data = text_format.Parse(f.read(), schema)
     return data
 
+def get_sorted_font_indices(font_objs):
+    """
+    Returns a tuple with indices sorted by 
+    font family, italic, width and weight values.
+    """
+    font_dict= dict()
+    for i, font_obj in enumerate(font_objs):
+        if "OS/2" not in font_obj or "name" not in font_obj:
+            # fonts must include the font tables OS/2 and name
+            # for figuring out a valid sorting.
+            continue
+
+        OS2 = font_obj["OS/2"]
+        name = font_obj["name"]
+
+        fam_name = name.getBestFamilyName()
+        wght_value = OS2.usWeightClass
+        wdth_value = OS2.usWidthClass
+        ital_value = font_is_italic(font_obj)
+
+        font_dict[(fam_name, ital_value, wdth_value, wght_value, i)] = i
+
+    return tuple([v for k, v in sorted(font_dict.items())])
