@@ -47,9 +47,8 @@ def merge_ufos(
     if layout_handling == "ignore":
         pass
     else:
-        includeDir = None
-        if hasattr(ufo2, "_path"):
-            includeDir = Path(ufo2._path).parent
+        path = getattr(ufo2, "_path", None)
+        includeDir = Path(ufo2._path).parent if path else None
         ff = FeaParser(ufo2.features.text, includeDir=includeDir).parse()
         for routine in ff.routines:
             newroutine = Routine(name=routine.name, flags=routine.flags)
