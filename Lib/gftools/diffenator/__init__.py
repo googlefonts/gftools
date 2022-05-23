@@ -216,8 +216,27 @@ class DFont:
 
 # Key feature of diffenator is to compare a static font against a VF instance.
 # We need to retain this
-def match_fonts(old_font: DFont, new_font: DFont, variations: dict = None):
+def match_fonts(old_font: DFont, new_font: DFont, variations: dict = None, scale_upm: bool = True, rename_glyphs: bool = True):
     logger.info(f"Matching {os.path.basename(old_font.path)} to {os.path.basename(new_font.path)}")
+    # diffing fonts with different upms was in V1 so we should retain it.
+    # previous implementation was rather messy. It is much easier to scale
+    # the whole font
+    if scale_upm:
+        ratio = new_font.ttFont["head"].unitsPerEm / old_font.ttFont["head"].unitsPerEm
+        if ratio != 1.0:
+            old_font.ttFont = scale_font(old_font.ttFont, ratio)
+    
+    # renaming was another key feature we need to retain
+    if rename_glyphs:
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".ttf") as modded_old_font:
+            # see https://github.com/googlefonts/ufo2ft/issues/485 for this mess
+            old_font.ttFont.save(modded_old_font.name)
+            old_font.ttFont = TTFont(modded_old_font.name)
+            old_font.set_glyph_names_from_font(new_font)
+            old_font.ttFont.save(modded_old_font.name)
+            old_font = DFont(modded_old_font.name)
+
     if old_font.is_variable() and new_font.is_variable():
         # todo allow user to specify coords
         return old_font, new_font
@@ -230,8 +249,7 @@ def match_fonts(old_font: DFont, new_font: DFont, variations: dict = None):
 
 class DiffFonts:
     def __init__(
-        self, old_font: DFont, new_font: DFont, scale_upm=True, rename_glyphs=True,
-        strings=None
+        self, old_font: DFont, new_font: DFont, strings=None
     ):
         self.diff = defaultdict(dict)
         # self.diff = {
@@ -242,27 +260,8 @@ class DiffFonts:
         self.old_font = old_font
         self.new_font = new_font
         self.strings  = strings
-        # diffing fonts with different upms was in V1 so we should retain it.
-        # previous implementation was rather messy. It is much easier to scale
-        # the whole font
-        if scale_upm:
-            ratio = new_font.ttFont["head"].unitsPerEm / old_font.ttFont["head"].unitsPerEm
-            if ratio != 1.0:
-                self.old_font.ttFont = scale_font(self.old_font.ttFont, ratio)
-        
-        # renaming was another key feature we need to retain
-        if rename_glyphs:
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix=".ttf") as modded_old_font:
-                # see https://github.com/googlefonts/ufo2ft/issues/485 for this mess
-                self.old_font.ttFont.save(modded_old_font.name)
-                self.old_font.ttFont = TTFont(modded_old_font.name)
-                self.old_font.set_glyph_names_from_font(self.new_font)
-                self.old_font.ttFont.save(modded_old_font.name)
-                self.old_font = DFont(modded_old_font.name)
 
         self.tables = jfont.Diff(self.old_font.jFont, self.new_font.jFont)
-        # todo this seems bolted on
         old_fea = self.old_font.glyph_combinator.ff.asFea()
         new_fea = self.new_font.glyph_combinator.ff.asFea()
         if old_fea != new_fea:
@@ -270,7 +269,6 @@ class DiffFonts:
                 old_fea.split("\n"),
                 new_fea.split("\n"),
             )
-
 
     def build(self):
         # TODO could make this dynamic use something like dir() to get funcs then call em

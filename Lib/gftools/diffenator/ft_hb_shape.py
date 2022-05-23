@@ -37,7 +37,7 @@ def draw_text(
         buf.script = str(script)
     if lang:
         buf.language = str(lang)
-    hb.shape(hb_font, buf, features)
+    hb.shape(hb_font, buf, {f:True for f in features})
     if not buf.glyph_infos or not buf.glyph_positions:
         logger.error("Shaping failed for string '%s'", text)
         return np.array([])
