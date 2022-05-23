@@ -191,8 +191,12 @@ class Diff:
         for k, v in obj.items():
             if isinstance(k, int):
                 k = f"[{k}]"
+            if space:
+                hide = 'style="display:none"'
+            else:
+                hide = ""
             s += (
-                f'\n{space}<div class="node">\n{space}{k}'
+                f'\n{space}<div class="node" {hide}>\n{space}{k}'
                 + self._render(v, space + "  ")
                 + f"\n{space}</div>"
             )

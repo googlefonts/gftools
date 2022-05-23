@@ -20,13 +20,15 @@ import freetype as ft
 from dataclasses import dataclass
 from gftools.diffenator.glyphs import GlyphCombinator
 import numpy as np
+import uharfbuzz as hb
 from collections import defaultdict
 from gftools.diffenator.scale import scale_font
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, pass_environment
 from gftools import html
 import os
 import shutil
 from gftools.diffenator import jfont
+from gftools.diffenator.ft_hb_shape import draw_text
 from pkg_resources import resource_filename
 import logging
 import pprint
@@ -42,9 +44,17 @@ FT_BITS = ft.raw.FT_LOAD_NO_HINTING | ft.raw.FT_LOAD_RENDER
 OPTIONAL_FEATURES = set(["case, ""dnom", "frac", "numr", "ordn", "zero", "locl", "ccmp", "liga"])
 
 
+class Renderable:
+    @pass_environment
+    def render(self, jinja):
+        classname = self.__class__.__name__
+        template = jinja.get_template(os.path.join("diffenator", classname+".partial.html"))
+        return template.render(self.__dict__)
+
+
 # Use dataclass instead of namedtuple. Override __eq__ method.
 @dataclass
-class Buffer:
+class Buffer(Renderable):
     # A buffer should in theory cover all GSUB lookup types
     name: str
     characters: str  # characters used to assemble buffer e.g कि == [क] + [ ि]
@@ -65,39 +75,23 @@ class Buffer:
     def __hash__(self):
         return hash((self.characters, self.features, self.script, self.lang))
 
-    def render(self):
-        return f"""
-        <div class="cell">
-        <div class="tooltip">
-        {self.characters}
-        <span class="tooltiptext">
-            glyph: {self.name}<br>
-            gids: {self.indexes}<br>
-        </span>
-        </div>
-        </div>
-        """
+    def to_image(self, font):
+        nparray = draw_text(None, self.characters, features=self.features, script=self.script, lang=self.lang, ft_face=font.ftFont, hb_font=font.hbFont)
+        return nparray[::-1, ::1]
 
 
 @dataclass
-class BufferDiff:
+class BufferDiff(Renderable):
     buffer_a: Buffer
     buffer_b: Buffer
     diff: float
 
-    def render(self):
-        return f"""
-        <div class="cell">
-        <div class="tooltip">
-        {self.buffer_b.characters}
-        <span class="tooltiptext">
-            glyph: {self.buffer_b.name}<br>
-            gids: {self.buffer_b.indexes}<br>
-            diff: {self.diff}
-        </span>
-        </div>
-        </div>
-        """
+    def __init__(self, buffer_a, font_a, buffer_b, font_b):
+        self.buffer_a = buffer_a
+        self.buffer_b = buffer_b
+        img_a = buffer_a.to_image(font_a)
+        img_b = buffer_b.to_image(font_b)
+        self.diff = img_diff(img_a, img_b)
 
 
 @dataclass
@@ -142,8 +136,11 @@ class DFont:
         self.path = path
         self.ttFont: TTFont = TTFont(self.path, recalcTimestamp=False)
         self.ftFont: ft.Face = ft.Face(self.path)
+        with open(path, "rb") as fontfile:
+            fontdata = fontfile.read()
+        self.hbFont: hb.Font = hb.Font(hb.Face(fontdata))
         self.jFont = jfont.TTJ(self.ttFont)
-        self.glyph_combinator = GlyphCombinator(self.ttFont)
+        self.glyph_combinator = GlyphCombinator(self.ttFont, self.hbFont)
 
         self.font_size: int = font_size
         self.set_font_size(self.font_size)
@@ -183,7 +180,7 @@ class DFont:
         shared = set(glyphs_rev) & set(other_glyphs_rev)
         mapping = {glyphs_rev[i]: other_glyphs_rev[i] for i in shared}
         logger.debug(f"{self} renaming glyphs {pprint.pformat(mapping)}")
-        PostProcessor.rename_glyphs(self.ttFont, mapping)
+        # PostProcessor.rename_glyphs(self.ttFont, mapping)
         glyphs = self.ttFont.getGlyphNames()
 
     # populate glyphs, kerns, marks etc
@@ -233,7 +230,8 @@ def match_fonts(old_font: DFont, new_font: DFont, variations: dict = None):
 
 class DiffFonts:
     def __init__(
-        self, old_font: DFont, new_font: DFont, scale_upm=True, rename_glyphs=True
+        self, old_font: DFont, new_font: DFont, scale_upm=True, rename_glyphs=True,
+        strings=None
     ):
         self.diff = defaultdict(dict)
         # self.diff = {
@@ -243,6 +241,7 @@ class DiffFonts:
         # }
         self.old_font = old_font
         self.new_font = new_font
+        self.strings  = strings
         # diffing fonts with different upms was in V1 so we should retain it.
         # previous implementation was rather messy. It is much easier to scale
         # the whole font
@@ -264,10 +263,13 @@ class DiffFonts:
 
         self.tables = jfont.Diff(self.old_font.jFont, self.new_font.jFont)
         # todo this seems bolted on
-        self.features = HtmlDiff(wrapcolumn=80).make_file(
-            self.old_font.glyph_combinator.ff.asFea().split("\n"),
-            self.new_font.glyph_combinator.ff.asFea().split("\n"),
-        )
+        old_fea = self.old_font.glyph_combinator.ff.asFea()
+        new_fea = self.new_font.glyph_combinator.ff.asFea()
+        if old_fea != new_fea:
+            self.features = HtmlDiff(wrapcolumn=80).make_file(
+                old_fea.split("\n"),
+                new_fea.split("\n"),
+            )
 
 
     def build(self):
@@ -290,6 +292,16 @@ class DiffFonts:
         if new_glyphs:
             self.diff["glyphs"]["new"] = new_glyphs
 
+        if self.strings:
+            diffstrings = []
+            for s in self.strings:
+                sbuf = Buffer(name=s, characters=s, indexes=[])
+                bd = BufferDiff(sbuf, self.old_font, sbuf, self.new_font)
+                if bd.diff > 1:
+                    diffstrings.append(bd)
+            if diffstrings:
+                self.diff["strings"]["differing"] = diffstrings
+
     def subtract(self, items_a, items_b):
         return items_a - items_b
 
@@ -297,23 +309,20 @@ class DiffFonts:
         return items_a & items_b
 
     # tiny amount is included so we skip details no one can see
-    def modified_glyphs(self, threshold=0.985):
+    def modified_glyphs(self, threshold=1):
         glyphs_a = {v: k for k, v in self.old_font.glyphs.items()}
         glyphs_b = {v: k for k, v in self.new_font.glyphs.items()}
         shared_glyphs = set(glyphs_a.keys()) & set(glyphs_b.keys())
         res = []
-        for glyph in shared_glyphs:
-            name_a = glyphs_a[glyph]
-            name_b = glyphs_b[glyph]
-            self.old_font.ftFont.load_glyph(self.old_font.glyphs[name_a].indexes[0], FT_BITS)
-            self.new_font.ftFont.load_glyph(self.new_font.glyphs[name_b].indexes[0], FT_BITS)
-            img_a = self.old_font.ftFont.glyph.bitmap.buffer
-            img_b = self.new_font.ftFont.glyph.bitmap.buffer
-            diff = img_diff(img_a, img_b)
-            d = BufferDiff(self.old_font.glyphs[name_a], self.new_font.glyphs[name_b], diff)
-            res.append(d)
+        for glyph_a in shared_glyphs:
+            # This looks weird, but it gets us a buffer with the right
+            # indices for the other font, in case the new font has different
+            # glyph indices for equivalent characters.
+            glyph_b = self.new_font.glyphs[glyphs_b[glyph_a]]
+            bd = BufferDiff(glyph_a, self.old_font, glyph_b, self.new_font)
+            if bd.diff > threshold:
+                res.append(bd)
         res.sort(key=lambda k: k.diff)
-        res = [i for i in res if i.diff <= threshold if i.diff > 0]
         return res
 
     def modified_marks(self):
@@ -391,4 +400,4 @@ def img_diff(img1, img2):
 
     img1_norm = np.resize(img1_norm, max(img1_norm.size, img2_norm.size))
     img2_norm = np.resize(img2_norm, max(img1_norm.size, img2_norm.size))
-    return np.sum(img1_norm * img2_norm)
+    return np.linalg.norm(img1_norm - img2_norm)

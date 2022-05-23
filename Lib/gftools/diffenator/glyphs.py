@@ -18,16 +18,14 @@ MATRAS = [
 ]
 
 class GlyphCombinator:
-    def __init__(self, ttFont, features={"kern": True, "liga": True}):
+    def __init__(self, ttFont, hbFont, features={"kern": True, "liga": True}):
         self.ttFont = ttFont
+        self.hbFont = hbFont
 
         self.glyphs = {v: chr(k) for k, v in self.ttFont.getBestCmap().items()}
         self.reverse_glyphs = {chr(k): v for k,v in self.ttFont.getBestCmap().items()}
         self.gids = {idx: n for idx, n in enumerate(self.ttFont.getGlyphOrder())}
         self.reverse_gids = {n: idx for idx, n in enumerate(self.ttFont.getGlyphOrder())}
-        blob = hb.Blob.from_file_path(ttFont.reader.file.name)
-        face = hb.Face(blob)
-        self.hbFont = hb.Font(face)
         self.dotted_circle = self.reverse_glyphs.get("◌", "")
         self.routine_map = {}
         self.features = features 
@@ -159,6 +157,14 @@ class GlyphCombinator:
                     perms = permutations(char_input)
                     for perm in perms:
                         string = "".join(perm)
+                        # XXX There is a problem here for rules which apply in the
+                        # middle of an orthographic cluster. For example, a rule
+                        # like "sub uni192A uni1922 by uni192A1922" should ligate
+                        # the two mark glyphs. However, since we are feeding the
+                        # two characters in alone without a preceding base glyph,
+                        # the shaper will first insert dotted circles before each
+                        # one, separating them into different clusters and causing
+                        # the rule not to fire.
                         hb_res = self.shape(string)
 
                         for g in hb_res:

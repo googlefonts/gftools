@@ -12,6 +12,15 @@
   margin: 5pt;
   line-height: {{ pt_size | int * 1.5}}px;
 }
+.cat-strings .cell {
+  clear: both;
+  position: static;
+  float: none;
+  text-align: left;
+}
+.box-title {
+  clear: both;
+}
 {% endblock %}
 {% block content_name %}
 <b>Diffenator</b>
@@ -28,16 +37,21 @@
       <div class="box-title">{{ cat }}: {{ sub_cat }}</div>
       <span class="{{ font_class.selector }}" style="font-size: {{ pt_size }}pt">
             {% for item in diff.diff[cat][sub_cat] %}
+              <div class="cat-{{cat}} subcat-{{sub_cat}}">
                 {{ item.render() }}
+              </div>
             {% endfor %}
         {% endfor %}
           </span>
 	    {% endfor %}
        </div>
     {% endfor %}
+    </div>
 
+    {% if diff.features %}
     <div class="box">
       <div class="box-title">Fea</div>
       {{ diff.features}}
     </div>
+    {% endif %}
 {% endblock %}
