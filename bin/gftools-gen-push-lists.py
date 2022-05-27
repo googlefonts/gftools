@@ -83,13 +83,13 @@ def main():
             elif "I New Font" in labels:
                 cat = "New"
             elif "I Description/Metadata/OFL" in labels:
-                cat = "Metadata/desc/OFL"
+                cat = "Metadata / Description / License"
             elif "I Designer profile" in labels:
                 cat = "Designer profile"
             elif "I Knowledge" in labels:
                 cat = "Knowledge"
-            elif "I Axis Registry" in labels:
-                cat = "Knowledge"
+            elif "I Axis Registry" in labels or "I API / Website / Platform" in labels:
+                cat = "API Stuff"
             else:
                 cat = "Small fix/other"
             if "--- to sandbox" in labels:
