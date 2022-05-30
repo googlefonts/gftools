@@ -84,7 +84,7 @@ setup(
         'glyphsets>=0.2.1',
         'PyGithub',
         'pillow',
-        'protobuf',
+        'protobuf==3.19.4',
         'requests',
         'tabulate',
         'unidecode',
