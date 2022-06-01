@@ -1,5 +1,5 @@
 """Ninja file writer for orchestrating font builds"""
-from ninja_syntax import Writer
+from ninja.ninja_syntax import Writer
 import glyphsLib
 import sys
 import ufoLib2
@@ -19,49 +19,72 @@ class NinjaBuilder(GFBuilder):
             self.build_variable()
             # transfer vf vtt hints now in case static fonts are instantiated
             if "vttSources" in self.config:
-                self.build_vtt(self.config['vfDir'])
+                self.build_vtt(self.config["vfDir"])
         if self.config["buildStatic"]:
             self.build_static()
             if "vttSources" in self.config:
-                self.build_vtt(self.config['ttDir'])
+                self.build_vtt(self.config["ttDir"])
         self.w.close()
 
     def setup_rules(self):
+        self.w.comment("Rules")
+        self.w.newline()
+        self.w.comment("Convert glyphs file to UFO")
         self.w.rule("glyphs2ufo", "fontmake -o ufo -g $in")
 
         if self.config["buildVariable"]:
-          self.w.rule("variable", "fontmake -o variable -m $in $fontmake_args")
+            self.w.comment("Build a variable font from Designspace")
+            self.w.rule("variable", "fontmake -o variable -m $in $fontmake_args")
 
+        self.w.comment("Build a set of instance UFOs from Designspace")
         self.w.rule("instanceufo", "fontmake -i -o ufo -m $in $fontmake_args")
-        self.w.rule("instancettf", "fontmake -o ttf -u $in $fontmake_args")
-        self.w.rule("instanceotf", "fontmake -o otf -u $in $fontmake_args")
-        self.w.rule("genstat", "gftools-gen-stat.py --inplace $other_args --axis-order $axis_order -- $in ; touch genstat.stamp")
-        if self.config["includeSourceFixes"]:
-            fixargs = "--include-source-fixes"
-        else:
-            fixargs = ""
-        self.w.rule("fix", f"gftools-fix-font.py -o $in {fixargs} $in; touch $in.fixstamp")
+
+        self.w.comment("Build a TTF file from a UFO")
+        self.w.rule(
+            "buildttf", "fontmake -o ttf -u $in $fontmake_args --output-path $out"
+        )
+
+        self.w.comment("Build an OTF file from a UFO")
+        self.w.rule(
+            "buildotf", "fontmake -o otf -u $in $fontmake_args --output-path $out"
+        )
+
+        self.w.comment("Add a STAT table to a set of variable fonts")
+        self.w.rule(
+            "genstat",
+            "gftools-gen-stat.py --inplace $other_args --axis-order $axis_order -- $in ; touch $stampfile",
+        )
+
+        self.w.comment("Run the font fixer in-place and touch a stamp file")
+        self.w.rule(
+            "fix", "gftools-fix-font.py -o $in $fixargs $in; touch $in.fixstamp"
+        )
+
+        self.w.comment("Create a web font")
+        self.w.rule("webfont", f"fonttools ttLib.woff2 compress -o $out $in")
+
         self.w.newline()
 
     def get_designspaces(self):
         self.designspaces = []
         for source in self.config["sources"]:
             if source.endswith(".glyphs"):
-              # Do the conversion once, so we know what the instances and filenames are
-              designspace = glyphsLib.to_designspace(
-                        glyphsLib.GSFont(source),
-                        ufo_module=ufoLib2,
-                        generate_GDEF=True,
-                        store_editor_state=False,
-                        minimal=True,
-                    )
-              designspace_path = os.path.join("master_ufo", designspace.filename)
-              os.makedirs(os.path.dirname(designspace_path), exist_ok=True)
-              designspace.write(designspace_path)
-              self.w.build(designspace_path, "glyphs2ufo", source)
+                # Do the conversion once, so we know what the instances and filenames are
+                designspace = glyphsLib.to_designspace(
+                    glyphsLib.GSFont(source),
+                    ufo_module=ufoLib2,
+                    generate_GDEF=True,
+                    store_editor_state=False,
+                    minimal=True,
+                )
+                designspace_path = os.path.join("master_ufo", designspace.filename)
+                os.makedirs(os.path.dirname(designspace_path), exist_ok=True)
+                designspace.write(designspace_path)
+                self.w.comment("Convert glyphs source to designspace")
+                self.w.build(designspace_path, "glyphs2ufo", source)
             else:
-              designspace_path = source
-              designspace = DesignSpaceDocument.fromfile(designspace_path)
+                designspace_path = source
+                designspace = DesignSpaceDocument.fromfile(designspace_path)
             self.designspaces.append((designspace_path, designspace))
         self.w.newline()
 
@@ -73,26 +96,42 @@ class NinjaBuilder(GFBuilder):
         if self.config["decomposeTransformedComponents"]:
             my_args.append("--filter DecomposeTransformedComponentsFilter")
         if "output_dir" in args:
-            my_args.append("--output-dir "+args["output_dir"])
+            my_args.append("--output-dir " + args["output_dir"])
         if "output_path" in args:
-            my_args.append("--output-path "+args["output_path"])
+            my_args.append("--output-path " + args["output_path"])
         return " ".join(my_args)
 
     def build_variable(self):
         targets = []
+        self.w.newline()
+        self.w.comment("VARIABLE FONTS")
+        self.w.newline()
         for (designspace_path, designspace) in self.designspaces:
             axis_tags = sorted([ax.tag for ax in designspace.axes])
             axis_tags = ",".join(axis_tags)
-            target = os.path.join(self.config["vfDir"], Path(designspace_path).stem + "[%s].ttf" % axis_tags)
-            self.w.build(target, "variable", designspace_path, variables={"fontmake_args": self.fontmake_args({"output_path": target})})
+            target = os.path.join(
+                self.config["vfDir"],
+                Path(designspace_path).stem + "[%s].ttf" % axis_tags,
+            )
+            self.w.build(
+                target,
+                "variable",
+                designspace_path,
+                variables={
+                    "fontmake_args": self.fontmake_args({"output_path": target})
+                },
+            )
             targets.append(target)
-        self.gen_stat(axis_tags, targets)
+        self.w.newline()
+        stampfile = self.gen_stat(axis_tags, targets)
         # We post process each variable font after generating the STAT tables
         # because these tables are needed in order to fix the name tables.
+        self.w.comment("Variable font post-processing")
         for t in targets:
-            self.post_process(t)
+            self.post_process(t, implicit=stampfile)
 
     def gen_stat(self, axis_tags, targets):
+        self.w.comment("Generate STAT tables")
         if "axisOrder" not in self.config:
             self.config["axisOrder"] = axis_tags.split(",")
             # Janky "is-italic" test. To strengthen this up we should look inside
@@ -103,88 +142,91 @@ class NinjaBuilder(GFBuilder):
         if "stat" in self.config:
             other_args = f"--src {self.config['stat']}"
         if "stylespaceFile" in self.config or "statFormat4" in self.config:
-            raise ValueError("Stylespace files / statFormat4 not supported in Ninja mode")
+            raise ValueError(
+                "Stylespace files / statFormat4 not supported in Ninja mode"
+            )
             # Because gftools-gen-stat doesn't seem to support it?
-        self.w.build("genstat.stamp", "genstat", targets, variables={"axis_order": self.config["axisOrder"], "other_args": other_args})
+        stampfile = targets[0] + ".statstamp"
+        self.w.build(
+            stampfile,
+            "genstat",
+            targets,
+            variables={
+                "axis_order": self.config["axisOrder"],
+                "other_args": other_args,
+                "stampfile": stampfile,
+            },
+        )
+        self.w.newline()
+        return stampfile
 
-    def post_process(self, file):
-        self.w.build(file+".fixstamp", "fix", file)
+    def post_process(self, file, implicit=None):
+        variables = {}
+        if self.config["includeSourceFixes"]:
+            variables = ({"fixargs": "--include-source-fixes"},)
+        self.w.build(
+            file + ".fixstamp", "fix", file, implicit=implicit, variables=variables
+        )
 
     def build_static(self):
+        # Let's make our interpolated UFOs.
+        self.w.newline()
+        self.w.comment("STATIC FONTS")
+        self.w.newline()
+        for (path, designspace) in self.designspaces:
+            self.w.comment(f"  Interpolate UFOs for {os.path.basename(path)}")
+            self.w.build(
+                [
+                    instance.filename.replace("instance_ufos", "instance_ufo")
+                    for instance in designspace.instances
+                ],
+                "instanceufo",
+                path,
+            )
+            self.w.newline()
+
+        return GFBuilder.build_static(self)
+
+    def instantiate_static_fonts(self, directory, postprocessor):
         pass
-    #     if self.config["buildOTF"]:
-    #         self.build_a_static_format("otf", self.config["otDir"], self.post_process)
-    #     if self.config["buildWebfont"]:
-    #         self.mkdir(self.config["woffDir"], clean=True)
-    #     if self.config["buildTTF"]:
-    #         if "instances" in self.config:
-    #             self.instantiate_static_fonts(
-    #                 self.config["ttDir"], self.post_process_ttf
-    #             )
-    #         else:
-    #             self.build_a_static_format(
-    #                 "ttf", self.config["ttDir"], self.post_process_ttf
-    #             )
 
-    # def instantiate_static_fonts(self, directory, postprocessor):
-    #     self.mkdir(directory, clean=True)
-    #     for font in self.config["instances"]:
-    #         varfont_path = os.path.join(self.config['vfDir'], font)
-    #         varfont = TTFont(varfont_path)
-    #         for font, instances in self.config["instances"].items():
-    #             for inst in instances:
-    #                 if 'familyName' in inst:
-    #                     family_name = inst['familyName']
-    #                 else:
-    #                     family_name = self.config['familyName']
-    #                 if "styleName" in inst:
-    #                     style_name = inst['styleName']
-    #                 else:
-    #                     style_name = None
+    def build_a_static_format(self, format, directory, postprocessor):
+        self.w.comment(f"Build {format} format")
+        self.w.newline()
+        if format == "ttf":
+            target_dir = self.config["ttDir"]
+        else:
+            target_dir = self.config["otDir"]
+        targets = []
+        for (path, designspace) in self.designspaces:
+            self.w.comment(f" {path}")
+            for instance in designspace.instances:
+                ufo = Path(instance.filename.replace("instance_ufos", "instance_ufo"))
+                target = str(Path(target_dir) / (ufo.stem + "." + format))
+                self.w.build(target, "build" + format, str(ufo))
+                targets.append(target)
+        self.w.newline()
+        self.w.comment(f"Post-processing {format}s")
+        for t in targets:
+            postprocessor(t)
+        self.w.newline()
 
-    #                 static_font = gen_static_font(
-    #                     varfont,
-    #                     axes=inst["coordinates"],
-    #                     family_name=family_name,
-    #                     style_name=style_name,
-    #                 )
-    #                 family_name = font_familyname(static_font)
-    #                 style_name = font_stylename(static_font)
-    #                 dst = os.path.join(
-    #                     directory, f"{family_name}-{style_name}.ttf".replace(" ", "")
-    #                 )
-    #                 static_font.save(dst)
-    #                 postprocessor(dst)
-    #                 self.outputs.add(dst)
-
-    # def build_a_static_format(self, format, directory, postprocessor):
-    #     self.mkdir(directory, clean=True)
-    #     for source in self.config["sources"]:
-    #         args = {
-    #             "output": [format],
-    #             "output_dir": directory,
-    #             "optimize_cff": CFFOptimization.SUBROUTINIZE,
-    #         }
-    #         if not source.endswith("ufo"):
-    #             args["interpolate"] = True
-    #         self.logger.info("Creating static fonts from %s" % source)
-    #         for fontfile in self.run_fontmake(source, args):
-    #             self.logger.info("Created static font %s" % fontfile)
-    #             postprocessor(fontfile)
-    #             self.outputs.add(fontfile)
-
-    # def post_process_ttf(self, filename):
-    #     if self.config["autohintTTF"]:
-    #         self.logger.debug("Autohinting")
-    #         autohint(filename, filename, add_script=self.config["ttfaUseScript"])
-    #     self.post_process(filename)
-    #     if self.config["buildWebfont"]:
-    #         self.logger.debug("Building webfont")
-    #         woff2_main(["compress", filename])
-    #         self.move_webfont(filename)
+    def post_process_ttf(self, filename):
+        # if self.config["autohintTTF"]:
+        #     self.logger.debug("Autohinting")
+        #     autohint(filename, filename, add_script=self.config["ttfaUseScript"])
+        self.post_process(filename)
+        if self.config["buildWebfont"]:
+            webfont_filename = filename.replace(".ttf", ".woff2").replace(
+                self.config["ttDir"], self.config["woffDir"]
+            )
+            self.w.build(
+                webfont_filename, "webfont", filename, implicit=filename + ".fixstamp"
+            )
 
     def build_vtt(self, font_dir):
         raise NotImplementedError
+
     #     for font, vtt_source in self.config['vttSources'].items():
     #         if font not in os.listdir(font_dir):
     #             continue
