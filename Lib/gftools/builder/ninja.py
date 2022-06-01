@@ -1,5 +1,6 @@
 """Ninja file writer for orchestrating font builds"""
 from ninja.ninja_syntax import Writer
+import ninja
 import glyphsLib
 import sys
 import ufoLib2
@@ -25,6 +26,8 @@ class NinjaBuilder(GFBuilder):
             if "vttSources" in self.config:
                 self.build_vtt(self.config["ttDir"])
         self.w.close()
+
+        ninja._program("ninja", [])
 
     def setup_rules(self):
         self.w.comment("Rules")
