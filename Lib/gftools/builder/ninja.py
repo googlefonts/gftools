@@ -63,6 +63,12 @@ class NinjaBuilder(GFBuilder):
             "fix", "gftools-fix-font.py -o $in $fixargs $in; touch $in.fixstamp"
         )
 
+        self.w.comment("Run the ttfautohint in-place and touch a stamp file")
+        self.w.rule(
+            "autohint",
+            "ttfautohint $in $in.autohinted; mv $in.autohinted $in; touch $in.autohintstamp",
+        )
+
         self.w.comment("Create a web font")
         self.w.rule("webfont", f"fonttools ttLib.woff2 compress -o $out $in")
 
@@ -215,10 +221,13 @@ class NinjaBuilder(GFBuilder):
         self.w.newline()
 
     def post_process_ttf(self, filename):
-        # if self.config["autohintTTF"]:
-        #     self.logger.debug("Autohinting")
-        #     autohint(filename, filename, add_script=self.config["ttfaUseScript"])
-        self.post_process(filename)
+        if self.config["autohintTTF"]:
+            if self.config["ttfaUseScript"]:
+                raise NotImplementedError("ttaUseScript not supported in ninja mode")
+            self.w.build(filename + ".autohintstamp", "autohint", filename)
+            self.post_process(filename, implicit=filename + ".autohintstamp")
+        else:
+            self.post_process(filename)
         if self.config["buildWebfont"]:
             webfont_filename = filename.replace(".ttf", ".woff2").replace(
                 self.config["ttDir"], self.config["woffDir"]
@@ -246,13 +255,6 @@ class NinjaBuilder(GFBuilder):
     #         gasp_tbl.version = 1
     #         font['gasp'] = gasp_tbl
     #         font.save(font.reader.file.name)
-
-    # def move_webfont(self, filename):
-    #     wf_filename = filename.replace(".ttf", ".woff2")
-    #     os.rename(
-    #         wf_filename,
-    #         wf_filename.replace(self.config["ttDir"], self.config["woffDir"]),
-    #     )
 
 
 if __name__ == "__main__":
