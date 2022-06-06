@@ -222,7 +222,7 @@ class NinjaBuilder(GFBuilder):
             self.w.comment(f" {path}")
             for instance in designspace.instances:
                 ufo = Path(instance.filename.replace("instance_ufos", "instance_ufo"))
-                target = str(Path(target_dir) / (ufo.stem + "." + format))
+                target = str(Path(target_dir) / ufo.with_suffix(f".{format}").name)
                 self.w.build(target, "build" + format, str(ufo))
                 targets.append(target)
         self.w.newline()
