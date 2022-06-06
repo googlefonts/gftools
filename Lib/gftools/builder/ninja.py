@@ -9,9 +9,20 @@ from gftools.builder import GFBuilder
 from fontTools.designspaceLib import DesignSpaceDocument
 from pathlib import Path
 
+UNSUPPORTED = ["stylespaceFile", "statFormat4", "ttfaUseScript", "vttSources"]
+
 
 class NinjaBuilder(GFBuilder):
     def build(self):
+        # In some cases we want to fall back to GFBuilder
+        for unsupported_key in UNSUPPORTED:
+            if self.config.get(unsupported_key):
+                self.logger.error(
+                    "%s configuration parameter not supported by ninja builder, "
+                    "falling back to classic GFBuilder" % unsupported_key
+                )
+                raise NotImplementedError()
+
         self.w = Writer(open("build.ninja", "w"))
         self.setup_rules()
         self.get_designspaces()
@@ -237,24 +248,8 @@ class NinjaBuilder(GFBuilder):
             )
 
     def build_vtt(self, font_dir):
+        # This should be an external gftool
         raise NotImplementedError
-
-    #     for font, vtt_source in self.config['vttSources'].items():
-    #         if font not in os.listdir(font_dir):
-    #             continue
-    #         self.logger.debug(f"Compiling hint file {vtt_source} into {font}")
-    #         font_path = os.path.join(font_dir, font)
-    #         font = TTFont(font_path)
-    #         merge_vtt_hinting(font, vtt_source, keep_cvar=True)
-    #         compile_vtt_hinting(font, ship=True)
-
-    #         # Add a gasp table which is optimised for VTT hinting
-    #         # https://googlefonts.github.io/how-to-hint-variable-fonts/
-    #         gasp_tbl = newTable("gasp")
-    #         gasp_tbl.gaspRange = {8: 10, 65535: 15}
-    #         gasp_tbl.version = 1
-    #         font['gasp'] = gasp_tbl
-    #         font.save(font.reader.file.name)
 
 
 if __name__ == "__main__":
