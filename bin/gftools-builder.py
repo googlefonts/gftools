@@ -17,6 +17,14 @@ import argparse
 from gftools.builder import GFBuilder
 from gftools.builder import __doc__ as GFBuilder_doc
 
+try:
+    from gftools.builder.ninja import NinjaBuilder
+
+    builder_class = NinjaBuilder
+except ImportError as e:
+    builder_class = GFBuilder
+
+
 
 parser = argparse.ArgumentParser(
     description=("Build a font family"),
@@ -53,14 +61,16 @@ args = parser.parse_args()
 if len(args.file) == 1 and (
     args.file[0].endswith(".yaml") or args.file[0].endswith(".yml")
 ):
-    builder = GFBuilder(configfile=args.file[0])
+    builder_args = dict(configfile=args.file[0])
 else:
     config={"sources": args.file}
     if args.stylespace:
         config["stylespaceFile"] = args.stylespace
     if args.family_name:
         config["familyName"] = args.family_name
-    builder = GFBuilder(config=config)
+    builder_args = dict(config=config)
+
+builder = builder_class(**builder_args)
 
 if args.no_autohint:
     builder.config["autohintTTF"] = False
@@ -80,4 +90,8 @@ if args.dump_config:
         fp.write(yaml.dump(config, Dumper=yaml.SafeDumper))
     sys.exit()
 
-builder.build()
+try:
+    builder.build()
+except NotImplementedError:
+    builder = GFBuilder(**builder_args)
+    builder.build()
