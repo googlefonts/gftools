@@ -291,13 +291,10 @@ class GFBuilder:
             args["output_path"] = os.path.join(
                 self.config["vfDir"], sourcebase + "-VF.ttf",
             )
-            try:
-                output_files = self.run_fontmake(source, args)
-                newname = self.rename_variable(output_files[0])
-                ttFont = TTFont(newname)
-                ttFonts.append(ttFont)
-            except Exception as e:
-                self.logger.error("Could not build variable font: %s" % e)
+            output_files = self.run_fontmake(source, args)
+            newname = self.rename_variable(output_files[0])
+            ttFont = TTFont(newname)
+            ttFonts.append(ttFont)
 
         if not ttFonts:
             return
