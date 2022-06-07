@@ -138,12 +138,12 @@ def main():
                 sources.append(s.path)
         else:
             sources.append(src)
-    
+
     if len(sources) == 1:
         raise ValueError("Single source family! cannot check.")
 
     names = [os.path.basename(f) for f in sources[1:]]
-    fonts = [Font.open(f) for f in sources[1:]]
+    fonts = [Font.open(f) for f in sources]
     glyphsets = [f.reader.getGlyphSet() for f in fonts]
     base_font = fonts[0]
     fonts = fonts[1:]
@@ -161,14 +161,14 @@ def main():
             comps_compat = components_compatible(base_font, font, glyph)
             if all([not res, points_compat, comps_compat]):
                 continue
-            if not comps_compat:
-                fix_component_order(base_font, font, glyph)
-            if any(i["type"] == "contour_order" for i in res[glyph]):
-                fix_contour_order([base_glyphset, glyphset], font, glyph, names)
             if not points_compat:
                 fix_starting_points(
                     [base_glyphset, glyphset], base_font, font, glyph, names
                 )
+            if not comps_compat:
+                fix_component_order(base_font, font, glyph)
+            if res and any(i["type"] == "contour_order" for i in res[glyph]):
+                fix_contour_order([base_glyphset, glyphset], font, glyph, names)
             if res:
                 for issue in res[glyph]:
                     if issue["type"] in ["wrong_start_point", "node_incompatibility"]:
