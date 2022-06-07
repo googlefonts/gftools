@@ -59,6 +59,12 @@ def point_compat(base_font, font, glyph):
     return base_points == font_points
 
 
+def comp_compat(base_font, font, glyph):
+    base_comps = [c.baseGlyph for c in base_font[glyph].components]
+    font_comps = [c.baseGlyph for c in font[glyph].components]
+    return base_comps == font_comps
+
+
 def fix_contour_order(glyphsets, font, glyph, names):
     contours = font[glyph].contours
     perms = permutations(contours)
@@ -71,8 +77,23 @@ def fix_contour_order(glyphsets, font, glyph, names):
         if len(res) == 0:
             print(f"{glyph}: fixed")
             return
-    raise ValueError("bad times!")
+    print("failed fixing contour order")
 
+
+def fix_composite_order(base_font, font, glyph):
+    components = font[glyph].components
+    perms = permutations(components)
+    for perm in perms:
+        font[glyph].clearComponents()
+        for comp in perm:
+            font[glyph].components.append(comp)
+        font.save()
+        res = comp_compat(base_font, font, glyph)
+        if res:
+            print(f"{glyph}: fixed")
+            return
+    print("failed fixing composite order")
+        
 
 def main():
     names = [os.path.basename(f) for f in sys.argv[1:]]
@@ -90,9 +111,12 @@ def main():
             font = fonts[idx]
             res = test([base_glyphset, glyphset], glyphs=[glyph], names=names)
             points_compat = point_compat(base_font, font, glyph)
-            if not res and points_compat:
+            comps_compat = comp_compat(base_font, font, glyph)
+            if all([not res, points_compat, comps_compat]):
                 continue
-            if any(i['type'] == "contour_order" for i in res[glyph]):
+            if not comps_compat:
+                fix_composite_order(base_font, font, glyph)
+            elif any(i['type'] == "contour_order" for i in res[glyph]):
                 fix_contour_order([base_glyphset, glyphset], font, glyph, names)
             elif not points_compat:
                 fix_starting_points([base_glyphset, glyphset], base_font, font, glyph, names)
