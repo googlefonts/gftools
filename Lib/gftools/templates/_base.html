@@ -184,8 +184,8 @@
 	  } else {
 	  POSITION = "before"
 	  for (item of items) {
-	    item.firstElementChild.textContent = item.firstElementChild.textContent.replace("after", "before")
-            item.lastElementChild.className = item.lastElementChild.className.replace("after", "before")
+	    item.firstElementChild.textContent = item.firstElementChild.textContent.replace("both", "before")
+            item.lastElementChild.className = item.lastElementChild.className.replace("both", "before")
 	    fontToggle.textContent = "Before"
 	  }
 	}
