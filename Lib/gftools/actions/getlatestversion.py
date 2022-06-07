@@ -13,6 +13,8 @@ def get_latest_release(family, user=None, repo=None):
     g = Github(os.environ["GITHUB_TOKEN"])
     repo = g.get_repo(user + '/' + repo)
     for release in repo.get_releases():
+        if release.draft:
+            continue
         m = re.match(r"^(.*)-(v[\d.]+)", release.tag_name)
         if not m:
             print(f"Unparsable release {release.tag_name} in {repo_name}")
