@@ -110,10 +110,10 @@ class FontQA:
             font_after = DFont(self.instances[style]['filename'])
             out = os.path.join(dst, style)
             if font_after.is_variable() and not font_before.is_variable():
-                font_after.set_variations_from_static(font_before)
+                font_after.set_variations_from_font(font_before)
 
             elif not font_after.is_variable() and font_before.is_variable():
-                font_before.set_variations_from_static(font_after)
+                font_before.set_variations_from_font(font_after)
 
             elif font_after.is_variable() and font_before.is_variable():
                 coordinates = self.instances_before[style]['coordinates']
