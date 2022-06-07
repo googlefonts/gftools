@@ -343,7 +343,7 @@ class Reporter:
         # create a dir which contains the html doc and fonts for easy distro
         if os.path.exists(fp):
             shutil.rmtree(fp)
-        os.mkdir(fp)
+        os.makedirs(fp, exist_ok=True)
 
         old_font_fp = os.path.join(fp, "before.ttf")
         new_font_fp = os.path.join(fp, "after.ttf")
