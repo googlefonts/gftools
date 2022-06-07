@@ -171,7 +171,12 @@ class DFont:
     def set_variations_from_font(self, font: any):
         # Parse static font into a variations dict
         # TODO improve this
-        coords = {"wght": font.ttFont["OS/2"].usWeightClass, "wdth": font.ttFont["OS/2"].usWidthClass}
+        coords = {}
+        axes = set([a.axisTag for a in self.ttFont["fvar"].axes])
+        if "wght" in axes:
+            coords["wght"] = font.ttFont["OS/2"].usWeightClass
+        if "wdth" in axes:
+            coords["wdth"] = font.ttFont["OS/2"].usWidthClass
         self.set_variations(coords)
 
     def set_glyph_names_from_font(self, font: any):
