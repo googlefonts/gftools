@@ -116,14 +116,17 @@ def main():
                 continue
             if not comps_compat:
                 fix_composite_order(base_font, font, glyph)
-            elif any(i['type'] == "contour_order" for i in res[glyph]):
+            if any(i['type'] == "contour_order" for i in res[glyph]):
                 fix_contour_order([base_glyphset, glyphset], font, glyph, names)
-            elif not points_compat:
+            if not points_compat:
                 fix_starting_points([base_glyphset, glyphset], base_font, font, glyph, names)
-            else:
+            if res:
                 for issue in res[glyph]:
                     if issue['type'] in ["wrong_start_point", "node_incompatibility"]:
                         fix_starting_points([base_glyphset, glyphset], base_font, font, glyph, names)
+                    else:
+                        print("Cannot fix")
+                        print(issue)
 
     print("Done!")
 
