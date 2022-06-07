@@ -1,7 +1,8 @@
 """
 Primitive prepolator!
 
-Warning mega destructive! TODO work on duplicates instead of overwriting
+Warning mega destructive! TODO work on duplicates instead of overwriting.
+Always use version control!
 
 This may take a while to run so grab dinner
 """
@@ -10,6 +11,7 @@ from fontmake.compatibility import CompatibilityChecker
 from ufoLib2 import Font
 import sys
 import os
+from itertools import permutations
 
 
 def _fix_starting_points(glyphsets, base_font, font, glyph, names, idx):
@@ -39,8 +41,9 @@ def _fix_starting_points(glyphsets, base_font, font, glyph, names, idx):
 def fix_starting_points(glyphsets, base_font, font, glyph, names):
     fixed = _fix_starting_points(glyphsets, base_font, font, glyph, names, 0)
     if not fixed:
-        raise ValueError("shit Curves")
+        raise ValueError(f"{glyph}: shit Curves")
     return True
+
 
 def point_compat(base_font, font, glyph):
     base_points = []
@@ -54,6 +57,21 @@ def point_compat(base_font, font, glyph):
         for pt in cont:
             font_points.append(pt.type)
     return base_points == font_points
+
+
+def fix_contour_order(glyphsets, font, glyph, names):
+    contours = font[glyph].contours
+    perms = permutations(contours)
+    for perm in perms:
+        font[glyph].clearContours()
+        for contour in perm:
+            font[glyph].appendContour(contour)
+        font.save()
+        res = test([glyphsets[0], font.reader.getGlyphSet()], glyphs=[glyph], names=names)
+        if len(res) == 0:
+            print(f"{glyph}: fixed")
+            return
+    raise ValueError("bad times!")
 
 
 def main():
@@ -74,7 +92,9 @@ def main():
             points_compat = point_compat(base_font, font, glyph)
             if not res and points_compat:
                 continue
-            if not points_compat:
+            if any(i['type'] == "contour_order" for i in res[glyph]):
+                fix_contour_order([base_glyphset, glyphset], font, glyph, names)
+            elif not points_compat:
                 fix_starting_points([base_glyphset, glyphset], base_font, font, glyph, names)
             else:
                 for issue in res[glyph]:
