@@ -142,6 +142,10 @@ def _MakeMetadata(fontdir, is_new):
     subsets = set(old_metadata.subsets) | set(subsets_in_font)
     metadata.languages[:] = old_metadata.languages
     metadata.fallbacks.extend(old_metadata.fallbacks)
+    if old_metadata.is_noto:
+      metadata.is_noto = True
+    if old_metadata.display_name:
+      metadata.display_name = old_metadata.display_name
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category.append('SANS_SERIF')
@@ -170,16 +174,6 @@ def _MakeMetadata(fontdir, is_new):
     font_metadata.full_name = fonts.ExtractName(fontfile, fonts.NAME_FULLNAME,
                                                 default_fullname)
     font_metadata.copyright = font_copyright
-
-  if not metadata.languages:
-    exemplar_font_fp = os.path.join(
-      fontdir, fonts.GetExemplarFont(metadata).filename
-    )
-    exemplar_font = ttLib.TTFont(exemplar_font_fp)
-    languages = LoadLanguages(base_dir=FLAGS.lang)
-    supported_languages = fonts.SupportedLanguages(exemplar_font, languages)
-    supported_languages = sorted([l.id for l in supported_languages])
-    metadata.languages.extend(supported_languages)
 
   axes_info_from_font_files \
     = {_AxisInfo(f.file) for f in file_family_style_weights}

@@ -24,7 +24,10 @@ def pr_directories(pr):
     results = set()
     files = pr.get_files()
     for f in files:
-        results.add(os.path.dirname(f.filename))
+        if f.filename.endswith(".textproto") and f.filename.startswith(("lang", "axisregistry")):
+            results.add(f.filename)
+        else:
+            results.add(os.path.dirname(f.filename))
     return results
 
 
@@ -80,13 +83,13 @@ def main():
             elif "I New Font" in labels:
                 cat = "New"
             elif "I Description/Metadata/OFL" in labels:
-                cat = "Metadata/desc/OFL"
+                cat = "Metadata / Description / License"
             elif "I Designer profile" in labels:
                 cat = "Designer profile"
             elif "I Knowledge" in labels:
                 cat = "Knowledge"
-            elif "I Axis Registry" in labels:
-                cat = "Knowledge"
+            elif "I Axis Registry" in labels or "I API / Website / Platform" in labels:
+                cat = "API Stuff"
             else:
                 cat = "Small fix/other"
             if "--- to sandbox" in labels:

@@ -2,7 +2,7 @@ fonttools[ufo]
 #google-apputils
 axisregistry>=0.2.0
 absl-py
-protobuf
+protobuf==3.19.4
 PyGithub
 vttLib
 statmake

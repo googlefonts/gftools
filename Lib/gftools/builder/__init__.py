@@ -91,11 +91,13 @@ required, all others have sensible defaults:
 * ``cleanUp``: Whether or not to remove temporary files. Defaults to ``true``.
 * ``autohintTTF``: Whether or not to autohint TTF files. Defaults to ``true``.
 * ``ttfaUseScript``: Whether or not to detect a font's primary script and add a ``-D<script>`` flag to ttfautohint. Defaults to ``false``.
+* ``vttSources``: To patch a manual VTT hinting program (ttx format) to font binaries.
 * ``axisOrder``: STAT table axis order. Defaults to fvar order.
 * ``familyName``: Family name for variable fonts. Defaults to family name of first source file.
 * ``flattenComponents``: Whether to flatten components on export. Defaults to ``true``.
 * ``decomposeTransformedComponents``: Whether to decompose transformed components on export. Defaults to ``true``.
 * ``googleFonts``: Whether this font is destined for release on Google Fonts. Used by GitHub Actions. Defaults to ``false``.
+* ``category``: If this font is destined for release on Google Fonts, a list of the categories it should be catalogued under. Used by GitHub Actions. Must be set if ``googleFonts`` is set.
 
 """
 
@@ -174,6 +176,7 @@ class GFBuilder:
                 "ufo2ft.filters",
                 "ufo2ft.postProcessor",
                 "fontTools.varLib",
+                "fontTools.feaLib.parser",
                 "cu2qu.ufo",
                 "glyphsLib.builder.builders.UFOBuilder",
             ]:
@@ -278,9 +281,9 @@ class GFBuilder:
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
-        args = {"output": ["variable"], "family_name": self.config["familyName"]}
         ttFonts = []
         for source in self.config["sources"]:
+            args = {"output": ["variable"], "family_name": self.config["familyName"]}
             if not source.endswith(".designspace") and not source.endswith("glyphs"):
                 continue
             self.logger.info("Creating variable fonts from %s" % source)
@@ -288,13 +291,10 @@ class GFBuilder:
             args["output_path"] = os.path.join(
                 self.config["vfDir"], sourcebase + "-VF.ttf",
             )
-            try:
-                output_files = self.run_fontmake(source, args)
-                newname = self.rename_variable(output_files[0])
-                ttFont = TTFont(newname)
-                ttFonts.append(ttFont)
-            except Exception as e:
-                self.logger.error("Could not build variable font: %s" % e)
+            output_files = self.run_fontmake(source, args)
+            newname = self.rename_variable(output_files[0])
+            ttFont = TTFont(newname)
+            ttFonts.append(ttFont)
 
         if not ttFonts:
             return
@@ -312,11 +312,11 @@ class GFBuilder:
             tmpdir = tempfile.TemporaryDirectory()
             args["output_dir"] = tmpdir.name
 
+        filters = args.get("filters", [])
         if (
             self.config["flattenComponents"] or
             self.config["decomposeTransformedComponents"]
         ):
-            filters = args.get("filters", [])
             if self.config["flattenComponents"]:
                 filters.append(
                     FlattenComponentsFilter(pre=True)
@@ -326,7 +326,9 @@ class GFBuilder:
                 filters.append(
                     DecomposeTransformedComponentsFilter(pre=True)
                 )
-            args["filters"] = filters
+        # ... will run the filters in the ufo's lib,
+        # https://github.com/googlefonts/fontmake/issues/872
+        args["filters"] = [...] + filters
 
         if source.endswith(".glyphs"):
             FontProject().run_from_glyphs(source, **args)
@@ -446,16 +448,13 @@ class GFBuilder:
 
     def build_a_static_format(self, format, directory, postprocessor):
         self.mkdir(directory, clean=True)
-        args = {
-            "output": [format],
-            "output_dir": directory,
-            "optimize_cff": CFFOptimization.SUBROUTINIZE,
-        }
         for source in self.config["sources"]:
-            if source.endswith("ufo"):
-                if "interpolate" in args:
-                    del args["interpolate"]
-            else:
+            args = {
+                "output": [format],
+                "output_dir": directory,
+                "optimize_cff": CFFOptimization.SUBROUTINIZE,
+            }
+            if not source.endswith("ufo"):
                 args["interpolate"] = True
             self.logger.info("Creating static fonts from %s" % source)
             for fontfile in self.run_fontmake(source, args):

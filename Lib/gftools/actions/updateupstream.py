@@ -16,6 +16,8 @@ from fontTools.ttLib import TTFont
 
 parser = argparse.ArgumentParser(description="Process some integers.")
 parser.add_argument("url", help="URL of GitHub release")
+parser.add_argument("--family", help="Family name", required=False)
+parser.add_argument("--config", help="Config file", default="sources/config.yaml", required=False)
 
 
 def get_family_name(config):
@@ -28,15 +30,15 @@ def generate_upstream(config, url):
     repo = os.environ.get("GITHUB_REPOSITORY")
     if not repo:
         raise ValueError("Not being run from a GitHub action?")
+    if "category" not in config:
+        config["category"] = ["SANS_SERIF"]
 
     upstream = {
         "name": get_family_name(config),
         "repository_url": os.environ["GITHUB_SERVER_URL"] + "/" + repo + ".git",
         "archive": url,
         "branch": "main",
-        "category": [
-            "SANS_SERIF"
-        ],  # One man's rigged demo is another man's proof of concept
+        "category": config["category"],
         "build": "",
         "files": {},
         "designer": "Will be filled in",
@@ -80,21 +82,26 @@ def update_file_list(upstream):
             raise ValueError(
                 "No license file was found. Ensure OFL.txt is added the the release"
             )
-        if not description_found:
+        if not description_found and "Noto" not in upstream["name"]:
             raise ValueError(
                 "No description file was found. Ensure DESCRIPTION.en_us.html is added the the release"
             )
         if not a_font:
             raise ValueError("No font files were found. Is the release broken?")
 
-        upstream["designer"] = TTFont(a_font)["name"].getDebugName(9)
+        designer = TTFont(a_font)["name"].getDebugName(9)
+        if designer:
+            upstream["designer"] = designer
 
 
 if __name__ == "__main__":
-    config = yaml.load(
-        open(os.path.join("sources", "config.yaml")), Loader=yaml.FullLoader
-    )
     args = parser.parse_args()
+    if args.family:
+        config = {"familyName": args.family}
+    else:
+        config = yaml.load(
+            open(args.config, Loader=yaml.FullLoader)
+        )
 
     if os.path.isfile("upstream.yaml"):
         try:

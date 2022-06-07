@@ -22,6 +22,7 @@ import shutil
 import unicodedata
 from unidecode import unidecode
 from collections import namedtuple
+from gflanguages import LoadLanguages
 from github import Github
 from pkg_resources import resource_filename
 from google.protobuf import text_format
@@ -194,6 +195,12 @@ def download_files_in_github_dir(
         download_file(f.download_url, filename)
         results.append(filename)
     return results
+
+
+def download_files_from_archive(url, dst):
+    zip_io = download_file(url)
+    with ZipFile(zip_io) as zip_file:
+        return fonts_from_zip(zip_file, dst)
 
 
 def download_file(url, dst_path=None):
@@ -446,19 +453,30 @@ def font_sample_text(ttFont):
 
     UDHR has been chosen due to the many languages it covers"""
     with open(resource_filename("gftools", "udhr_all.txt")) as doc:
-        text = doc.read()
+        uhdr = doc.read()
 
     cmap = set(ttFont.getBestCmap())
     words = []
     seen_chars = set()
-    for word in text.split():
-        chars = set(ord(l) for l in word)
-        if not chars.issubset(cmap):
-            continue
-        if chars & seen_chars == chars:
-            continue
-        seen_chars |= chars
-        words.append(word)
+    def _add_words(words, text, seen_chars):
+        for word in text.split():
+            chars = set(ord(l) for l in word)
+            if not chars.issubset(cmap):
+                continue
+            if chars & seen_chars == chars:
+                continue
+            seen_chars |= chars
+            words.append(word)
+
+    _add_words(words, uhdr, seen_chars)
+
+    if not words:
+        languages = LoadLanguages()
+        for file, proto in languages.items():
+            if hasattr(proto, "sample_text"):
+                for key, text in proto.sample_text.ListFields():
+                    _add_words(words, text, seen_chars)
+
     return words
 
 

@@ -12,18 +12,15 @@ import logging
 import os
 import re
 import sys
+import shutil
+import tempfile
 from pathlib import Path
-from strictyaml import (
-    Map,
-    Str,
-    HexInt,
-    Seq,
-    Optional,
-)
 
+import pygit2
+import ufoLib2
 from fontTools import designspaceLib
 from glyphsets.codepoints import CodepointsInSubset
-import ufoLib2
+from strictyaml import HexInt, Map, Optional, Seq, Str
 
 from gftools.builder import GFBuilder
 from gftools.builder.autohint import autohint
@@ -51,9 +48,12 @@ class NotoBuilder(GFBuilder):
         self.config = self.load_config(config)
         if os.path.dirname(config):
             os.chdir(os.path.dirname(config))
-        self.config["vfDir"] = "../fonts/unhinted/variable-ttf"
-        self.config["otDir"] = "../fonts/unhinted/otf"
-        self.config["ttDir"] = "../fonts/unhinted/ttf"
+        family_dir = self.get_family_name().replace(" ", "")
+        self.config["vfDir"] = "../fonts/%s/unhinted/variable-ttf" % family_dir
+        self.config["otDir"] = "../fonts/%s/unhinted/otf" % family_dir
+        self.config["ttDir"] = "../fonts/%s/unhinted/ttf" % family_dir
+        self.config["buildWebfont"] = False
+        self.config["autohintTTF"] = False  # We take care of it ourselves
         self.outputs = set()
         self.logger = logging.getLogger("GFBuilder")
         self.fill_config_defaults()
@@ -74,9 +74,11 @@ class NotoBuilder(GFBuilder):
         hinted = filename.replace("unhinted", "hinted")
         try:
             autohint(filename, hinted, add_script=True)
-            self.outputs.add(hinted)
         except Exception as e:
             self.logger.error("Couldn't autohint %s: %s" % (filename, e))
+            # We just copy it and pretend.
+            shutil.copy(filename, hinted)
+        self.outputs.add(hinted)
 
     def post_process(self, filename):
         super().post_process(filename)
@@ -120,20 +122,39 @@ class NotoBuilder(GFBuilder):
         for key in ["vfDir", "otDir", "ttDir"]:
             self.config[key] = self.config[key].replace("unhinted", "full")
 
+        new_builder_sources = []
+        temporaries = []
+
         for ds_file in self.config["sources"]:
+            new_ds_file_dir = tempfile.TemporaryDirectory()
+            temporaries.append(new_ds_file_dir)
             ds = designspaceLib.DesignSpaceDocument.fromfile(ds_file)
-            for subset in self.config["includeSubsets"]:
-                if len(ds.sources) == 1:
-                    self.add_subset(ds.sources[0], subset, mapping="Regular")
-                else:
-                    for master in ds.sources:
-                        self.add_subset(ds.sources[0], subset)
+            for master in ds.sources:
+                # Save a copy to temporary UFO
+                newpath = os.path.join(new_ds_file_dir.name, os.path.basename(master.path))
+                original_ufo = ufoLib2.Font.open(master.path)
+                original_ufo.save(newpath, overwrite=True)
+
+                master.path = newpath
+
+                for subset in self.config["includeSubsets"]:
+                    self.add_subset(ds, master, subset)
+            # # Set instance filenames to temporary
+            for instance in ds.instances:
+                instance.filename = instance.path = os.path.join(new_ds_file_dir.name, os.path.basename(instance.filename))
+
+            # Save new designspace to temporary
+            new_ds_file = os.path.join(new_ds_file_dir.name, os.path.basename(ds_file))
+            ds.write(new_ds_file)
+
+            new_builder_sources.append(new_ds_file)
+
+        self.config["sources"] = new_builder_sources
 
         super().build()
+        # Temporaries should get cleaned here.
 
-    def add_subset(self, ds_source, subset, mapping=None):
-        if mapping is None:
-            raise NotImplementedError
+    def add_subset(self, ds, ds_source, subset):
         if "name" in subset:
             # Resolve to glyphset
             unicodes = CodepointsInSubset(subset["name"])
@@ -142,31 +163,68 @@ class NotoBuilder(GFBuilder):
             for r in subset["ranges"]:
                 for cp in range(r["start"], r["end"] + 1):
                     unicodes.append(cp)
-        source_ufo = self.obtain_noto_ufo(subset["from"], mapping)
+        location = dict(ds_source.location)
+        for axis in ds.axes:
+            location[axis.name] = axis.map_backward(location[axis.name])
+        source_ufo = self.obtain_noto_ufo(subset["from"], location)
         target_ufo = ufoLib2.Font.open(ds_source.path)
         merge_ufos(
             target_ufo, source_ufo, codepoints=unicodes, existing_handling="skip",
         )
         target_ufo.save(ds_source.path, overwrite=True)
 
-    def obtain_noto_ufo(self, font_name, mapping):
+    def obtain_noto_ufo(self, font_name, location):
         if font_name == "Noto Sans":
-            path = "../subset-files/noto-sans/sources/NotoSans-MM.glyphs"
+            self.clone_for_subsetting("latin-greek-cyrillic")
+            path = "../subset-files/latin-greek-cyrillic/sources/NotoSans-MM.glyphs"
+        if font_name == "Noto Serif":
+            self.clone_for_subsetting("latin-greek-cyrillic")
+            path = "../subset-files/latin-greek-cyrillic/sources/NotoSerif-MM.glyphs"
         if font_name == "Noto Sans Devanagari":
+            self.clone_for_subsetting("devanagari")
             path = "../subset-files/devanagari/sources/NotoSansDevanagari.glyphs"
 
         if path.endswith(".glyphs"):
-            # Check if UFO already exists
-            path = self.glyphs_to_ufo(path)
+            ds_path = path.replace(".glyphs", ".designspace")
+            if os.path.exists(ds_path):
+                path = ds_path
+            else:
+                self.logger.info("Building UFO file for subset font "+font_name)
+                path = self.glyphs_to_ufo(path)
         source_ds = designspaceLib.DesignSpaceDocument.fromfile(path)
-        regs = [
-            source.path
-            for source in source_ds.sources
-            if source.name.endswith("Regular")
-        ]
-        if not regs:
-            regs = [source_ds.sources[0].path]
-        return ufoLib2.Font.open(regs[0])
+
+        # Find a source for this location
+        return ufoLib2.Font.open(self.find_source(source_ds, location, font_name).path)
+
+    def find_source(self, source_ds, location, font_name):
+        source_mappings = {
+            ax.name: ax.map_forward for ax in source_ds.axes
+        }
+        target = None
+        for source in source_ds.sources:
+            match = True
+            for axis, loc in location.items():
+                if axis in source.location and axis in source_mappings and source.location[axis] != source_mappings[axis](loc):
+                    match = False
+            if match:
+                target = source
+                break
+        if target:
+            self.logger.info(f"Adding subset from {target} for location {location}")
+            return target
+        self.logger.error(f"Could not find master in {font_name} for location {location}")
+        raise ValueError("Could not add subset")
+
+    def clone_for_subsetting(self, repo):
+        dest = "../subset-files/" + repo
+        if os.path.exists(dest):
+            return
+        if not os.path.exists("../subset-files"):
+            os.mkdir("../subset-files")
+        print(f"Cloning notofonts/{repo}")
+        pygit2.clone_repository(f"https://github.com/notofonts/{repo}", dest)
+
+
 
 
 if __name__ == "__main__":
