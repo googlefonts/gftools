@@ -31,11 +31,12 @@ class GlyphCombinator:
         self.features = features 
         self.script = "DFLT"
         self.language = "dflt"
+        self.ff = FontFeatures()
 
         if "GSUB" not in self.ttFont:
+            self.languageSystems = {}
             return
         self.languageSystems = unparseLanguageSystems([self.ttFont["GSUB"]])
-        self.ff = FontFeatures()
         unparsed = GSUBUnparser(
             self.ttFont["GSUB"], self.ff, self.languageSystems, font=self.ttFont, config={}
         )
