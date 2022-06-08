@@ -13,7 +13,7 @@ Output:
 - A single html page. No images, just pure html and js.
 """
 from difflib import HtmlDiff
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
 from ufo2ft.postProcessor import PostProcessor
@@ -160,7 +160,7 @@ class DFont:
         self.font_size = size
         self.ftFont.set_char_size(self.font_size)
 
-    def set_variations(self, coords: dict[str, float]):
+    def set_variations(self, coords: Dict[str, float]):
         # freetype-py's api uses a tuple/list
         ft_coords = [
             a.defaultValue if a.axisTag not in coords else coords[a.axisTag]
