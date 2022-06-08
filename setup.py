@@ -47,7 +47,9 @@ setup(
     packages=['gftools',
               'gftools.actions',
               'gftools.util',
-              'gftools.builder'],
+              'gftools.builder',
+              'gftools.diffenator',
+              ],
     package_data={'gftools.util': ["GlyphsInfo/*.xml", "UnicodeSections/*.json"],
                   'gftools': [
                       'template.upstream.yaml',
