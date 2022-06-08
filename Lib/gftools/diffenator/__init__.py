@@ -151,7 +151,8 @@ class DFont:
         self.marks: set[Mark] = set()
         # TODO what about the easy tables OS/2, hhea etc?
         self.build()
-    
+
+    @property
     def is_variable(self):
         return "fvar" in self.ttFont
 
