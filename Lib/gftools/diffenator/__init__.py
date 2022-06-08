@@ -13,6 +13,7 @@ Output:
 - A single html page. No images, just pure html and js.
 """
 from difflib import HtmlDiff
+from typing import List, Tuple
 from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
 from ufo2ft.postProcessor import PostProcessor
@@ -58,10 +59,10 @@ class Buffer(Renderable):
     # A buffer should in theory cover all GSUB lookup types
     name: str
     characters: str  # characters used to assemble buffer e.g कि == [क] + [ ि]
-    indexes: list[int]  # glyph indexes
-    features: tuple[str] = None
-    script: tuple[str] = None
-    lang: tuple[str] = None
+    indexes: List[int]  # glyph indexes
+    features: Tuple[str] = None
+    script: Tuple[str] = None
+    lang: Tuple[str] = None
     contextual: bool = False
 
     def __eq__(self, other):
@@ -100,8 +101,8 @@ class Kern:
     # 1: SinglePos (just leave right as None)
     # 2: PairPos
     # TODO what about type 3? we may have to borrow Gulzar or a cursive attachment font for this
-    left: tuple[Buffer]
-    right: tuple[Buffer]
+    left: Tuple[Buffer]
+    right: Tuple[Buffer]
     value_x: int
     value_y: int
 
@@ -115,8 +116,8 @@ class Mark:
     # 4: Mark to Base
     # 5: Mark to Lig??? (Don't think so yet)
     # 6: Mark to Mark (first mark can just be a base)
-    base: tuple[Buffer]
-    mark: tuple[Buffer]
+    base: Tuple[Buffer]
+    mark: Tuple[Buffer]
     base_x: int
     base_y: int
     mark_x: int
