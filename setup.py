@@ -55,6 +55,7 @@ setup(
                       'template.upstream.yaml',
                       "udhr_all.txt",
                       "templates/*.html",
+                      "templates/diffenator/*.html",
                   ]
                  },
     scripts=gftools_scripts(),
