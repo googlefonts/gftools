@@ -244,12 +244,12 @@ def match_fonts(old_font: DFont, new_font: DFont, variations: dict = None, scale
             old_font.ttFont.save(modded_old_font.name)
             old_font = DFont(modded_old_font.name)
 
-    if old_font.is_variable() and new_font.is_variable():
+    if old_font.is_variable and new_font.is_variable:
         # todo allow user to specify coords
         return old_font, new_font
-    elif not old_font.is_variable() and new_font.is_variable():
+    elif not old_font.is_variable and new_font.is_variable:
         new_font.set_variations_from_font(old_font)
-    elif old_font.is_variable() and not new_font.is_variable():
+    elif old_font.is_variable and not new_font.is_variable:
         old_font.set_variations_from_font(new_font)
     return old_font, new_font
 
