@@ -188,6 +188,7 @@ class DFont:
         mapping = {glyphs_rev[i]: other_glyphs_rev[i] for i in shared}
         logger.debug(f"{self} renaming glyphs {pprint.pformat(mapping)}")
         # PostProcessor.rename_glyphs(self.ttFont, mapping)
+        # XXX This is clearly wrong
         glyphs = self.ttFont.getGlyphNames()
 
     # populate glyphs, kerns, marks etc
@@ -196,6 +197,20 @@ class DFont:
 
     def build_glyphs(self):
         logger.info(f"{self}: building glyphs")
+        # Populate all simple glyphs first; work out more about them later.
+        # (In case e.g. there is no GSUB table)
+        reverse_map = self.ttFont["cmap"].buildReversed()
+        for gid, glyph in enumerate(self.ttFont.getGlyphOrder()):
+            if glyph not in reverse_map:
+                continue
+            character = chr(list(reverse_map[glyph])[0])
+            self.glyphs[glyph] = Buffer(
+                name=glyph,
+                indexes=[gid],
+                characters=character,
+                features = ""
+            )
+
         optional_features = OPTIONAL_FEATURES & set(self.glyph_combinator.ff.features.keys())
         for script, langs in self.glyph_combinator.languageSystems.items():
             for lang in langs:
