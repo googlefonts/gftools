@@ -87,6 +87,8 @@ def update_file_list(upstream):
                 "No description file was found. Ensure DESCRIPTION.en_us.html is added the the release"
             )
         if not a_font:
+            if config.get("buildVariable", True):
+                raise ValueError("No variable font files were found. Is the build broken?")
             raise ValueError("No font files were found. Is the release broken?")
 
         designer = TTFont(a_font)["name"].getDebugName(9)
