@@ -69,6 +69,8 @@ def update_file_list(upstream):
                     description_found = True
                     upstream["files"][relpath] = file
                 elif file.endswith("ttf"):
+                    if "Noto" in upstream["name"] and "full" not in relpath:
+                        continue
                     if config.get("buildVariable", True):
                         # Only add the file if it is the variable font
                         if "[" in file:
