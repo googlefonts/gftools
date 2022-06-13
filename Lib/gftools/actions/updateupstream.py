@@ -100,7 +100,7 @@ if __name__ == "__main__":
         config = {"familyName": args.family}
     else:
         config = yaml.load(
-            open(args.config, Loader=yaml.FullLoader)
+            open(args.config), Loader=yaml.FullLoader
         )
 
     if os.path.isfile("upstream.yaml"):
