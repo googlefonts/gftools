@@ -80,7 +80,9 @@ setup(
     python_requires=">=3.7",
     setup_requires=["setuptools_scm>=4,<6.1"],
     # Dependencies needed for gftools qa.
-    extras_require={"qa": ["fontbakery", "fontdiffenator", "gfdiffbrowsers"]},
+    extras_require={
+        "qa": ["fontbakery", "fontdiffenator", "gfdiffbrowsers", "freetype-py"]
+    },
     install_requires=[
         #       'fontforge', # needed by build-font2ttf script
         #                      but there's no fontforge package on pypi
