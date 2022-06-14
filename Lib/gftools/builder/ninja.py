@@ -2,6 +2,7 @@
 from ninja.ninja_syntax import Writer
 import ninja
 import glyphsLib
+from glyphsLib.builder.builders import UFOBuilder
 import sys
 import ufoLib2
 import os
@@ -89,14 +90,13 @@ class NinjaBuilder(GFBuilder):
         self.designspaces = []
         for source in self.config["sources"]:
             if source.endswith(".glyphs"):
-                # Do the conversion once, so we know what the instances and filenames are
-                designspace = glyphsLib.to_designspace(
-                    glyphsLib.GSFont(source),
-                    ufo_module=ufoLib2,
-                    generate_GDEF=True,
-                    store_editor_state=False,
-                    minimal=True,
-                )
+                builder = UFOBuilder(glyphsLib.GSFont(source))
+                # This is a sneaky way of skipping the hard work of
+                # converting all the glyphs and stuff, and just gettting
+                # a minimal designspace
+                builder.to_ufo_groups = builder.to_ufo_kerning = builder.to_ufo_layers = lambda: True
+
+                designspace = builder.designspace
                 designspace_path = os.path.join("master_ufo", designspace.filename)
                 os.makedirs(os.path.dirname(designspace_path), exist_ok=True)
                 designspace.write(designspace_path)
