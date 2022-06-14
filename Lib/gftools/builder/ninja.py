@@ -197,7 +197,7 @@ class NinjaBuilder(GFBuilder):
             self.w.comment(f"  Interpolate UFOs for {os.path.basename(path)}")
             self.w.build(
                 [
-                    instance.filename.replace("instance_ufos", "instance_ufo")
+                    instance.filename
                     for instance in designspace.instances
                 ],
                 "instanceufo",
@@ -221,7 +221,7 @@ class NinjaBuilder(GFBuilder):
         for (path, designspace) in self.designspaces:
             self.w.comment(f" {path}")
             for instance in designspace.instances:
-                ufo = Path(instance.filename.replace("instance_ufos", "instance_ufo"))
+                ufo = Path(path).parent / Path(instance.filename)
                 target = str(Path(target_dir) / ufo.with_suffix(f".{format}").name)
                 self.w.build(target, "build" + format, str(ufo))
                 targets.append(target)
