@@ -115,7 +115,7 @@ def merge_ufos(
 
     # Slim down the groups to only those in the glyph set
     for g in ufo2.groups.keys():
-        ufo2.groups[g] = [g for g in ufo2.groups[g] if g in newglyphset]
+        ufo2.groups[g] = [g for g in ufo2.groups[g] if g in glyphs]
 
     for (l, r), value in ufo2.kerning.items():
         lg = ufo2.groups.get(l, [l])
