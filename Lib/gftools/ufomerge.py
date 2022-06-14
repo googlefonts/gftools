@@ -18,8 +18,6 @@ def merge_ufos(
 ):
     if glyphs is None:
         glyphs = []
-    if exclude_glyphs:
-        glyphs = set(glyphs) - set(exclude_glyphs)
 
     glyphs = set(glyphs)
 
@@ -29,6 +27,9 @@ def merge_ufos(
             for u in g.unicodes:
                 cp2glyph[u] = g.name
         glyphs |= set(cp2glyph[c] for c in codepoints if c in cp2glyph)
+
+    if exclude_glyphs:
+        glyphs = set(glyphs) - set(exclude_glyphs)
 
     # Check those glyphs actually are in UFO 2
     not_there = glyphs - set(ufo2.keys())
