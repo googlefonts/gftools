@@ -94,7 +94,9 @@ class NinjaBuilder(GFBuilder):
                 # This is a sneaky way of skipping the hard work of
                 # converting all the glyphs and stuff, and just gettting
                 # a minimal designspace
-                builder.to_ufo_groups = builder.to_ufo_kerning = builder.to_ufo_layers = lambda: True
+                builder.to_ufo_groups = (
+                    builder.to_ufo_kerning
+                ) = builder.to_ufo_layers = lambda: True
 
                 designspace = builder.designspace
                 designspace_path = os.path.join("master_ufo", designspace.filename)
