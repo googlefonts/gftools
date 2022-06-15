@@ -103,7 +103,15 @@ class NinjaBuilder(GFBuilder):
                 os.makedirs(os.path.dirname(designspace_path), exist_ok=True)
                 designspace.write(designspace_path)
                 self.w.comment("Convert glyphs source to designspace")
-                self.w.build(designspace_path, "glyphs2ufo", source)
+                designspace_and_ufos = [designspace_path] + list(
+                    set(
+                        [
+                            os.path.join("master_ufo", m.filename)
+                            for m in designspace.sources
+                        ]
+                    )
+                )
+                self.w.build(designspace_and_ufos, "glyphs2ufo", source)
             else:
                 designspace_path = source
                 designspace = DesignSpaceDocument.fromfile(designspace_path)
@@ -190,6 +198,17 @@ class NinjaBuilder(GFBuilder):
             file + ".fixstamp", "fix", file, implicit=implicit, variables=variables
         )
 
+    def _instance_ufo_filenames(self, path, designspace):
+        instance_filenames = []
+        for instance in designspace.instances:
+            fn = instance.filename.replace("instance_ufos/", "instance_ufo/")
+            if "/" in fn:
+                ufo = Path(fn)
+            else:
+                ufo = Path(path).parent / fn
+            instance_filenames.append(ufo)
+        return instance_filenames
+
     def build_static(self):
         # Let's make our interpolated UFOs.
         self.w.newline()
@@ -197,11 +216,9 @@ class NinjaBuilder(GFBuilder):
         self.w.newline()
         for (path, designspace) in self.designspaces:
             self.w.comment(f"  Interpolate UFOs for {os.path.basename(path)}")
+
             self.w.build(
-                [
-                    instance.filename
-                    for instance in designspace.instances
-                ],
+                [str(i) for i in self._instance_ufo_filenames(path, designspace)],
                 "instanceufo",
                 path,
             )
@@ -222,8 +239,7 @@ class NinjaBuilder(GFBuilder):
         targets = []
         for (path, designspace) in self.designspaces:
             self.w.comment(f" {path}")
-            for instance in designspace.instances:
-                ufo = Path(path).parent / Path(instance.filename)
+            for ufo in self._instance_ufo_filenames(path, designspace):
                 target = str(Path(target_dir) / ufo.with_suffix(f".{format}").name)
                 self.w.build(target, "build" + format, str(ufo))
                 targets.append(target)
