@@ -1,0 +1,57 @@
+{% extends "_base.html" %}
+{% block title %}Glyphs{% endblock %}
+{% block style %}
+{{ super() }}
+.cell{
+  position: relative;
+  z-index: -100;
+  float: left;
+  display: block;
+  text-align: center;
+  padding: 5pt;
+  margin: 5pt;
+  line-height: {{ pt_size | int * 1.5}}px;
+}
+.cat-strings .cell {
+  clear: both;
+  position: static;
+  float: none;
+  text-align: left;
+}
+.box-title {
+  clear: both;
+}
+{% endblock %}
+{% block content_name %}
+<b>Diffenator</b>
+{% endblock %}
+{% block content %}
+  {% for font_class in css_font_classes or css_font_classes_before or css_font_classes_after %}
+    <div class="box">
+    <div class="box-title">Tables</div>
+     {{ diff.tables.render() }}
+    </div>
+	    {% for cat in diff.diff %}
+        {% for sub_cat in diff.diff[cat] %}
+      <div class="box">
+      <div class="box-title">{{ cat }}: {{ sub_cat }}</div>
+      <span class="{{ font_class.selector }}" style="font-size: {{ pt_size }}pt">
+            {% for item in diff.diff[cat][sub_cat] %}
+              <div class="cat-{{cat}} subcat-{{sub_cat}}">
+                {{ item.render() }}
+              </div>
+            {% endfor %}
+        {% endfor %}
+          </span>
+	    {% endfor %}
+       </div>
+    {% endfor %}
+    </div>
+
+    {% if diff.features %}
+    <div class="box">
+      <div class="box-title">Fea</div>
+      {{ diff.features}}
+    </div>
+    {% endif %}
+{% endblock %}

@@ -110,6 +110,9 @@ def main():
         "--diffenator", action="store_true", help="Run Fontdiffenator"
     )
     check_group.add_argument(
+        "--diffenator2", action="store_true", help="Run Fontdiffenator2"
+    )
+    check_group.add_argument(
         "--diffbrowsers", action="store_true", help="Run Diffbrowsers"
     )
     check_group.add_argument(
@@ -161,6 +164,7 @@ def main():
                 args.plot_glyphs,
                 args.diffbrowsers,
                 args.diffenator,
+                args.diffenator2,
                 args.browser_previews]):
         raise Exception("Terminating. No checks selected. Run gftools qa "
                         "--help to see all possible commands.")
@@ -248,6 +252,8 @@ def main():
         qa.fontbakery()
     if args.diffenator:
         qa.diffenator()
+    if args.diffenator2:
+        qa.diffenator2()
     if args.diffbrowsers:
         qa.diffbrowsers()
 

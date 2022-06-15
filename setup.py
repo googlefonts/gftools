@@ -50,7 +50,13 @@ setup(
     ),
     author_email="dave@lab6.com",
     package_dir={"": "Lib"},
-    packages=["gftools", "gftools.actions", "gftools.util", "gftools.builder"],
+    packages=[
+        "gftools",
+        "gftools.actions",
+        "gftools.util",
+        "gftools.builder",
+        "gftools.diffenator",
+    ],
     package_data={
         "gftools.util": ["GlyphsInfo/*.xml", "UnicodeSections/*.json"],
         "gftools": [
@@ -58,6 +64,7 @@ setup(
             "udhr_all.txt",
             "templates/*.html",
             "push-templates/*.html",
+            "templates/diffenator/*.html",
         ],
     },
     scripts=gftools_scripts(),
@@ -75,43 +82,43 @@ setup(
     setup_requires=["setuptools_scm>=4,<6.1"],
     # Dependencies needed for gftools qa.
     extras_require={
-        "qa": ["fontbakery", "fontdiffenator", "gfdiffbrowsers"],
+        "qa": ["fontbakery", "fontdiffenator", "gfdiffbrowsers", "freetype-py"],
         "ninja": ["ninja"],
     },
     install_requires=[
-#       'fontforge', # needed by build-font2ttf script
-#                      but there's no fontforge package on pypi
-#                      see: https://github.com/fontforge/fontforge/issues/2048
-        'setuptools',
-        'FontTools[ufo]',
-        'axisregistry>=0.2.0', # API update removed fallback names pre-processing
-        'absl-py',
-        'glyphsLib',
-        'gflanguages>=0.4.0',
-        'glyphsets>=0.2.1',
-        'PyGithub',
-        'pillow',
-        'protobuf==3.19.4',
-        'requests',
-        'tabulate',
-        'unidecode',
-        'opentype-sanitizer',
-        'vttlib',
-        'pygit2',
-        'strictyaml',
-        'fontmake>=3.3.0',
-        'skia-pathops',
-        'statmake',
-        'PyYAML',
-        'babelfont',
-        'ttfautohint-py',
-        'brotli',
-        'browserstack-local==1.2.2',
-        'pybrowserstack-screenshots==0.1',
-        'jinja2',
-        'hyperglot',
-        'fontFeatures',
-        'vharfbuzz',
-        'bumpfontversion',
-    ]
-    )
+        #       'fontforge', # needed by build-font2ttf script
+        #                      but there's no fontforge package on pypi
+        #                      see: https://github.com/fontforge/fontforge/issues/2048
+        "setuptools",
+        "FontTools[ufo]",
+        "axisregistry>=0.2.0",  # API update removed fallback names pre-processing
+        "absl-py",
+        "glyphsLib",
+        "gflanguages>=0.4.0",
+        "glyphsets>=0.2.1",
+        "PyGithub",
+        "pillow",
+        "protobuf==3.19.4",
+        "requests",
+        "tabulate",
+        "unidecode",
+        "opentype-sanitizer",
+        "vttlib",
+        "pygit2",
+        "strictyaml",
+        "fontmake>=3.3.0",
+        "skia-pathops",
+        "statmake",
+        "PyYAML",
+        "babelfont",
+        "ttfautohint-py",
+        "brotli",
+        "browserstack-local==1.2.2",
+        "pybrowserstack-screenshots==0.1",
+        "jinja2>=3.0.0",
+        "hyperglot",
+        "fontFeatures",
+        "vharfbuzz",
+        "bumpfontversion",
+    ],
+)

@@ -6,6 +6,8 @@ import subprocess
 from gftools.github import GitHubClient
 from gftools.utils import mkdir
 from gftools.html import HtmlProof, HtmlDiff
+from gftools.diffenator import DiffFonts as DiffFonts2, DFont as DFont2, Reporter
+
 try:
     from diffenator.diff import DiffFonts
     from diffenator.font import DFont
@@ -102,18 +104,32 @@ class FontQA:
         return shared
 
     def diffenator(self, **kwargs):
+        for diff, out, _, _ in self._run_diffenator(DFont, DiffFonts, **kwargs):
+            diff.to_gifs(dst=out)
+            diff.to_txt(20, os.path.join(out, "report.txt"))
+            diff.to_md(20, os.path.join(out, "report.md"))
+            diff.to_html(20, os.path.join(out, "report.html"), image_dir=".")
+
+    def diffenator2(self, **kwargs):
+        for diff, out, font_before, font_after, in self._run_diffenator(DFont2, DiffFonts2, **kwargs):
+            diff.build()
+            report = Reporter(diff)
+            report.save(out, font_before.path, font_after.path)
+
+    # This runs *both* diffenators...
+    def _run_diffenator(self, dfont_class, diffenator_class, **kwargs):
         logger.info("Running Diffenator")
         dst = os.path.join(self.out, "Diffenator")
         mkdir(dst)
         for style in self.matching_instances:
-            font_before = DFont(self.instances_before[style]['filename'])
-            font_after = DFont(self.instances[style]['filename'])
+            font_before = dfont_class(self.instances_before[style]['filename'])
+            font_after = dfont_class(self.instances[style]['filename'])
             out = os.path.join(dst, style)
             if font_after.is_variable and not font_before.is_variable:
-                font_after.set_variations_from_static(font_before)
+                font_after.set_variations_from_font(font_before)
 
             elif not font_after.is_variable and font_before.is_variable:
-                font_before.set_variations_from_static(font_after)
+                font_before.set_variations_from_font(font_after)
 
             elif font_after.is_variable and font_before.is_variable:
                 coordinates = self.instances_before[style]['coordinates']
@@ -121,11 +137,8 @@ class FontQA:
                 font_before.set_variations(coordinates)
 
             # TODO add settings
-            diff = DiffFonts(font_before, font_after, {"render_diffs": True})
-            diff.to_gifs(dst=out)
-            diff.to_txt(20, os.path.join(out, "report.txt"))
-            diff.to_md(20, os.path.join(out, "report.md"))
-            diff.to_html(20, os.path.join(out, "report.html"), image_dir=".")
+            diff = diffenator_class(font_before, font_after, **kwargs)
+            yield diff, out, font_before, font_after
 
     def diffbrowsers(self, **kwargs):
         """Test fonts on GFR regression and take screenshots using

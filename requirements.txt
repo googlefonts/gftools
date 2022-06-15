@@ -23,7 +23,7 @@ strictyaml
 tabulate
 unidecode
 skia-pathops
-jinja2
+jinja2>=3.0.0
 hyperglot
 fontFeatures>=1.6.2
 vharfbuzz
