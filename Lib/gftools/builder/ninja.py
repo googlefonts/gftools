@@ -25,6 +25,7 @@ class NinjaBuilder(GFBuilder):
                 raise NotImplementedError()
 
         self.w = Writer(open("build.ninja", "w"))
+        self.temporaries = []
         self.setup_rules()
         self.get_designspaces()
 
@@ -40,6 +41,10 @@ class NinjaBuilder(GFBuilder):
         self.w.close()
 
         ninja._program("ninja", [])
+
+        # Tidy up stamp files
+        for temporary in self.temporaries:
+            os.remove(temporary)
 
     def setup_rules(self):
         self.w.comment("Rules")
@@ -177,6 +182,7 @@ class NinjaBuilder(GFBuilder):
             )
             # Because gftools-gen-stat doesn't seem to support it?
         stampfile = targets[0] + ".statstamp"
+        self.temporaries.append(stampfile)
         self.w.build(
             stampfile,
             "genstat",
@@ -194,6 +200,7 @@ class NinjaBuilder(GFBuilder):
         variables = {}
         if self.config["includeSourceFixes"]:
             variables = ({"fixargs": "--include-source-fixes"},)
+        self.temporaries.append(file + ".fixstamp")
         self.w.build(
             file + ".fixstamp", "fix", file, implicit=implicit, variables=variables
         )
@@ -254,6 +261,7 @@ class NinjaBuilder(GFBuilder):
             if self.config["ttfaUseScript"]:
                 raise NotImplementedError("ttaUseScript not supported in ninja mode")
             self.w.build(filename + ".autohintstamp", "autohint", filename)
+            self.temporaries.append(filename + ".autohintstamp")
             self.post_process(filename, implicit=filename + ".autohintstamp")
         else:
             self.post_process(filename)
