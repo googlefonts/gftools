@@ -70,12 +70,8 @@ def draw_text(
         left = ft_face.glyph.bitmap_left
         x = (pen.x >> 6) - xmin + left + (pos.x_offset >> 6)
         y = (pen.y >> 6) - ymin - (rows - top) + (pos.y_offset >> 6)
-        data = []
-        for j in range(rows):
-            data.extend(bitmap.buffer[j * pitch : j * pitch + width])
-        if len(data):
-            Z = np.array(data, dtype=np.ubyte).reshape(rows, width)
-            L[y : y + rows, x : x + width] |= Z[::-1, ::1]
+        Z = np.array(bitmap.buffer, dtype=np.ubyte).reshape(rows, width)
+        L[y : y + rows, x : x + width] |= Z[::-1, ::1]
         pen.x += pos.x_advance
         pen.y += pos.y_advance
 
