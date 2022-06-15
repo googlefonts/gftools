@@ -69,6 +69,8 @@ def update_file_list(upstream):
                     description_found = True
                     upstream["files"][relpath] = file
                 elif file.endswith("ttf"):
+                    if "Noto" in upstream["name"] and "full" not in relpath:
+                        continue
                     if config.get("buildVariable", True):
                         # Only add the file if it is the variable font
                         if "[" in file:
@@ -87,6 +89,8 @@ def update_file_list(upstream):
                 "No description file was found. Ensure DESCRIPTION.en_us.html is added the the release"
             )
         if not a_font:
+            if config.get("buildVariable", True):
+                raise ValueError("No variable font files were found. Is the build broken?")
             raise ValueError("No font files were found. Is the release broken?")
 
         designer = TTFont(a_font)["name"].getDebugName(9)
@@ -100,7 +104,7 @@ if __name__ == "__main__":
         config = {"familyName": args.family}
     else:
         config = yaml.load(
-            open(args.config, Loader=yaml.FullLoader)
+            open(args.config), Loader=yaml.FullLoader
         )
 
     if os.path.isfile("upstream.yaml"):
