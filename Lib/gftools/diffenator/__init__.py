@@ -132,7 +132,8 @@ class Mark:
 
 class DFont:
     def __init__(
-        self, path: str, font_size: int = 1000, lazy=False
+        self, path: str, font_size: int = 1000, lazy=False,
+        do_combinator = False
     ):  # <- use types!
         self.path = path
         self.ttFont: TTFont = TTFont(self.path, recalcTimestamp=False)
@@ -142,6 +143,9 @@ class DFont:
         self.hbFont: hb.Font = hb.Font(hb.Face(fontdata))
         self.jFont = jfont.TTJ(self.ttFont)
         self.glyph_combinator = GlyphCombinator(self.ttFont, self.hbFont)
+
+        # Turning the glyph combinator off by default for now
+        self.do_combinator = do_combinator
 
         self.font_size: int = font_size
         self.set_font_size(self.font_size)
@@ -211,26 +215,28 @@ class DFont:
                 features = ""
             )
 
-        optional_features = OPTIONAL_FEATURES & set(self.glyph_combinator.ff.features.keys())
-        for script, langs in self.glyph_combinator.languageSystems.items():
-            for lang in langs:
-                for feat in ["", "case"]:
-                    self.glyph_combinator.get_combinations({"liga": True, "kern": True, feat: True}, script, lang)
-                    for name, chars in self.glyph_combinator.glyphs.items():
-                        gids = [self.glyph_combinator.reverse_gids[n] for n in name.split("-")]
-                        if name in self.glyphs:
-                            continue
-                        buffer = Buffer(
-                            name=name,
-                            characters=chars,
-                            indexes=gids,
-                            features=feat, # fix this
-                            script=script,
-                            lang=lang,
-                            contextual=True if "-" in name else False,
+        if self.do_combinator:
+            optional_features = OPTIONAL_FEATURES & set(self.glyph_combinator.ff.features.keys())
+            for script, langs in self.glyph_combinator.languageSystems.items():
+                for lang in langs:
+                    for feat in ["", "case"]:
+                        self.glyph_combinator.get_combinations({"liga": True, "kern": True, feat: True}, script, lang)
+                        for name, chars in self.glyph_combinator.glyphs.items():
+                            gids = [self.glyph_combinator.reverse_gids[n] for n in name.split("-")]
+                            if name in self.glyphs:
+                                continue
+                            buffer = Buffer(
+                                name=name,
+                                characters=chars,
+                                indexes=gids,
+                                features=feat, # fix this
+                                script=script,
+                                lang=lang,
+                                contextual=True if "-" in name else False,
 
-                        )
-                        self.glyphs[name] = buffer
+                            )
+                            self.glyphs[name] = buffer
+        logger.info("Gathered %i glyph combinations" % len(self.glyphs))
     
     def __repr__(self):
         return f"<DFont: {self.path}>"
