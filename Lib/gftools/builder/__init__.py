@@ -319,12 +319,12 @@ class GFBuilder:
         ):
             if self.config["flattenComponents"]:
                 filters.append(
-                    FlattenComponentsFilter(pre=True)
+                    FlattenComponentsFilter()
                 )
 
             if self.config["decomposeTransformedComponents"]:
                 filters.append(
-                    DecomposeTransformedComponentsFilter(pre=True)
+                    DecomposeTransformedComponentsFilter()
                 )
         # ... will run the filters in the ufo's lib,
         # https://github.com/googlefonts/fontmake/issues/872
