@@ -19,7 +19,7 @@ from fontTools.ttLib import TTFont
 from gftools.fix import *
 
 
-log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def new_filename(font, font_renamed=None):
