@@ -208,7 +208,7 @@ class NinjaBuilder(GFBuilder):
     def _instance_ufo_filenames(self, path, designspace):
         instance_filenames = []
         for instance in designspace.instances:
-            fn = instance.filename.replace("instance_ufos/", "instance_ufo/")
+            fn = instance.filename
             if "/" in fn:
                 ufo = Path(fn)
             else:
