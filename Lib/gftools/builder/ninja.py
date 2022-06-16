@@ -199,7 +199,7 @@ class NinjaBuilder(GFBuilder):
     def post_process(self, file, implicit=None):
         variables = {}
         if self.config["includeSourceFixes"]:
-            variables = ({"fixargs": "--include-source-fixes"},)
+            variables = {"fixargs": "--include-source-fixes"}
         self.temporaries.append(file + ".fixstamp")
         self.w.build(
             file + ".fixstamp", "fix", file, implicit=implicit, variables=variables
