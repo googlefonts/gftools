@@ -248,7 +248,9 @@ class NinjaBuilder(GFBuilder):
             self.w.comment(f" {path}")
             for ufo in self._instance_ufo_filenames(path, designspace):
                 target = str(Path(target_dir) / ufo.with_suffix(f".{format}").name)
-                self.w.build(target, "build" + format, str(ufo))
+                self.w.build(target, "build" + format, str(ufo), variables={
+                    "fontmake_args": self.fontmake_args({"output_path": target})
+                })
                 targets.append(target)
         self.w.newline()
         self.w.comment(f"Post-processing {format}s")
