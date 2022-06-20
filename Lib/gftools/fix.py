@@ -252,6 +252,7 @@ def fix_mac_style(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    old_mac_style = ttFont["head"].macStyle
     stylename = font_stylename(ttFont)
     tokens = set(stylename.split())
     mac_style = 0
@@ -260,6 +261,7 @@ def fix_mac_style(ttFont):
     if "Bold" in tokens:
         mac_style |= 1 << 0
     ttFont["head"].macStyle = mac_style
+    return old_mac_style != mac_style
 
 
 def fix_fvar_instances(ttFont):
@@ -274,6 +276,7 @@ def fix_fvar_instances(ttFont):
         raise ValueError("ttFont is not a variable font")
 
     fvar = ttFont["fvar"]
+    old_instances = { ttFont["name"].getDebugName(inst.subfamilyNameID): inst.coordinates for inst in fvar.instances }
     default_axis_vals = {a.axisTag: a.defaultValue for a in fvar.axes}
 
     stylename = font_stylename(ttFont)
@@ -314,6 +317,11 @@ def fix_fvar_instances(ttFont):
     else:
         instances += gen_instances(is_italic=False)
     fvar.instances = instances
+    new_instances = { ttFont["name"].getDebugName(inst.subfamilyNameID): inst.coordinates for inst in fvar.instances }
+    if new_instances != old_instances:
+        log.info("Set instances in fvar table to: %s", ", ".join(new_instances.keys()))
+        log.info("(Old instances were: %s)", ", ".join(old_instances.keys()))
+        log.info("Consider fixing export list in source\n")
 
 
 def update_nametable(ttFont, family_name=None, style_name=None):
@@ -431,14 +439,24 @@ def fix_nametable(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    old_nametable = {n.nameID: n.toStr() for n in ttFont["name"].names}
     if "fvar" in ttFont:
         from fontTools.varLib.instancer.names import updateNameTable
         dflt_axes = {a.axisTag: a.defaultValue for a in ttFont['fvar'].axes}
         updateNameTable(ttFont, dflt_axes)
-        return
-    family_name = font_familyname(ttFont)
-    style_name = font_stylename(ttFont)
-    update_nametable(ttFont, family_name, style_name)
+    else:
+        family_name = font_familyname(ttFont)
+        style_name = font_stylename(ttFont)
+        update_nametable(ttFont, family_name, style_name)
+    new_nametable = {n.nameID: n.toStr() for n in ttFont["name"].names}
+    if old_nametable != new_nametable:
+        log.info("Name table entries changed (consider fixing the source instead):")
+        for nid, old_name in old_nametable.items():
+            new_name = new_nametable[nid]
+            if new_name != old_name:
+                log.info("- %i: %s", nid, old_name)
+                log.info("+ %i: %s", nid, new_name)
+        log.info("")
 
 
 def rename_font(font, new_name):
@@ -573,7 +591,9 @@ def fix_italic_angle(ttFont):
     style_name = font_stylename(ttFont)
     if "Italic" not in style_name and ttFont["post"].italicAngle != 0:
         ttFont["post"].italicAngle = 0
+        return True
     # TODO (Marc F) implement for italic fonts
+    return False
 
 
 def fix_ascii_fontmetadata(font):
@@ -776,17 +796,23 @@ def fix_font(font, include_source_fixes=False, new_family_name=None):
         remove_tables(font, ["MVAR"])
 
     if include_source_fixes:
-        log.warning(
-            "include-source-fixes is enabled. Please consider fixing the "
-            "source files instead."
-        )
         remove_tables(font)
         fix_nametable(font)
-        fix_fs_type(font)
-        fix_fs_selection(font)
-        fix_mac_style(font)
-        fix_weight_class(font)
-        fix_italic_angle(font)
+        if fix_fs_type(font):
+            log.info("Changed OS/2 table's fsType flag to 0 (Installable embedding)")
+            log.info("Consider fixing in the source (e.g. adding a 'fsType' custom parameter in Glyphs)\n")
+        if fix_fs_selection(font):
+            log.info("Changed OS/2 table's fsSelection flag to %i", font["OS/2"].fsSelection)
+            log.info("Consider fixing in the source (e.g. adding an 'openTypeOS2Selection' or 'Use Typo Metrics' custom parameter in Glyphs)\n")
+        if fix_mac_style(font):
+            log.info("Changed head table's macStyle to %i", font["head"].macStyle)
+            log.info("Consider fixing in the source\n")
+        if fix_weight_class(font):
+            log.info("Changed OS/2 table's usWeightClass to %i", ttFont["OS/2"].usWeightClass)
+            log.info("Consider fixing in the source\n")
+        if fix_italic_angle(font):
+            log.info("Changed post table's italicAngle to %f", ttFont["post"].italicAngle)
+            log.info("Consider fixing in the source\n")
 
         if "fvar" in font:
             fix_fvar_instances(font)

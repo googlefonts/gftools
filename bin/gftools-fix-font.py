@@ -18,7 +18,7 @@ from fontTools.ttLib import TTFont
 from gftools.fix import *
 
 
-log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def main():
