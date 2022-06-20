@@ -14,7 +14,7 @@ from gftools.utils import download_file
 from fontTools.ttLib import TTFont
 
 
-parser = argparse.ArgumentParser(description="Process some integers.")
+parser = argparse.ArgumentParser(description="Create an upstream.yaml for a family")
 parser.add_argument("url", help="URL of GitHub release")
 parser.add_argument("--family", help="Family name", required=False)
 parser.add_argument("--config", help="Config file", default="sources/config.yaml", required=False)
@@ -80,6 +80,12 @@ def update_file_list(upstream):
                         # Add statics
                         upstream["files"][relpath] = file
                         a_font = fullpath
+
+        # If there was a "googlefonts/" directory in the release, just
+        # use files in that directory.
+        if any("googlefonts/" in upstream["files"].keys()):
+            upstream["files"] = {k:v for k,v in upstream["files"].items() if "googlefonts/" in k}
+
         if not license_found:
             raise ValueError(
                 "No license file was found. Ensure OFL.txt is added the the release"
