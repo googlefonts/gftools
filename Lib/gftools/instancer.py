@@ -1,5 +1,6 @@
 from fontTools.varLib.instancer import instantiateVariableFont, OverlapMode
-from gftools.fix import update_nametable, fix_fs_selection, fix_mac_style
+from axisregistry import build_name_table
+from gftools.fix import fix_fs_selection, fix_mac_style
 from gftools.utils import font_stylename, font_familyname
 
 
@@ -45,7 +46,7 @@ def gen_static_font(
     # We need to reupdate the name table using our own update function
     # since GF requires axis particles which are not wght or ital to
     # be appended to the family name. See func for more details.
-    update_nametable(static_font, family_name, style_name)
+    build_name_table(static_font, family_name, style_name)
     fix_fs_selection(static_font)
     fix_mac_style(static_font)
     static_font["OS/2"].usWidthClass = 5
