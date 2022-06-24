@@ -276,7 +276,7 @@ def fix_fvar_instances(ttFont):
         raise ValueError("ttFont is not a variable font")
 
     fvar = ttFont["fvar"]
-    old_instances = { ttFont["name"].getDebugName(inst.subfamilyNameID): inst.coordinates for inst in fvar.instances }
+    old_instances = { (ttFont["name"].getDebugName(inst.subfamilyNameID) or "<removed>"): inst.coordinates for inst in fvar.instances }
     default_axis_vals = {a.axisTag: a.defaultValue for a in fvar.axes}
 
     stylename = font_stylename(ttFont)
@@ -452,7 +452,7 @@ def fix_nametable(ttFont):
     if old_nametable != new_nametable:
         log.info("Name table entries changed (consider fixing the source instead):")
         for nid, old_name in old_nametable.items():
-            new_name = new_nametable[nid]
+            new_name = new_nametable.get(nid, "<removed>")
             if new_name != old_name:
                 log.info("- %i: %s", nid, old_name)
                 log.info("+ %i: %s", nid, new_name)
