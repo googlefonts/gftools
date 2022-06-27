@@ -100,7 +100,9 @@ def update_file_list(upstream):
             raise ValueError("No font files were found. Is the release broken?")
 
         designer = TTFont(a_font)["name"].getDebugName(9)
-        if designer:
+        if "Noto" in upstream["name"]:
+            upstream["designer"] = "Google"
+        elif designer:
             upstream["designer"] = designer
 
 
