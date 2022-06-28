@@ -597,7 +597,7 @@ def drop_mac_names(ttfont):
     return changed
 
 
-def fix_font(font, include_source_fixes=False, new_family_name=None):
+def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
     if new_family_name:
         rename_font(font, new_family_name)
     font["OS/2"].version = 4
@@ -630,10 +630,10 @@ def fix_font(font, include_source_fixes=False, new_family_name=None):
             log.info("Consider fixing in the source\n")
 
         if "fvar" in font:
-            fix_fvar_instances(font)
+            fix_fvar_instances(font, fvar_instance_axis_dflts)
 
 
-def fix_family(fonts, include_source_fixes=False, new_family_name=None):
+def fix_family(fonts, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
     """Fix all fonts in a family"""
     validate_family(fonts)
 
@@ -641,7 +641,8 @@ def fix_family(fonts, include_source_fixes=False, new_family_name=None):
         fix_font(
             font,
             include_source_fixes=include_source_fixes,
-            new_family_name=new_family_name
+            new_family_name=new_family_name,
+            fvar_instance_axis_dflts=fvar_instance_axis_dflts
         )
     family_name = font_familyname(fonts[0])
     if include_source_fixes:
