@@ -123,7 +123,7 @@ def stylename_to_axes(font_style, axis_reg=axis_registry):
 
 def style_token_to_axis(string, axis_reg=axis_registry):
     # Condensed --> width
-    for axis_tag, axis in axis_reg.__dict__.items():
+    for axis_tag, axis in axis_reg.items():
         for fallback in axis.fallback:
             if fallback.name == string:
                 return axis_tag
