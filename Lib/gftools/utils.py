@@ -513,3 +513,12 @@ def read_proto(fp, schema):
         data = text_format.Parse(f.read(), schema)
     return data
 
+
+def parse_axis_dflts(string):
+    axes = string.split()
+    res = {}
+    for axis in axes:
+        k,v = axis.split("=")
+        res[k] = float(v)
+    return res
+

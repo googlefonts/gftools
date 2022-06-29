@@ -291,15 +291,15 @@ def _check_css_classes_match(classes_before, classes_after):
 
 
 def test_HtmlDiff_match_css_classes_different_styles(static_ttfonts):
-    from gftools.fix import update_nametable
+    from axisregistry import build_name_table
     family_before = static_ttfonts
     family_after = deepcopy(static_ttfonts)
 
     reg_after = next((f for f in family_after if "Regular.ttf" in f.reader.file.name), None)
-    update_nametable(reg_after, style_name="Foobar")
+    build_name_table(reg_after, style_name="Foobar")
 
     bold_after = next((f for f in family_after if "Bold.ttf" in f.reader.file.name), None)
-    update_nametable(bold_after, style_name="Foobar2")
+    build_name_table(bold_after, style_name="Foobar2")
 
     with tempfile.TemporaryDirectory() as project_dir, tempfile.TemporaryDirectory() as mod_fonts:
         # save modified ttfonts to a tempdir and load them
