@@ -28,9 +28,9 @@ def merge_ufos(
                 cp2glyph[u] = g.name
         for c in codepoints:
             if c in cp2glyph:
-                glyphs[ cp2glyph[c] ] = True
+                glyphs[cp2glyph[c]] = True
 
-    for g in (exclude_glyphs or []):
+    for g in exclude_glyphs or []:
         if g in glyphs:
             del glyphs[g]
 
@@ -87,14 +87,20 @@ def merge_ufos(
                         continue
                     if len(rule.input) == 1 and len(rule.replacement) == 1:  # GSUB1
                         mapping = zip(rule.input[0], rule.replacement[0])
-                        mapping = [(a,b) for a,b in mapping if a in newglyphset and b in newglyphset]
+                        mapping = [
+                            (a, b)
+                            for a, b in mapping
+                            if a in newglyphset and b in newglyphset
+                        ]
                         if not mapping:
                             continue
                         rule.input[0] = [r[0] for r in mapping]
                         rule.replacement[0] = [r[1] for r in mapping]
                     else:
                         rule.input = true_inputs
-                        rule.replacement = [list(set(r) & newglyphset) for r in rule.replacement]
+                        rule.replacement = [
+                            list(set(r) & newglyphset) for r in rule.replacement
+                        ]
                     logging.debug("Adding rule '%s'", rule.asFea())
                 newroutine.rules.append(rule)
             if newroutine.rules:
@@ -184,7 +190,9 @@ def merge_ufos(
                     f"New glyph {g} used component {comp.baseGlyph} which already exists in font; not replacing it, as you have not specified --replace-existing"
                 )
 
-    for g in list(glyphs.keys()):  # list() avoids "Set changed size during iteration" error
+    for g in list(
+        glyphs.keys()
+    ):  # list() avoids "Set changed size during iteration" error
         close_components(glyphs, g)
 
     # Now do the add
