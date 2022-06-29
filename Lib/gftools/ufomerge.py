@@ -29,6 +29,8 @@ def merge_ufos(
         for c in codepoints:
             if c in cp2glyph:
                 glyphs[cp2glyph[c]] = True
+
+    for g in exclude_glyphs or []:
         if g in glyphs:
             del glyphs[g]
 
