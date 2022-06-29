@@ -72,18 +72,18 @@ class NinjaBuilder(GFBuilder):
         self.w.comment("Add a STAT table to a set of variable fonts")
         self.w.rule(
             "genstat",
-            "gftools-gen-stat.py --inplace $other_args --axis-order $axis_order -- $in ; touch $stampfile",
+            "gftools-gen-stat.py --inplace $other_args --axis-order $axis_order -- $in  && touch $stampfile",
         )
 
         self.w.comment("Run the font fixer in-place and touch a stamp file")
         self.w.rule(
-            "fix", "gftools-fix-font.py -o $in $fixargs $in; touch $in.fixstamp"
+            "fix", "gftools-fix-font.py -o $in $fixargs $in && touch $in.fixstamp"
         )
 
         self.w.comment("Run the ttfautohint in-place and touch a stamp file")
         self.w.rule(
             "autohint",
-            "ttfautohint $in $in.autohinted; mv $in.autohinted $in; touch $in.autohintstamp",
+            "ttfautohint $in $in.autohinted && mv $in.autohinted $in && touch $in.autohintstamp",
         )
 
         self.w.comment("Create a web font")
