@@ -3,6 +3,7 @@ Functions to fix fonts so they conform to the Google Fonts
 specification:
 https://github.com/googlefonts/gf-docs/tree/main/Spec
 """
+from axisregistry import build_filename, build_name_table, build_fvar_instances
 from fontTools.misc.fixedTools import otRound
 from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
@@ -42,7 +43,6 @@ __all__ = [
     "fix_fs_selection",
     "fix_mac_style",
     "fix_fvar_instances",
-    "update_nametable",
     "fix_nametable",
     "inherit_vertical_metrics",
     "fix_vertical_metrics",
@@ -264,7 +264,7 @@ def fix_mac_style(ttFont):
     return old_mac_style != mac_style
 
 
-def fix_fvar_instances(ttFont):
+def fix_fvar_instances(ttFont, axis_dflts=None):
     """Replace a variable font's fvar instances with a set of new instances
     that conform to the Google Fonts instance spec:
     https://github.com/googlefonts/gf-docs/tree/main/Spec#fvar-instances
@@ -275,160 +275,14 @@ def fix_fvar_instances(ttFont):
     if "fvar" not in ttFont:
         raise ValueError("ttFont is not a variable font")
 
-    fvar = ttFont["fvar"]
+    fvar = ttFont['fvar']
     old_instances = { (ttFont["name"].getDebugName(inst.subfamilyNameID) or "<removed>"): inst.coordinates for inst in fvar.instances }
-    default_axis_vals = {a.axisTag: a.defaultValue for a in fvar.axes}
-
-    stylename = font_stylename(ttFont)
-    is_italic = "Italic" in stylename
-    is_roman_and_italic = any(a for a in ("slnt", "ital") if a in default_axis_vals)
-
-    wght_axis = next((a for a in fvar.axes if a.axisTag == "wght"), None)
-    wght_min = int(wght_axis.minValue)
-    wght_max = int(wght_axis.maxValue)
-
-    nametable = ttFont["name"]
-
-    def gen_instances(is_italic):
-        results = []
-        for wght_val in range(wght_min, wght_max + 100, 100):
-            name = (
-                WEIGHT_VALUES[wght_val]
-                if not is_italic
-                else f"{WEIGHT_VALUES[wght_val]} Italic".strip()
-            )
-            name = name.replace("Regular Italic", "Italic")
-
-            coordinates = deepcopy(default_axis_vals)
-            coordinates["wght"] = wght_val
-
-            inst = NamedInstance()
-            inst.subfamilyNameID = nametable.addName(name)
-            inst.coordinates = coordinates
-            results.append(inst)
-        return results
-
-    instances = []
-    if is_roman_and_italic:
-        for bool_ in (False, True):
-            instances += gen_instances(is_italic=bool_)
-    elif is_italic:
-        instances += gen_instances(is_italic=True)
-    else:
-        instances += gen_instances(is_italic=False)
-    fvar.instances = instances
+    build_fvar_instances(ttFont, axis_dflts)
     new_instances = { ttFont["name"].getDebugName(inst.subfamilyNameID): inst.coordinates for inst in fvar.instances }
     if new_instances != old_instances:
         log.info("Set instances in fvar table to: %s", ", ".join(new_instances.keys()))
         log.info("(Old instances were: %s)", ", ".join(old_instances.keys()))
         log.info("Consider fixing export list in source\n")
-
-
-def update_nametable(ttFont, family_name=None, style_name=None):
-    """Update a static font's name table. The updated name table will conform
-    to the Google Fonts support styles table:
-    https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
-
-    If a style_name includes tokens other than wght and ital, these tokens
-    will be appended to the family name e.g
-
-    Input:
-    family_name="MyFont"
-    style_name="SemiCondensed SemiBold"
-
-    Output:
-    familyName (nameID 1) = "MyFont SemiCondensed SemiBold
-    subFamilyName (nameID 2) = "Regular"
-    typo familyName (nameID 16) = "MyFont SemiCondensed"
-    typo subFamilyName (nameID 17) = "SemiBold"
-
-    Google Fonts has used this model for several years e.g
-    https://fonts.google.com/?query=cabin
-
-    Args:
-        ttFont:
-        family_name: New family name
-        style_name: New style name
-    """
-    if "fvar" in ttFont:
-        raise ValueError("Cannot update the nametable for a variable font")
-    nametable = ttFont["name"]
-
-    # Remove nametable records which are not Win US English
-    # TODO this is too greedy. We should preserve multilingual
-    # names in the future. Please note, this has always been an issue.
-    platforms = set()
-    for rec in nametable.names:
-        platforms.add((rec.platformID, rec.platEncID, rec.langID))
-    platforms_to_remove = platforms ^ set([(3, 1, 0x409)])
-    if platforms_to_remove:
-        log.warning(
-            f"Removing records which are not Win US English, {list(platforms_to_remove)}"
-        )
-        for platformID, platEncID, langID in platforms_to_remove:
-            nametable.removeNames(
-                platformID=platformID, platEncID=platEncID, langID=langID
-            )
-
-    # Remove any name records which contain linebreaks
-    contains_linebreaks = []
-    for r in nametable.names:
-        for char in ("\n", "\r"):
-            if char in r.toUnicode():
-                contains_linebreaks.append(r.nameID)
-    for nameID in contains_linebreaks:
-        nametable.removeNames(nameID)
-
-    if not family_name:
-        family_name = font_familyname(ttFont)
-
-    if not style_name:
-        style_name = font_stylename(ttFont)
-
-    ribbi = ("Regular", "Bold", "Italic", "Bold Italic")
-    tokens = family_name.split() + style_name.split()
-
-    nameids = {
-        1: " ".join(t for t in tokens if t not in ribbi),
-        2: " ".join(t for t in tokens if t in ribbi) or "Regular",
-        16: " ".join(t for t in tokens if t not in list(WEIGHT_NAMES) + ['Italic']),
-        17: " ".join(t for t in tokens if t in list(WEIGHT_NAMES) + ['Italic']) or "Regular"
-    }
-    # Remove typo name if they match since they're redundant
-    if nameids[16] == nameids[1]:
-        del nameids[16]
-    if nameids[17] == nameids[2]:
-        del nameids[17]
-
-    family_name = nameids.get(16) or nameids.get(1)
-    style_name = nameids.get(17) or nameids.get(2)
-
-    # create NameIDs 3, 4, 6
-    nameids[4] = f"{family_name} {style_name}"
-    nameids[6] = f"{family_name.replace(' ', '')}-{style_name.replace(' ', '')}"
-    nameids[3] = unique_name(ttFont, nameids)
-
-    # Pass through all records and replace occurences of the old family name
-    # with the new family name
-    current_family_name = font_familyname(ttFont)
-    for record in nametable.names:
-        string = record.toUnicode()
-        if current_family_name in string:
-            nametable.setName(
-                string.replace(current_family_name, family_name),
-                record.nameID,
-                record.platformID,
-                record.platEncID,
-                record.langID,
-            )
-
-    # Remove previous typographic names
-    for nameID in (16, 17):
-        nametable.removeNames(nameID=nameID)
-
-    # Update nametable with new names
-    for nameID, string in nameids.items():
-        nametable.setName(string, nameID, 3, 1, 0x409)
 
 
 def fix_nametable(ttFont):
@@ -440,15 +294,9 @@ def fix_nametable(ttFont):
         ttFont: a TTFont instance
     """
     old_nametable = {n.nameID: n.toStr() for n in ttFont["name"].names}
-    if "fvar" in ttFont:
-        from fontTools.varLib.instancer.names import updateNameTable
-        dflt_axes = {a.axisTag: a.defaultValue for a in ttFont['fvar'].axes}
-        updateNameTable(ttFont, dflt_axes)
-    else:
-        family_name = font_familyname(ttFont)
-        style_name = font_stylename(ttFont)
-        update_nametable(ttFont, family_name, style_name)
+    build_name_table(ttFont)
     new_nametable = {n.nameID: n.toStr() for n in ttFont["name"].names}
+
     if old_nametable != new_nametable:
         log.info("Name table entries changed (consider fixing the source instead):")
         for nid, old_name in old_nametable.items():
@@ -468,44 +316,11 @@ def rename_font(font, new_name):
             "This tool does not work on webfonts."
         )
     log.info("Updating font name records")
-    for record in nametable.names:
-        record_string = record.toUnicode()
-
-        no_space = current_name.replace(" ", "")
-        hyphenated = current_name.replace(" ", "-")
-        if " " not in record_string:
-            new_string = record_string.replace(no_space, new_name.replace(" ", ""))
-        else:
-            new_string = record_string.replace(current_name, new_name)
-
-        if new_string is not record_string:
-            record_info = (
-                record.nameID,
-                record.platformID,
-                record.platEncID,
-                record.langID
-            )
-            log.info(
-                "Updating {}: '{}' to '{}'".format(
-                    record_info,
-                    record_string,
-                    new_string,
-                )
-            )
-            record.string = new_string
+    build_name_table(font, family_name=new_name)
 
 
 def fix_filename(ttFont):
-    ext = splitext(ttFont.reader.file.name)[1]
-    family_name = font_familyname(ttFont)
-    style_name = font_stylename(ttFont)
-
-    if "fvar" in ttFont:
-        axes = ",".join([a.axisTag for a in ttFont['fvar'].axes])
-        if "Italic" in style_name:
-            return f"{family_name}-Italic[{axes}]{ext}".replace(" ", "")
-        return f"{family_name}[{axes}]{ext}".replace(" ", "")
-    return f"{family_name}-{style_name}{ext}".replace(" ", "")
+    return build_filename(ttFont)
 
 
 def inherit_vertical_metrics(ttFonts, family_name=None):
@@ -782,7 +597,7 @@ def drop_mac_names(ttfont):
     return changed
 
 
-def fix_font(font, include_source_fixes=False, new_family_name=None):
+def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
     if new_family_name:
         rename_font(font, new_family_name)
     font["OS/2"].version = 4
@@ -815,10 +630,10 @@ def fix_font(font, include_source_fixes=False, new_family_name=None):
             log.info("Consider fixing in the source\n")
 
         if "fvar" in font:
-            fix_fvar_instances(font)
+            fix_fvar_instances(font, fvar_instance_axis_dflts)
 
 
-def fix_family(fonts, include_source_fixes=False, new_family_name=None):
+def fix_family(fonts, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
     """Fix all fonts in a family"""
     validate_family(fonts)
 
@@ -826,7 +641,8 @@ def fix_family(fonts, include_source_fixes=False, new_family_name=None):
         fix_font(
             font,
             include_source_fixes=include_source_fixes,
-            new_family_name=new_family_name
+            new_family_name=new_family_name,
+            fvar_instance_axis_dflts=fvar_instance_axis_dflts
         )
     family_name = font_familyname(fonts[0])
     if include_source_fixes:

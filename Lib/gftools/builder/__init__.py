@@ -98,7 +98,9 @@ required, all others have sensible defaults:
 * ``decomposeTransformedComponents``: Whether to decompose transformed components on export. Defaults to ``true``.
 * ``googleFonts``: Whether this font is destined for release on Google Fonts. Used by GitHub Actions. Defaults to ``false``.
 * ``category``: If this font is destined for release on Google Fonts, a list of the categories it should be catalogued under. Used by GitHub Actions. Must be set if ``googleFonts`` is set.
-
+* ``fvarInstanceAxisDflts``: Mapping to set every fvar instance's non-wght axis
+value e.g if a font has a wdth and wght axis, we can set the wdth to be 100 for
+every fvar instance. Defaults to ``None``
 """
 
 from fontmake.font_project import FontProject
@@ -274,6 +276,8 @@ class GFBuilder:
             self.config["cleanUp"] = True
         if "includeSourceFixes" not in self.config:
             self.config["includeSourceFixes"] = False
+        if "fvarInstanceAxisDflts" not in self.config:
+            self.config["fvarInstanceAxisDflts"] = None
         if "flattenComponents" not in self.config:
             self.config["flattenComponents"] = True
         if "decomposeTransformedComponents" not in self.config:
@@ -476,7 +480,11 @@ class GFBuilder:
     def post_process(self, filename):
         self.logger.info("Postprocessing font %s" % filename)
         font = TTFont(filename)
-        fix_font(font, include_source_fixes=self.config["includeSourceFixes"])
+        fix_font(
+            font,
+            include_source_fixes=self.config["includeSourceFixes"],
+            fvar_instance_axis_dflts=self.config["fvarInstanceAxisDflts"]
+        )
         font.save(filename)
 
     def post_process_ttf(self, filename):
