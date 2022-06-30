@@ -40,7 +40,11 @@ class NinjaBuilder(GFBuilder):
                 self.build_vtt(self.config["ttDir"])
         self.w.close()
 
-        ninja._program("ninja", [])
+        ninja_args = []
+        if self.config["logLevel"] == "DEBUG":
+            ninja_args = ["-v", "-j", "1"]
+
+        ninja._program("ninja", ninja_args)
 
         # Tidy up stamp files
         for temporary in self.temporaries:
