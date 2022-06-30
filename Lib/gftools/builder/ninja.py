@@ -48,7 +48,8 @@ class NinjaBuilder(GFBuilder):
 
         # Tidy up stamp files
         for temporary in self.temporaries:
-            os.remove(temporary)
+            if os.path.exists(temporary):
+                os.remove(temporary)
 
     def setup_rules(self):
         self.w.comment("Rules")
