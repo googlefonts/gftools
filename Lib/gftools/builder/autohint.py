@@ -97,5 +97,7 @@ def autohint(infile, outfile, args=None, add_script=False, discount_latin=False)
             script = autohint_script_tag(font, discount_latin=discount_latin)
             if script:
                 args.append("-D" + script)
-
-    ttfautohint(**ttfautohint_parse_args([infile, outfile, *args]))
+    args_dict = ttfautohint_parse_args([infile, outfile, *args])
+    if not args_dict:
+        raise ValueError("Could not parse arguments")
+    ttfautohint(**args_dict)
