@@ -65,10 +65,12 @@ AUTOHINT_SCRIPTS = [
 ]
 
 
-def autohint_script_tag(ttFont):
+def autohint_script_tag(ttFont, discount_latin=False):
     script_count = Counter()
     for x in ttFont.getBestCmap().keys():
         for script in unicodedata.script_extension(chr(x)):
+            if script[0] == "Latn" and discount_latin:
+                continue
             if script[0] != "Z":
                 script_count[script] += 1
     # If there isn't a clear winner, give up
@@ -85,12 +87,14 @@ def autohint_script_tag(ttFont):
             return script
 
 
-def autohint(infile, outfile, args=None, add_script=False):
+def autohint(infile, outfile, args=None, add_script=False, discount_latin=False):
     font = TTFont(infile)
     if not args:
         args = []
-        if add_script:
-            script = autohint_script_tag(font)
+        if isinstance(add_script, str) and add_script != "auto":
+            args.append("-D"+ add_script)
+        elif add_script:  # True or "auto"
+            script = autohint_script_tag(font, discount_latin=discount_latin)
             if script:
                 args.append("-D" + script)
 
