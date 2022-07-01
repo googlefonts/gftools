@@ -3,7 +3,6 @@ Functions to fix fonts so they conform to the Google Fonts
 specification:
 https://github.com/googlefonts/gf-docs/tree/main/Spec
 """
-from axisregistry import build_filename, build_name_table, build_fvar_instances
 from fontTools.misc.fixedTools import otRound
 from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
@@ -22,6 +21,12 @@ from gftools.utils import (
     typo_metrics_enabled,
     validate_family,
     unique_name,
+)
+from axisregistry import (
+    build_filename,
+    build_name_table,
+    build_fvar_instances,
+    build_variations_ps_name
 )
 from gftools.stat import gen_stat_tables
 
@@ -609,6 +614,12 @@ def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instan
 
     if "fvar" in font:
         remove_tables(font, ["MVAR"])
+        name_table = font["name"]
+        variation_ps_name = name_table.getName(25, 3, 1, 0x409)
+        if not variation_ps_name:
+            build_variations_ps_name(font)
+            var_ps_name = font["name"].getName(25, 3, 1, 0x409).toUnicode()
+            log.info(f"Added a Variations PostScript Name Prefix (NameID 25) '{var_ps_name}'")
 
     if include_source_fixes:
         remove_tables(font)
