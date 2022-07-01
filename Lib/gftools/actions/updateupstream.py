@@ -82,7 +82,7 @@ def update_file_list(upstream):
         # If there was a "googlefonts/" directory in the release, just
         # use files in that directory.
         if any("googlefonts/" in x for x in upstream["files"].keys()):
-            upstream["files"] = {str(k):str(v) for k,v in upstream["files"].items() if "googlefonts/" in str(k)}
+            upstream["files"] = {str(k):str(v) for k,v in upstream["files"].items() if "googlefonts/" in str(k) or not ".ttf" in str(k) }
 
         if not license_found:
             raise ValueError(
