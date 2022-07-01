@@ -44,12 +44,15 @@ class NinjaBuilder(GFBuilder):
         if self.config["logLevel"] == "DEBUG":
             ninja_args = ["-v", "-j", "1"]
 
-        ninja._program("ninja", ninja_args)
+        errcode = ninja._program("ninja", ninja_args)
 
         # Tidy up stamp files
         for temporary in self.temporaries:
             if os.path.exists(temporary):
                 os.remove(temporary)
+
+        if errcode:
+            sys.exit(errcode)
 
     def setup_rules(self):
         self.w.comment("Rules")
