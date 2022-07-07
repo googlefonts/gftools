@@ -18,7 +18,7 @@ def main():
 
     old_font = DFont(args.old_font)
     new_font = DFont(args.new_font)
-    old_font, new_font = match_fonts(old_font, new_font)
+    old_font, new_font = match_fonts(old_font, new_font, rename_glyphs=False, scale_upm=False)
 
     strings = None
     if args.strings:

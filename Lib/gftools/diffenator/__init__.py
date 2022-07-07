@@ -19,6 +19,7 @@ from ufo2ft.postProcessor import PostProcessor
 import freetype as ft
 from dataclasses import dataclass
 from gftools.diffenator.glyphs import GlyphCombinator
+from gftools.diffenator.fuzzer import fuzz_fonts
 import numpy as np
 import uharfbuzz as hb
 from collections import defaultdict
@@ -185,7 +186,8 @@ class DFont:
 
     # populate glyphs, kerns, marks etc
     def build(self):
-        self.build_glyphs()
+        pass
+        #self.build_glyphs()
 
     def build_glyphs(self):
         logger.info(f"{self}: building glyphs")
@@ -269,27 +271,29 @@ class DiffFonts:
                 old_fea.split("\n"),
                 new_fea.split("\n"),
             )
+        print("Fuzzing. Will take 60 secs")
+        self.fuzz = fuzz_fonts(self.old_font.ttFont, self.new_font.ttFont, 10)
 
     def build(self):
         # TODO could make this dynamic use something like dir() to get funcs then call em
-        modified_glyphs = self.modified_glyphs()
-        if modified_glyphs:
-            self.diff["glyphs"]["modified"] = modified_glyphs
-        
-        missing_glyphs = self.subtract(
-            set(self.old_font.glyphs.values()),
-            set(self.new_font.glyphs.values()),
-        )
-        if missing_glyphs:
-            self.diff["glyphs"]["missing"] = missing_glyphs
-        
-        new_glyphs = self.subtract(
-            set(self.new_font.glyphs.values()),
-            set(self.old_font.glyphs.values()),
-        )
-        if new_glyphs:
-            self.diff["glyphs"]["new"] = new_glyphs
-
+#        modified_glyphs = self.modified_glyphs()
+#        if modified_glyphs:
+#            self.diff["glyphs"]["modified"] = modified_glyphs
+#        
+#        missing_glyphs = self.subtract(
+#            set(self.old_font.glyphs.values()),
+#            set(self.new_font.glyphs.values()),
+#        )
+#        if missing_glyphs:
+#            self.diff["glyphs"]["missing"] = missing_glyphs
+#        
+#        new_glyphs = self.subtract(
+#            set(self.new_font.glyphs.values()),
+#            set(self.old_font.glyphs.values()),
+#        )
+#        if new_glyphs:
+#            self.diff["glyphs"]["new"] = new_glyphs
+#
         if self.strings:
             diffstrings = []
             for s in self.strings:

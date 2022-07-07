@@ -173,13 +173,6 @@
             item.lastElementChild.className = item.lastElementChild.className.replace("before", "after")
 	    fontToggle.textContent = "After"
 	  }
-	  } else if (POSITION === "after") {
-	  POSITION = "both"
-	  for (item of items) {
-	    item.firstElementChild.textContent = item.firstElementChild.textContent.replace("after", "both")
-            item.lastElementChild.className = item.lastElementChild.className.replace("after", "both")
-	    fontToggle.textContent = "Both"
-	  }
 
 	  } else {
 	  POSITION = "before"
