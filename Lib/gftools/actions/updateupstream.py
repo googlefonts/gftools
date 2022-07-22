@@ -68,9 +68,9 @@ def update_file_list(upstream):
                 elif file == "DESCRIPTION.en_us.html":
                     description_found = True
                     upstream["files"][relpath] = file
+                elif file == "ARTICLE.en_us.html":
+                    upstream["files"][relpath] = "article/"+file
                 elif file.endswith("ttf"):
-                    if "Noto" in upstream["name"] and "full" not in relpath:
-                        continue
                     if config.get("buildVariable", True):
                         # Only add the file if it is the variable font
                         if "[" in file:
@@ -84,7 +84,7 @@ def update_file_list(upstream):
         # If there was a "googlefonts/" directory in the release, just
         # use files in that directory.
         if any("googlefonts/" in x for x in upstream["files"].keys()):
-            upstream["files"] = {k:v for k,v in upstream["files"].items() if "googlefonts/" in k}
+            upstream["files"] = {str(k):str(v) for k,v in upstream["files"].items() if "googlefonts/" in str(k) or not ".ttf" in str(k) }
 
         if not license_found:
             raise ValueError(
