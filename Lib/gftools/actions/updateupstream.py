@@ -68,6 +68,8 @@ def update_file_list(upstream):
                 elif file == "DESCRIPTION.en_us.html":
                     description_found = True
                     upstream["files"][relpath] = file
+                elif file == "ARTICLE.en_us.html":
+                    upstream["files"][relpath] = "article/"+file
                 elif file.endswith("ttf"):
                     if config.get("buildVariable", True):
                         # Only add the file if it is the variable font
