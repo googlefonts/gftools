@@ -272,7 +272,7 @@ class DiffFonts:
                 new_fea.split("\n"),
             )
         print("Fuzzing. Will take 60 secs")
-        self.fuzz = fuzz_fonts(self.old_font.ttFont, self.new_font.ttFont, 10)
+        self.fuzz = fuzz_fonts(self.old_font.ttFont, self.new_font.ttFont, 40)
 
     def build(self):
         # TODO could make this dynamic use something like dir() to get funcs then call em

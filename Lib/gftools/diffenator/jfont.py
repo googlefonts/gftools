@@ -60,15 +60,18 @@ def serialise_stat_table(obj, root):
     }
     if not obj.table.AxisValueArray:
         return {"design axis records": design_records}
-    axis_values = {
-        nametbl.getName(a.ValueNameID, 3, 1, 0x409).toUnicode(): {
-            "format": a.Format,
-            "AxisIndex": a.AxisIndex,
-            "Flags": a.Flags,
-            "Value": a.Value,
+    try:
+        axis_values = {
+            nametbl.getName(a.ValueNameID, 3, 1, 0x409).toUnicode(): {
+                "format": a.Format,
+                "AxisIndex": a.AxisIndex,
+                "Flags": a.Flags,
+                "Value": a.Value,
+            }
+            for a in obj.table.AxisValueArray.AxisValue
         }
-        for a in obj.table.AxisValueArray.AxisValue
-    }
+    except:
+        return {}
     return {"axis values": axis_values, "design axis records": design_records}
 
 
