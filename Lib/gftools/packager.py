@@ -287,6 +287,7 @@ LICENSE_DIRS = tuple(zip(*LICENSE_FILES_2_DIRS))[1]
 ALLOWED_FILES = {
     'DESCRIPTION.en_us.html'
   , 'FONTLOG.txt'
+  , 'article/ARTICLE.en_us.html'
   , *dict(LICENSE_FILES_2_DIRS).keys() # just the file names/keys
 # METADATA.pb is not taken from upstream, technically we update the
 # version in google fonts or create it newly
