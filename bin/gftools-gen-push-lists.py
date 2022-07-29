@@ -74,7 +74,7 @@ def main():
 
             labels = set(l.name for l in content.labels)
             pr = content.as_pull_request()
-            directories = set(f"{directory} # PR#{pr.number}" for directory in pr_directories(pr))
+            directories = set(f"{directory} # PR#{pr.html_url}" for directory in pr_directories(pr))
             if "-- blocked" in labels or "--- Live" in labels:
                 continue
             seen_directories |= directories
