@@ -623,10 +623,10 @@ def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instan
             log.info("Changed head table's macStyle to %i", font["head"].macStyle)
             log.info("Consider fixing in the source\n")
         if fix_weight_class(font):
-            log.info("Changed OS/2 table's usWeightClass to %i", ttFont["OS/2"].usWeightClass)
+            log.info("Changed OS/2 table's usWeightClass to %i", font["OS/2"].usWeightClass)
             log.info("Consider fixing in the source\n")
         if fix_italic_angle(font):
-            log.info("Changed post table's italicAngle to %f", ttFont["post"].italicAngle)
+            log.info("Changed post table's italicAngle to %f", font["post"].italicAngle)
             log.info("Consider fixing in the source\n")
 
         if "fvar" in font:
