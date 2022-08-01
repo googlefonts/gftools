@@ -382,7 +382,7 @@ class GFBuilder:
         elif "stat" in self.config:
             gen_stat_tables_from_config(self.config["stat"], varfonts, locations=locations)
         else:
-            gen_stat_tables(varfonts, self.config["axisOrder"])
+            gen_stat_tables(varfonts)
 
         for ttFont in varfonts:
             ttFont.save(ttFont.reader.file.name)
