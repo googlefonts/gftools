@@ -56,46 +56,60 @@ class NinjaBuilder(GFBuilder):
 
     def setup_rules(self):
         self.w.comment("Rules")
+        if self.config["logLevel"] == "DEBUG":
+            args = {"pool": "console"}
+        else:
+            args = {}
         self.w.newline()
         self.w.comment("Convert glyphs file to UFO")
-        self.w.rule("glyphs2ufo", "fontmake -o ufo -g $in")
+        self.w.rule("glyphs2ufo", "fontmake -o ufo -g $in", **args)
 
         if self.config["buildVariable"]:
             self.w.comment("Build a variable font from Designspace")
-            self.w.rule("variable", "fontmake -o variable -m $in $fontmake_args")
+            self.w.rule(
+                "variable", "fontmake -o variable -m $in $fontmake_args", **args
+            )
 
         self.w.comment("Build a set of instance UFOs from Designspace")
-        self.w.rule("instanceufo", "fontmake -i -o ufo -m $in $fontmake_args")
+        self.w.rule("instanceufo", "fontmake -i -o ufo -m $in $fontmake_args", **args)
 
         self.w.comment("Build a TTF file from a UFO")
         self.w.rule(
-            "buildttf", "fontmake -o ttf -u $in $fontmake_args --output-path $out"
+            "buildttf",
+            "fontmake -o ttf -u $in $fontmake_args --output-path $out",
+            **args,
         )
 
         self.w.comment("Build an OTF file from a UFO")
         self.w.rule(
-            "buildotf", "fontmake -o otf -u $in $fontmake_args --output-path $out"
+            "buildotf",
+            "fontmake -o otf -u $in $fontmake_args --output-path $out",
+            **args,
         )
 
         self.w.comment("Add a STAT table to a set of variable fonts")
         self.w.rule(
             "genstat",
             "gftools-gen-stat.py --inplace $other_args --axis-order $axis_order -- $in  && touch $stampfile",
+            **args,
         )
 
         self.w.comment("Run the font fixer in-place and touch a stamp file")
         self.w.rule(
-            "fix", "gftools-fix-font.py -o $in $fixargs $in && touch $in.fixstamp"
+            "fix",
+            "gftools-fix-font.py -o $in $fixargs $in && touch $in.fixstamp",
+            **args,
         )
 
         self.w.comment("Run the ttfautohint in-place and touch a stamp file")
         self.w.rule(
             "autohint",
             "ttfautohint $in $in.autohinted && mv $in.autohinted $in && touch $in.autohintstamp",
+            **args,
         )
 
         self.w.comment("Create a web font")
-        self.w.rule("webfont", f"fonttools ttLib.woff2 compress -o $out $in")
+        self.w.rule("webfont", f"fonttools ttLib.woff2 compress -o $out $in", **args)
 
         self.w.newline()
 
@@ -256,9 +270,14 @@ class NinjaBuilder(GFBuilder):
             self.w.comment(f" {path}")
             for ufo in self._instance_ufo_filenames(path, designspace):
                 target = str(Path(target_dir) / ufo.with_suffix(f".{format}").name)
-                self.w.build(target, "build" + format, str(ufo), variables={
-                    "fontmake_args": self.fontmake_args({"output_path": target})
-                })
+                self.w.build(
+                    target,
+                    "build" + format,
+                    str(ufo),
+                    variables={
+                        "fontmake_args": self.fontmake_args({"output_path": target})
+                    },
+                )
                 targets.append(target)
         self.w.newline()
         self.w.comment(f"Post-processing {format}s")
