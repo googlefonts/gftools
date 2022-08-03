@@ -105,5 +105,6 @@ setup(
         'fontFeatures',
         'vharfbuzz',
         'bumpfontversion',
+        'blackrenderer',
     ]
     )

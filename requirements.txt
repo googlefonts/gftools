@@ -28,3 +28,4 @@ hyperglot
 fontFeatures>=1.6.2
 vharfbuzz
 bumpfontversion
+blackrenderer

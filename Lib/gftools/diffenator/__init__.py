@@ -77,8 +77,14 @@ class Buffer(Renderable):
         return hash((self.characters, self.features, self.script, self.lang))
 
     def to_image(self, font):
-        nparray = draw_text(None, self.characters, features=self.features, script=self.script, lang=self.lang, ft_face=font.ftFont, hb_font=font.hbFont)
-        return nparray[::-1, ::1]
+        nparray = draw_text(
+            font.path,
+            self.characters,
+            features=self.features,
+            script=self.script,
+            lang=self.lang
+        )
+        return nparray
 
 
 @dataclass
@@ -186,8 +192,7 @@ class DFont:
 
     # populate glyphs, kerns, marks etc
     def build(self):
-        pass
-        #self.build_glyphs()
+        self.build_glyphs()
 
     def build_glyphs(self):
         logger.info(f"{self}: building glyphs")
@@ -272,13 +277,13 @@ class DiffFonts:
                 new_fea.split("\n"),
             )
         print("Fuzzing. Will take 60 secs")
-        self.fuzz = fuzz_fonts(self.old_font.ttFont, self.new_font.ttFont, 40)
+        # self.fuzz = fuzz_fonts(self.old_font.ttFont, self.new_font.ttFont, 40)
 
     def build(self):
         # TODO could make this dynamic use something like dir() to get funcs then call em
-#        modified_glyphs = self.modified_glyphs()
-#        if modified_glyphs:
-#            self.diff["glyphs"]["modified"] = modified_glyphs
+        modified_glyphs = self.modified_glyphs()
+        if modified_glyphs:
+            self.diff["glyphs"]["modified"] = modified_glyphs
 #        
 #        missing_glyphs = self.subtract(
 #            set(self.old_font.glyphs.values()),
@@ -395,8 +400,6 @@ def img_diff(img1, img2):
     """
     Compare normalised arrays.
     """
-    img1, img2 = np.array(img1), np.array(img2)
-
     img1_norm = img1 / np.sqrt(np.sum(img1 ** 2))
     img2_norm = img2 / np.sqrt(np.sum(img2 ** 2))
 
