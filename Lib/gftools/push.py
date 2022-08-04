@@ -40,6 +40,8 @@ def parse_server_file(fp):
                 category = line[1:].strip()
             elif "#" in line:
                 line = line.split("#")[0].strip()
+                item = PushItem(Path(line), category)
+                results.append(item)
             else:
                 item = PushItem(Path(line), category)
                 results.append(item)
