@@ -316,7 +316,7 @@ class DiffFonts:
         return items_a & items_b
 
     # tiny amount is included so we skip details no one can see
-    def modified_glyphs(self, threshold=1):
+    def modified_glyphs(self, threshold=0.0001):
         glyphs_a = {v: k for k, v in self.old_font.glyphs.items()}
         glyphs_b = {v: k for k, v in self.new_font.glyphs.items()}
         shared_glyphs = set(glyphs_a.keys()) & set(glyphs_b.keys())

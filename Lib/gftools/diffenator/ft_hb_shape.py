@@ -24,9 +24,6 @@ def draw_text(
     return arr
 
 
-
-
-
 if __name__ == "__main__":
     import argparse
     import re

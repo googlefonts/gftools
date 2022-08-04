@@ -29,6 +29,8 @@ def main():
     diff.build()
 
     report = Reporter(diff)
+    import pdb
+    pdb.set_trace()
     report.save(args.out, args.old_font, args.new_font)
 
 
