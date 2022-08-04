@@ -49,12 +49,12 @@ def parse_server_file(fp):
 
 
 def is_family_dir(path):
-    return any(t for t in ("ofl", "apache", "ufl") if t in path.parts)
+    return any(t for t in ("ofl", "apache", "ufl") if t in path.parts if "article" not in str(path))
 
 
 def family_dir_name(path):
     metadata_file = path / "METADATA.pb"
-    assert metadata_file.exists()
+    assert metadata_file.exists(), f"no metadata for {path}"
     return read_proto(metadata_file, fonts_pb2.FamilyProto()).name
 
 
