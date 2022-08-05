@@ -22,10 +22,11 @@ Existing families, last pushed:
 @dataclass
 class PushItem:
     path: Path
+    raw: str
     type: str
 
     def to_json(self):
-        return {"path": str(self.path), "type": self.type}
+        return {"path": str(self.path), "type": self.type, "raw": raw}
 
 
 def parse_server_file(fp):
@@ -39,11 +40,11 @@ def parse_server_file(fp):
             if line.startswith("#"):
                 category = line[1:].strip()
             elif "#" in line:
-                line = line.split("#")[0].strip()
-                item = PushItem(Path(line), category)
+                path = line.split("#")[0].strip()
+                item = PushItem(Path(path), line, category)
                 results.append(item)
             else:
-                item = PushItem(Path(line), category)
+                item = PushItem(Path(line), line, category)
                 results.append(item)
     return results
 

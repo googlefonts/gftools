@@ -105,13 +105,13 @@ def main():
     # a label. These need to be manually deleted as well.
     existing_sandbox = parse_server_file(sb_path)
     for i in existing_sandbox:
-        if str(i.path) not in seen_directories:
-            to_sandbox[i.type].add(str(i.path))
+        if str(i.raw) not in seen_directories:
+            to_sandbox[i.type].add(str(i.raw))
 
     existing_production = parse_server_file(prod_path)
     for i in existing_production:
-        if str(i.path) not in seen_directories:
-            to_production[i.type].add(str(i.path))
+        if str(i.raw) not in seen_directories:
+            to_production[i.type].add(str(i.raw))
 
     with open(sb_path, "w") as sb_doc:
         sb_doc.write(write_server_file(to_sandbox))
