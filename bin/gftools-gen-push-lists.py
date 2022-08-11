@@ -74,7 +74,9 @@ def main():
 
             labels = set(l.name for l in content.labels)
             pr = content.as_pull_request()
-            directories = set(f"{directory} # {pr.html_url}" for directory in pr_directories(pr))
+            # we rename lang paths due to: https://github.com/google/fonts/pull/4679
+            directories = set(f"{directory.replace('lang/Lib/gflanguages/data/languages/', 'lang/languages/')} # {pr.html_url}" for directory in pr_directories(pr))
+
             if "-- blocked" in labels or "--- Live" in labels:
                 continue
             seen_directories |= directories
