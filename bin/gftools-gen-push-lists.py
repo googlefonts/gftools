@@ -42,9 +42,27 @@ def pr_directories(pr):
 
 def write_server_file(data):
     doc = []
-    for title, directories in data.items():
-        directories = sorted(directories)
-        doc.append("# " + f"{title}")
+    categories_to_write = []
+    for cat in (
+        "New",
+        "Upgrade",
+        "Small fix/other",
+        "Designer profile",
+        "API Stuff",
+        "Knowledge",
+        "Metadata / Description / License",
+    ):
+        if cat in data:
+            categories_to_write.append(cat)
+
+    for cat in data:
+        if cat not in categories_to_write:
+            print(f"{cat} isn't sorted appending to end of doc")
+            categories_to_write.append(cat)
+
+    for cat in categories_to_write:
+        directories = sorted(data[cat])
+        doc.append(f"# {cat}")
         doc.append("\n".join(directories))
         doc.append("")
     return "\n".join(doc)
