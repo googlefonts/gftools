@@ -207,6 +207,8 @@ def _RegistryOverrides(axes_info):
   res = {}
   for font in axes_info:
     for axis_tag, min_val, max_val, dflt_val in font:
+      if axis_tag not in axis_registry:
+        continue
       default_val = axis_registry[axis_tag].default_value
       if default_val >= min_val and default_val <= max_val:
         continue
