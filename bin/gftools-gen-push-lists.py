@@ -24,10 +24,19 @@ def pr_directories(pr):
     results = set()
     files = pr.get_files()
     for f in files:
-        if f.filename.endswith(".textproto") and f.filename.startswith(("lang", "axisregistry")):
-            results.add(f.filename)
+        filename = f.filename
+        if filename.endswith(".textproto") and filename.startswith(("lang", "axisregistry")):
+            # we rename lang paths due to: https://github.com/google/fonts/pull/4679
+            if filename.startswith("lang"):
+                filename = filename.replace('lang/Lib/gflanguages/data/languages/', 'lang/languages/')
+            results.add(filename)
         else:
-            results.add(os.path.dirname(f.filename))
+            filename = os.path.dirname(filename)
+            # If a noto article has been updated, just return the family dir
+            # ofl/notosans/article --> ofl/notosans
+            if "article" in filename:
+                filename = os.path.dirname(filename)
+            results.add(filename)
     return results
 
 
@@ -74,8 +83,7 @@ def main():
 
             labels = set(l.name for l in content.labels)
             pr = content.as_pull_request()
-            # we rename lang paths due to: https://github.com/google/fonts/pull/4679
-            directories = set(f"{directory.replace('lang/Lib/gflanguages/data/languages/', 'lang/languages/')} # {pr.html_url}" for directory in pr_directories(pr))
+            directories = set(f"{directory} # {pr.html_url}" for directory in pr_directories(pr))
 
             if "-- blocked" in labels or "--- Live" in labels:
                 continue
