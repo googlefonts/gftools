@@ -65,10 +65,12 @@ def merge_ufos(
                 flat_outputs = [
                     item for sublist in rule.replacement for item in sublist
                 ]
-                true_inputs = [list(set(r) & newglyphset) for r in rule.input]
-                rule.precontext = [list(set(r) & newglyphset) for r in rule.precontext]
+                true_inputs = [sorted(set(r) & newglyphset) for r in rule.input]
+                rule.precontext = [
+                    sorted(set(r) & newglyphset) for r in rule.precontext
+                ]
                 rule.postcontext = [
-                    list(set(r) & newglyphset) for r in rule.postcontext
+                    sorted(set(r) & newglyphset) for r in rule.postcontext
                 ]
                 if (
                     any(not g for g in true_inputs)
@@ -101,7 +103,7 @@ def merge_ufos(
                     else:
                         rule.input = true_inputs
                         rule.replacement = [
-                            list(set(r) & newglyphset) for r in rule.replacement
+                            sorted(set(r) & newglyphset) for r in rule.replacement
                         ]
                     logging.debug("Adding rule '%s'", rule.asFea())
                 newroutine.rules.append(rule)
@@ -144,12 +146,12 @@ def merge_ufos(
             if l not in ufo1.groups:
                 ufo1.groups[l] = ufo2.groups[l]
             else:
-                ufo1.groups[l] = list(set(ufo1.groups[l] + ufo2.groups[l]))
+                ufo1.groups[l] = sorted(set(ufo1.groups[l] + ufo2.groups[l]))
         if r.startswith("public.kern"):
             if r not in ufo1.groups:
                 ufo1.groups[r] = ufo2.groups[r]
             else:
-                ufo1.groups[r] = list(set(ufo1.groups[r] + ufo2.groups[r]))
+                ufo1.groups[r] = sorted(set(ufo1.groups[r] + ufo2.groups[r]))
 
     # Routines for merging font lib keys
     def merge_set(ufo1, ufo2, name, g, create_if_not_in_ufo1=False):
@@ -214,6 +216,10 @@ def merge_ufos(
             ufo1[g] = ufo2[g]
         else:
             ufo1.addGlyph(ufo2[g])
+
+    # Sort unordered lists for deterministic output
+    if "public.skipExportGlyphs" in ufo1.lib:
+        ufo1.lib["public.skipExportGlyphs"].sort()
 
     if new_layout_rules.routines:
         ufo1.features.text += new_layout_rules.asFea(do_gdef=False)
