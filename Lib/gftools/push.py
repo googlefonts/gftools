@@ -98,22 +98,51 @@ def push_report(fp):
     server_push_report("Sandbox", sandbox_path, SANDBOX_URL)
 
 
+# The internal Google fonts team store the axisregistry and lang directories
+# in a different location. The two functions below tranform paths to
+# whichever representation you need.
+def repo_path_to_google_path(fp):
+    """lang/Lib/gflanguages/data/languages/.*.textproto --> lang/languages/.*.textproto"""
+    # we rename lang paths due to: https://github.com/google/fonts/pull/4679
+    if "languages" in fp.parts:
+        return Path("lang") / "languages" / fp.name
+    # https://github.com/google/fonts/pull/5147
+    elif "axisregistry" in fp.parts:
+        return Path("axisregistry") / fp.name
+    else:
+        raise ValueError(f"No transform found for path {fp}")
+
+
+def google_path_to_repo_path(fp):
+    """lang/languages/.*.textproto --> lang/Lib/gflanguages/data/languages/.*.textproto"""
+    if "languages" in fp.parts:
+        return fp.parent.parent / "Lib" / "gflanguages" / "data" / "languages" / fp.name
+    elif "axisregistry" in fp.parts:
+        return fp.parent / "Lib" / "axisregistry" / "data" / fp.name
+    else:
+        raise ValueError(f"No transform found for path {fp}")
+
+
 def missing_paths(fp):
     paths = [fp.parent / p.path for p in parse_server_file(fp)]
-    lang_files = [p for p in paths if "lang" in p.parts]
-    axis_files = [p for p in paths if p.name.endswith(("textproto", "svg")) if p not in lang_files]
-    dirs = [p for p in paths if p not in axis_files + lang_files]
+    font_paths = [p for p in paths if any(d in p.parts for d in ("ofl", "ufl", "apache"))]
+    lang_paths = [p for p in paths if "lang" in p.parts]
+    axis_paths = [p for p in paths if "axisregistry" in p.parts]
+    misc_paths = [p for p in paths if p not in font_paths+lang_paths+axis_paths]
 
-    missing_dirs = [p for p in dirs if not p.is_dir()]
-    missing_axis_files = [p for p in axis_files if not p.is_file()]
-    missing_lang_files = [p for p in lang_files if not
-        (p.parent.parent / "Lib" / "gflanguages" / "data" / "languages" / lang_files[0].name).is_file()
-    ]
-    return missing_dirs + missing_axis_files + missing_lang_files
+    missing_paths = [p for p in misc_paths+font_paths if not p.exists()]
+    missing_lang_files = [p for p in lang_paths if not google_path_to_repo_path(p).exists()]
+    missing_axis_files = [p for p in axis_paths if not google_path_to_repo_path(p).exists()]
+    return missing_paths + missing_lang_files + missing_axis_files
 
 
 def lint_server_files(fp):
     template = "{}: Following paths are not valid:\n{}\n\n"
+    footnote = (
+        "lang and axisregistry dir paths need to be transformed.\n"
+        "See https://github.com/googlefonts/gftools/issues/603"
+    )
+
     prod_path = fp / "to_production.txt"
     prod_missing = "\n".join(map(str, missing_paths(prod_path)))
     prod_msg = template.format("to_production.txt", prod_missing)
@@ -123,10 +152,10 @@ def lint_server_files(fp):
     sandbox_msg = template.format("to_sandbox.txt", sandbox_missing)
 
     if prod_missing and sandbox_missing:
-        raise ValueError(prod_msg + sandbox_msg)
+        raise ValueError(prod_msg + sandbox_msg + footnote)
     elif prod_missing:
-        raise ValueError(prod_msg)
+        raise ValueError(prod_msg + footnote)
     elif sandbox_missing:
-        raise ValueError(sandbox_msg)
+        raise ValueError(sandbox_msg + footnote)
     else:
         print("Server files have valid paths")
