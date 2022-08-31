@@ -18,25 +18,24 @@ from github import Github
 from collections import defaultdict
 import os
 import sys
+from pathlib import Path
+from gftools.push import repo_path_to_google_path
 
 
 def pr_directories(pr):
     results = set()
     files = pr.get_files()
     for f in files:
-        filename = f.filename
-        if filename.endswith(".textproto") and filename.startswith(("lang", "axisregistry")):
-            # we rename lang paths due to: https://github.com/google/fonts/pull/4679
-            if filename.startswith("lang"):
-                filename = filename.replace('lang/Lib/gflanguages/data/languages/', 'lang/languages/')
-            results.add(filename)
+        path = Path(f.filename)
+        if path.suffix == ".textproto" and any(d in path.parts for d in ("lang", "axisregistry")):
+            results.add(repo_path_to_google_path(path))
         else:
-            filename = os.path.dirname(filename)
+            path = path.parent
             # If a noto article has been updated, just return the family dir
             # ofl/notosans/article --> ofl/notosans
-            if "article" in filename:
-                filename = os.path.dirname(filename)
-            results.add(filename)
+            if "article" in path.parts:
+                path = path.parent
+            results.add(str(path))
     return results
 
 
