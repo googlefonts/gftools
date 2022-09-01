@@ -28,8 +28,9 @@ message FamilyProto {
   optional SampleTextProto sample_text = 17;
   optional string display_name = 18;
   optional FontType source_type = 19 [default = TYPE_TTF];
+  optional string primary_script = 20;
 
-  // Next = 19
+  // Next = 21
 }
 
 message FontProto {
