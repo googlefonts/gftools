@@ -146,6 +146,8 @@ def _MakeMetadata(fontdir, is_new):
       metadata.is_noto = True
     if old_metadata.display_name:
       metadata.display_name = old_metadata.display_name
+    if old_metadata.primary_script:
+      metadata.primary_script = old_metadata.primary_script
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category.append('SANS_SERIF')
