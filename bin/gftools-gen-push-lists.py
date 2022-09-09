@@ -104,7 +104,7 @@ def main():
 
             if "-- blocked" in labels or "--- Live" in labels:
                 continue
-            seen_directories |= directories
+            seen_directories |= set(d.replace(" ", "").lower() for d in directories)
             if "I Font Upgrade" in labels or "III VF Replacement" in labels:
                 cat = "Upgrade"
             elif "I New Font" in labels:
@@ -117,6 +117,8 @@ def main():
                 cat = "Knowledge"
             elif "I Axis Registry" in labels or "I API / Website / Platform" in labels:
                 cat = "API Stuff"
+            elif "I Lang" in labels:
+                cat = "Add/update lang files"
             else:
                 cat = "Small fix/other"
             if "--- to sandbox" in labels:
@@ -132,12 +134,12 @@ def main():
     # a label. These need to be manually deleted as well.
     existing_sandbox = parse_server_file(sb_path)
     for i in existing_sandbox:
-        if str(i.raw) not in seen_directories:
+        if str(i.raw.replace(" ", "").lower()) not in seen_directories:
             to_sandbox[i.type].add(str(i.raw))
 
     existing_production = parse_server_file(prod_path)
     for i in existing_production:
-        if str(i.raw) not in seen_directories:
+        if str(i.raw.replace(" ", "").lower()) not in seen_directories:
             to_production[i.type].add(str(i.raw))
 
     with open(sb_path, "w") as sb_doc:
