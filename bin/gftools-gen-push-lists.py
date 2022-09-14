@@ -45,11 +45,12 @@ def write_server_file(data):
     for cat in (
         "New",
         "Upgrade",
-        "Small fix/other",
+        "Other",
         "Designer profile",
-        "API Stuff",
+        "Axis Registry",
         "Knowledge",
         "Metadata / Description / License",
+        "Sample texts"
     ):
         if cat in data:
             categories_to_write.append(cat)
@@ -105,7 +106,7 @@ def main():
             if "-- blocked" in labels or "--- Live" in labels:
                 continue
             seen_directories |= set(d.replace(" ", "").lower() for d in directories)
-            if "I Font Upgrade" in labels or "III VF Replacement" in labels:
+            if "I Font Upgrade" in labels or "I Small Fix" in labels:
                 cat = "Upgrade"
             elif "I New Font" in labels:
                 cat = "New"
@@ -115,12 +116,12 @@ def main():
                 cat = "Designer profile"
             elif "I Knowledge" in labels:
                 cat = "Knowledge"
-            elif "I Axis Registry" in labels or "I API / Website / Platform" in labels:
-                cat = "API Stuff"
+            elif "I Axis Registry" in labels:
+                cat = "Axis Registry"
             elif "I Lang" in labels:
-                cat = "Add/update lang files"
+                cat = "Sample texts"
             else:
-                cat = "Small fix/other"
+                cat = "Other"
             if "--- to sandbox" in labels:
                 to_sandbox[cat] |= directories
             if "--- to production" in labels:
