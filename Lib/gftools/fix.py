@@ -605,28 +605,30 @@ def drop_mac_names(ttfont):
     return changed
 
 
-def _blank_glyph_to_gid1(ttfont):
+def _add_blank_glyph_to_gid1(ttfont):
     from nanoemoji.reorder_glyphs import reorder_glyphs
     from nanoemoji.svg import _ensure_ttfont_fully_decompiled
-
-    second_glyph = ttfont.getGlyphOrder()[1]
+    from fontTools.ttLib.tables._g_l_y_f import Glyph
+    glyph_order = ttfont.getGlyphOrder()
     glyf_table = ttfont["glyf"]
-    # Will also work for composite glyphs since these have a -1 contour count
-    if glyf_table[second_glyph].numberOfContours > 0:
-        _ensure_ttfont_fully_decompiled(ttfont)
-        glyph_order = ttfont.getGlyphOrder()
-        empty_glyph = next(
-            (g for g in glyph_order if glyf_table[g].numberOfContours == 0),
-            None
-        )
-        if empty_glyph is None:
-            raise ValueError(
-                "Font contains no empty glyphs. Please include a space or .null glyph"
-            )
-        new_order = glyph_order
-        new_order.remove(empty_glyph)
-        new_order.insert(1, empty_glyph)
-        reorder_glyphs(ttfont, new_order)
+
+    gid1 = glyph_order[1]
+    if glyf_table[gid1].numberOfContours == 0:
+        return
+    _ensure_ttfont_fully_decompiled(ttfont)
+    hmtx = ttfont["hmtx"]
+    blank_glyph = Glyph()
+    blank_name = "blank"
+    glyf_table[blank_name] = blank_glyph
+    ttfont["glyf"] = glyf_table
+    hmtx.metrics[blank_name] = (0, 0)
+    if "HVAR" in ttfont:
+         hvar = ttfont["HVAR"]
+         hvar.table.AdvWidthMap.mapping[blank_name] = 0
+
+    new_order = glyph_order
+    new_order.insert(1, blank_name)
+    reorder_glyphs(ttfont, new_order)
 
 
 def fix_colr_font(ttfont):
@@ -639,7 +641,7 @@ def fix_colr_font(ttfont):
     assert "COLR" in ttfont, "Not a COLR font"
     colr_version = ttfont["COLR"].version
     if colr_version == 0:
-        _blank_glyph_to_gid1(ttfont)
+        _add_blank_glyph_to_gid1(ttfont)
         return ttfont
     elif colr_version == 1:
         font_filename = os.path.basename(ttfont.reader.file.name)
