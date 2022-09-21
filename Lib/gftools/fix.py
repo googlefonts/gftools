@@ -605,8 +605,44 @@ def drop_mac_names(ttfont):
     return changed
 
 
-def _add_blank_glyph_to_gid1(ttfont):
+def fix_colr_v0_gid1(ttfont):
+    assert "COLR" in ttfont and ttfont["COLR"].version == 0
+    if ttfont["maxp"].numGlyphs < 2:
+        return
+    glyph_names = ttfont.getGlyphOrder()
+    glyf_table = ttfont["glyf"]
+    has_empty_glyphs = any(glyf_table[g].numberOfContours == 0 for g in glyph_names)
+    if has_empty_glyphs:
+        fixed_font = _swap_empty_glyph_to_gid1(ttfont)
+    else:
+        fixed_font = _add_empty_glyph_to_gid1(ttfont)
+    return fixed_font
+
+
+def _swap_empty_glyph_to_gid1(ttfont):
     from nanoemoji.reorder_glyphs import reorder_glyphs
+    from nanoemoji.util import load_fully
+    second_glyph = ttfont.getGlyphOrder()[1]
+    glyf_table = ttfont["glyf"]
+    if glyf_table[second_glyph].numberOfContours > 0:
+        ttfont = load_fully(ttfont)
+        glyph_order = ttfont.getGlyphOrder()
+        empty_glyph = next(
+            (g for g in glyph_order if glyf_table[g].numberOfContours == 0),
+            None
+        )
+        if empty_glyph is None:
+            raise ValueError(
+                "Font contains no empty glyphs. Please include a space or .null glyph"
+            )
+        new_order = glyph_order
+        new_order.remove(empty_glyph)
+        new_order.insert(1, empty_glyph)
+        reorder_glyphs(ttfont, new_order)
+    return ttfont
+
+
+def _add_empty_glyph_to_gid1(ttfont):
     from nanoemoji.util import load_fully
     from fontTools.ttLib.tables._g_l_y_f import Glyph
     from fontTools.ttLib.tables.otTables import NO_VARIATION_INDEX
@@ -615,10 +651,10 @@ def _add_blank_glyph_to_gid1(ttfont):
     glyf_table = ttfont["glyf"]
 
     if len(glyph_order) < 2:
-        return
+        return ttfont
     gid1 = glyph_order[1]
     if glyf_table[gid1].numberOfContours == 0:
-        return
+        return ttfont
     hmtx = ttfont["hmtx"]
     empty_glyph = Glyph()
     empty_name = ".null" if ".null" not in glyph_order else "emptyglyph"
@@ -649,7 +685,7 @@ def fix_colr_font(ttfont):
     assert "COLR" in ttfont, "Not a COLR font"
     colr_version = ttfont["COLR"].version
     if colr_version == 0:
-        return _add_blank_glyph_to_gid1(ttfont)
+        return fix_colr_v0_gid1(ttfont)
     elif colr_version == 1:
         font_filename = os.path.basename(ttfont.reader.file.name)
         with tempfile.TemporaryDirectory() as build_dir:
