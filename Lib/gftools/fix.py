@@ -658,6 +658,7 @@ def _add_empty_glyph_to_gid1(ttfont):
     hmtx = ttfont["hmtx"]
     empty_glyph = Glyph()
     empty_name = ".null" if ".null" not in glyph_order else "emptyglyph"
+    assert empty_name not in glyph_order, f"{empty_name} already exists in font"
     glyf_table.glyphs[empty_name] = empty_glyph
     hmtx.metrics[empty_name] = (0, 0)
     if "HVAR" in ttfont:
