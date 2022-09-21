@@ -630,16 +630,18 @@ def _blank_glyph_to_gid1(ttfont):
 
 
 def fix_colr_font(ttfont):
+    """For COLR v0 fonts, we need to ensure that the 2nd glyph is whitespace glyph,
+    https://github.com/googlefonts/gftools/issues/609. For COLR v1 fonts, we need
+    to run Nanoemoji's maximum_color script in order to generate an SVG table since
+    this format isn't well supported by browsers yet,
+    https://github.com/googlefonts/fontbakery/issues/3888.
+    """
     assert "COLR" in ttfont, "Not a COLR font"
     colr_version = ttfont["COLR"].version
     if colr_version == 0:
-        # ensure GID 1 is a blank glyph so Win 10 renders correctly
-        # https://github.com/googlefonts/gftools/issues/609
         _blank_glyph_to_gid1(ttfont)
         return ttfont
     elif colr_version == 1:
-        # Run nanoemoji maximum_color on COLR v1 fonts
-        # https://github.com/googlefonts/fontbakery/issues/3888
         font_filename = os.path.basename(ttfont.reader.file.name)
         with tempfile.TemporaryDirectory() as build_dir:
             subprocess.call(
@@ -651,7 +653,7 @@ def fix_colr_font(ttfont):
                 ]
             )
             out_fp = os.path.join(build_dir, font_filename)
-        return TTFont(out_fp)
+            return TTFont(out_fp)
     else:
         raise NotImplementedError(f"COLR version '{colr_version}' not supported.")
 
