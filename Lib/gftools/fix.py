@@ -34,8 +34,8 @@ from os.path import basename, splitext
 from copy import deepcopy
 import logging
 import subprocess
-import shutil
 import os
+import tempfile
 
 
 log = logging.getLogger(__name__)
@@ -605,12 +605,13 @@ def drop_mac_names(ttfont):
     return changed
 
 
-def blank_glyph_to_gid1(ttfont):
+def _blank_glyph_to_gid1(ttfont):
     from nanoemoji.reorder_glyphs import reorder_glyphs
     from nanoemoji.svg import _ensure_ttfont_fully_decompiled
 
     second_glyph = ttfont.getGlyphOrder()[1]
     glyf_table = ttfont["glyf"]
+    # Will also work for composite glyphs since these have a -1 contour count
     if glyf_table[second_glyph].numberOfContours > 0:
         _ensure_ttfont_fully_decompiled(ttfont)
         glyph_order = ttfont.getGlyphOrder()
@@ -629,18 +630,28 @@ def blank_glyph_to_gid1(ttfont):
 
 
 def fix_colr_font(ttfont):
+    assert "COLR" in ttfont, "Not a COLR font"
     colr_version = ttfont["COLR"].version
     if colr_version == 0:
         # ensure GID 1 is a blank glyph so Win 10 renders correctly
         # https://github.com/googlefonts/gftools/issues/609
-        blank_glyph_to_gid1(ttfont)
+        _blank_glyph_to_gid1(ttfont)
         return ttfont
     elif colr_version == 1:
-        # (TODO) don't use subprocess 
-        subprocess.call(["maximum_color", ttfont.reader.file.name])
-        shutil.move(os.path.join("build", "Font.ttf"), ttfont.reader.file.name)
-        shutil.rmtree("build")
-        return TTFont(ttfont.reader.file.name)
+        # Run nanoemoji maximum_color on COLR v1 fonts
+        # https://github.com/googlefonts/fontbakery/issues/3888
+        font_filename = os.path.basename(ttfont.reader.file.name)
+        with tempfile.TemporaryDirectory() as build_dir:
+            subprocess.call(
+                [
+                    "maximum_color",
+                    ttfont.reader.file.name,
+                    "--build_dir", build_dir,
+                    "--output_file", font_filename,
+                ]
+            )
+            out_fp = os.path.join(build_dir, font_filename)
+        return TTFont(out_fp)
     else:
         raise NotImplementedError(f"COLR version '{colr_version}' not supported.")
 
@@ -665,7 +676,8 @@ def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instan
             log.info(f"Added a Variations PostScript Name Prefix (NameID 25) '{var_ps_name}'")
     
     if "COLR" in font:
-        fix_colr_font(font)
+        log.info("Fixing COLR font tables")
+        font = fix_colr_font(font)
 
     if include_source_fixes:
         remove_tables(font)
