@@ -607,15 +607,15 @@ def drop_mac_names(ttfont):
 
 def _add_blank_glyph_to_gid1(ttfont):
     from nanoemoji.reorder_glyphs import reorder_glyphs
-    from nanoemoji.svg import _ensure_ttfont_fully_decompiled
+    from nanoemoji.util import load_fully
     from fontTools.ttLib.tables._g_l_y_f import Glyph
+    ttfont = load_fully(ttfont)
     glyph_order = ttfont.getGlyphOrder()
     glyf_table = ttfont["glyf"]
 
     gid1 = glyph_order[1]
     if glyf_table[gid1].numberOfContours == 0:
         return
-    _ensure_ttfont_fully_decompiled(ttfont)
     hmtx = ttfont["hmtx"]
     blank_glyph = Glyph()
     blank_name = "blank"
@@ -629,6 +629,7 @@ def _add_blank_glyph_to_gid1(ttfont):
     new_order = glyph_order
     new_order.insert(1, blank_name)
     reorder_glyphs(ttfont, new_order)
+    return ttfont
 
 
 def fix_colr_font(ttfont):
@@ -641,8 +642,7 @@ def fix_colr_font(ttfont):
     assert "COLR" in ttfont, "Not a COLR font"
     colr_version = ttfont["COLR"].version
     if colr_version == 0:
-        _add_blank_glyph_to_gid1(ttfont)
-        return ttfont
+        return _add_blank_glyph_to_gid1(ttfont)
     elif colr_version == 1:
         font_filename = os.path.basename(ttfont.reader.file.name)
         with tempfile.TemporaryDirectory() as build_dir:
