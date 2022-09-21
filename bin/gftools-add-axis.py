@@ -102,6 +102,10 @@ def main(font: str):
     axis_proto.max_value = fvar_axis.maxValue
     # Input values for this axis must aligned to 10^precision
     axis_proto.precision = 1  # ask user?
+    # Some parameter I don't know what it does
+    axis_proto.fallback_only = false
+    # Illustration path
+    axis_proto.illustration_url = '' # leave empty? 
     # Short descriptive paragraph
     axis_proto.description = (  # ask user?
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod'
