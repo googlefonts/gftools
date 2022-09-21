@@ -265,3 +265,21 @@ def test_fix_colr_v1_font(colr_v1_font):
     colr_v1_font["COLR"].version = 1
     fixed = fix_colr_font(colr_v1_font)
     assert "SVG " in fixed
+
+
+def test_add_empty_glyph_to_gid1(colr_v0_font):
+    from gftools.fix import _add_empty_glyph_to_gid1
+    fixed_font = _add_empty_glyph_to_gid1(colr_v0_font)
+    empty_name = fixed_font.getGlyphOrder()[1]
+    assert fixed_font["glyf"][empty_name].numberOfContours == 0
+    assert empty_name not in colr_v0_font.getGlyphOrder()
+
+
+def test_swap_empty_glyph_to_gid1(colr_v0_font):
+    from gftools.fix import _swap_empty_glyph_to_gid1
+    original_glyphset = list(colr_v0_font.getGlyphOrder())
+    fixed_font = _swap_empty_glyph_to_gid1(colr_v0_font)
+    new_glyphset = list(fixed_font.getGlyphOrder())
+    gid1_name = fixed_font.getGlyphOrder()[1]
+    assert fixed_font["glyf"][gid1_name].numberOfContours == 0
+    assert original_glyphset.index(gid1_name) != new_glyphset.index(gid1_name)
