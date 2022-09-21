@@ -620,24 +620,22 @@ def _add_blank_glyph_to_gid1(ttfont):
     if glyf_table[gid1].numberOfContours == 0:
         return
     hmtx = ttfont["hmtx"]
-    blank_glyph = Glyph()
-    blank_name = ".null" if ".null" not in glyph_order else "emptyglyph"
-    glyf_table[blank_name] = blank_glyph
-    ttfont["glyf"] = glyf_table
-    hmtx.metrics[blank_name] = (0, 0)
+    empty_glyph = Glyph()
+    empty_name = ".null" if ".null" not in glyph_order else "emptyglyph"
+    glyf_table.glyphs[empty_name] = empty_glyph
+    hmtx.metrics[empty_name] = (0, 0)
     if "HVAR" in ttfont:
         hvar = ttfont["HVAR"].table
         if hvar.AdvWidthMap:
-            hvar.AdvWidthMap.mapping[blank_name] = NO_VARIATION_INDEX
+            hvar.AdvWidthMap.mapping[empty_name] = NO_VARIATION_INDEX
         if hvar.LsbMap:
-            hvar.LsbMap.mapping[blank_name] = NO_VARIATION_INDEX
+            hvar.LsbMap.mapping[empty_name] = NO_VARIATION_INDEX
         if hvar.RsbMap:
-           hvar.RsbMap.mapping[blank_name] = NO_VARIATION_INDEX
+           hvar.RsbMap.mapping[empty_name] = NO_VARIATION_INDEX
 
     new_order = list(glyph_order)
-    new_order.remove(blank_name)
-    new_order.insert(1, blank_name)
-    reorder_glyphs(ttfont, new_order)
+    new_order.insert(1, empty_name)
+    ttfont.setGlyphOrder(new_order)
     return ttfont
 
 
