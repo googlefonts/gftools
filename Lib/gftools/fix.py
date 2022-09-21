@@ -609,24 +609,33 @@ def _add_blank_glyph_to_gid1(ttfont):
     from nanoemoji.reorder_glyphs import reorder_glyphs
     from nanoemoji.util import load_fully
     from fontTools.ttLib.tables._g_l_y_f import Glyph
+    from fontTools.ttLib.tables.otTables import NO_VARIATION_INDEX
     ttfont = load_fully(ttfont)
     glyph_order = ttfont.getGlyphOrder()
     glyf_table = ttfont["glyf"]
 
+    if len(glyph_order) < 2:
+        return
     gid1 = glyph_order[1]
     if glyf_table[gid1].numberOfContours == 0:
         return
     hmtx = ttfont["hmtx"]
     blank_glyph = Glyph()
-    blank_name = "blank"
+    blank_name = ".null" if ".null" not in glyph_order else "emptyglyph"
     glyf_table[blank_name] = blank_glyph
     ttfont["glyf"] = glyf_table
     hmtx.metrics[blank_name] = (0, 0)
     if "HVAR" in ttfont:
-         hvar = ttfont["HVAR"]
-         hvar.table.AdvWidthMap.mapping[blank_name] = 0
+        hvar = ttfont["HVAR"].table
+        if hvar.AdvWidthMap:
+            hvar.AdvWidthMap.mapping[blank_name] = NO_VARIATION_INDEX
+        if hvar.LsbMap:
+            hvar.LsbMap.mapping[blank_name] = NO_VARIATION_INDEX
+        if hvar.RsbMap:
+           hvar.RsbMap.mapping[blank_name] = NO_VARIATION_INDEX
 
-    new_order = glyph_order
+    new_order = list(glyph_order)
+    new_order.remove(blank_name)
     new_order.insert(1, blank_name)
     reorder_glyphs(ttfont, new_order)
     return ttfont
@@ -635,8 +644,8 @@ def _add_blank_glyph_to_gid1(ttfont):
 def fix_colr_font(ttfont):
     """For COLR v0 fonts, we need to ensure that the 2nd glyph is whitespace glyph,
     https://github.com/googlefonts/gftools/issues/609. For COLR v1 fonts, we need
-    to run Nanoemoji's maximum_color script in order to generate an SVG table since
-    this format isn't well supported by browsers yet,
+    to run Nanoemoji's maximum_color script in order to generate an SVG table for
+    applications that don't support COLRv1 yet,
     https://github.com/googlefonts/fontbakery/issues/3888.
     """
     assert "COLR" in ttfont, "Not a COLR font"
@@ -680,7 +689,7 @@ def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instan
             log.info(f"Added a Variations PostScript Name Prefix (NameID 25) '{var_ps_name}'")
     
     if "COLR" in font:
-        log.info("Fixing COLR font tables")
+        log.info("Fixing COLR font")
         font = fix_colr_font(font)
 
     if include_source_fixes:
