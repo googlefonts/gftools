@@ -104,8 +104,6 @@ def main(font: str):
     axis_proto.precision = 1  # ask user?
     # Wether or not fallback positions should be used (but not sure)
     axis_proto.fallback_only = False
-    # Illustration path
-    axis_proto.illustration_url = ''
     # Short descriptive paragraph
     axis_proto.description = (  # ask user?
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod'
@@ -131,6 +129,7 @@ def main(font: str):
     filename = f'{axis_proto.display_name.lower()}.textproto'
     with open(filename, 'x') as f:
         f.write(text_proto)
+    print(f"Please remember to link an illustration. The description should be reviewed by a Knowledge content editor.")
     print(f'DONE create {filename}!')
 
 
