@@ -672,7 +672,7 @@ def _add_empty_glyph_to_gid1(ttfont):
     return ttfont
 
 
-def fix_colr_font(ttfont):
+def fix_colr_font(ttfont: TTFont) -> TTFont:
     """For COLR v0 fonts, we need to ensure that the 2nd glyph is whitespace glyph,
     https://github.com/googlefonts/gftools/issues/609. For COLR v1 fonts, we need
     to run Nanoemoji's maximum_color script in order to generate an SVG table for
