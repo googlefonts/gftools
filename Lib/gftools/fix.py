@@ -672,6 +672,25 @@ def _add_empty_glyph_to_gid1(ttfont):
     return ttfont
 
 
+def fix_colr_v1_add_svg(ttfont):
+    if "SVG " in ttfont:
+        return ttfont
+    font_filename = os.path.basename(ttfont.reader.file.name)
+    with tempfile.TemporaryDirectory() as build_dir:
+        subprocess.call(
+            [
+                "maximum_color",
+                ttfont.reader.file.name,
+                "--build_dir", build_dir,
+                "--output_file", font_filename,
+            ]
+        )
+        out_fp = os.path.join(build_dir, font_filename)
+        fixed_ttfont = TTFont(out_fp)
+        assert "SVG " in fixed_ttfont, "SVG table is missing"
+        return fixed_ttfont
+
+
 def fix_colr_font(ttfont: TTFont) -> TTFont:
     """For COLR v0 fonts, we need to ensure that the 2nd glyph is whitespace glyph,
     https://github.com/googlefonts/gftools/issues/609. For COLR v1 fonts, we need
@@ -684,20 +703,7 @@ def fix_colr_font(ttfont: TTFont) -> TTFont:
     if colr_version == 0:
         return fix_colr_v0_gid1(ttfont)
     elif colr_version == 1:
-        if "SVG " in ttfont:
-            return ttfont
-        font_filename = os.path.basename(ttfont.reader.file.name)
-        with tempfile.TemporaryDirectory() as build_dir:
-            subprocess.call(
-                [
-                    "maximum_color",
-                    ttfont.reader.file.name,
-                    "--build_dir", build_dir,
-                    "--output_file", font_filename,
-                ]
-            )
-            out_fp = os.path.join(build_dir, font_filename)
-            return TTFont(out_fp)
+        return fix_colr_v1_add_svg(ttfont)
     else:
         raise NotImplementedError(f"COLR version '{colr_version}' not supported.")
 
