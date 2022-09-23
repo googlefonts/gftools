@@ -684,6 +684,8 @@ def fix_colr_font(ttfont: TTFont) -> TTFont:
     if colr_version == 0:
         return fix_colr_v0_gid1(ttfont)
     elif colr_version == 1:
+        if "SVG " in ttfont:
+            return ttfont
         font_filename = os.path.basename(ttfont.reader.file.name)
         with tempfile.TemporaryDirectory() as build_dir:
             subprocess.call(
