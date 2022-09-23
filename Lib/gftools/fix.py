@@ -33,6 +33,9 @@ from gftools.stat import gen_stat_tables
 from os.path import basename, splitext
 from copy import deepcopy
 import logging
+import subprocess
+import os
+import tempfile
 
 
 log = logging.getLogger(__name__)
@@ -602,6 +605,110 @@ def drop_mac_names(ttfont):
     return changed
 
 
+def fix_colr_v0_gid1(ttfont):
+    assert "COLR" in ttfont and ttfont["COLR"].version == 0
+    if ttfont["maxp"].numGlyphs < 2:
+        return ttfont
+    glyph_names = ttfont.getGlyphOrder()
+    glyf_table = ttfont["glyf"]
+    second_glyph = glyph_names[1]
+    if glyf_table[second_glyph].numberOfContours == 0:
+        return ttfont
+    has_empty_glyphs = any(glyf_table[g].numberOfContours == 0 for g in glyph_names)
+    if has_empty_glyphs:
+        fixed_font = _swap_empty_glyph_to_gid1(ttfont)
+    else:
+        fixed_font = _add_empty_glyph_to_gid1(ttfont)
+    return fixed_font
+
+
+def _swap_empty_glyph_to_gid1(ttfont):
+    from nanoemoji.reorder_glyphs import reorder_glyphs
+    from nanoemoji.util import load_fully
+    glyf_table = ttfont["glyf"]
+    ttfont = load_fully(ttfont)
+    glyph_order = ttfont.getGlyphOrder()
+    empty_glyph = next(
+        (g for g in glyph_order if glyf_table[g].numberOfContours == 0),
+        None
+    )
+    if empty_glyph is None:
+        raise ValueError(
+            "Font contains no empty glyphs. Please include a space or .null glyph"
+        )
+    new_order = list(glyph_order)
+    new_order.remove(empty_glyph)
+    new_order.insert(1, empty_glyph)
+    reorder_glyphs(ttfont, new_order)
+    return ttfont
+
+
+def _add_empty_glyph_to_gid1(ttfont):
+    from nanoemoji.util import load_fully
+    from fontTools.ttLib.tables._g_l_y_f import Glyph
+    from fontTools.ttLib.tables.otTables import NO_VARIATION_INDEX
+    ttfont = load_fully(ttfont)
+    glyph_order = ttfont.getGlyphOrder()
+    glyf_table = ttfont["glyf"]
+    hmtx = ttfont["hmtx"]
+
+    empty_glyph = Glyph()
+    empty_name = ".null" if ".null" not in glyph_order else "emptyglyph"
+    assert empty_name not in glyph_order, f"{empty_name} already exists in font"
+    glyf_table.glyphs[empty_name] = empty_glyph
+    hmtx.metrics[empty_name] = (0, 0)
+    if "HVAR" in ttfont:
+        hvar = ttfont["HVAR"].table
+        if hvar.AdvWidthMap:
+            hvar.AdvWidthMap.mapping[empty_name] = NO_VARIATION_INDEX
+        if hvar.LsbMap:
+            hvar.LsbMap.mapping[empty_name] = NO_VARIATION_INDEX
+        if hvar.RsbMap:
+           hvar.RsbMap.mapping[empty_name] = NO_VARIATION_INDEX
+
+    new_order = list(glyph_order)
+    new_order.insert(1, empty_name)
+    ttfont.setGlyphOrder(new_order)
+    return ttfont
+
+
+def fix_colr_v1_add_svg(ttfont):
+    if "SVG " in ttfont:
+        return ttfont
+    font_filename = os.path.basename(ttfont.reader.file.name)
+    with tempfile.TemporaryDirectory() as build_dir:
+        subprocess.run(
+            [
+                "maximum_color",
+                ttfont.reader.file.name,
+                "--build_dir", build_dir,
+                "--output_file", font_filename,
+            ],
+            check=True,
+        )
+        out_fp = os.path.join(build_dir, font_filename)
+        fixed_ttfont = TTFont(out_fp)
+        assert "SVG " in fixed_ttfont, "SVG table is missing"
+        return fixed_ttfont
+
+
+def fix_colr_font(ttfont: TTFont) -> TTFont:
+    """For COLR v0 fonts, we need to ensure that the 2nd glyph is whitespace glyph,
+    https://github.com/googlefonts/gftools/issues/609. For COLR v1 fonts, we need
+    to run Nanoemoji's maximum_color script in order to generate an SVG table for
+    applications that don't support COLRv1 yet,
+    https://github.com/googlefonts/fontbakery/issues/3888.
+    """
+    assert "COLR" in ttfont, "Not a COLR font"
+    colr_version = ttfont["COLR"].version
+    if colr_version == 0:
+        return fix_colr_v0_gid1(ttfont)
+    elif colr_version == 1:
+        return fix_colr_v1_add_svg(ttfont)
+    else:
+        raise NotImplementedError(f"COLR version '{colr_version}' not supported.")
+
+
 def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
     if new_family_name:
         rename_font(font, new_family_name)
@@ -620,6 +727,10 @@ def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instan
             build_variations_ps_name(font)
             var_ps_name = font["name"].getName(25, 3, 1, 0x409).toUnicode()
             log.info(f"Added a Variations PostScript Name Prefix (NameID 25) '{var_ps_name}'")
+    
+    if "COLR" in font:
+        log.info("Fixing COLR font")
+        font = fix_colr_font(font)
 
     if include_source_fixes:
         remove_tables(font)

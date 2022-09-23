@@ -237,3 +237,40 @@ def test_fix_vertical_metrics_typo_metrics_enabled(static_fonts):
         assert font["OS/2"].sTypoDescender == -300
         assert font["OS/2"].sTypoLineGap == 0
     _check_vertical_metrics(static_fonts)
+
+
+@pytest.mark.parametrize(
+    "font_path",
+    [
+        (os.path.join(TEST_DATA, "CairoPlay[slnt,wght]-no-empty-glyphs.ttf")),
+        (os.path.join(TEST_DATA, "CairoPlay[slnt,wght]-gid1-not-empty.ttf")),
+    ]
+)
+def test_fix_colr_v0_font(font_path):
+    # Fix a COLR v0 font.
+    # maximum_color should not be run and GID 1 should have a blank glyph
+    from gftools.fix import fix_colr_font
+    font = TTFont(font_path)
+
+    gid1 = font.getGlyphOrder()[1]
+    assert font["glyf"][gid1].numberOfContours != 0
+
+    fixed = fix_colr_font(font)
+    gid1 = fixed.getGlyphOrder()[1]
+    assert fixed["glyf"][gid1].numberOfContours == 0
+    assert "SVG " not in fixed
+
+
+@pytest.fixture
+def colr_v1_font():
+    return TTFont(os.path.join(TEST_DATA, "Nabla[EDPT,EHLT].subset.ttf"))
+
+
+def test_fix_colr_v1_font(colr_v1_font):
+    # Fix a COLR v1 font. Only maximum_color should be run
+    from gftools.fix import fix_colr_font
+
+    assert "SVG " not in colr_v1_font
+    colr_v1_font["COLR"].version = 1
+    fixed = fix_colr_font(colr_v1_font)
+    assert "SVG " in fixed
