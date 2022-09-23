@@ -677,13 +677,14 @@ def fix_colr_v1_add_svg(ttfont):
         return ttfont
     font_filename = os.path.basename(ttfont.reader.file.name)
     with tempfile.TemporaryDirectory() as build_dir:
-        subprocess.call(
+        subprocess.run(
             [
                 "maximum_color",
                 ttfont.reader.file.name,
                 "--build_dir", build_dir,
                 "--output_file", font_filename,
-            ]
+            ],
+            check=True,
         )
         out_fp = os.path.join(build_dir, font_filename)
         fixed_ttfont = TTFont(out_fp)
