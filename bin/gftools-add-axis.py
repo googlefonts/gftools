@@ -101,7 +101,7 @@ def main(font: str):
     # Upper bound for the axis
     axis_proto.max_value = fvar_axis.maxValue
     # Input values for this axis must aligned to 10^precision
-    axis_proto.precision = 1  # ask user?
+    axis_proto.precision = 0  # ask user?
     # Wether or not fallback positions should be used (but not sure)
     axis_proto.fallback_only = False
     # Short descriptive paragraph
