@@ -81,5 +81,8 @@ schema = Map(
         Optional("ttfaUseScript"): Bool(),
         Optional("googleFonts"): Bool(),
         Optional("category"): UniqueSeq(Enum(CATEGORIES)),
+        Optional("reverseOutlineDirection"): Bool(),
+        Optional("removeOutlineOverlaps"): Bool(),
+        Optional("expandFeaturesToInstances"): Bool(),
     }
 )
