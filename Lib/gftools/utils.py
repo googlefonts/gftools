@@ -470,7 +470,7 @@ def font_sample_text(ttFont):
 
     _add_words(words, uhdr, seen_chars)
 
-    if not words:
+    if len(seen_chars) < len(cmap):
         languages = LoadLanguages()
         for file, proto in languages.items():
             if hasattr(proto, "sample_text"):

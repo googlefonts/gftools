@@ -51,44 +51,12 @@ import os
 axis_registry = AxisRegistry()
 
 
-def parse_elided_values(string):
-    # "wght=300,400 wdth=75,100" --> {"wght": [300, 400], "wdth": [75, 100]}
-    res = {}
-    for axis in string:
-        try:
-            k, v = axis.split("=")
-            v = [int(i) for i in v.split(",")]
-            res[k] = v
-        except ValueError:
-            raise ValueError(
-                "Incorrect --elided-values input. Requires 'AXIS=val,val ...' "
-                "e.g 'wght=400 wdth=100'"
-            )
-    return res
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "fonts", nargs="+", help="Variable TTF files which make up a family"
     )
     parser.add_argument("--src", help="use yaml file to build STAT", default=None)
-    parser.add_argument(
-        "--axis-order",
-        nargs="+",
-        required=False,
-        choices=axis_registry.keys(),
-        help="List of space seperated axis tags used to set the STAT table "
-        "axis order e.g --axis-order wdth wght ital",
-    )
-    parser.add_argument(
-        "--elided-values",
-        nargs="+",
-        default=None,
-        help="List of space seperated axis_values to elide. "
-        "Input must be structed as axis_tag=int,int..."
-        "e.g --elided-values wdth=100 wght=400",
-    )
     parser.add_argument("--out", "-o", help="Output dir for fonts")
     parser.add_argument(
         "--inplace", action="store_true", default=False, help="Overwrite input files"
@@ -101,12 +69,7 @@ def main():
         config = yaml.load(open(args.src), Loader=yaml.SafeLoader)
         gen_stat_tables_from_config(config, fonts)
     else:
-        if not args.axis_order:
-            raise ValueError("axis-order arg is missing")
-        elided_values = (
-            parse_elided_values(args.elided_values) if args.elided_values else None
-        )
-        gen_stat_tables(fonts, args.axis_order, elided_values)
+        gen_stat_tables(fonts)
 
     if args.out:
         if not os.path.isdir(args.out):

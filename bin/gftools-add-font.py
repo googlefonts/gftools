@@ -146,6 +146,8 @@ def _MakeMetadata(fontdir, is_new):
       metadata.is_noto = True
     if old_metadata.display_name:
       metadata.display_name = old_metadata.display_name
+    if old_metadata.primary_script:
+      metadata.primary_script = old_metadata.primary_script
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category.append('SANS_SERIF')
@@ -207,6 +209,8 @@ def _RegistryOverrides(axes_info):
   res = {}
   for font in axes_info:
     for axis_tag, min_val, max_val, dflt_val in font:
+      if axis_tag not in axis_registry:
+        continue
       default_val = axis_registry[axis_tag].default_value
       if default_val >= min_val and default_val <= max_val:
         continue
