@@ -90,7 +90,7 @@ class NinjaBuilder(GFBuilder):
         self.w.comment("Add a STAT table to a set of variable fonts")
         self.w.rule(
             "genstat",
-            "gftools-gen-stat.py --inplace $other_args --axis-order $axis_order -- $in  && touch $stampfile",
+            "gftools-gen-stat.py --inplace $other_args -- $in  && touch $stampfile",
             **args,
         )
 
@@ -210,7 +210,6 @@ class NinjaBuilder(GFBuilder):
             "genstat",
             targets,
             variables={
-                "axis_order": self.config["axisOrder"],
                 "other_args": other_args,
                 "stampfile": stampfile,
             },
