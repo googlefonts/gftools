@@ -19,23 +19,27 @@ def merge_ufos(
     if glyphs is None:
         glyphs = []
 
-    glyphs = set(glyphs)
+    glyphs = dict.fromkeys(glyphs)
 
     if codepoints:
         cp2glyph = {}
         for g in ufo2:
             for u in g.unicodes:
                 cp2glyph[u] = g.name
-        glyphs |= set(cp2glyph[c] for c in codepoints if c in cp2glyph)
+        for c in codepoints:
+            if c in cp2glyph:
+                glyphs[cp2glyph[c]] = True
 
-    if exclude_glyphs:
-        glyphs = set(glyphs) - set(exclude_glyphs)
+    for g in exclude_glyphs or []:
+        if g in glyphs:
+            del glyphs[g]
 
     # Check those glyphs actually are in UFO 2
-    not_there = glyphs - set(ufo2.keys())
+    not_there = set(glyphs) - set(ufo2.keys())
     if len(not_there):
         logger.warn("The following glyphs were not in UFO 2: %s" % ", ".join(not_there))
-        glyphs = glyphs - not_there
+        for g in not_there:
+            del glyphs[g]
 
     if not glyphs:
         logger.info("No glyphs selected, nothing to do")
@@ -50,7 +54,9 @@ def merge_ufos(
     else:
         path = getattr(ufo2, "_path", None)
         includeDir = Path(ufo2._path).parent if path else None
-        ff = FeaParser(ufo2.features.text, includeDir=includeDir).parse()
+        ff = FeaParser(
+            ufo2.features.text, includeDir=includeDir, glyphNames=list(ufo2.keys())
+        ).parse()
         for routine in ff.routines:
             newroutine = Routine(name=routine.name, flags=routine.flags)
             for rule in routine.rules:
@@ -83,14 +89,20 @@ def merge_ufos(
                         continue
                     if len(rule.input) == 1 and len(rule.replacement) == 1:  # GSUB1
                         mapping = zip(rule.input[0], rule.replacement[0])
-                        mapping = [(a,b) for a,b in mapping if a in newglyphset and b in newglyphset]
+                        mapping = [
+                            (a, b)
+                            for a, b in mapping
+                            if a in newglyphset and b in newglyphset
+                        ]
                         if not mapping:
                             continue
                         rule.input[0] = [r[0] for r in mapping]
                         rule.replacement[0] = [r[1] for r in mapping]
                     else:
                         rule.input = true_inputs
-                        rule.replacement = [list(set(r) & newglyphset) for r in rule.replacement]
+                        rule.replacement = [
+                            list(set(r) & newglyphset) for r in rule.replacement
+                        ]
                     logging.debug("Adding rule '%s'", rule.asFea())
                 newroutine.rules.append(rule)
             if newroutine.rules:
@@ -168,11 +180,11 @@ def merge_ufos(
         for comp in ufo2[g].components:
             if comp.baseGlyph not in newglyphset:
                 # Well, this is the easy case
-                glyphs.add(comp.baseGlyph)
+                glyphs[comp.baseGlyph] = True
                 close_components(glyphs, comp.baseGlyph)
             elif existing_handling == "replace":
                 # Also not a problem
-                glyphs.add(comp.baseGlyph)
+                glyphs[comp.baseGlyph] = True
                 close_components(glyphs, comp.baseGlyph)
             elif comp.baseGlyph in ufo1:
                 # Oh bother.
@@ -180,11 +192,13 @@ def merge_ufos(
                     f"New glyph {g} used component {comp.baseGlyph} which already exists in font; not replacing it, as you have not specified --replace-existing"
                 )
 
-    for g in list(glyphs):  # list() avoids "Set changed size during iteration" error
+    for g in list(
+        glyphs.keys()
+    ):  # list() avoids "Set changed size during iteration" error
         close_components(glyphs, g)
 
     # Now do the add
-    for g in glyphs:
+    for g in glyphs.keys():
         if existing_handling == "skip" and g in ufo1:
             logger.info("Skipping glyph '%s' already present in target file" % g)
             continue

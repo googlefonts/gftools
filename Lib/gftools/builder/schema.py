@@ -54,6 +54,7 @@ schema = Map(
     {
         "sources": Seq(Str()),
         Optional("vttSources"): MapPattern(Str(), Str()),
+        Optional("fvarInstanceAxisDflts"): MapPattern(Str(), Float()),
         Optional("logLevel"): Str(),
         Optional("stylespaceFile"): Str(),
         Optional("stat"): stat_schema | MapPattern(Str(), stat_schema),
@@ -80,5 +81,8 @@ schema = Map(
         Optional("ttfaUseScript"): Bool(),
         Optional("googleFonts"): Bool(),
         Optional("category"): UniqueSeq(Enum(CATEGORIES)),
+        Optional("reverseOutlineDirection"): Bool(),
+        Optional("removeOutlineOverlaps"): Bool(),
+        Optional("expandFeaturesToInstances"): Bool(),
     }
 )

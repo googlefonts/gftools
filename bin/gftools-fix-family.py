@@ -17,9 +17,9 @@ import logging
 import os
 from fontTools.ttLib import TTFont
 from gftools.fix import *
+from gftools.utils import parse_axis_dflts
 
-
-log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def new_filename(font, font_renamed=None):
@@ -44,10 +44,21 @@ def main():
         "--rename-family",
         help="Change the family's name"
     )
+    parser.add_argument(
+        "--fvar-instance-axis-dflts",
+        help=(
+            "Set the fvar instance default values for non-wght axes. e.g "
+            "wdth=100 opsz=36"
+        )
+    )
     args = parser.parse_args()
 
     fonts = [TTFont(f) for f in args.fonts]
-    fix_family(fonts, args.include_source_fixes, args.rename_family)
+    if args.fvar_instance_axis_dflts:
+        axis_dflts = parse_axis_dflts(args.fvar_instance_axis_dflts)
+    else:
+        axis_dflts = None
+    fix_family(fonts, args.include_source_fixes, args.rename_family, axis_dflts)
 
     if args.inplace:
         for font in fonts:

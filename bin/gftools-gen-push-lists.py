@@ -18,24 +18,51 @@ from github import Github
 from collections import defaultdict
 import os
 import sys
+from pathlib import Path
+from gftools.push import repo_path_to_google_path
 
 
 def pr_directories(pr):
     results = set()
     files = pr.get_files()
     for f in files:
-        if f.filename.endswith(".textproto") and f.filename.startswith(("lang", "axisregistry")):
-            results.add(f.filename)
+        path = Path(f.filename)
+        if path.suffix == ".textproto" and any(d in path.parts for d in ("lang", "axisregistry")):
+            results.add(repo_path_to_google_path(path))
         else:
-            results.add(os.path.dirname(f.filename))
+            path = path.parent
+            # If a noto article has been updated, just return the family dir
+            # ofl/notosans/article --> ofl/notosans
+            if "article" in path.parts:
+                path = path.parent
+            results.add(str(path))
     return results
 
 
 def write_server_file(data):
     doc = []
-    for title, directories in data.items():
-        directories = sorted(directories)
-        doc.append("# " + f"{title}")
+    categories_to_write = []
+    for cat in (
+        "New",
+        "Upgrade",
+        "Other",
+        "Designer profile",
+        "Axis Registry",
+        "Knowledge",
+        "Metadata / Description / License",
+        "Sample texts"
+    ):
+        if cat in data:
+            categories_to_write.append(cat)
+
+    for cat in data:
+        if cat not in categories_to_write:
+            print(f"{cat} isn't sorted appending to end of doc")
+            categories_to_write.append(cat)
+
+    for cat in categories_to_write:
+        directories = sorted(data[cat])
+        doc.append(f"# {cat}")
         doc.append("\n".join(directories))
         doc.append("")
     return "\n".join(doc)
@@ -74,11 +101,12 @@ def main():
 
             labels = set(l.name for l in content.labels)
             pr = content.as_pull_request()
-            directories = pr_directories(pr)
+            directories = set(f"{directory} # {pr.html_url}" for directory in pr_directories(pr))
+
             if "-- blocked" in labels or "--- Live" in labels:
                 continue
-            seen_directories |= directories
-            if "I Font Upgrade" in labels or "III VF Replacement" in labels:
+            seen_directories |= set(d.replace(" ", "").lower() for d in directories)
+            if "I Font Upgrade" in labels or "I Small Fix" in labels:
                 cat = "Upgrade"
             elif "I New Font" in labels:
                 cat = "New"
@@ -88,10 +116,12 @@ def main():
                 cat = "Designer profile"
             elif "I Knowledge" in labels:
                 cat = "Knowledge"
-            elif "I Axis Registry" in labels or "I API / Website / Platform" in labels:
-                cat = "API Stuff"
+            elif "I Axis Registry" in labels:
+                cat = "Axis Registry"
+            elif "I Lang" in labels:
+                cat = "Sample texts"
             else:
-                cat = "Small fix/other"
+                cat = "Other"
             if "--- to sandbox" in labels:
                 to_sandbox[cat] |= directories
             if "--- to production" in labels:
@@ -105,13 +135,13 @@ def main():
     # a label. These need to be manually deleted as well.
     existing_sandbox = parse_server_file(sb_path)
     for i in existing_sandbox:
-        if str(i.path) not in seen_directories:
-            to_sandbox[i.type].add(str(i.path))
+        if str(i.raw.replace(" ", "").lower()) not in seen_directories:
+            to_sandbox[i.type].add(str(i.raw))
 
     existing_production = parse_server_file(prod_path)
     for i in existing_production:
-        if str(i.path) not in seen_directories:
-            to_production[i.type].add(str(i.path))
+        if str(i.raw.replace(" ", "").lower()) not in seen_directories:
+            to_production[i.type].add(str(i.raw))
 
     with open(sb_path, "w") as sb_doc:
         sb_doc.write(write_server_file(to_sandbox))

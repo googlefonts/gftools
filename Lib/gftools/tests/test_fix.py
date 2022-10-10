@@ -160,114 +160,6 @@ def test_fix_mac_style(static_font, style, weight_class, fs_selection, mac_style
     assert static_font["head"].macStyle == mac_style
 
 
-STYLENAME_HEADERS = "family_name, style, id1, id2, id16, id17"
-STYLENAME_TABLE = [
-    # Roman
-    ("Test Family", "Hairline", "Test Family Hairline", "Regular", "Test Family", "Hairline"),
-    ("Test Family", "Thin", "Test Family Thin", "Regular", "Test Family", "Thin"),
-    ("Test Family", "ExtraLight", "Test Family ExtraLight", "Regular", "Test Family", "ExtraLight"),
-    ("Test Family", "Light", "Test Family Light", "Regular", "Test Family", "Light"),
-    ("Test Family", "Regular", "Test Family", "Regular", "", ""),
-    ("Test Family", "Medium", "Test Family Medium", "Regular", "Test Family", "Medium"),
-    ("Test Family", "SemiBold", "Test Family SemiBold", "Regular", "Test Family", "SemiBold"),
-    ("Test Family", "Bold", "Test Family", "Bold", "", ""),
-    ("Test Family", "ExtraBold", "Test Family ExtraBold", "Regular", "Test Family", "ExtraBold"),
-    ("Test Family", "Black", "Test Family Black", "Regular", "Test Family", "Black"),
-    ("Test Family", "ExtraBlack", "Test Family ExtraBlack", "Regular", "Test Family", "ExtraBlack"),
-    # Italics
-    ("Test Family", "Hairline Italic", "Test Family Hairline", "Italic", "Test Family", "Hairline Italic"),
-    ("Test Family", "Thin Italic", "Test Family Thin", "Italic", "Test Family", "Thin Italic"),
-    ("Test Family", "ExtraLight Italic", "Test Family ExtraLight", "Italic", "Test Family", "ExtraLight Italic"),
-    ("Test Family", "Light Italic", "Test Family Light", "Italic", "Test Family", "Light Italic"),
-    ("Test Family", "Italic", "Test Family", "Italic", "", ""),
-    ("Test Family", "Medium Italic", "Test Family Medium", "Italic", "Test Family", "Medium Italic"),
-    ("Test Family", "SemiBold Italic", "Test Family SemiBold", "Italic", "Test Family", "SemiBold Italic"),
-    ("Test Family", "Bold Italic", "Test Family", "Bold Italic", "", ""),
-    ("Test Family", "ExtraBold Italic", "Test Family ExtraBold", "Italic", "Test Family", "ExtraBold Italic"),
-    ("Test Family", "Black Italic", "Test Family Black", "Italic", "Test Family", "Black Italic"),
-    ("Test Family", "ExtraBlack Italic", "Test Family ExtraBlack", "Italic", "Test Family", "ExtraBlack Italic"),
-]
-@pytest.mark.parametrize(
-    STYLENAME_HEADERS,
-    STYLENAME_TABLE
-)
-def test_update_nametable(static_font, family_name, style, id1, id2, id16, id17):
-    update_nametable(static_font, family_name, style)
-    nametable = static_font["name"]
-    assert nametable.getName(1, 3, 1, 0x409).toUnicode() == id1
-    assert nametable.getName(2, 3, 1, 0x409).toUnicode() == id2
-    if id16 and id17:
-        assert nametable.getName(16, 3, 1, 0x409).toUnicode() == id16
-        assert nametable.getName(17, 3, 1, 0x409).toUnicode() == id17
-    else:
-        assert nametable.getName(16, 3, 1, 0x409) == None
-        assert nametable.getName(17, 3, 1, 0x409) == None
-
-
-# TODO test fix_nametable once https://github.com/fonttools/fonttools/pull/2078 is merged
-
-
-def _get_fvar_instance_names(var_font):
-    inst_names = []
-    for inst in var_font['fvar'].instances:
-        inst_name = var_font['name'].getName(inst.subfamilyNameID, 3, 1, 0x409)
-        inst_names.append(inst_name.toUnicode())
-    return inst_names
-
-
-def test_fix_fvar_instances(var_font):
-    roman_instances = [
-        "ExtraLight",
-        "Light",
-        "Regular",
-        "Medium",
-        "SemiBold",
-        "Bold",
-        "ExtraBold",
-        "Black"
-    ]
-    italic_instances = [
-        "ExtraLight Italic",
-        "Light Italic",
-        "Italic",
-        "Medium Italic",
-        "SemiBold Italic",
-        "Bold Italic",
-        "ExtraBold Italic",
-        "Black Italic",
-    ]
-    var_font["fvar"].instances = []
-
-    fix_fvar_instances(var_font)
-    inst_names = _get_fvar_instance_names(var_font)
-    assert inst_names == roman_instances
-
-
-    # Let's rename the font style so the font becomes an Italic variant
-    var_font2 = deepcopy(var_font)
-    var_font2["name"].setName("Italic", 2, 3, 1, 0x409)
-    var_font2["name"].setName("Italic", 17, 3, 1, 0x409)
-
-    fix_fvar_instances(var_font2)
-    inst_names = _get_fvar_instance_names(var_font2)
-    assert inst_names == italic_instances
-
-
-    # Let's mock an ital axis so the font has both ital and wght axes
-    new_fvar = deepcopy(var_font["fvar"])
-    new_fvar.axes[1].axisTag = "ital"
-    new_fvar.axes[1].minValue = 0
-    new_fvar.axes[1].maxValue = 1
-    new_fvar.axes[1].defaultValue = 0
-
-    var_font3 = deepcopy(var_font)
-    var_font3['fvar'] = new_fvar
-    fix_fvar_instances(var_font3)
-
-    inst_names = _get_fvar_instance_names(var_font3)
-    assert inst_names == roman_instances + italic_instances
-
-
 def _check_vertical_metrics(fonts):
     ref_font = fonts[0]
     y_min = min(f["head"].yMin for f in fonts)
@@ -345,3 +237,40 @@ def test_fix_vertical_metrics_typo_metrics_enabled(static_fonts):
         assert font["OS/2"].sTypoDescender == -300
         assert font["OS/2"].sTypoLineGap == 0
     _check_vertical_metrics(static_fonts)
+
+
+@pytest.mark.parametrize(
+    "font_path",
+    [
+        (os.path.join(TEST_DATA, "CairoPlay[slnt,wght]-no-empty-glyphs.ttf")),
+        (os.path.join(TEST_DATA, "CairoPlay[slnt,wght]-gid1-not-empty.ttf")),
+    ]
+)
+def test_fix_colr_v0_font(font_path):
+    # Fix a COLR v0 font.
+    # maximum_color should not be run and GID 1 should have a blank glyph
+    from gftools.fix import fix_colr_font
+    font = TTFont(font_path)
+
+    gid1 = font.getGlyphOrder()[1]
+    assert font["glyf"][gid1].numberOfContours != 0
+
+    fixed = fix_colr_font(font)
+    gid1 = fixed.getGlyphOrder()[1]
+    assert fixed["glyf"][gid1].numberOfContours == 0
+    assert "SVG " not in fixed
+
+
+@pytest.fixture
+def colr_v1_font():
+    return TTFont(os.path.join(TEST_DATA, "Nabla[EDPT,EHLT].subset.ttf"))
+
+
+def test_fix_colr_v1_font(colr_v1_font):
+    # Fix a COLR v1 font. Only maximum_color should be run
+    from gftools.fix import fix_colr_font
+
+    assert "SVG " not in colr_v1_font
+    colr_v1_font["COLR"].version = 1
+    fixed = fix_colr_font(colr_v1_font)
+    assert "SVG " in fixed

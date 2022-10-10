@@ -36,10 +36,6 @@ Check a variable font family against the same family as static fonts:
 
     gftools qa -f [vf_fonts] -fb [static_fonts] --diffenator --diffbrowsers -o ~/path/out
 
-Add a DSIG table to a font
-
-    gftools fix-dsig font1.ttf
-
 Fix a non hinted font
 
     gftools fix-nonhinting font_in.ttf font_out.ttf

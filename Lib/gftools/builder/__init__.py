@@ -98,7 +98,12 @@ required, all others have sensible defaults:
 * ``decomposeTransformedComponents``: Whether to decompose transformed components on export. Defaults to ``true``.
 * ``googleFonts``: Whether this font is destined for release on Google Fonts. Used by GitHub Actions. Defaults to ``false``.
 * ``category``: If this font is destined for release on Google Fonts, a list of the categories it should be catalogued under. Used by GitHub Actions. Must be set if ``googleFonts`` is set.
-
+* ``fvarInstanceAxisDflts``: Mapping to set every fvar instance's non-wght axis
+* ``expandFeaturesToInstances``: Resolve all includes in the sources' features, so that generated instances can be compiled without errors. Defaults to ``true``.
+* ``reverseOutlineDirection``: Reverse the outline direction when compiling TTFs (no effect for OTFs). Defaults to fontmake's default.
+* ``removeOutlineOverlaps``: Remove overlaps when compiling fonts. Defaults to fontmake's default.
+value e.g if a font has a wdth and wght axis, we can set the wdth to be 100 for
+every fvar instance. Defaults to ``None``
 """
 
 from fontmake.font_project import FontProject
@@ -274,6 +279,8 @@ class GFBuilder:
             self.config["cleanUp"] = True
         if "includeSourceFixes" not in self.config:
             self.config["includeSourceFixes"] = False
+        if "fvarInstanceAxisDflts" not in self.config:
+            self.config["fvarInstanceAxisDflts"] = None
         if "flattenComponents" not in self.config:
             self.config["flattenComponents"] = True
         if "decomposeTransformedComponents" not in self.config:
@@ -319,16 +326,28 @@ class GFBuilder:
         ):
             if self.config["flattenComponents"]:
                 filters.append(
-                    FlattenComponentsFilter(pre=True)
+                    FlattenComponentsFilter()
                 )
 
             if self.config["decomposeTransformedComponents"]:
                 filters.append(
-                    DecomposeTransformedComponentsFilter(pre=True)
+                    DecomposeTransformedComponentsFilter()
                 )
         # ... will run the filters in the ufo's lib,
         # https://github.com/googlefonts/fontmake/issues/872
         args["filters"] = [...] + filters
+
+        # The following arguments must be determined dynamically.
+        if source.endswith((".glyphs", ".designspace")):
+            args["expand_features_to_instances"] = self.config.get(
+                "expandFeaturesToInstances", True
+            )
+        # XXX: This will blow up if output formats are mixing TTFs/OTFs.
+        is_ttf = args["output"][0] in {"ttf", "ttf-interpolatable", "variable"}
+        if "reverseOutlineDirection" in self.config and is_ttf:
+            args["reverse_direction"] = self.config["reverseOutlineDirection"]
+        if "removeOutlineOverlaps" in self.config:
+            args["remove_overlaps"] = self.config["removeOutlineOverlaps"]
 
         if source.endswith(".glyphs"):
             FontProject().run_from_glyphs(source, **args)
@@ -378,7 +397,7 @@ class GFBuilder:
         elif "stat" in self.config:
             gen_stat_tables_from_config(self.config["stat"], varfonts, locations=locations)
         else:
-            gen_stat_tables(varfonts, self.config["axisOrder"])
+            gen_stat_tables(varfonts)
 
         for ttFont in varfonts:
             ttFont.save(ttFont.reader.file.name)
@@ -476,7 +495,11 @@ class GFBuilder:
     def post_process(self, filename):
         self.logger.info("Postprocessing font %s" % filename)
         font = TTFont(filename)
-        fix_font(font, include_source_fixes=self.config["includeSourceFixes"])
+        fix_font(
+            font,
+            include_source_fixes=self.config["includeSourceFixes"],
+            fvar_instance_axis_dflts=self.config["fvarInstanceAxisDflts"]
+        )
         font.save(filename)
 
     def post_process_ttf(self, filename):

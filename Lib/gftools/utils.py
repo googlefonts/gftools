@@ -470,7 +470,7 @@ def font_sample_text(ttFont):
 
     _add_words(words, uhdr, seen_chars)
 
-    if not words:
+    if len(seen_chars) < len(cmap):
         languages = LoadLanguages()
         for file, proto in languages.items():
             if hasattr(proto, "sample_text"):
@@ -512,4 +512,13 @@ def read_proto(fp, schema):
     with open(fp, "rb") as f:
         data = text_format.Parse(f.read(), schema)
     return data
+
+
+def parse_axis_dflts(string):
+    axes = string.split()
+    res = {}
+    for axis in axes:
+        k,v = axis.split("=")
+        res[k] = float(v)
+    return res
 

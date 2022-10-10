@@ -84,7 +84,7 @@ setup(
 #                      see: https://github.com/fontforge/fontforge/issues/2048
         'setuptools',
         'FontTools[ufo]',
-        'axisregistry>=0.2.0', # API update removed fallback names pre-processing
+        'axisregistry>=0.3.1', # API update removed fallback names pre-processing
         'absl-py',
         'glyphsLib',
         'gflanguages>=0.4.0',
@@ -113,5 +113,6 @@ setup(
         'fontFeatures',
         'vharfbuzz',
         'bumpfontversion',
+        'nanoemoji>=0.15.0',
     ]
     )

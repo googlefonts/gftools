@@ -22,9 +22,7 @@ from glyphsets.codepoints import (CodepointsInFont,
                                   nam_dir)
 
 
-NAM_DIR = os.path.join(nam_dir, "GF Glyph Sets")
-NAM_FILES = [os.path.join(NAM_DIR, f)
-             for f in os.listdir(NAM_DIR)
+NAM_FILES = [f for f in os.listdir(nam_dir)
              if f.endswith(".nam")]
 
 
@@ -34,7 +32,7 @@ def main():
 
   expected = set()
   for nam_file in NAM_FILES:
-    nam_filepath = os.path.join(NAM_DIR, nam_file)
+    nam_filepath = os.path.join(nam_dir, nam_file)
     expected.update(CodepointsInNamelist(nam_filepath))
 
   filename = sys.argv[1]
