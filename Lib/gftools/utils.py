@@ -29,6 +29,8 @@ from google.protobuf import text_format
 import json
 from PIL import Image
 import re
+from fontTools import unicodedata as ftunicodedata
+from collections import Counter
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -506,3 +508,22 @@ def remove_url_prefix(url):
     pattern = r'(https?://)?(www\.)?'
     cleaned_url = re.sub(pattern, '', url)
     return cleaned_url
+
+
+def primary_script(ttFont, ignore_latin=True):
+    script_count = Counter()
+    for x in ttFont.getBestCmap().keys():
+        for script in ftunicodedata.script_extension(chr(x)):
+            if script == "Latn" and ignore_latin:
+                continue
+            if script[0] != "Z":
+                script_count[script] += 1
+    # If there isn't a clear winner, give up
+    if (
+        len(script_count) > 2
+        and script_count.most_common(2)[0][1] < 2 * script_count.most_common(2)[1][1]
+    ):
+        return
+    most_common = script_count.most_common(1)
+    if most_common:
+        return most_common[0][0]
