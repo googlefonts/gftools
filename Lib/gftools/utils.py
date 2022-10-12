@@ -30,6 +30,7 @@ import json
 from PIL import Image
 import re
 from fontTools import unicodedata as ftunicodedata
+from ufo2ft.util import classifyGlyphs
 from collections import Counter
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
@@ -511,13 +512,13 @@ def remove_url_prefix(url):
 
 
 def primary_script(ttFont, ignore_latin=True):
-    script_count = Counter()
-    for x in ttFont.getBestCmap().keys():
-        for script in ftunicodedata.script_extension(chr(x)):
-            if script == "Latn" and ignore_latin:
-                continue
-            if script[0] != "Z":
-                script_count[script] += 1
+    g = classifyGlyphs(lambda uv:list(ftunicodedata.script_extension(chr(uv))), ttFont.getBestCmap(), gsub=ttFont.get("GSUB"))
+    if "Zyyy" in g:
+        del g["Zyyy"]
+    if "Latn" in g and ignore_latin:
+        del g["Latn"]
+    script_count = Counter({k:len(v) for k,v in g.items()})
+
     # If there isn't a clear winner, give up
     if (
         len(script_count) > 2
