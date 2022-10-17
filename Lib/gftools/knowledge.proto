@@ -1,0 +1,103 @@
+syntax = "proto2";
+
+/**
+ * Proto definitions for Fonts Knowledge metadata in the filesystem.
+ */
+package fonts;
+
+option java_package = "com.google.fonts.proto";
+option java_outer_classname = "Knowledge";
+
+/** Knowledge metadata. */
+message KnowledgeProto {
+  /** Module ids in order. */
+  repeated string modules = 1;
+  // Next = 2
+}
+
+/**
+ * Knowledge module metadata.
+ *
+ * <p>Module id is inferred from directory name in the filesystem.
+ */
+message ModuleProto {
+  repeated string alt_ids = 1;
+  optional string name = 2;
+  /** Brief description of the module. */
+  optional string excerpt = 3;
+  /** Ids of constituent lessons in order. */
+  repeated string lessons = 4;
+  // Next = 5
+}
+
+/**
+ * Knowledge topic metadata.
+ *
+ * <p>Topic id is inferred from directory name in the filesystem.
+ */
+message TopicProto {
+  repeated string alt_ids = 1;
+  optional string name = 2;
+  // Next = 3
+}
+
+/**
+ * Knowledge lesson metadata.
+ *
+ * <p>Lesson id, as well as id of the parent module, are inferred from path in
+ * the filesystem.
+ */
+message LessonProto {
+  repeated string alt_ids = 1;
+  optional string name = 2;
+  repeated string authors = 3;
+  repeated string reviewers = 4;
+  /** Ids of tagged topics. */
+  repeated string topics = 5;
+  /** Ids of lessons to read before this one. */
+  repeated string prev_lessons = 6;
+  /** Ids of lessons to read after this one. */
+  repeated string next_lessons = 7;
+  /** Ids of related glossary terms. */
+  repeated string related_terms = 8;
+  /** Brief description of the lesson. */
+  optional string excerpt = 9;
+  /** URLs of related content, for example for use in an iframe. */
+  repeated string related_content_urls = 10;
+  // Next = 11
+}
+
+/**
+ * Knowledge glossary term metadata.
+ *
+ * <p>Term id is inferred from directory name in the filesystem.
+ */
+message TermProto {
+  repeated string alt_ids = 1;
+  optional string name = 2;
+  /** Brief description of the glossary term. */
+  optional string excerpt = 3;
+  /** Ids of related lessons. */
+  repeated string related_lessons = 4;
+  /** URLs of related content, for example for use in an iframe. */
+  repeated string related_content_urls = 5;
+  // Next = 6
+}
+
+/**
+ * Knowledge contributor metadata.
+ *
+ * <p>Contributors appear in other Knowledge metadata as authors/reviewers of
+ * lessons.
+ */
+message ContributorsProto {
+  repeated ContributorProto contributors = 1;
+  // Next = 2
+
+  message ContributorProto {
+    optional string name = 1;
+    /** URL to the person's personal site. */
+    optional string personal_site = 2;
+    // Next = 3
+  }
+}
