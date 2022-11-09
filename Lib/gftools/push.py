@@ -117,6 +117,9 @@ def google_path_to_repo_path(fp):
     """lang/languages/.*.textproto --> lang/Lib/gflanguages/data/languages/.*.textproto"""
     if "languages" in fp.parts:
         return fp.parent.parent / "Lib" / "gflanguages" / "data" / "languages" / fp.name
+    """lang/scripts/.*.textproto --> lang/Lib/gflanguages/data/scripts/.*.textproto"""
+    elif "scripts" in fp.parts:
+        return fp.parent.parent / "Lib" / "gflanguages" / "data" / "scripts" / fp.name
     elif "axisregistry" in fp.parts:
         return fp.parent / "Lib" / "axisregistry" / "data" / fp.name
     else:
