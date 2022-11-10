@@ -84,7 +84,9 @@ setup(
         'glyphsets>=0.2.1',
         'PyGithub',
         'pillow',
-        'protobuf==3.19.4',
+        # 3.7.0 fixed a bug on parsing some METADATA.pb files.
+        # We cannot use v4 because our protobuf files have been compiled with v3.
+        'protobuf>=3.7.0, <4',
         'requests',
         'tabulate',
         'unidecode',
