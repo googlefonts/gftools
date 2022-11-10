@@ -106,6 +106,10 @@ def repo_path_to_google_path(fp):
     # we rename lang paths due to: https://github.com/google/fonts/pull/4679
     if "languages" in fp.parts:
         return Path("lang") / "languages" / fp.name
+    elif "scripts" in fp.parts:
+        return Path("lang") / "scripts" / fp.name
+    elif "regions" in fp.parts:
+        return Path("lang") / "regions" / fp.name
     # https://github.com/google/fonts/pull/5147
     elif "axisregistry" in fp.parts:
         return Path("axisregistry") / fp.name
@@ -117,9 +121,10 @@ def google_path_to_repo_path(fp):
     """lang/languages/.*.textproto --> lang/Lib/gflanguages/data/languages/.*.textproto"""
     if "languages" in fp.parts:
         return fp.parent.parent / "Lib" / "gflanguages" / "data" / "languages" / fp.name
-    """lang/scripts/.*.textproto --> lang/Lib/gflanguages/data/scripts/.*.textproto"""
     elif "scripts" in fp.parts:
         return fp.parent.parent / "Lib" / "gflanguages" / "data" / "scripts" / fp.name
+    elif "regions" in fp.parts:
+        return fp.parent.parent / "Lib" / "gflanguages" / "data" / "regions" / fp.name
     elif "axisregistry" in fp.parts:
         return fp.parent / "Lib" / "axisregistry" / "data" / fp.name
     else:
