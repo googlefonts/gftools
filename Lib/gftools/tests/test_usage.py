@@ -170,9 +170,6 @@ class TestGFToolsScripts(unittest.TestCase):
     def test_list_panose(self):
         self.check_script(['python', self.get_path('list-panose'), self.example_font])
 
-    def test_list_variable_source(self):
-        self.check_script(['python', self.get_path('list-variable-source')])
-
     def test_list_weightclass(self):
         self.check_script(['python', self.get_path('list-weightclass'), self.example_font])
 
