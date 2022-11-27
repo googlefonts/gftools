@@ -1,7 +1,7 @@
 fonttools[ufo]
 axisregistry>=0.3.1
 absl-py
-protobuf==3.19.4
+protobuf==3.19.5
 PyGithub
 vttLib
 statmake
