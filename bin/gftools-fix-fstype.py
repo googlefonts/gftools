@@ -18,7 +18,7 @@
 Update a collection of fonts fsType value to Installable Embedding.
 
 Google Fonts requires Installable Embedding (0):
-https://github.com/googlefonts/gf-docs/blob/master/ProjectChecklist.md#fstype
+https://googlefonts.github.io/gf-guide/requirements.html#font-embedding-fstype
 
 Microsoft OpenType specification:
 https://www.microsoft.com/typography/otspec/os2.htm#fst
