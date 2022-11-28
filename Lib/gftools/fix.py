@@ -712,7 +712,8 @@ def fix_colr_font(ttfont: TTFont) -> TTFont:
 def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
     if new_family_name:
         rename_font(font, new_family_name)
-    font["OS/2"].version = 4
+    if font["OS/2"].version > 1:
+        font["OS/2"].version = 4
 
     if "fpgm" in font:
         fix_hinted_font(font)
