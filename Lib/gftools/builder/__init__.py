@@ -333,7 +333,7 @@ class GFBuilder:
         # We post process each variable font after generating the STAT tables
         # because these tables are needed in order to fix the name tables.
         for ttFont in ttFonts:
-            self.post_process(ttFont.reader.file.name)
+            self.post_process_variable(ttFont.reader.file.name)
             self.outputs.add(ttFont.reader.file.name)
 
     def run_fontmake(self, source, args):
@@ -450,11 +450,11 @@ class GFBuilder:
         if self.config["buildTTF"]:
             if "instances" in self.config:
                 self.instantiate_static_fonts(
-                    self.config["ttDir"], self.post_process_ttf
+                    self.config["ttDir"], self.post_process_static_ttf
                 )
             else:
                 self.build_a_static_format(
-                    "ttf", self.config["ttDir"], self.post_process_ttf
+                    "ttf", self.config["ttDir"], self.post_process_static_ttf
                 )
 
     def instantiate_static_fonts(self, directory, postprocessor):
@@ -527,10 +527,21 @@ class GFBuilder:
         font.save(filename)
 
     def post_process_ttf(self, filename):
+        self.logger.debug("Deprecated method .post_process_ttf called, update code to use .post_process_static_ttf")
+        self.post_process_static_ttf(filename)
+
+    def post_process_static_ttf(self, filename):
         if self.config["autohintTTF"]:
             self.logger.debug("Autohinting")
             autohint(filename, filename, add_script=self.config["ttfaUseScript"])
         self.post_process(filename)
+        self.build_webfont(filename)
+
+    def post_process_variable(self, filename):
+        self.post_process(filename)
+        self.build_webfont(filename)
+
+    def build_webfont(self, filename):
         if self.config["buildWebfont"]:
             self.logger.debug("Building webfont")
             woff2_main(["compress", filename])
