@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Create or author Google Fonts axisregistry {AXIS_NAME}.textproto files."""
-
 import sys
 import argparse
 from gftools.axes_pb2 import AxisProto, FallbackProto
@@ -72,7 +71,7 @@ def _get_fallbacks_gen(name_table, stat_axis_index, AxisValue):
                   f'({name_table.getName(stat_axis_value.ValueNameID, 3, 1, 0x0409)})')
 
 
-def main(font: str):
+def add_axis(font: str):
     axis_proto = AxisProto()
     ttFont = TTFont(font)
     name_table = ttFont['name']
@@ -151,14 +150,17 @@ def _get_fallbacks(axis_tag, stat_table, name_table):
         fallbacks.append(fallback_proto)
     return fallbacks
 
-
-if __name__ == '__main__':
-    args = parser.parse_args()
+def main(args=None):
     try:
-        main(**args.__dict__)
+        args = parser.parse_args(args)
+        add_axis(args.font)
     except UserAbortError:
         print('Aborted by user!')
         sys.exit(1)
     except ProgramAbortError as e:
         print(f'Aborted by program: {e}')
         sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
