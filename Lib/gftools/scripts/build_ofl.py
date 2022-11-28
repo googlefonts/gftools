@@ -170,8 +170,8 @@ def generate_ofl(fonts):
     return False
 
 
-def main():
-    args = parser.parse_args()
+def main(args=None):
+    args = parser.parse_args(args)
     folder = args.folder[0]
 
     if 'OFL.txt' not in os.listdir(folder):
