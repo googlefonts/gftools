@@ -40,7 +40,7 @@ def parse_version_head(fonts):
     versions.append(float(fonts['head'].fontRevision))
   return max(versions)
 
-def main():
+def main(args=None):
   parser = ArgumentParser(description=__doc__)
   parser.add_argument('family',
             help='Name of font family')
@@ -48,7 +48,7 @@ def main():
                       help='Compare against a web url .zip family')
   parser.add_argument('-lc', '--local-compare', nargs='+',
                       help='Compare against a set of local ttfs')
-  args = parser.parse_args()
+  args = parser.parse_args(args)
 
   google_family = download_family_from_Google_Fonts(args.family)
   google_family_fonts = [TTFont(f) for f in google_family]

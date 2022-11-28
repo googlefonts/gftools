@@ -72,6 +72,7 @@ gftools-builder = "gftools.builder:main"
 gftools-check-bbox = "gftools.check_bbox:main"
 gftools-check-category = "gftools.check_category:main"
 gftools-check-copyright-notices = "gftools.check_copyright_notices:main"
+gftools-check-font-version = "gftools.check_font_version:main"
 
 [tool.setuptools.packages.find]
 where = ["Lib"]
