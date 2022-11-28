@@ -143,7 +143,7 @@ def make_designer(
     print(f"Finished profile {designer_dir}")
 
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser(usage=__doc__)
     parser.add_argument("designers_directory", help="path to google/fonts designer dir")
     parser.add_argument("name", help="Designer name e.g 'Steve Matteson'")
@@ -151,7 +151,7 @@ def main():
     parser.add_argument(
         "--spreadsheet", help="Optional path to the Google Drive spreadsheet"
     )
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     if args.spreadsheet:
         try:
