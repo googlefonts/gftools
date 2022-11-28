@@ -246,6 +246,22 @@ class GFBuilder:
             )
         return list(names)[0]
 
+    def determine_variability(self):
+        is_variable = []
+        for fp in self.config["sources"]:
+            if fp.endswith("glyphs"):
+                src = glyphsLib.GSFont(fp)
+                is_variable.append(len(src.masters) > 1)
+            elif fp.endswith("ufo"):
+                is_variable.append(False)
+            elif fp.endswith("designspace"):
+                ds = designspaceLib.DesignSpaceDocument.fromfile(self.config["sources"][0])
+                is_variable.append(len(ds.sources) > 1)
+        # This needs to be consistent...
+        if any(variability != is_variable[0] for variability in is_variable[1:]):
+            raise ValueError("Some sources were multi-master and some were not. Specify buildVariable manually.")
+        return is_variable[0]
+
     def fill_config_defaults(self):
         if "familyName" not in self.config:
             self.logger.info("Deriving family name (this takes a while)")
@@ -262,7 +278,7 @@ class GFBuilder:
             self.config["woffDir"] = self.config["outputDir"] + "/webfonts"
 
         if "buildVariable" not in self.config:
-            self.config["buildVariable"] = True
+            self.config["buildVariable"] = self.determine_variability()
         if "buildStatic" not in self.config:
             self.config["buildStatic"] = True
         if "buildOTF" not in self.config:
