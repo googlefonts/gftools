@@ -42,14 +42,14 @@ def get_font_for_os():
     else:
         raise NotImplementedError("Please use OSX, Ubuntu or Win")
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("url")
     parser.add_argument("-o", "--out",
                         help="Gif out path e.g ~/Desktop/site1.gif")
     parser.add_argument("-l", "--limit", type=int,
                         help="limit diff height")
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     chrome_options = Options()
     chrome_options.add_argument("--headless")
