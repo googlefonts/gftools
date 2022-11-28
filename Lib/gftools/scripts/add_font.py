@@ -57,7 +57,6 @@ from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
 from axisregistry import AxisRegistry
 from glyphsets.codepoints import SubsetsInFont
-from absl import app
 from google.protobuf import text_format
 from pkg_resources import resource_filename
 
