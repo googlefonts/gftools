@@ -38,8 +38,8 @@ parser.add_argument('--verbose',
 
 
 API_URL = 'https://www.googleapis.com/webfonts/v1/webfonts?key={}'
-def main():
-    args = parser.parse_args()
+def main(args=None):
+    args = parser.parse_args(args)
     response = requests.get(API_URL.format(args.key))
     try:
         webfontList = response.json()['items']
