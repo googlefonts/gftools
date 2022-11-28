@@ -77,8 +77,8 @@ def find_extremes(rows):
     return [extremes.items()]
 
 
-def main():
-    args = parser.parse_args()
+def main(args=None):
+    args = parser.parse_args(args)
 
     rows = []
     for font in args.fonts:

@@ -69,6 +69,7 @@ gftools-add-designer = "gftools.scripts.add_designer:main"
 gftools-add-font = "gftools.scripts.add_font:main"
 gftools-build-ofl = "gftools.scripts.build_ofl:main"
 gftools-builder = "gftools.builder:main"
+gftools-check-bbox = "gftools.check_bbox:main"
 
 [tool.setuptools.packages.find]
 where = ["Lib"]
