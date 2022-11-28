@@ -84,5 +84,7 @@ schema = Map(
         Optional("reverseOutlineDirection"): Bool(),
         Optional("removeOutlineOverlaps"): Bool(),
         Optional("expandFeaturesToInstances"): Bool(),
+        Optional("version"): Str(),
+        Optional("addGftoolsVersion"): Bool(),
     }
 )

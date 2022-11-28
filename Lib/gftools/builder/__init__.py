@@ -15,6 +15,7 @@ which looks like this::
       - wght
     outputDir: "../fonts"
     familyName: Texturina
+    version: 1.005
     stat:
       - name: Width
         tag: wdth
@@ -111,6 +112,7 @@ from fontTools import designspaceLib
 from fontTools.otlLib.builder import buildStatTable
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.woff2 import main as woff2_main
+from fontv.libfv import FontVersion
 from gftools.builder.schema import schema
 from gftools.builder.autohint import autohint
 from gftools.fix import fix_font
@@ -125,6 +127,7 @@ from ufo2ft.filters.decomposeTransformedComponents import DecomposeTransformedCo
 from vttLib.transfer import merge_from_file as merge_vtt_hinting
 from vttLib import compile_instructions as compile_vtt_hinting
 import difflib
+import gftools
 import glyphsLib
 from defcon import Font
 import argparse
@@ -301,6 +304,8 @@ class GFBuilder:
             self.config["fvarInstanceAxisDflts"] = None
         if "flattenComponents" not in self.config:
             self.config["flattenComponents"] = True
+        if "addGftoolsVersion" not in self.config:
+            self.config["addGftoolsVersion"] = True
         if "decomposeTransformedComponents" not in self.config:
             self.config["decomposeTransformedComponents"] = True
 
@@ -512,6 +517,7 @@ class GFBuilder:
 
     def post_process(self, filename):
         self.logger.info("Postprocessing font %s" % filename)
+        self.set_version(filename)
         font = TTFont(filename)
         fix_font(
             font,
@@ -529,6 +535,17 @@ class GFBuilder:
             self.logger.debug("Building webfont")
             woff2_main(["compress", filename])
             self.move_webfont(filename)
+
+    def set_version(self, filename):
+        if "version" not in self.config and not self.config["addGftoolsVersion"]:
+            return
+        fv = FontVersion(filename)
+        if "version" in self.config:
+            fv.set_version_number(self.config["version"])
+        if self.config["addGftoolsVersion"]:
+            fv.version_string_parts.append(f"gftools[{gftools.__version__}]")
+        fv.write_version_string()
+
 
     def build_vtt(self, font_dir):
         for font, vtt_source in self.config['vttSources'].items():
