@@ -29,8 +29,8 @@ parser.add_argument('--csv', default=False, action='store_true',
                          " (CSV) file format")
 
 
-def main():
-    args = parser.parse_args()
+def main(args=None):
+    args = parser.parse_args(args)
 
     rows = []
     for font in args.font:
