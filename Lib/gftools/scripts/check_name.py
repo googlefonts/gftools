@@ -58,8 +58,8 @@ def printInfo(rows, save=False):
     print(tabulate.tabulate(t, header, tablefmt="plain"))
 
 
-def main():
-  args = parser.parse_args()
+def main(args=None):
+  args = parser.parse_args(args)
 
   rows = []
   for font_filename in args.fonts:
