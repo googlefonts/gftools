@@ -104,12 +104,8 @@ def push_report(fp):
 def repo_path_to_google_path(fp):
     """lang/Lib/gflanguages/data/languages/.*.textproto --> lang/languages/.*.textproto"""
     # we rename lang paths due to: https://github.com/google/fonts/pull/4679
-    if "languages" in fp.parts:
-        return Path("lang") / "languages" / fp.name
-    elif "scripts" in fp.parts:
-        return Path("lang") / "scripts" / fp.name
-    elif "regions" in fp.parts:
-        return Path("lang") / "regions" / fp.name
+    if "gflanguages" in fp.parts:
+        return Path("lang") / fp.relative_to("lang/Lib/gflanguages/data")
     # https://github.com/google/fonts/pull/5147
     elif "axisregistry" in fp.parts:
         return Path("axisregistry") / fp.name
@@ -119,12 +115,8 @@ def repo_path_to_google_path(fp):
 
 def google_path_to_repo_path(fp):
     """lang/languages/.*.textproto --> lang/Lib/gflanguages/data/languages/.*.textproto"""
-    if "languages" in fp.parts:
-        return fp.parent.parent / "Lib" / "gflanguages" / "data" / "languages" / fp.name
-    elif "scripts" in fp.parts:
-        return fp.parent.parent / "Lib" / "gflanguages" / "data" / "scripts" / fp.name
-    elif "regions" in fp.parts:
-        return fp.parent.parent / "Lib" / "gflanguages" / "data" / "regions" / fp.name
+    if "lang" in fp.parts:
+        Path("lang/Lib/gflanguages/data/") / fp.relative_to("lang")
     elif "axisregistry" in fp.parts:
         return fp.parent / "Lib" / "axisregistry" / "data" / fp.name
     else:
