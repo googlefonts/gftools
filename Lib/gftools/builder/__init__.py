@@ -172,6 +172,7 @@ class GFBuilder:
 
     def build(self):
         loglevel = getattr(logging, self.config["logLevel"].upper())
+        logging.basicConfig(level=loglevel)
         self.logger.setLevel(loglevel)
         # Shut up irrelevant loggers
         if loglevel != logging.DEBUG:
