@@ -66,6 +66,7 @@ dependencies = [
 gftools = "gftools.scripts:main"
 gftools-add-axis = "gftools.scripts.add_axis:main"
 gftools-add-designer = "gftools.scripts.add_designer:main"
+gftools-add-font = "gftools.scripts.add_font:main"
 
 [tool.setuptools.packages.find]
 where = ["Lib"]

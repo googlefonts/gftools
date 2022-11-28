@@ -40,6 +40,7 @@ Generating a METADATA.pb file for an existing family:
 """
 from __future__ import print_function
 from functools import cmp_to_key
+import argparse
 import contextlib
 import errno
 import glob
@@ -50,7 +51,6 @@ import time
 from fontTools import ttLib
 
 
-from absl import flags
 from gflanguages import LoadLanguages
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
@@ -63,16 +63,14 @@ from pkg_resources import resource_filename
 
 axis_registry = AxisRegistry()
 
-FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('min_pct', 50,
-                     'What percentage of subset codepoints have to be supported'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--min_pct", type=int, default=50, help='What percentage of subset codepoints have to be supported'
                      ' for a non-ext subset.')
-# if a single glyph from the 81 glyphs in *-ext_unique-glyphs.nam file is present, the font can have the "ext" subset
-flags.DEFINE_float('min_pct_ext', 0.01,
-                   'What percentage of subset codepoints have to be supported'
+parser.add_argument("--min_pct_ext", type=float, default=0.01, help='What percentage of subset codepoints have to be supported'
                    ' for a -ext subset.')
-flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')
+parser.add_argument("--lang", type=str, help='Path to lang metadata package', default=None)
+parser.add_argument("directory", type=str, help='A directory containing a font family')
 
 
 def _FileFamilyStyleWeights(fontdir):
@@ -109,7 +107,7 @@ def _FileFamilyStyleWeights(fontdir):
   return result
 
 
-def _MakeMetadata(fontdir, is_new):
+def _MakeMetadata(args, is_new):
   """Builds a dictionary matching a METADATA.pb file.
 
   Args:
@@ -121,17 +119,17 @@ def _MakeMetadata(fontdir, is_new):
     RuntimeError: If the variable font axes info differs between font files of
     same family.
   """
-  file_family_style_weights = _FileFamilyStyleWeights(fontdir)
+  file_family_style_weights = _FileFamilyStyleWeights(args.directory)
 
   first_file = file_family_style_weights[0].file
-  old_metadata_file = os.path.join(fontdir, 'METADATA.pb')
-  font_license = fonts.LicenseFromPath(fontdir)
+  old_metadata_file = os.path.join(args.directory, 'METADATA.pb')
+  font_license = fonts.LicenseFromPath(args.directory)
 
   metadata = fonts_pb2.FamilyProto()
   metadata.name = file_family_style_weights[0].family
 
   subsets_in_font = [s[0] for s in SubsetsInFont(
-    first_file, FLAGS.min_pct, FLAGS.min_pct_ext
+    first_file, args.min_pct, args.min_pct_ext
   )]
 
   if not is_new:
@@ -286,20 +284,18 @@ def _AddHumanReadableDateComment(text_proto):
                 r'\1  # ' + time.strftime('%Y-%m-%d'), text_proto)
 
 
-def main(argv):
-  if len(argv) != 2:
-    sys.exit('One argument, a directory containing a font family')
-  fontdir = argv[1]
-
+def main(args=None):
+  args = parser.parse_args(args)
   is_new = True
+  fontdir = args.directory
   old_metadata_file = os.path.join(fontdir, 'METADATA.pb')
   if os.path.isfile(old_metadata_file):
     is_new = False
 
   language_comments = fonts.LanguageComments(
-    LoadLanguages(base_dir=FLAGS.lang)
+    LoadLanguages(base_dir=args.lang)
   )
-  metadata = _MakeMetadata(fontdir, is_new)
+  metadata = _MakeMetadata(args, is_new)
   fonts.WriteProto(metadata, os.path.join(fontdir, 'METADATA.pb'), comments=language_comments)
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
@@ -310,4 +306,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    app.run(main)
+    main()
