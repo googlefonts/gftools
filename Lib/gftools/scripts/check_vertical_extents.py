@@ -177,9 +177,9 @@ def _is_noto_ui_font(font_file_name):
     return base_name.startswith("Noto") and "UI-" in base_name
 
 
-def main():
+def main(args=None):
     """Check vertical extents to make sure they stay within specified bounds."""
-    args = parser.parse_args()
+    args = parser.parse_args(args)
     if not args.ymax:
         font = TTFont(args.font)
         args.ymin = -font["OS/2"].usWinDescent
