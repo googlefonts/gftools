@@ -1,4 +1,6 @@
-"""Config-driven font project builder.
+"""
+gftools-builder: Config-driven font project builder
+===================================================
 
 This utility wraps fontmake and a number of post-processing fixes to
 build variable, static OTF, static TTF and webfonts from Glyphs,
@@ -72,15 +74,15 @@ required, all others have sensible defaults:
 * ``logLevel``: Debugging log level. Defaults to ``INFO``.
 * ``stylespaceFile``: A statmake ``.stylespace`` file.
 * ``stat``: A STAT table configuration. This may be either a list of axes and
-    values as demonstrated above, or a dictionary mapping each variable font to a
-    per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
-    STAT table is generated automatically using ``gftools.stat``.
+  values as demonstrated above, or a dictionary mapping each variable font to a
+  per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
+  STAT table is generated automatically using ``gftools.stat``.
 * ``instances``: A list of static font TTF instances to generate from each variable
-    font as demonstrated above. If this argument isn't provided, static TTFs will
-    be generated for each instance that is specified in the source files.
+  font as demonstrated above. If this argument isn't provided, static TTFs will
+  be generated for each instance that is specified in the source files.
 * ``buildVariable``: Build variable fonts. Defaults to true.
 * ``buildStatic``: Build static fonts (OTF or TTF depending on ``$buildOTF``
-    and ``$buildTTF`). Defaults to true.
+  and ``$buildTTF`). Defaults to true.
 * ``buildOTF``: Build OTF fonts. Defaults to true.
 * ``buildTTF``: Build TTF fonts. Defaults to true.
 * ``buildWebfont``: Build WOFF2 fonts. Defaults to ``$buildStatic``.
@@ -100,11 +102,11 @@ required, all others have sensible defaults:
 * ``googleFonts``: Whether this font is destined for release on Google Fonts. Used by GitHub Actions. Defaults to ``false``.
 * ``category``: If this font is destined for release on Google Fonts, a list of the categories it should be catalogued under. Used by GitHub Actions. Must be set if ``googleFonts`` is set.
 * ``fvarInstanceAxisDflts``: Mapping to set every fvar instance's non-wght axis
+  value e.g if a font has a wdth and wght axis, we can set the wdth to be 100 for
+  every fvar instance. Defaults to ``None``
 * ``expandFeaturesToInstances``: Resolve all includes in the sources' features, so that generated instances can be compiled without errors. Defaults to ``true``.
 * ``reverseOutlineDirection``: Reverse the outline direction when compiling TTFs (no effect for OTFs). Defaults to fontmake's default.
 * ``removeOutlineOverlaps``: Remove overlaps when compiling fonts. Defaults to fontmake's default.
-value e.g if a font has a wdth and wght axis, we can set the wdth to be 100 for
-every fvar instance. Defaults to ``None``
 """
 
 from fontmake.font_project import FontProject
