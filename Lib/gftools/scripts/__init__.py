@@ -33,7 +33,10 @@ def _get_subcommands():
         if module == "__init__":
             continue
         friendly_name = module.replace("_", "-")
-        subcommands[friendly_name] = module
+        subcommands[friendly_name] = (module, "gftools.scripts")
+
+    # A special case
+    subcommands["builder"] = ("__init__", "gftools.builder")
 
     return subcommands
 
@@ -83,8 +86,8 @@ def main(args=None):
         args = sys.argv
     if len(args) >= 2 and args[1] in subcommands:
         # relay
-        module = subcommands[args[1]]
-        mod = import_module(f".{module}", "gftools.scripts")
+        (module, package) = subcommands[args[1]]
+        mod = import_module(f".{module}", package)
         mod.main(args[2:])
     elif "--list-subcommands" in sys.argv:
         print(' '.join(list(subcommands.keys())))
