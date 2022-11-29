@@ -144,3 +144,4 @@ gftools-what-subsets = "gftools.scripts.what_subsets:main"
 where = ["Lib"]
 
 [tool.setuptools_scm]
+write_to = "Lib/gftools/_version.py"
