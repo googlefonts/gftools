@@ -1,2 +1,1 @@
-include Lib/gftools/util/GlyphsInfo *.xml
-exclude Lib/gftools/util/GlyphsInfo *.py
+global-include Glyph*xml
