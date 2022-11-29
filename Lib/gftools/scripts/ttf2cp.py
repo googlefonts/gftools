@@ -22,40 +22,37 @@ Prints codepoints supported by the font, one per line, in hex (0xXXXX).
 import os
 import sys
 import unicodedata
-from absl import (app,
-                  flags)
+import argparse
+
 from glyphsets.codepoints import (CodepointsInFont,
                                   SubsetsForCodepoint)
 
-if sys.version[0] == '3':
-    unichr = chr
 
-FLAGS = flags.FLAGS
-flags.DEFINE_bool('show_char', False, 'Print the actual character')
-flags.DEFINE_bool('show_subsets', False,
-                  'Print what subsets, if any, char is in')
+parser = argparse.ArgumentParser(description='Dump codepoints in a font')
+parser.add_argument('--show_char', action='store_true',help='Print the actual character')
+parser.add_argument('--show_subsets', action='store_true',help='Print what subsets, if any, char is in')
+parser.add_argument('font', metavar='TTF', nargs="+",help='font files')
 
 
-def main(argv):
-  if len(argv) < 2:
-    sys.exit('Must specify one or more font files.')
+def main(args=None):
+  args = parser.parse_args(args)
 
   cps = set()
-  for filename in argv[1:]:
+  for filename in args.font:
     if not os.path.isfile(filename):
       sys.exit('%s is not a file' % filename)
     cps |= CodepointsInFont(filename)
 
   for cp in sorted(cps):
     show_char = ''
-    if FLAGS.show_char:
-      show_char = (' ' + unichr(cp).strip() + ' ' +
-                   unicodedata.name(unichr(cp), ''))
+    if args.show_char:
+      show_char = (' ' + chr(cp).strip() + ' ' +
+                   unicodedata.name(chr(cp), ''))
     show_subset = ''
-    if FLAGS.show_subsets:
+    if args.show_subsets:
       show_subset = ' subset:%s' % ','.join(SubsetsForCodepoint(cp))
 
     print(u'0x%04X%s%s' % (cp, show_char, show_subset))
 
 if __name__ == '__main__':
-  app.run(main)
+  main()
