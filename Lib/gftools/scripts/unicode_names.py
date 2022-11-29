@@ -22,29 +22,26 @@ Input file should have one codepoint per line in hex (0xXXXX).
 from __future__ import print_function
 import unicodedata
 import sys
-if sys.version[0] == '3':
-    unichr = chr
-from absl import flags, app
+import argparse
 
-FLAGS = flags.FLAGS
-
-flags.DEFINE_string('nam_file', None, 'Location of nam file')
+parser = argparse.ArgumentParser(description='Add Unicode character names to a nam file')
+parser.add_argument('nam_file', help='Location of nam file')
 
 
-def main(_):
-  with open(FLAGS.nam_file, 'r') as f:
+def main(args=None):
+  args = parser.parse_args(args)
+  with open(args.nam_file, 'r') as f:
     for line in f:
       print(_ReformatLine(line))
 
 
 def _ReformatLine(line):
   if line.startswith('0x'):
-    codepoint = int(line[2:6], 16)
-    out = unichr(codepoint) + ' ' + unicodedata.name(unichr(codepoint), '')
+    codepoint = int(line[2:6], 16)  # This'll only work for BMP...
+    out = chr(codepoint) + ' ' + unicodedata.name(chr(codepoint), '')
     return '0x%04X  %s' % (codepoint, out)
   else:
     return line
 
 if __name__ == '__main__':
-  flags.mark_flag_as_required('nam_file')
-  app.run(main)
+  main()
