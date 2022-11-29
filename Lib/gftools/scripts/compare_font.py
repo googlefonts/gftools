@@ -67,14 +67,18 @@ import os
 import sys
 
 from fontTools.ttLib import sfnt
-from absl import flags, app
+import argparse
 from gftools.util import google_fonts as fonts
 from glyphsets.codepoints import (CodepointsInFont,
                                   CodepointsInSubset)
 
-FLAGS = flags.FLAGS
-flags.DEFINE_boolean('diff_tables', True, 'Whether to print table size diffs')
-flags.DEFINE_boolean('diff_coverage', True, 'Whether to print coverage diffs')
+
+parser = argparse.ArgumentParser(description='Compare size and coverage of two fonts')
+parser.add_argument('first_font')
+parser.add_argument('second_font')
+parser.add_argument('--nodiff_tables', dest="diff_tables", action="store_false", help='Whether to print table size diffs')
+parser.add_argument('--nodiff_coverage', dest="diff_coverage", action="store_false", help='Whether to print coverage diffs')
+
 
 _KNOWN_TABLES = ('BASE', 'CFF ', 'DSIG', 'GDEF', 'GPOS', 'GSUB', 'LTSH',
                  'OS/2', 'VORG', 'cmap', 'cvt ', 'fpgm', 'gasp', 'glyf', 'hdmx',
@@ -82,7 +86,7 @@ _KNOWN_TABLES = ('BASE', 'CFF ', 'DSIG', 'GDEF', 'GPOS', 'GSUB', 'LTSH',
                  'FFTM', 'kern', 'vhea', 'vmtx')
 
 
-def CompareSize(font_filename1, font_filename2):
+def CompareSize(font_filename1, font_filename2, args):
   """Prints a size comparison for two fonts.
 
   If so flagged (--diff_tables), prints per-table size change.
@@ -105,7 +109,7 @@ def CompareSize(font_filename1, font_filename2):
       os.path.basename(font_filename1), font_sz1,
       os.path.basename(font_filename2), font_sz2, font_sz2 - font_sz1)
 
-  if FLAGS.diff_tables:
+  if args.diff_tables:
     result += DiffTables(font_filename1, font_filename2)
 
   return result
@@ -175,7 +179,7 @@ def DiffCoverage(font_filename1, font_filename2, subset):
       subset_cp_str))
 
 
-def CompareDirs(font1, font2):
+def CompareDirs(font1, font2, args):
   """Compares fonts by assuming font1/2 are dirs containing METADATA.pb."""
 
   m1 = fonts.Metadata(font1)
@@ -188,40 +192,37 @@ def CompareDirs(font1, font2):
   font_filename1 = os.path.join(font1, fonts.RegularWeight(m1))
   font_filename2 = os.path.join(font2, fonts.RegularWeight(m2))
 
-  if FLAGS.diff_coverage:
+  if args.ndiff_coverage:
     print('Subset Coverage Change (codepoints)')
     for subset in subsets_to_compare:
       DiffCoverage(font_filename1, font_filename2, subset)
 
-  print(CompareSize(font_filename1, font_filename2))
+  print(CompareSize(font_filename1, font_filename2, args))
 
 
-def CompareFiles(font1, font2):
+def CompareFiles(font1, font2, args):
   """Compares fonts assuming font1/2 are font files."""
-  print(CompareSize(font1, font2))
+  print(CompareSize(font1, font2, args))
 
 
-def main(_):
-  if len(sys.argv) < 3:
-    raise app.UsageError('Must pass at least two arguments, font file or font'
-                         ' dir to diff')
+def main(args=None):
+  args = parser.parse_args(args)
 
-  font1 = sys.argv[1]
-  font2 = sys.argv[2]
+  font1 = args.first_font
+  font2 = args.second_font
   dirs = os.path.isdir(font1) and os.path.isdir(font2)
   files = os.path.isfile(font1) and os.path.isfile(font2)
-
   if not dirs and not files:
     print('%s and %s must both point to directories or font files' % (
         font1, font2))
     sys.exit(1)
 
   if dirs:
-    CompareDirs(font1, font2)
+    CompareDirs(font1, font2, args)
 
   if files:
-    CompareFiles(font1, font2)
+    CompareFiles(font1, font2, args)
 
 
 if __name__ == '__main__':
-  app.run(main)
+  main()
