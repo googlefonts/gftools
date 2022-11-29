@@ -62,6 +62,9 @@ dependencies = [
   'nanoemoji>=0.15.0',
 ]
 
+[project.optional-dependencies]
+qa = ['fontbakery', 'fontdiffenator', 'gfdiffbrowsers']
+
 [project.scripts]
 gftools = "gftools.scripts:main"
 gftools-add-axis = "gftools.scripts.add_axis:main"
