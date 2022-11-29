@@ -29,22 +29,23 @@ FamilyName-Light.ttf passed
 from __future__ import print_function
 import os
 from os import listdir
+import argparse
 import sys
-from absl import app
 from glyphsets.codepoints import CodepointsInFont
 
 
-def main(argv):
-  if len(argv) != 2 or not os.path.isdir(argv[1]):
-    sys.exit('Must have one argument, a directory containing font files.')
+parser = argparse.ArgumentParser(description='Compare size and coverage of two fonts')
+parser.add_argument('dirpath', help="a directory containing font files.", metavar="DIR")
 
-  dirpath = argv[1]
+def main(args=None):
+  args = parser.parse_args(args)
+
   cps = set()
-  for f in _GetFontFiles(dirpath):
-    cps.update(CodepointsInFont(os.path.join(dirpath, f)))
+  for f in _GetFontFiles(args.dirpath):
+    cps.update(CodepointsInFont(os.path.join(args.dirpath, f)))
 
-  for f in _GetFontFiles(dirpath):
-    diff = cps - CodepointsInFont(os.path.join(dirpath, f))
+  for f in _GetFontFiles(args.dirpath):
+    diff = cps - CodepointsInFont(os.path.join(args.dirpath, f))
     if bool(diff):
       print('%s failed' % (f))
       for c in diff:
@@ -66,4 +67,4 @@ def _GetFontFiles(path):
 
 
 if __name__ == '__main__':
-  app.run(main)
+  main()
