@@ -20,11 +20,11 @@ Attempts to highlight the variable(s) that differ table by table.
 
 """
 from __future__ import print_function
+import argparse
 import collections
 import warnings
 
 from fontTools import ttLib
-from absl import app
 
 DiffTuple = collections.namedtuple('DiffTuple', ['name', 'lhs', 'rhs'])
 
@@ -99,14 +99,15 @@ def _DiffFont(lhs, rhs):
   return results
 
 
-def main(argv):
-  print(argv)
-  if len(argv) != 3:
-    raise ValueError('Specify two files to diff')
+def main(args=None):
+  parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument('first_font')
+  parser.add_argument('second_font')
+  args = parser.parse_args(args)
 
   with warnings.catch_warnings():
     warnings.simplefilter('ignore')
-    with open(argv[1], 'rb') as f1, open(argv[2], 'rb') as f2:
+    with open(args.first_font, 'rb') as f1, open(args.second_font, 'rb') as f2:
       lhs = ttLib.TTFont(f1)
       rhs = ttLib.TTFont(f2)
       font_diff = _DiffFont(lhs, rhs)
@@ -126,4 +127,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-  app.run(main)
+  main()
