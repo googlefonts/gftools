@@ -28,7 +28,4 @@ jobs:
           pip install mypy pytest
       - name: Run Tests
         run: |
-          pytest ./Lib/gftools/tests/test_usage.py
-          pytest ./Lib/gftools/tests/test_fix.py
-          pytest ./Lib/gftools/tests/test_html.py
-          pytest ./Lib/gftools/tests/test_instancer.py
+          pytest tests
