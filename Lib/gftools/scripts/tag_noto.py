@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """
-gftools lang
-
 Updates METADATA.pb to add is_noto field to families detected as Noto.
 
 Families are determined to be part of the Noto collection based on naive logic.
@@ -14,8 +12,7 @@ gftools tag-noto ofl/**/METADATA.pb
 
 """
 
-from absl import app
-from absl import flags
+import argparse
 from gftools import fonts_public_pb2
 from google.protobuf import text_format
 import re
@@ -24,8 +21,9 @@ import re
 NOTO_FAMILY_NAME = re.compile(r'^Noto .*')
 
 
-FLAGS = flags.FLAGS
-flags.DEFINE_bool('preview', False, 'Preview mode', short_name='p')
+parser = argparse.ArgumentParser(description='Updates METADATA.pb to add is_noto field to families detected as Noto')
+parser.add_argument('--preview', '-p', action='store_true',help='Preview mode')
+parser.add_argument('metadata', metavar='METADATA', nargs="+",help='METADATA.pb files')
 
 
 def _ReadProto(proto, path):
@@ -40,18 +38,18 @@ def _WriteProto(proto, path):
     f.write(textproto)
 
 
-def main(argv):
-  assert len(argv) > 1, 'No METADATA.pb files specified'
+def main(args=None):
+  args = parser.parse_args(args)
 
-  if FLAGS.preview:
+  if args.preview:
     print('Running in preview mode. No changes will be made.')
     print('The names of families detected as part of the Noto')
     print('collection will be printed below.')
 
-  for path in argv[1:]:
+  for path in args.metadata:
     family = _ReadProto(fonts_public_pb2.FamilyProto(), path)
     if NOTO_FAMILY_NAME.search(family.name):
-      if FLAGS.preview:
+      if args.preview:
         print(family.name)
       else:
         family.is_noto = True
@@ -59,4 +57,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-  app.run(main)
+  main()
