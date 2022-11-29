@@ -57,8 +57,18 @@ message AxisSegmentProto {
 
 message SourceProto {
   optional string repository_url = 1;
+  optional string branch = 5;
   optional string commit = 2;
   optional string archive_url = 3;
+  repeated SourceFileProto files = 4;
+  // Next = 6
+}
+
+// A file to take from source and where to put it in dest
+// Ex web/split/Roboto[wdth,wght].ttf => Roboto[wdth,wght].ttf
+message SourceFileProto {
+  optional string source_file = 1;
+  optional string dest_file = 2;
 }
 
 enum TargetTypeProto {
@@ -84,6 +94,8 @@ message FamilyFallbackProto {
   // Next = 6
 }
 
+// Corresponds to SampleTextProto in
+// google3/java/com/google/fonts/backend/spanner/google_fonts_proto.proto
 message SampleTextProto {
   optional string masthead_full = 1;
   optional string masthead_partial = 2;
