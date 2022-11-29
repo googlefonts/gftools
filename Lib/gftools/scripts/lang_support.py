@@ -14,8 +14,7 @@ gftools lang-support -l ./lang/ -r ./ofl/noto*/METADATA.pb
 
 """
 
-from absl import app
-from absl import flags
+import argparse
 from fontTools.ttLib import TTFont
 from gflanguages import (LoadLanguages,
                          LoadScripts)
@@ -27,11 +26,12 @@ import csv
 import os
 from pkg_resources import resource_filename
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string('lang', None, 'Path to lang metadata package', short_name='l')
-flags.DEFINE_bool('report', False, 'Whether to output a report of lang metadata insights', short_name='r')
-flags.DEFINE_bool('sample_text_audit', False, 'Whether to run the sample text audit', short_name='s')
-flags.DEFINE_string('out', None, 'Path to output directory for report', short_name='o')
+parser = argparse.ArgumentParser(description='Add language support metadata to METADATA.pb files')
+parser.add_argument('--lang', '-l', help='Path to lang metadata package')
+parser.add_argument('--report', '-r', action="store_true", help='Whether to output a report of lang metadata insights')
+parser.add_argument('--sample_text_audit', '-s', action="store_true", help='Whether to run the sample text audit')
+parser.add_argument('--out', '-o', help='Path to output directory for report')
+parser.add_argument('metadata_files', help='Path to METADATA.pb files', nargs="+")
 
 
 def _WriteCsv(path, rows):
@@ -125,17 +125,18 @@ def _SampleTextAudit(out_dir, languages, scripts, unused_scripts=[]):
   _WriteCsv(path, rows)
 
 
-def main(argv):
-  languages = LoadLanguages(base_dir=FLAGS.lang)
-  scripts = LoadScripts(base_dir=FLAGS.lang)
+def main(args=None):
+  args = parser.parse_args(args)
+  languages = LoadLanguages(base_dir=args.lang)
+  scripts = LoadScripts(base_dir=args.lang)
 
-  if FLAGS.report:
+  if args.report:
     assert len(argv) > 1, 'No METADATA.pb files specified'
-    assert FLAGS.out is not None, 'No output dir specified (--out)'
+    assert args.out is not None, 'No output dir specified (--out)'
     print('Writing insights report...')
-    _WriteReport(argv[1:], FLAGS.out, languages)
-  elif FLAGS.sample_text_audit:
-    assert FLAGS.out is not None, 'No output dir specified (--out)'
+    _WriteReport(argv[1:], args.out, languages)
+  elif args.sample_text_audit:
+    assert args.out is not None, 'No output dir specified (--out)'
     print('Auditing sample text')
     seen_scripts = set()
     unused_scripts = set()
@@ -146,11 +147,10 @@ def main(argv):
     for s in scripts:
       if s not in seen_scripts:
         unused_scripts.add(s)
-    _SampleTextAudit(FLAGS.out, languages, scripts, unused_scripts)
+    _SampleTextAudit(args.out, languages, scripts, unused_scripts)
   else:
-    assert len(argv) > 1, 'No METADATA.pb files specified'
     language_comments = fonts.LanguageComments(languages)
-    for path in argv[1:]:
+    for path in args.metadata_files:
       family_metadata = fonts.ReadProto(fonts_public_pb2.FamilyProto(), path)
       if len(family_metadata.languages) > 0:
         continue
@@ -166,4 +166,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-  app.run(main)
+  main()
