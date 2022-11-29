@@ -215,7 +215,9 @@ def namelist_from_font(file_name, out=None):
     font.close()
 
 
-def main(*args):
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
     if args[0] == 'reformat':
         reformat_namelist(args[1])
     elif args[0] == 'generate-filter-lists':
@@ -225,4 +227,4 @@ def main(*args):
 
 
 if __name__ == '__main__':
-    main(*sys.argv[1:])
+    main()

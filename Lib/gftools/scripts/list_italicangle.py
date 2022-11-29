@@ -19,13 +19,13 @@ import os
 import tabulate
 from fontTools import ttLib
 
-args = argparse.ArgumentParser(
+parser = argparse.ArgumentParser(
     description='Print out italicAngle of the fonts')
-args.add_argument('font', nargs="+")
-args.add_argument('--csv', default=False, action='store_true')
+parser.add_argument('font', nargs="+")
+parser.add_argument('--csv', default=False, action='store_true')
 
-def main(args=None)
-    arg = args.parse_args(args)
+def main(args=None):
+    arg = parser.parse_args(args)
 
     headers = ['filename', 'italicAngle']
     rows = []

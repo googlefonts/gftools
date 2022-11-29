@@ -25,7 +25,7 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser(description='Add Unicode character names to a nam file')
-parser.add_argument('nam_file', help='Location of nam file')
+parser.add_argument('--nam_file', help='Location of nam file')
 
 
 def main(args=None):

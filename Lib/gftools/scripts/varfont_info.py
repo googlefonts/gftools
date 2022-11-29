@@ -21,6 +21,7 @@ table of a given TTF file.
 
 """
 from __future__ import print_function
+import argparse
 import contextlib
 import sys
 from fontTools import ttLib
@@ -38,12 +39,13 @@ def _ResolveName(ttf, name_id):
   return names[0].toUnicode()
 
 
-def main(argv):
-  if len(argv) < 2:
-    sys.exit(('{}\n'
-              'usage:\n'
-              '       gftools varfont-info fontfile.ttf').format(__doc__))
-  for filename in argv[1:]:
+def main(args=None):
+  parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument('fonts', metavar="TTF", nargs="+",
+                      help="Fonts in OpenType (TTF/OTF) format")
+
+  args = parser.parse_args(args)
+  for filename in args.fonts:
     with contextlib.closing(ttLib.TTFont(filename)) as ttf:
       print(filename)
       if 'fvar' not in ttf:
@@ -63,4 +65,4 @@ def main(argv):
                                 inst.coordinates))
 
 if __name__ == '__main__':
-  main(sys.argv)
+  main()

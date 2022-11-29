@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 from __future__ import print_function
+import argparse
 import os
 import sys
 from glyphsets.codepoints import (CodepointsInFont,
@@ -27,7 +28,12 @@ NAM_FILES = [f for f in os.listdir(nam_dir)
 
 
 def main(args=None):
-  if len(sys.argv) != 2 or sys.argv[1][-4:] != ".ttf":
+  parser = argparse.ArgumentParser(
+    description='Reports the missing codepoints in a font')
+  parser.add_argument('font')
+  args = parser.parse_args(args)
+
+  if args.font[-4:] != ".ttf":
     sys.exit('Usage: {} fontfile.ttf'.format(sys.argv[0]))
 
   expected = set()
@@ -35,10 +41,9 @@ def main(args=None):
     nam_filepath = os.path.join(nam_dir, nam_file)
     expected.update(CodepointsInNamelist(nam_filepath))
 
-  filename = sys.argv[1]
-  diff = expected - CodepointsInFont(filename)
+  diff = expected - CodepointsInFont(args.font)
 
-  print(filename),
+  print(args.font),
   if bool(diff):
     print('missing'),
     for c in sorted(diff):

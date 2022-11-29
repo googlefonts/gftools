@@ -18,6 +18,7 @@
 
 """
 from __future__ import print_function
+from argparse import ArgumentParser
 import os
 import sys
 from fontTools.ttLib import TTFont
@@ -43,11 +44,16 @@ def ListFeatures(font):
   return results
 
 
-def main(path):
-  if path.endswith(".ttf"):
-    font_files = [path]
-  elif os.path.isdir(path):
-    font_files = glob(path + "/*.ttf")
+def main(args=None):
+  parser = ArgumentParser(description=__doc__)
+  parser.add_argument('path', metavar="PATH",
+            help='Path to a font file or directory')
+
+  args = parser.parse_args(args)
+  if args.path.endswith(".ttf"):
+    font_files = [args.path]
+  elif os.path.isdir(args.path):
+    font_files = glob(args.path + "/*.ttf")
 
   for font_file in font_files:
     features = []
@@ -60,9 +66,5 @@ def main(path):
 
 
 if __name__ == '__main__':
-  if len(sys.argv) != 2:
-    print("Please include either a path to a ttf or a path to a dir "
-          "containing ttfs")
-  else:
-    main(sys.argv[1])
+    main()
 

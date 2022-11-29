@@ -18,6 +18,7 @@
 #
 # Converts a .nam file to a list of ranges.
 import sys
+import argparse
 import tokenize
 
 
@@ -31,10 +32,11 @@ def get_codepoints(cps):
 
 
 def main(args=None):
-  if len(sys.argv) != 2:
-    sys.exit("Usage: rangify <nam file>")
-
-  codepoints_data = list(tokenize.tokenize(open(sys.argv[1], 'rb').readline))
+  parser = argparse.ArgumentParser(
+      description='Converts a .nam file to a list of ranges')
+  parser.add_argument('nam')
+  args = parser.parse_args(args)
+  codepoints_data = list(tokenize.tokenize(open(args.nam, 'rb').readline))
   codepoints = get_codepoints(codepoints_data)
   codepoints.sort()
 

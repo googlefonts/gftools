@@ -31,15 +31,17 @@ from fontTools.ttLib import TTFont
 
 parser = ArgumentParser(description=__doc__,
                         formatter_class=RawTextHelpFormatter)
+parser.add_argument('--old_version',
+          help="Old version number",
+          required=True,
+          type=str)
+parser.add_argument('--new_version',
+          help="New Version number",
+          required=True,
+          type=str)
 parser.add_argument('fonts',
           nargs="+",
           help="Fonts in OpenType (TTF/OTF) format")
-parser.add_argument('old_version',
-          help="Old version number",
-          type=str)
-parser.add_argument('new_version',
-          help="New Version number",
-          type=str)
 
 
 def main(args=None):

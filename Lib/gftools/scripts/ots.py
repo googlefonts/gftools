@@ -15,13 +15,19 @@
 # limitations under the License.
 #
 from __future__ import print_function
+import argparse
 import ots
 import sys
 import os
 
-def main(gf_path):
+def main(args=None):
+    parser = argparse.ArgumentParser(
+        description='Run ots-sanitizer on all fonts in the directory')
+    parser.add_argument('path')
+    args = parser.parse_args(args)
+
     results = []
-    for p, i, files in os.walk(gf_path):
+    for p, i, files in os.walk(args.path):
         for f in files:
             if f.endswith('.ttf'):
                 try:
