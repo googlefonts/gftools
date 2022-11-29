@@ -3,14 +3,13 @@ import unittest
 import tempfile
 import os
 
+from gftools.scripts.qa import main
+
 
 class TestQA(unittest.TestCase):
     def _test_diff_pr_vs_googlefonts(self):
         with tempfile.TemporaryDirectory() as qa_out:
-            subprocess.call(
-                [
-                    "gftools",
-                    "qa",
+            main([
                     "-pr",
                     "https://github.com/google/fonts/pull/2067",
                     "-gfb",
@@ -23,10 +22,7 @@ class TestQA(unittest.TestCase):
 
     def _test_diff_github_fonts_vs_googlefonts(self):
         with tempfile.TemporaryDirectory() as qa_out:
-            subprocess.call(
-                [
-                    "gftools",
-                    "qa",
+            main([
                     "-gh",
                     "https://github.com/googlefonts/AmaticSC/tree/main/fonts/ttf",
                     "-gfb",
@@ -39,10 +35,7 @@ class TestQA(unittest.TestCase):
 
     def test_diff_github_fonts_vs_googlefonts_vf(self):
         with tempfile.TemporaryDirectory() as qa_out:
-            subprocess.call(
-                [
-                    "gftools",
-                    "qa",
+            main([
                     "-gh",
                     "https://github.com/google/fonts/tree/main/ofl/mavenpro",
                     "-gfb",
