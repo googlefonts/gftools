@@ -18,28 +18,26 @@
 
 """
 from __future__ import print_function
+import argparse
 import os
 
-from absl import flags
 from glyphsets.codepoints import SubsetsInFont
-from absl import app
 
-FLAGS = flags.FLAGS
-
-flags.DEFINE_integer('min_pct', 0,
-                     'What percentage of subset codepoints have to be supported'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--min_pct', type=int, default=0, help='What percentage of subset codepoints have to be supported'
                      ' for a non-ext subset.')
-flags.DEFINE_integer('min_pct_ext', 0,
-                     'What percentage of subset codepoints have to be supported'
-                     ' for a -ext subset.')
+parser.add_argument('--min_pct_ext', type=int, default=0, help='What percentage of subset codepoints have to be supported'
+                     ' for an -ext subset.')
+parser.add_argument('fonts', nargs='+', metavar="FONT")
 
 
-def main(argv):
-  for arg in argv[1:]:
-    subsets = SubsetsInFont(arg, FLAGS.min_pct, FLAGS.min_pct_ext)
+def main(args=None):
+  args = parser.parse_args(args)
+  for arg in args.fonts:
+    subsets = SubsetsInFont(arg, args.min_pct, args.min_pct_ext)
     for (subset, available, total) in subsets:
       print('%s %s %d/%d' % (os.path.basename(arg), subset, available, total))
 
 
 if __name__ == '__main__':
-  app.run(main)
+  main()
