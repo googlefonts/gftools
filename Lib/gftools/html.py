@@ -13,6 +13,7 @@ import time
 from copy import copy
 import shutil
 from collections import namedtuple
+import ntpath
 from gftools.utils import (
     font_sample_text,
     download_file,
@@ -173,7 +174,7 @@ def css_font_faces(ttFonts, server_dir=None, position=None):
             if not server_dir
             else os.path.relpath(font_path, start=server_dir)
         )
-        src = f"url({path})"
+        src = f"url({path})".replace(ntpath.sep, os.path.sep)
         font_family = _class_name(family_name, style_name, position)
         font_style = "italic" if font_is_italic(ttFont) else "normal"
         font_weight = css_font_weight(ttFont)
