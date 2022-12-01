@@ -112,14 +112,10 @@ def add_axis(font: str):
         ' mollit anim id est laborum.'
         )
 
-    # Fallback positions along the axis
-    try:
-        stat_table = ttFont['STAT'].table
-        fallbacks = _get_fallbacks(fvar_axis.axisTag, stat_table, name_table)
-        if len(fallbacks):
-            axis_proto.fallback.extend(fallbacks)
-    except KeyError:
-        print('STAT table not found, fallbacks won\'t be set.')
+    fallback_proto = FallbackProto()
+    fallback_proto.name = 'Default'
+    fallback_proto.value = fvar_axis.defaultValue
+    axis_proto.fallback.append(fallback_proto)
 
     text_proto = text_format.MessageToString(axis_proto, as_utf8=True,
                                              use_index_order=True)
@@ -128,27 +124,6 @@ def add_axis(font: str):
         f.write(text_proto)
     print(f'DONE create {filename}!')
 
-
-def _get_fallbacks(axis_tag, stat_table, name_table):
-    fallbacks = []
-    for stat_axis_index, stat_axis in enumerate(
-                                    stat_table.DesignAxisRecord.Axis):
-        if stat_axis.AxisTag == axis_tag:
-            break
-        # keep only in case of break
-        stat_axis_index = None
-        stat_axis = None
-    if stat_axis is None:
-        print(f'No STAT table DesignAxisRecord for {axis_tag} found.')
-        return fallbacks
-
-    for name, value in _get_fallbacks_gen(name_table, stat_axis_index,
-                                          stat_table.AxisValueArray.AxisValue):
-        fallback_proto = FallbackProto()
-        fallback_proto.name = f'{name}'
-        fallback_proto.value = value
-        fallbacks.append(fallback_proto)
-    return fallbacks
 
 def main(args=None):
     try:
