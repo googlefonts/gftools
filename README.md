@@ -9,9 +9,9 @@ The tools and files under this directory are available under the Apache License 
 
 ## Google Fonts Official Glyph Sets (Encodings)
 
-This repo also contains definitions of glyph sets useful for type designers:
+The glyph sets useful for type designers that were previously hosted in this repository have been moved to:
 
-<https://github.com/googlefonts/glyphsets/tree/main/Lib/glyphsets/encodings/GF%20Glyph%20Sets>
+<https://github.com/googlefonts/glyphsets/tree/main/Lib/glyphsets/encodings>
 
 ## Tool Usage Examples
 
