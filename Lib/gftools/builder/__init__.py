@@ -1,4 +1,6 @@
-"""Config-driven font project builder.
+"""
+gftools-builder: Config-driven font project builder
+===================================================
 
 This utility wraps fontmake and a number of post-processing fixes to
 build variable, static OTF, static TTF and webfonts from Glyphs,
@@ -15,6 +17,7 @@ which looks like this::
       - wght
     outputDir: "../fonts"
     familyName: Texturina
+    version: 1.005
     stat:
       - name: Width
         tag: wdth
@@ -71,15 +74,15 @@ required, all others have sensible defaults:
 * ``logLevel``: Debugging log level. Defaults to ``INFO``.
 * ``stylespaceFile``: A statmake ``.stylespace`` file.
 * ``stat``: A STAT table configuration. This may be either a list of axes and
-    values as demonstrated above, or a dictionary mapping each variable font to a
-    per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
-    STAT table is generated automatically using ``gftools.stat``.
+  values as demonstrated above, or a dictionary mapping each variable font to a
+  per-source list. If neither ``stylespaceFile`` or ``stat`` are provided, a
+  STAT table is generated automatically using ``gftools.stat``.
 * ``instances``: A list of static font TTF instances to generate from each variable
-    font as demonstrated above. If this argument isn't provided, static TTFs will
-    be generated for each instance that is specified in the source files.
+  font as demonstrated above. If this argument isn't provided, static TTFs will
+  be generated for each instance that is specified in the source files.
 * ``buildVariable``: Build variable fonts. Defaults to true.
 * ``buildStatic``: Build static fonts (OTF or TTF depending on ``$buildOTF``
-    and ``$buildTTF`). Defaults to true.
+  and ``$buildTTF`). Defaults to true.
 * ``buildOTF``: Build OTF fonts. Defaults to true.
 * ``buildTTF``: Build TTF fonts. Defaults to true.
 * ``buildWebfont``: Build WOFF2 fonts. Defaults to ``$buildStatic``.
@@ -99,11 +102,11 @@ required, all others have sensible defaults:
 * ``googleFonts``: Whether this font is destined for release on Google Fonts. Used by GitHub Actions. Defaults to ``false``.
 * ``category``: If this font is destined for release on Google Fonts, a list of the categories it should be catalogued under. Used by GitHub Actions. Must be set if ``googleFonts`` is set.
 * ``fvarInstanceAxisDflts``: Mapping to set every fvar instance's non-wght axis
+  value e.g if a font has a wdth and wght axis, we can set the wdth to be 100 for
+  every fvar instance. Defaults to ``None``
 * ``expandFeaturesToInstances``: Resolve all includes in the sources' features, so that generated instances can be compiled without errors. Defaults to ``true``.
 * ``reverseOutlineDirection``: Reverse the outline direction when compiling TTFs (no effect for OTFs). Defaults to fontmake's default.
 * ``removeOutlineOverlaps``: Remove overlaps when compiling fonts. Defaults to fontmake's default.
-value e.g if a font has a wdth and wght axis, we can set the wdth to be 100 for
-every fvar instance. Defaults to ``None``
 """
 
 from fontmake.font_project import FontProject
@@ -111,6 +114,7 @@ from fontTools import designspaceLib
 from fontTools.otlLib.builder import buildStatTable
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.woff2 import main as woff2_main
+from fontv.libfv import FontVersion
 from gftools.builder.schema import schema
 from gftools.builder.autohint import autohint
 from gftools.fix import fix_font
@@ -125,6 +129,7 @@ from ufo2ft.filters.decomposeTransformedComponents import DecomposeTransformedCo
 from vttLib.transfer import merge_from_file as merge_vtt_hinting
 from vttLib import compile_instructions as compile_vtt_hinting
 import difflib
+import gftools
 import glyphsLib
 from defcon import Font
 import argparse
@@ -172,6 +177,7 @@ class GFBuilder:
 
     def build(self):
         loglevel = getattr(logging, self.config["logLevel"].upper())
+        logging.basicConfig(level=loglevel)
         self.logger.setLevel(loglevel)
         # Shut up irrelevant loggers
         if loglevel != logging.DEBUG:
@@ -245,6 +251,22 @@ class GFBuilder:
             )
         return list(names)[0]
 
+    def determine_variability(self):
+        is_variable = []
+        for fp in self.config["sources"]:
+            if fp.endswith("glyphs"):
+                src = glyphsLib.GSFont(fp)
+                is_variable.append(len(src.masters) > 1)
+            elif fp.endswith("ufo"):
+                is_variable.append(False)
+            elif fp.endswith("designspace"):
+                ds = designspaceLib.DesignSpaceDocument.fromfile(self.config["sources"][0])
+                is_variable.append(len(ds.sources) > 1)
+        # This needs to be consistent...
+        if any(variability != is_variable[0] for variability in is_variable[1:]):
+            raise ValueError("Some sources were multi-master and some were not. Specify buildVariable manually.")
+        return is_variable[0]
+
     def fill_config_defaults(self):
         if "familyName" not in self.config:
             self.logger.info("Deriving family name (this takes a while)")
@@ -261,7 +283,7 @@ class GFBuilder:
             self.config["woffDir"] = self.config["outputDir"] + "/webfonts"
 
         if "buildVariable" not in self.config:
-            self.config["buildVariable"] = True
+            self.config["buildVariable"] = self.determine_variability()
         if "buildStatic" not in self.config:
             self.config["buildStatic"] = True
         if "buildOTF" not in self.config:
@@ -284,6 +306,8 @@ class GFBuilder:
             self.config["fvarInstanceAxisDflts"] = None
         if "flattenComponents" not in self.config:
             self.config["flattenComponents"] = True
+        if "addGftoolsVersion" not in self.config:
+            self.config["addGftoolsVersion"] = True
         if "decomposeTransformedComponents" not in self.config:
             self.config["decomposeTransformedComponents"] = True
 
@@ -311,7 +335,7 @@ class GFBuilder:
         # We post process each variable font after generating the STAT tables
         # because these tables are needed in order to fix the name tables.
         for ttFont in ttFonts:
-            self.post_process(ttFont.reader.file.name)
+            self.post_process_variable(ttFont.reader.file.name)
             self.outputs.add(ttFont.reader.file.name)
 
     def run_fontmake(self, source, args):
@@ -428,11 +452,11 @@ class GFBuilder:
         if self.config["buildTTF"]:
             if "instances" in self.config:
                 self.instantiate_static_fonts(
-                    self.config["ttDir"], self.post_process_ttf
+                    self.config["ttDir"], self.post_process_static_ttf
                 )
             else:
                 self.build_a_static_format(
-                    "ttf", self.config["ttDir"], self.post_process_ttf
+                    "ttf", self.config["ttDir"], self.post_process_static_ttf
                 )
 
     def instantiate_static_fonts(self, directory, postprocessor):
@@ -474,7 +498,7 @@ class GFBuilder:
                 "output_dir": directory,
                 "optimize_cff": CFFOptimization.SUBROUTINIZE,
             }
-            if not source.endswith("ufo"):
+            if self.config["buildVariable"]:
                 args["interpolate"] = True
             self.logger.info("Creating static fonts from %s" % source)
             for fontfile in self.run_fontmake(source, args):
@@ -495,6 +519,7 @@ class GFBuilder:
 
     def post_process(self, filename):
         self.logger.info("Postprocessing font %s" % filename)
+        self.set_version(filename)
         font = TTFont(filename)
         fix_font(
             font,
@@ -504,14 +529,36 @@ class GFBuilder:
         font.save(filename)
 
     def post_process_ttf(self, filename):
+        self.logger.debug("Deprecated method .post_process_ttf called, update code to use .post_process_static_ttf")
+        self.post_process_static_ttf(filename)
+
+    def post_process_static_ttf(self, filename):
         if self.config["autohintTTF"]:
             self.logger.debug("Autohinting")
             autohint(filename, filename, add_script=self.config["ttfaUseScript"])
         self.post_process(filename)
+        self.build_webfont(filename)
+
+    def post_process_variable(self, filename):
+        self.post_process(filename)
+        self.build_webfont(filename)
+
+    def build_webfont(self, filename):
         if self.config["buildWebfont"]:
             self.logger.debug("Building webfont")
             woff2_main(["compress", filename])
             self.move_webfont(filename)
+
+    def set_version(self, filename):
+        if "version" not in self.config and not self.config["addGftoolsVersion"]:
+            return
+        fv = FontVersion(filename)
+        if "version" in self.config:
+            fv.set_version_number(self.config["version"])
+        if self.config["addGftoolsVersion"]:
+            fv.version_string_parts.append(f"gftools[{gftools.__version__}]")
+        fv.write_version_string()
+
 
     def build_vtt(self, font_dir):
         for font, vtt_source in self.config['vttSources'].items():
