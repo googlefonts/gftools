@@ -339,7 +339,7 @@ class GFBuilder:
         args["filters"] = [...] + filters
 
         # The following arguments must be determined dynamically.
-        if source.endswith((".glyphs", ".designspace")):
+        if source.endswith((".glyphs", ".designspace", ".glyphspackage")):
             args["expand_features_to_instances"] = self.config.get(
                 "expandFeaturesToInstances", True
             )
@@ -350,7 +350,7 @@ class GFBuilder:
         if "removeOutlineOverlaps" in self.config:
             args["remove_overlaps"] = self.config["removeOutlineOverlaps"]
 
-        if source.endswith(".glyphs"):
+        if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
             FontProject().run_from_glyphs(source, **args)
         elif source.endswith(".designspace"):
             FontProject().run_from_designspace(source, **args)
