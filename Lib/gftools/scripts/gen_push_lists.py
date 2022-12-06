@@ -17,6 +17,7 @@ from gftools.push import parse_server_file
 from github import Github
 from collections import defaultdict
 import os
+import re
 import sys
 from pathlib import Path
 from gftools.push import repo_path_to_google_path
@@ -60,10 +61,19 @@ def write_server_file(data):
             print(f"{cat} isn't sorted appending to end of doc")
             categories_to_write.append(cat)
 
+    seen = set()
     for cat in categories_to_write:
-        directories = sorted(data[cat])
         doc.append(f"# {cat}")
-        doc.append("\n".join(directories))
+        directories = sorted(data[cat], key=lambda f: len(f))
+        filtered_directories = []
+        for directory in directories:
+            # Skip subdirectories when parent is already seen
+            plain_path = re.sub(r" # .*", "", directory)
+            if any(plain_path.startswith(this) for this in seen):
+                continue
+            seen.add(plain_path)
+            filtered_directories.append(directory)
+        doc.append("\n".join(sorted(filtered_directories)))
         doc.append("")
     return "\n".join(doc)
 
