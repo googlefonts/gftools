@@ -1,11 +1,9 @@
 import logging
 import os
-import re
 import subprocess
 
 from gftools.github import GitHubClient
 from gftools.utils import mkdir
-from gftools.html import HtmlProof, HtmlDiff
 try:
     from diffenator import ninja_diff, ninja_proof
 except ModuleNotFoundError:
