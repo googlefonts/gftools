@@ -42,7 +42,7 @@ def config_file():
 def test_good_config(config_file):
     # check a good config file
     with restore_cwd():
-        with tempfile.NamedTemporaryFile("r+", suffix=".yml") as f:
+        with tempfile.NamedTemporaryFile("r+", suffix=".yml", encoding="utf-8") as f:
             f.write(yaml.dump(config_file))
             f.seek(0)
             GFBuilder(f.name)
@@ -52,7 +52,7 @@ def test_bad_config_structure(config_file):
     # change sources to a string when it should be a list
     with restore_cwd():
         config_file["sources"] = "foobar"
-        with tempfile.NamedTemporaryFile("r+", suffix=".yml") as f:
+        with tempfile.NamedTemporaryFile("r+", suffix=".yml", encoding="utf-8") as f:
             f.write(yaml.dump(config_file))
             f.seek(0)
             with pytest.raises(ValueError, match="The yaml config file isn't structured properly"):
@@ -64,7 +64,7 @@ def test_bad_config_key(config_file):
     with restore_cwd():
         config_file["source"] = config_file["sources"]
         del config_file["sources"]
-        with tempfile.NamedTemporaryFile("r+", suffix=".yml") as f:
+        with tempfile.NamedTemporaryFile("r+", suffix=".yml", encoding="utf-8") as f:
             f.write(yaml.dump(config_file))
             f.seek(0)
             with pytest.raises(YAMLError, match="A key in the configuration file"):
