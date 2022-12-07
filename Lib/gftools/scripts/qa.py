@@ -116,6 +116,9 @@ def main(args=None):
     check_group.add_argument(
         "--fontbakery", action="store_true", help="Run FontBakery"
     )
+    check_group.add_argument(
+        "--diffbrowsers", action="store_true", help="Run Diffbrowsers"
+    )
     parser.add_argument("-re", "--filter-fonts", help="Filter fonts by regex")
     parser.add_argument(
         "-o", "--out", default="out", help="Output path for check results"
@@ -147,6 +150,7 @@ def main(args=None):
     if not any([args.auto_qa,
                 args.fontbakery,
                 args.proof,
+                args.diffbrowsers,
                 args.diffenator]):
         raise Exception("Terminating. No checks selected. Run gftools qa "
                         "--help to see all possible commands.")
@@ -230,6 +234,8 @@ def main(args=None):
         qa.fontbakery()
     if args.diffenator:
         qa.diffenator()
+    if args.diffbrowsers:
+        qa.diffbrowsers()
     if args.proof:
         qa.proof()
 
