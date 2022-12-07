@@ -37,7 +37,7 @@ class FontQA:
         )
         ninja._program("ninja", [])
     
-    def diffbrowsers(self):
+    def diffbrowsers(self, imgs=False):
         logger.info("Running Diffbrowsers")
         dst = os.path.join(self.out, "Diffbrowsers")
         mkdir(dst)
@@ -45,7 +45,7 @@ class FontQA:
             self.fonts_before,
             self.fonts,
             out=dst,
-            imgs=False,
+            imgs=imgs,
             filter_styles=None,
             user_wordlist=None,
             diffenator=False,
@@ -53,14 +53,14 @@ class FontQA:
         )
         ninja._program("ninja", [])
     
-    def proof(self):
+    def proof(self, imgs=False):
         logger.info("Running proofing tools")
         dst = os.path.join(self.out, "Proof")
         mkdir(dst)
         ninja_proof(
             fonts=self.fonts,
             out=dst,
-            imgs=False,
+            imgs=imgs,
             filter_styles=None,
         )
         ninja._program("ninja", [])
@@ -81,14 +81,14 @@ class FontQA:
             cmd.extend(extra_args)
         subprocess.call(cmd)
 
-    def googlefonts_upgrade(self):
+    def googlefonts_upgrade(self, imgs=False):
         self.fontbakery()
         self.diffenator()
-        self.diffbrowsers()
+        self.diffbrowsers(imgs)
 
-    def googlefonts_new(self):
+    def googlefonts_new(self, imgs=False):
         self.fontbakery()
-        self.proof()
+        self.proof(imgs)
 
     def post_to_github(self, url):
         """Post Fontbakery report as a new issue or as a comment to an open

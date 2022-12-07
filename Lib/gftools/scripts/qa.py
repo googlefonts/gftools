@@ -140,6 +140,7 @@ def main(args=None):
             "fetching method."
         )
     )
+    parser.add_argument("--imgs", action="store_true", help="Gen images using Selenium")
     parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args(args)
     if args.out_github and not any([args.pull_request, args.github_dir]):
@@ -227,15 +228,15 @@ def main(args=None):
         qa = FontQA(ttfonts, out=args.out)
 
     if args.auto_qa and family_on_gf:
-        qa.googlefonts_upgrade()
+        qa.googlefonts_upgrade(args.imgs)
     elif args.auto_qa and not family_on_gf:
-        qa.googlefonts_new()
+        qa.googlefonts_new(args.imgs)
     if args.fontbakery:
         qa.fontbakery()
     if args.diffenator:
         qa.diffenator()
     if args.diffbrowsers:
-        qa.diffbrowsers()
+        qa.diffbrowsers(args.imgs)
     if args.proof:
         qa.proof()
 
