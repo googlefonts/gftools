@@ -29,3 +29,4 @@ fontFeatures>=1.6.2
 vharfbuzz
 bumpfontversion
 nanoemoji>=0.15.0
+font-v

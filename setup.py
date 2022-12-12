@@ -121,5 +121,6 @@ setup(
         'vharfbuzz',
         'bumpfontversion',
         'nanoemoji>=0.15.0',
+        'font-v',
     ]
     )
