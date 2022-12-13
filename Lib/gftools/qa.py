@@ -35,7 +35,6 @@ class FontQA:
             diffenator=True,
             diffbrowsers=False,
         )
-        ninja._program("ninja", [])
     
     def diffbrowsers(self, imgs=False):
         logger.info("Running Diffbrowsers")
@@ -51,7 +50,6 @@ class FontQA:
             diffenator=False,
             diffbrowsers=True,
         )
-        ninja._program("ninja", [])
     
     def proof(self, imgs=False):
         logger.info("Running proofing tools")
@@ -63,7 +61,6 @@ class FontQA:
             imgs=imgs,
             filter_styles=None,
         )
-        ninja._program("ninja", [])
 
     def fontbakery(self, profile="googlefonts", html=False, extra_args=None):
         logger.info("Running Fontbakery")
