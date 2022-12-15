@@ -63,7 +63,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-qa = ['fontbakery']
+qa = [
+  'fontbakery',
+  'diffenator2 @ git+https://github.com/googlfonts/diffenator2.git'
+]
 
 [project.scripts]
 gftools = "gftools.scripts:main"
