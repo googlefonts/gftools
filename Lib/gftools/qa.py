@@ -5,7 +5,7 @@ import subprocess
 from gftools.github import GitHubClient
 from gftools.utils import mkdir
 try:
-    from diffenator import ninja_diff, ninja_proof
+    from diffenator2 import ninja_diff, ninja_proof
 except ModuleNotFoundError:
     raise ModuleNotFoundError(("gftools was installed without the QA "
         "dependencies. To install the dependencies, see the ReadMe, "
