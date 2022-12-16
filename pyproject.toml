@@ -65,7 +65,7 @@ dependencies = [
 [project.optional-dependencies]
 qa = [
   'fontbakery',
-  'diffenator2 @ git+https://github.com/googlfonts/diffenator2.git'
+  'diffenator2 @ git+https://github.com/googlefonts/diffenator2.git'
 ]
 
 [project.scripts]
