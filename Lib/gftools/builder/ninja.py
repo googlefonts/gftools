@@ -244,9 +244,12 @@ class NinjaBuilder(GFBuilder):
         self.w.newline()
         for (path, designspace) in self.designspaces:
             self.w.comment(f"  Interpolate UFOs for {os.path.basename(path)}")
+            instances = self._instance_ufo_filenames(path, designspace)
+            if not instances:
+                continue
 
             self.w.build(
-                [str(i) for i in self._instance_ufo_filenames(path, designspace)],
+                [str(i) for i in instances],
                 "instanceufo",
                 path,
             )
