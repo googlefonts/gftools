@@ -480,29 +480,6 @@ def font_sample_text(ttFont):
     return words
 
 
-def gen_gifs(dir1, dir2, dst_dir):
-    dir1_imgs = set(f for f in os.listdir(dir1) if f.endswith(("jpg", "png")))
-    dir2_imgs = set(f for f in os.listdir(dir2) if f.endswith(("jpg", "png")))
-    shared_imgs = dir1_imgs & dir2_imgs
-    for img in shared_imgs:
-        gif_filename = img[:-4] + '.gif'
-        img_a_path = os.path.join(dir1, img)
-        img_b_path = os.path.join(dir2, img)
-        dst = os.path.join(dst_dir, gif_filename)
-        gen_gif(img_a_path, img_b_path, dst)
-
-
-def gen_gif(img_a_path, img_b_path, dst):
-    with Image.open(img_a_path) as img_a, Image.open(img_b_path) as img_b:
-        img_a.save(
-            dst, 
-            save_all=True,
-            append_images=[img_b],
-            loop=10000,
-            duration=1000
-        )
-
-
 def partition(items, size):
     """partition([1,2,3,4,5,6], 2) --> [[1,2],[3,4],[5,6]]"""
     return [items[i : i + size] for i in range(0, len(items), size)]

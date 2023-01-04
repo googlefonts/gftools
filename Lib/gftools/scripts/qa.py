@@ -9,9 +9,6 @@ Check a local family against another local family and generate reports
 for Font Diffenator only:
 `gftools qa -f [fonts_a.ttf] -fb [fonts_b.ttf] --diffenator -o qa`
 
-Check a local family against the same family hosted on Google Fonts and
-generate reports for Diffbrowsers only:
-`gftools qa -f [fonts.ttf] -gf --diffbrowsers -o qa
 
 Compare a pull request against the same family hosted on Google Fonts:
 `gftools qa -pr www.github.com/user/repo/pull/1 -gfb -a -o qa`
@@ -33,11 +30,15 @@ from gftools.utils import (
     Google_Fonts_has_family,
     mkdir,
 )
+import re
 from gftools.qa import FontQA
 
-__version__ = "2.2.0"
+
+__version__ = "3.0.0"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
 
 def family_name_from_fonts(fonts):
     results = []
@@ -110,23 +111,13 @@ def main(args=None):
         "--diffenator", action="store_true", help="Run Fontdiffenator"
     )
     check_group.add_argument(
-        "--diffbrowsers", action="store_true", help="Run Diffbrowsers"
+        "--proof", action="store_true", help="Run HTML proofs"
     )
     check_group.add_argument(
         "--fontbakery", action="store_true", help="Run FontBakery"
     )
     check_group.add_argument(
-        "--plot-glyphs",
-        action="store_true",
-        help="Gen images of full charset, useful for new familes",
-    )
-    check_group.add_argument(
-        "--browser-previews",
-        action="store_true",
-        help="Gen images on diff browsers, useful for new families",
-    )
-    check_group.add_argument(
-        "-dm", "--diff-mode", choices=("weak", "normal", "strict"), default="normal"
+        "--diffbrowsers", action="store_true", help="Run Diffbrowsers"
     )
     parser.add_argument("-re", "--filter-fonts", help="Filter fonts by regex")
     parser.add_argument(
@@ -149,6 +140,7 @@ def main(args=None):
             "fetching method."
         )
     )
+    parser.add_argument("--imgs", action="store_true", help="Gen images using Selenium")
     parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args(args)
     if args.out_github and not any([args.pull_request, args.github_dir]):
@@ -158,10 +150,9 @@ def main(args=None):
         )
     if not any([args.auto_qa,
                 args.fontbakery,
-                args.plot_glyphs,
+                args.proof,
                 args.diffbrowsers,
-                args.diffenator,
-                args.browser_previews]):
+                args.diffenator]):
         raise Exception("Terminating. No checks selected. Run gftools qa "
                         "--help to see all possible commands.")
 
@@ -237,19 +228,17 @@ def main(args=None):
         qa = FontQA(ttfonts, out=args.out)
 
     if args.auto_qa and family_on_gf:
-        qa.googlefonts_upgrade()
+        qa.googlefonts_upgrade(args.imgs)
     elif args.auto_qa and not family_on_gf:
-        qa.googlefonts_new()
-    if args.plot_glyphs:
-        qa.plot_glyphs()
-    if args.browser_previews:
-        qa.browser_previews()
+        qa.googlefonts_new(args.imgs)
     if args.fontbakery:
         qa.fontbakery()
     if args.diffenator:
         qa.diffenator()
     if args.diffbrowsers:
-        qa.diffbrowsers()
+        qa.diffbrowsers(args.imgs)
+    if args.proof:
+        qa.proof()
 
     if args.out_url:
         qa.post_to_github(args.out_url)
