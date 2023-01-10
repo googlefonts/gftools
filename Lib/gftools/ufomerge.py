@@ -81,7 +81,9 @@ def merge_ufos(
                     if not any(g in glyphs for g in rule.involved_glyphs):
                         continue
                     rule.input = true_inputs
-                    glyphs |= set(flat_outputs)
+                    for glyph in flat_outputs:
+                        glyphs[glyph] = True
+                        newglyphset.add(glyph)
                 else:
                     # Any rules with new glyphs on the right hand side and glyphs
                     # we have on the left hand side need to be copied into UFO1
