@@ -24,6 +24,11 @@ class FontQA:
 
     def diffenator(self, **kwargs):
         logger.info("Running Diffenator")
+        if not self.fonts_before:
+            logger.warning(
+                "Cannot run Diffenator since there are no fonts before"
+            )
+            return
         dst = os.path.join(self.out, "Diffenator")
         ninja_diff(
             self.fonts_before,
@@ -38,6 +43,11 @@ class FontQA:
     
     def diffbrowsers(self, imgs=False):
         logger.info("Running Diffbrowsers")
+        if not self.fonts_before:
+            logger.warning(
+                "Cannot run diffbrowsers since there are no fonts before"
+            )
+            return
         dst = os.path.join(self.out, "Diffbrowsers")
         mkdir(dst)
         ninja_diff(
@@ -86,6 +96,12 @@ class FontQA:
     def googlefonts_new(self, imgs=False):
         self.fontbakery()
         self.proof(imgs)
+
+    def render(self, imgs=False):
+        if self.fonts_before:
+            self.diffbrowsers(imgs)
+        else:
+            self.proof(imgs)
 
     def post_to_github(self, url):
         """Post Fontbakery report as a new issue or as a comment to an open

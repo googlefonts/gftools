@@ -114,6 +114,10 @@ def main(args=None):
         "--proof", action="store_true", help="Run HTML proofs"
     )
     check_group.add_argument(
+        "--render", action="store_true",
+        help="Run diffbrowsers if fonts_before exist, otherwise run proof"
+    )
+    check_group.add_argument(
         "--fontbakery", action="store_true", help="Run FontBakery"
     )
     check_group.add_argument(
@@ -148,11 +152,16 @@ def main(args=None):
             "Cannot upload results to a github issue or pr. "
             "Font input must either a github dir or a pull request"
         )
-    if not any([args.auto_qa,
-                args.fontbakery,
-                args.proof,
-                args.diffbrowsers,
-                args.diffenator]):
+    if not any(
+        [
+            args.auto_qa,
+            args.fontbakery,
+            args.proof,
+            args.diffbrowsers,
+            args.diffenator,
+            args.render,
+        ]
+    ):
         raise Exception("Terminating. No checks selected. Run gftools qa "
                         "--help to see all possible commands.")
 
@@ -231,6 +240,8 @@ def main(args=None):
         qa.googlefonts_upgrade(args.imgs)
     elif args.auto_qa and not family_on_gf:
         qa.googlefonts_new(args.imgs)
+    if args.render:
+        qa.render(args.imgs)
     if args.fontbakery:
         qa.fontbakery()
     if args.diffenator:
