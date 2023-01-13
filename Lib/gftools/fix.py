@@ -87,7 +87,6 @@ UNWANTED_TABLES = frozenset(
         "TSI3",
         "TSI5",
         "prop",
-        "MVAR",
         "Debg",
     ]
 )
@@ -721,7 +720,6 @@ def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instan
         fix_unhinted_font(font)
 
     if "fvar" in font:
-        remove_tables(font, ["MVAR"])
         name_table = font["name"]
         variation_ps_name = name_table.getName(25, 3, 1, 0x409)
         if not variation_ps_name:
