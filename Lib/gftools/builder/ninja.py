@@ -199,6 +199,7 @@ class NinjaBuilder(GFBuilder):
         stampfile = targets[0] + ".statstamp"
         if "stat" in self.config:
             statfile = targets[0] + ".stat.yaml"
+            os.makedirs(os.path.dirname(statfile), exist_ok=True)
             open(statfile, "w").write(yaml.dump(self.config["stat"]))
             other_args = f"--src {statfile}"
         if "stylespaceFile" in self.config or "statFormat4" in self.config:
