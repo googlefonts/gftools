@@ -4,7 +4,7 @@ import ninja
 import glyphsLib
 from glyphsLib.builder.builders import UFOBuilder
 import sys
-import ufoLib2
+import yaml
 import os
 from gftools.builder import GFBuilder
 from fontTools.designspaceLib import DesignSpaceDocument
@@ -196,14 +196,16 @@ class NinjaBuilder(GFBuilder):
             if any("italic" in x[0].lower() for x in self.designspaces):
                 self.config["axisOrder"].append("ital")
         other_args = ""
+        stampfile = targets[0] + ".statstamp"
         if "stat" in self.config:
-            other_args = f"--src {self.config['stat']}"
+            statfile = targets[0] + ".stat.yaml"
+            open(statfile, "w").write(yaml.dump(self.config["stat"]))
+            other_args = f"--src {statfile}"
         if "stylespaceFile" in self.config or "statFormat4" in self.config:
             raise ValueError(
                 "Stylespace files / statFormat4 not supported in Ninja mode"
             )
             # Because gftools-gen-stat doesn't seem to support it?
-        stampfile = targets[0] + ".statstamp"
         self.temporaries.append(stampfile)
         self.w.build(
             stampfile,
