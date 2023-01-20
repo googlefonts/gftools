@@ -62,7 +62,7 @@ class NinjaBuilder(GFBuilder):
             args = {}
         self.w.newline()
         self.w.comment("Convert glyphs file to UFO")
-        self.w.rule("glyphs2ufo", "fontmake -o ufo -g $in", **args)
+        self.w.rule("glyphs2ufo", "fontmake -o ufo --instance-dir instance_ufo -g $in", **args)
 
         if self.config["buildVariable"]:
             self.w.comment("Build a variable font from Designspace")
