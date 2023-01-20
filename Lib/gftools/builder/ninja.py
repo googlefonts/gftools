@@ -287,7 +287,7 @@ class NinjaBuilder(GFBuilder):
             postprocessor(t)
         self.w.newline()
 
-    def post_process_ttf(self, filename):
+    def post_process_static_ttf(self, filename):
         if self.config["autohintTTF"]:
             if self.config["ttfaUseScript"]:
                 raise NotImplementedError("ttaUseScript not supported in ninja mode")
@@ -296,6 +296,16 @@ class NinjaBuilder(GFBuilder):
             self.post_process(filename, implicit=filename + ".autohintstamp")
         else:
             self.post_process(filename)
+        if self.config["buildWebfont"]:
+            webfont_filename = filename.replace(".ttf", ".woff2").replace(
+                self.config["ttDir"], self.config["woffDir"]
+            )
+            self.w.build(
+                webfont_filename, "webfont", filename, implicit=filename + ".fixstamp"
+            )
+
+    def post_process_variable(self, filename):
+        self.post_process(filename)
         if self.config["buildWebfont"]:
             webfont_filename = filename.replace(".ttf", ".woff2").replace(
                 self.config["ttDir"], self.config["woffDir"]
