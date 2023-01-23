@@ -79,7 +79,7 @@ def write_server_file(data):
 
 
 def main(args=None):
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         print("Usage: gftools gen-push-lists /path/to/google/fonts")
         sys.exit()
 
@@ -137,7 +137,7 @@ def main(args=None):
             if "--- to production" in labels:
                 to_production[cat] |= directories
 
-    gf_repo_path = sys.argv[1]
+    gf_repo_path = sys.argv[2]
     sb_path = os.path.join(gf_repo_path, "to_sandbox.txt")
     prod_path = os.path.join(gf_repo_path, "to_production.txt")
 
