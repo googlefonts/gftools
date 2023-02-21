@@ -107,7 +107,7 @@ required, all others have sensible defaults:
 * ``expandFeaturesToInstances``: Resolve all includes in the sources' features, so that generated instances can be compiled without errors. Defaults to ``true``.
 * ``reverseOutlineDirection``: Reverse the outline direction when compiling TTFs (no effect for OTFs). Defaults to fontmake's default.
 * ``removeOutlineOverlaps``: Remove overlaps when compiling fonts. Defaults to fontmake's default.
-* ``interpolateMasters``: Interpolate between masters when generating static fonts. Defaults to ``false``.
+* ``interpolate``: Enable fontmake --interpolate flag. Defaults to ``false``.
 """
 
 from fontmake.font_project import FontProject
