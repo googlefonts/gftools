@@ -311,8 +311,8 @@ class GFBuilder:
             self.config["addGftoolsVersion"] = True
         if "decomposeTransformedComponents" not in self.config:
             self.config["decomposeTransformedComponents"] = True
-        if "interpolateMasters" not in self.config:
-            self.config["interpolateMasters"] = False
+        if "interpolate" not in self.config:
+            self.config["interpolate"] = False
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
