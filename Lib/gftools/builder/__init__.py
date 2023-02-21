@@ -107,6 +107,7 @@ required, all others have sensible defaults:
 * ``expandFeaturesToInstances``: Resolve all includes in the sources' features, so that generated instances can be compiled without errors. Defaults to ``true``.
 * ``reverseOutlineDirection``: Reverse the outline direction when compiling TTFs (no effect for OTFs). Defaults to fontmake's default.
 * ``removeOutlineOverlaps``: Remove overlaps when compiling fonts. Defaults to fontmake's default.
+* ``interpolateMasters``: Interpolate between masters when generating static fonts. Defaults to ``false``.
 """
 
 from fontmake.font_project import FontProject
@@ -310,6 +311,8 @@ class GFBuilder:
             self.config["addGftoolsVersion"] = True
         if "decomposeTransformedComponents" not in self.config:
             self.config["decomposeTransformedComponents"] = True
+        if "interpolateMasters" not in self.config:
+            self.config["interpolateMasters"] = False
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
@@ -498,7 +501,7 @@ class GFBuilder:
                 "output_dir": directory,
                 "optimize_cff": CFFOptimization.SUBROUTINIZE,
             }
-            if self.config["buildVariable"]:
+            if self.config["buildVariable"] or self.config["interpolateMasters"]:
                 args["interpolate"] = True
             self.logger.info("Creating static fonts from %s" % source)
             for fontfile in self.run_fontmake(source, args):
