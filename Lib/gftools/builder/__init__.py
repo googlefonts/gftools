@@ -501,7 +501,7 @@ class GFBuilder:
                 "output_dir": directory,
                 "optimize_cff": CFFOptimization.SUBROUTINIZE,
             }
-            if self.config["buildVariable"] or self.config["interpolateMasters"]:
+            if self.config["buildVariable"] or self.config["interpolate"]:
                 args["interpolate"] = True
             self.logger.info("Creating static fonts from %s" % source)
             for fontfile in self.run_fontmake(source, args):
