@@ -82,7 +82,7 @@ schema = Map(
         Optional("googleFonts"): Bool(),
         Optional("category"): UniqueSeq(Enum(CATEGORIES)),
         Optional("reverseOutlineDirection"): Bool(),
-        Optional("interpolateMasters"): Bool(),
+        Optional("interpolate"): Bool(),
         Optional("removeOutlineOverlaps"): Bool(),
         Optional("expandFeaturesToInstances"): Bool(),
         Optional("version"): Str(),
