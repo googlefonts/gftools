@@ -782,7 +782,7 @@ def fix_family(fonts, include_source_fixes=False, new_family_name=None, fvar_ins
             )
         fix_vertical_metrics(fonts)
         if all(["fvar" in f for f in fonts]):
-            gen_stat_tables(fonts, ["opsz", "wdth", "wght", "ital", "slnt"])
+            gen_stat_tables(fonts)
 
 
 class FontFixer():
