@@ -709,67 +709,71 @@ def fix_colr_font(ttfont: TTFont) -> TTFont:
 
 
 def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
+    fixed_font = deepcopy(font)
     if new_family_name:
-        rename_font(font, new_family_name)
-    if font["OS/2"].version > 1:
-        font["OS/2"].version = 4
+        rename_font(fixed_font, new_family_name)
+    if fixed_font["OS/2"].version > 1:
+        fixed_font["OS/2"].version = 4
 
-    if "fpgm" in font:
-        fix_hinted_font(font)
+    if "fpgm" in fixed_font:
+        fix_hinted_font(fixed_font)
     else:
-        fix_unhinted_font(font)
+        fix_unhinted_font(fixed_font)
 
-    if "fvar" in font:
-        name_table = font["name"]
+    if "fvar" in fixed_font:
+        name_table = fixed_font["name"]
         variation_ps_name = name_table.getName(25, 3, 1, 0x409)
         if not variation_ps_name:
-            build_variations_ps_name(font)
-            var_ps_name = font["name"].getName(25, 3, 1, 0x409).toUnicode()
+            build_variations_ps_name(fixed_font)
+            var_ps_name = fixed_font["name"].getName(25, 3, 1, 0x409).toUnicode()
             log.info(f"Added a Variations PostScript Name Prefix (NameID 25) '{var_ps_name}'")
     
-    if "COLR" in font:
+    if "COLR" in fixed_font:
         log.info("Fixing COLR font")
-        font = fix_colr_font(font)
+        fixed_font = fix_colr_font(fixed_font)
 
     if include_source_fixes:
-        remove_tables(font)
-        fix_nametable(font)
-        if fix_fs_type(font):
+        remove_tables(fixed_font)
+        fix_nametable(fixed_font)
+        if fix_fs_type(fixed_font):
             log.info("Changed OS/2 table's fsType flag to 0 (Installable embedding)")
             log.info("Consider fixing in the source (e.g. adding a 'fsType' custom parameter in Glyphs)\n")
-        if fix_fs_selection(font):
-            log.info("Changed OS/2 table's fsSelection flag to %i", font["OS/2"].fsSelection)
+        if fix_fs_selection(fixed_font):
+            log.info("Changed OS/2 table's fsSelection flag to %i", fixed_font["OS/2"].fsSelection)
             log.info("Consider fixing in the source (e.g. adding an 'openTypeOS2Selection' or 'Use Typo Metrics' custom parameter in Glyphs)\n")
-        if fix_mac_style(font):
-            log.info("Changed head table's macStyle to %i", font["head"].macStyle)
+        if fix_mac_style(fixed_font):
+            log.info("Changed head table's macStyle to %i", fixed_font["head"].macStyle)
             log.info("Consider fixing in the source\n")
-        if fix_weight_class(font):
-            log.info("Changed OS/2 table's usWeightClass to %i", font["OS/2"].usWeightClass)
+        if fix_weight_class(fixed_font):
+            log.info("Changed OS/2 table's usWeightClass to %i", fixed_font["OS/2"].usWeightClass)
             log.info("Consider fixing in the source\n")
-        if fix_italic_angle(font):
-            log.info("Changed post table's italicAngle to %f", font["post"].italicAngle)
+        if fix_italic_angle(fixed_font):
+            log.info("Changed post table's italicAngle to %f", fixed_font["post"].italicAngle)
             log.info("Consider fixing in the source\n")
 
-        if "fvar" in font:
-            fix_fvar_instances(font, fvar_instance_axis_dflts)
+        if "fvar" in fixed_font:
+            fix_fvar_instances(fixed_font, fvar_instance_axis_dflts)
+    return fixed_font
 
 
 def fix_family(fonts, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
     """Fix all fonts in a family"""
     validate_family(fonts)
 
+    fixed_fonts = []
     for font in fonts:
-        fix_font(
+        fixed_font = fix_font(
             font,
             include_source_fixes=include_source_fixes,
             new_family_name=new_family_name,
             fvar_instance_axis_dflts=fvar_instance_axis_dflts
         )
-    family_name = font_familyname(fonts[0])
+        fixed_fonts.append(fixed_font)
+    family_name = font_familyname(fixed_fonts[0])
     if include_source_fixes:
         try:
             if Google_Fonts_has_family(family_name):
-                inherit_vertical_metrics(fonts)
+                inherit_vertical_metrics(fixed_fonts)
             else:
                 log.warning(
                     f"{family_name} is not on Google Fonts. Skipping "
@@ -780,9 +784,10 @@ def fix_family(fonts, include_source_fixes=False, new_family_name=None, fvar_ins
                 f"Google Fonts api key not found so we can't regression "
                 "fix fonts. See Repo readme to add keys."
             )
-        fix_vertical_metrics(fonts)
+        fix_vertical_metrics(fixed_fonts)
         if all(["fvar" in f for f in fonts]):
-            gen_stat_tables(fonts, ["opsz", "wdth", "wght", "ital", "slnt"])
+            gen_stat_tables(fixed_fonts)
+    return fixed_fonts
 
 
 class FontFixer():
