@@ -524,7 +524,7 @@ class GFBuilder:
         self.logger.info("Postprocessing font %s" % filename)
         self.set_version(filename)
         font = TTFont(filename)
-        fix_font(
+        font = fix_font(
             font,
             include_source_fixes=self.config["includeSourceFixes"],
             fvar_instance_axis_dflts=self.config["fvarInstanceAxisDflts"]
