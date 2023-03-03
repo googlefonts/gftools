@@ -337,12 +337,12 @@ class GFBuilder:
         if not ttFonts:
             return
 
-        self.gen_stat(ttFonts)
-        # We post process each variable font after generating the STAT tables
-        # because these tables are needed in order to fix the name tables.
         for ttFont in ttFonts:
             self.post_process_variable(ttFont.reader.file.name)
             self.outputs.add(ttFont.reader.file.name)
+
+        ttFonts = [TTFont(f.reader.file.name) for f in ttFonts]
+        self.gen_stat(ttFonts)
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:

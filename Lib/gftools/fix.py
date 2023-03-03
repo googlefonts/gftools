@@ -708,6 +708,12 @@ def fix_colr_font(ttfont: TTFont) -> TTFont:
         raise NotImplementedError(f"COLR version '{colr_version}' not supported.")
 
 
+def fix_nbspace_glyph(ttfont: TTFont):
+    cmap = ttfont.getBestCmap()
+    if 0x00A0 in cmap:
+        return
+    
+
 def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
     fixed_font = deepcopy(font)
     if new_family_name:
