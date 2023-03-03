@@ -108,6 +108,7 @@ required, all others have sensible defaults:
 * ``reverseOutlineDirection``: Reverse the outline direction when compiling TTFs (no effect for OTFs). Defaults to fontmake's default.
 * ``removeOutlineOverlaps``: Remove overlaps when compiling fonts. Defaults to fontmake's default.
 * ``interpolate``: Enable fontmake --interpolate flag. Defaults to ``false``.
+* ``checkCompatibility``: Enable fontmake Multiple Master compatibility checking. Defaults to ``true``.
 """
 
 from fontmake.font_project import FontProject
@@ -313,6 +314,8 @@ class GFBuilder:
             self.config["decomposeTransformedComponents"] = True
         if "interpolate" not in self.config:
             self.config["interpolate"] = False
+        if "checkCompatibility" not in self.config:
+            self.config["checkCompatibility"] = True
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
@@ -376,6 +379,8 @@ class GFBuilder:
             args["reverse_direction"] = self.config["reverseOutlineDirection"]
         if "removeOutlineOverlaps" in self.config:
             args["remove_overlaps"] = self.config["removeOutlineOverlaps"]
+
+        args["check_compatibility"] = self.config["checkCompatibility"]
 
         if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
             FontProject().run_from_glyphs(source, **args)
