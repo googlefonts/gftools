@@ -83,6 +83,7 @@ schema = Map(
         Optional("category"): UniqueSeq(Enum(CATEGORIES)),
         Optional("reverseOutlineDirection"): Bool(),
         Optional("interpolate"): Bool(),
+        Optional("useMutatorMath"): Bool(),
         Optional("checkCompatibility"): Bool(),
         Optional("removeOutlineOverlaps"): Bool(),
         Optional("expandFeaturesToInstances"): Bool(),
