@@ -109,6 +109,7 @@ required, all others have sensible defaults:
 * ``removeOutlineOverlaps``: Remove overlaps when compiling fonts. Defaults to fontmake's default.
 * ``interpolate``: Enable fontmake --interpolate flag. Defaults to ``false``.
 * ``checkCompatibility``: Enable fontmake Multiple Master compatibility checking. Defaults to ``true``.
+* ``useMutatorMath``: Use MutatorMath to generate instances (supports extrapolation and anisotropic locations). Defaults to ``false``.
 """
 
 from fontmake.font_project import FontProject
@@ -314,6 +315,8 @@ class GFBuilder:
             self.config["decomposeTransformedComponents"] = True
         if "interpolate" not in self.config:
             self.config["interpolate"] = False
+        if "useMutatorMath" not in self.config:
+            self.config["useMutatorMath"] = False
         if "checkCompatibility" not in self.config:
             self.config["checkCompatibility"] = True
 
@@ -508,6 +511,8 @@ class GFBuilder:
             }
             if self.config["buildVariable"] or self.config["interpolate"]:
                 args["interpolate"] = True
+            if self.config["useMutatorMath"]:
+                args["use_mutatormath"] = True
             self.logger.info("Creating static fonts from %s" % source)
             for fontfile in self.run_fontmake(source, args):
                 self.logger.info("Created static font %s" % fontfile)
