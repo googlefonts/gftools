@@ -38,14 +38,15 @@ def glyphs_points(font):
 
   {'a': [(0,0), (10,10)], 'b': [(10,10, (20,20))]},
   '''
+  res = {}
   for glyph in font:
     if hasattr(font[glyph], 'coordinates'):
-      font[glyph] = font[glyph].coordinates
+      res[glyph] = font[glyph].coordinates
     elif font[glyph].isComposite():
-      font[glyph] = [c.glyphName for c in font[glyph]]
+      res[glyph] = [c.glyphName for c in font[glyph].components]
     else:
-      font[glyph] = None
-  return font
+      res[glyph] = None
+  return res
 
 
 def compare_glyph_count(font1, name1, name2):
