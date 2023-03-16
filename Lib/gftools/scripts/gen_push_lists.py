@@ -69,7 +69,7 @@ def write_server_file(data):
         for directory in directories:
             # Skip subdirectories when parent is already seen
             plain_path = re.sub(r" # .*", "", directory)
-            if any(plain_path.startswith(this) for this in seen):
+            if str(Path(plain_path).parent) in seen:
                 continue
             seen.add(plain_path)
             filtered_directories.append(directory)
