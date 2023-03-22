@@ -383,11 +383,12 @@ class GFBuilder:
         if "removeOutlineOverlaps" in self.config:
             args["remove_overlaps"] = self.config["removeOutlineOverlaps"]
 
-        args["check_compatibility"] = self.config["checkCompatibility"]
 
         if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
+            args["check_compatibility"] = self.config["checkCompatibility"]
             FontProject().run_from_glyphs(source, **args)
         elif source.endswith(".designspace"):
+            args["check_compatibility"] = self.config["checkCompatibility"]
             FontProject().run_from_designspace(source, **args)
         elif source.endswith(".ufo"):
             FontProject().run_from_ufos([source], **args)
