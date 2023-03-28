@@ -35,7 +35,7 @@ def generate_upstream(config, url):
 
     upstream = {
         "name": get_family_name(config),
-        "repository_url": os.environ["GITHUB_SERVER_URL"] + "/" + repo + ".git",
+        "repository_url": os.environ["GITHUB_SERVER_URL"] + "/" + repo,
         "archive": url,
         "branch": "main",
         "category": config["category"],
