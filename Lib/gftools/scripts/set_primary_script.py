@@ -34,10 +34,9 @@ def main(directory):
         print(f"{path_obj} doesn't conform to font schema: {e}")
         continue
       first_font = path_obj.parent / metadata.fonts[0].filename
-      script = primary_script(TTFont(first_font), ignore_latin=False)
+      ignore_latin = path_obj.parent.name.startswith("noto")
+      script = primary_script(TTFont(first_font), ignore_latin=ignore_latin)
       if not script or script == "Latn":
-        continue
-      if path_obj.parent.name.startswith("noto"):
         continue
 
       print("%s -> %s" % (path_obj.parent.name, script))
