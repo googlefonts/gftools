@@ -459,8 +459,6 @@ class GFBuilder:
     def build_static(self):
         if self.config["buildOTF"]:
             self.build_a_static_format("otf", self.config["otDir"], self.post_process)
-        if self.config["buildWebfont"]:
-            self.mkdir(self.config["woffDir"], clean=True)
         if self.config["buildTTF"]:
             if "instances" in self.config:
                 self.instantiate_static_fonts(
@@ -593,11 +591,19 @@ class GFBuilder:
             font.save(font.reader.file.name)
 
     def move_webfont(self, filename):
-        wf_filename = filename.replace(".ttf", ".woff2")
-        os.rename(
-            wf_filename,
-            wf_filename.replace(self.config["ttDir"], self.config["woffDir"]),
-        )
+        woff_dir = self.config["woffDir"]
+        ttf_dir = self.config["ttDir"]
+        var_dir = self.config["vfDir"]
+
+        if not os.path.exists(self.config["woffDir"]):
+            self.mkdir(self.config["woffDir"])
+
+        src = filename.replace(".ttf", ".woff2")
+        dst = src
+        for p in (woff_dir, ttf_dir, var_dir):
+            dst = dst.replace(p, woff_dir)
+
+        shutil.move(src, dst)
 
 
 def main(args=None):
