@@ -159,6 +159,8 @@ def main(args=None):
       )
       exemplar_font = TTFont(exemplar_font_fp)
       supported_languages = fonts.SupportedLanguages(exemplar_font, languages)
+      if family_metadata.HasField("is_noto") and family_metadata.is_noto:
+        supported_languages = [l for l in supported_languages if "Latn" not in l.id]
       supported_languages = sorted([l.id for l in supported_languages])
       family_metadata.languages.extend(supported_languages)
       fonts.WriteProto(family_metadata, path, comments=language_comments)
