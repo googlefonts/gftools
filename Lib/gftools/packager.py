@@ -12,14 +12,10 @@ import shutil
 from tempfile import TemporaryDirectory, mkstemp
 import zipfile
 import subprocess
-import requests
-import pprint
 import typing
 from collections import OrderedDict
 import traceback
 from io import StringIO, BytesIO
-from contextlib import contextmanager
-import urllib.parse
 import pygit2  # type: ignore
 from strictyaml import (  # type: ignore
     Map,
@@ -1785,68 +1781,3 @@ def _print_package_report(
     for entry_name, filesize in package_contents:
         filesize_str = filesize
         print(f"   {entry_name} {_sizeof_fmt(filesize_str)}")
-
-
-@contextmanager
-def _create_tmp_remote(
-    repo: pygit2.Repository, url: str
-) -> typing.Iterator[pygit2.Remote]:
-    remote_name_template = "tmp_{}".format
-    # create a new remote (with unique name)
-    i = 0
-    tmp_name: str
-    remote: pygit2.Remote
-    # try to create and expect to fail if it exists
-    while True:
-        try:
-            tmp_name = remote_name_template(i)
-            remote = repo.remotes.create(tmp_name, url)
-            break
-        except ValueError as e:
-            # raises ValueError: remote '{tmp_name}' already exists
-            if "already exists" not in f"{e}":
-                # ValueError is rather generic, maybe another condition can raise
-                # it, hence I check for the phrase "already exists" as well.
-                # I think something similar to FileExistsError would have been better
-                # to raise here. Though that's an OSError.
-                raise e
-            i += 1
-            continue
-    try:
-        yield remote
-    finally:
-        repo.remotes.delete(tmp_name)
-
-
-# note: currently unused, example!
-# def _git_create_remote(repo: pygit2.Repository) -> None:
-#   # If we did not find a suitable remote, we can add it.
-#   # If remote_name exists: repo.remotes.creat raises:
-#   # "ValueError: remote 'upstream' already exists"
-#   default_remote_name = 'upstream'
-#
-#   remote_name = input(f'Creating a git remote.\nEnter remote name (default={default_remote_name}),a=abort:')
-#   if remote_name == 'a':
-#     raise UserAbortError()
-#   remote_name = remote_name or default_remote_name
-#
-#   searched_repo = 'google/fonts'
-#   url =  f'git@github.com:{searched_repo}.git'
-#   # url =  f'ssh://git@github.com/{searched_repo}'
-#   # url = f'https://github.com/{searched_repo}.git'
-#
-#   refspecs_candidates = {
-#       '1': f'+refs/heads/*:refs/remotes/{remote_name}/*'
-#     , '2': f'+refs/heads/main:refs/remotes/{remote_name}/main'
-#   }
-#   print('Pick a fetch refspec for the remote:')
-#   print(f'1: {refspecs_candidates["1"]} (default)')
-#   print(f'2: {refspecs_candidates["2"]} (minimal)')
-#   refspec = input(f'1(default),2,a=abort:').strip()
-#   if refspec == 'a':
-#     raise UserAbortError()
-#   fetch_refspec = refspecs_candidates[refspec or '1']
-#
-#   # raises ValueError: remote 'upstream' already exists
-#   # fetch argument will apply the default refspec if it is None
-#   repo.remotes.create(remote_name, url, fetch=fetch_refspec)
