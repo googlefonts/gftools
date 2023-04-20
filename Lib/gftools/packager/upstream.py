@@ -361,30 +361,16 @@ def output_upstream_yaml(
             use_template_schema=True,
         )
     # save!
-    while True:
-        try:
-            with open(target, "x" if not force else "w") as f:
-                f.write(upstream_conf_yaml.as_yaml())
-            break
-        except FileExistsError:
-            if not force:
-                answer = user_input(
-                    f"Can't override existing target file {target}"
-                    " without explicit permission.",
-                    OrderedDict(f="force override", q="quit program"),
-                    default="q",
-                    yes=yes,
-                    quiet=quiet,
-                )
-            if answer == "q":
-                raise UserAbortError(
-                    "Can't override existing target file "
-                    f"{target}. "
-                    "Use --force to allow explicitly."
-                )
-            else:  # answer == 'f'
-                force = True
-                continue
+    try:
+        with open(target, "x" if not force else "w") as f:
+            f.write(upstream_conf_yaml.as_yaml())
+    except FileExistsError:
+        if not force:
+            raise UserAbortError(
+                "Can't override existing target file "
+                f"{target}. "
+                "Use --force to allow explicitly."
+            )
     print(f"DONE upstream conf saved as {target}!")
 
 
