@@ -13,7 +13,7 @@ from strictyaml import (
                         UniqueSeq,
                         Enum
                         )
-from gftools.packager import CATEGORIES
+from gftools.packager.constants import CATEGORIES
 
 
 stat_schema = Seq(
