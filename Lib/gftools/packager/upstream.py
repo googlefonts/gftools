@@ -291,7 +291,8 @@ def get_upstream_info(
         # Can also be an user input error, but we don't handle this yet/here.
         print(f'Font Family "{family_name}" not found on Google Fonts.')
         if require_license_dir:
-            license_dir = _user_input_license(yes=yes, quiet=quiet)
+            print("Assuming OFL")
+            license_dir = "ofl"
         if upstream_conf_yaml is None:
             # if there was no local upstream yaml
             upstream_conf_yaml = _upstream_conf_from_scratch(
@@ -372,32 +373,6 @@ def output_upstream_yaml(
                 "Use --force to allow explicitly."
             )
     print(f"DONE upstream conf saved as {target}!")
-
-
-def _user_input_license(yes: bool = False, quiet: bool = False):
-    answer = user_input(
-        "To add a new typeface family to Google Fonts we "
-        "must know the license of the family.\n"
-        "It's very likely that OFL is the license that is expected here.",
-        OrderedDict(
-            o="OFL: SIL Open Font License",
-            a="Apache License",
-            u="Ubuntu Font License",
-            q="quit program",
-        ),
-        # the default should always be an option that does
-        # not require user interaction. That way we can
-        # have an all -y/--no-confirm flag that always chooses the
-        # default.
-        default="o",
-        yes=yes,
-        quiet=quiet,
-    )
-    if answer == "q":
-        raise UserAbortError()
-
-    license_dir = {d[0]: d for d in LICENSE_DIRS}[answer]
-    return license_dir
 
 
 def _get_query_variables(
