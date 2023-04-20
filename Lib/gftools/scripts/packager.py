@@ -44,18 +44,6 @@ parser.add_argument(
                  '(depends: files, directories or branches, trees, blobs) '
                  'is allowed.')
 parser.add_argument(
-            '-y',
-            '--no-confirm',
-            dest='yes',
-            action='store_true',
-            help='Don\'t require user interaction, by answering with the '
-                 'default always. Removes all interactivity.')
-parser.add_argument(
-            '-q',
-            '--quiet',
-            action='store_true',
-            help='Don\'t print user interaction dialogues when -y/--no-confirm is used.')
-parser.add_argument(
             'target',
             type=str,
             help='The target of the package. By default a path to a directory. '

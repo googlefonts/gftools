@@ -255,8 +255,6 @@ def _create_package_content(
     license_dir: str,
     gf_dir_content: dict,
     allow_build: bool,
-    yes: bool,
-    quiet: bool,
     no_allowlist: bool = False,
 ) -> str:
     print(f"Creating package with \n{format_upstream_yaml(upstream_conf_yaml)}")
@@ -595,8 +593,6 @@ def _git_make_commit(
     repo: pygit2.Repository,
     add_commit: bool,
     force: bool,
-    yes: bool,
-    quiet: bool,
     local_branch: str,
     remote_name: str,
     base_remote_branch: str,
@@ -668,8 +664,6 @@ def _packagage_to_git(
     family_dir: str,
     branch: str,
     force: bool,
-    yes: bool,
-    quiet: bool,
     add_commit: bool,
 ) -> None:
 
@@ -684,8 +678,6 @@ def _packagage_to_git(
         repo,
         add_commit,
         force,
-        yes,
-        quiet,
         branch,
         remote_name,
         base_remote_branch,
@@ -732,8 +724,6 @@ def _packagage_to_dir(
     target: str,
     family_dir: str,
     force: bool,
-    yes: bool,
-    quiet: bool,
 ):
     # target is a directory:
     target_family_dir = os.path.join(target, family_dir)
@@ -787,8 +777,6 @@ def _packages_to_target(
     is_gf_git: bool,
     branch: str,
     force: bool,
-    yes: bool,
-    quiet: bool,
     add_commit: bool,
 ) -> None:
     for i, family_dir in enumerate(family_dirs):
@@ -806,14 +794,10 @@ def _packages_to_target(
                 family_dir,
                 branch,
                 force,
-                yes,
-                quiet,
                 add_commit,
             )
         else:
-            _packagage_to_dir(
-                tmp_package_family_dir, target, family_dir, force, yes, quiet
-            )
+            _packagage_to_dir(tmp_package_family_dir, target, family_dir, force)
 
 
 def _branch_name_from_family_dirs(family_dirs: typing.List[str]) -> str:
@@ -855,8 +839,6 @@ def _file_or_family_is_file(file_or_family: str) -> bool:
 def make_package(
     file_or_families: typing.List[str],
     target: str,
-    yes: bool,
-    quiet: bool,
     no_allowlist: bool,
     is_gf_git: bool,
     force: bool,
@@ -871,7 +853,7 @@ def make_package(
 
     if upstream_yaml:
         return output_upstream_yaml(
-            file_or_families[0] if file_or_families else None, target, yes, quiet, force
+            file_or_families[0] if file_or_families else None, target, force
         )
     # some flags can be set implicitly
     pr = pr or bool(push_upstream) or bool(pr_upstream)
@@ -899,7 +881,7 @@ def make_package(
                 upstream_conf_yaml,
                 license_dir,
                 gf_dir_content,
-            ) = get_upstream_info(file_or_family, is_file, yes, quiet)
+            ) = get_upstream_info(file_or_family, is_file)
             assert isinstance(license_dir, str)
             try:
                 family_dir = _create_package_content(
@@ -909,8 +891,6 @@ def make_package(
                     license_dir,
                     gf_dir_content,
                     allow_build,
-                    yes,
-                    quiet,
                     no_allowlist,
                 )
                 family_dirs.append(family_dir)
@@ -943,8 +923,6 @@ def make_package(
             is_gf_git,
             target_branch,
             force,
-            yes,
-            quiet,
             add_commit,
         )
 

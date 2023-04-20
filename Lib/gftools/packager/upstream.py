@@ -318,8 +318,6 @@ def get_upstream_info(
 def output_upstream_yaml(
     file_or_family: typing.Union[str, None],
     target: str,
-    yes: bool,
-    quiet: bool,
     force: bool,
 ) -> None:
     if not file_or_family:
@@ -332,8 +330,6 @@ def output_upstream_yaml(
         upstream_conf_yaml, _, _ = get_upstream_info(
             file_or_family,
             is_file,
-            yes,
-            quiet,
             require_license_dir=False,
             use_template_schema=True,
         )
