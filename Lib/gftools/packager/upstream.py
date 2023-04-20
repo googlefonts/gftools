@@ -358,23 +358,6 @@ def _upstream_conf_from_yaml_metadata(
     upstream_yaml_text = upstream_conf_yaml.as_yaml()
     assert upstream_yaml_text is not None
 
-    # two cases:
-    # - upstream.yaml may need an update by the user
-    # - upstream.yaml may be invalid (updated schema, syntax)
-    answer = user_input(
-        "Do you want to edit the current upstream configuration?",
-        OrderedDict(y="yes", n="no"),
-        default="n",
-        yes=yes,
-        quiet=quiet,
-    )
-    if answer == "y":
-        return _repl_upstream_conf(
-            upstream_yaml_text,
-            yes=yes,
-            quiet=quiet,
-            use_template_schema=use_template_schema,
-        )
     _, upstream_conf_yaml = _load_upstream(
         upstream_yaml_text,
         use_template_schema=use_template_schema,
