@@ -23,6 +23,7 @@ from strictyaml import (  # type: ignore
 )
 import functools
 from hashlib import sha1
+import humanize
 from fontTools.ttLib import TTFont  # type: ignore
 from gflanguages import LoadLanguages
 from gftools.util import google_fonts as fonts
@@ -468,15 +469,6 @@ def _check_target(is_gf_git: bool, target: str) -> None:
         return _check_git_target(target)
     else:
         return _check_directory_target(target)
-
-
-# thanks https://stackoverflow.com/a/1094933
-def _sizeof_fmt(num, suffix="B"):
-    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
-        if abs(num) < 1024.0:
-            return "%3.1f%s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.1f%s%s" % (num, "Yi", suffix)
 
 
 def _make_pr(
@@ -1080,4 +1072,4 @@ def _print_package_report(
     print(f"Created files in {target_label}:")
     for entry_name, filesize in package_contents:
         filesize_str = filesize
-        print(f"   {entry_name} {_sizeof_fmt(filesize_str)}")
+        print(f"   {entry_name} {humanize.naturalsize(filesize_str)}")
