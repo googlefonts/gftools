@@ -189,7 +189,6 @@ def main(args=None):
         if args.subcommand == "generate-upstream":
             upstream.output_upstream_yaml(args)
         else:
-            print(args)
             # "Encourage" user to create sensible argument combinations
             if args.subcommand == "package-git":
                 if args.push_upstream and not args.pr:

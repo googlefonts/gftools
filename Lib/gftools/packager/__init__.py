@@ -7,6 +7,7 @@ to the google/fonts GitHub repository structure, taking care of all the details.
 Documentation at gftools/docs/gftools-packager/README.md
 """
 import sys
+import argparse
 import os
 import shutil
 from tempfile import TemporaryDirectory
@@ -38,14 +39,12 @@ from gftools.packager.constants import (
     ALLOWED_FILES,
     GITHUB_REPO_SSH_URL,
     LICENSE_DIRS,
-    NOTO_GITHUB_URL,
     GIT_NEW_BRANCH_PREFIX,
 )
 from gftools.packager.exceptions import UserAbortError, ProgramAbortError
 from gftools.packager.upstream import (
     UpstreamConfig,
     get_upstream_info,
-    output_upstream_yaml,
 )
 
 # ignore type because mypy error: Module 'google.protobuf' has no
@@ -63,8 +62,6 @@ else:
     import gftools.fonts_public_pb2 as fonts_pb2
 
 
-
-
 def _write_file_to_package(basedir: str, filename: str, data: bytes) -> None:
     full_name = os.path.realpath(os.path.join(basedir, filename))
 
@@ -74,8 +71,8 @@ def _write_file_to_package(basedir: str, filename: str, data: bytes) -> None:
         raise Exception(f'Target is not in package directory: "{filename}".')
 
     os.makedirs(os.path.dirname(full_name), exist_ok=True)
-    with open(full_name, "wb") as f:
-        f.write(data)
+    with open(full_name, "wb") as file:
+        file.write(data)
 
 
 def _file_in_package(basedir, filename):
@@ -89,7 +86,7 @@ def _is_allowed_file(filename: str, no_allowlist: bool = False):
     # a job for font bakery
     if filename.endswith(".ttf") and os.path.dirname(filename) in ["", "static"]:
         return True  # using this!
-    elif filename not in ALLOWED_FILES and not no_allowlist:  # this is the default
+    if filename not in ALLOWED_FILES and not no_allowlist:  # this is the default
         return False
     return True
 
@@ -124,7 +121,7 @@ def _copy_upstream_files_from_git(
 
         try:
             source_object = repo.revparse_single(f"{branch}:{source}")
-        except KeyError as e:
+        except KeyError:
             skipped[SKIP_SOURCE_NOT_FOUND].append(source)
             continue
 
@@ -218,24 +215,11 @@ def _create_or_update_metadata_pb(
     with open(metadata_file_name, "rb") as fb:
         text_format.Parse(fb.read(), metadata)
 
-    # make upstream_conf the source of truth for some entries
-    metadata.name = upstream_conf["name"]
-    for font in metadata.fonts:
-        font.name = upstream_conf["name"]
-    metadata.designer = upstream_conf["designer"]
-
-    metadata.category[:] = upstream_conf["category"]
-
-    # metadata.date_added # is handled well
-
-    metadata.source.repository_url = upstream_conf["repository_url"]
+    upstream_conf.fill_metadata(metadata)
     if upstream_commit_sha:
         metadata.source.commit = upstream_commit_sha
     if upstream_archive_url:
         metadata.source.archive_url = upstream_archive_url
-
-    if upstream_conf["repository_url"].startswith(NOTO_GITHUB_URL):
-        metadata.is_noto = True
 
     language_comments = fonts.LanguageComments(LoadLanguages())
     fonts.WriteProto(metadata, metadata_file_name, comments=language_comments)
@@ -251,7 +235,6 @@ def _create_package_content(
     no_allowlist: bool = False,
 ) -> str:
     print(f"Creating package with \n{upstream_conf.format()}")
-    upstream_conf = upstream_conf.all_data
     upstream_commit_sha = None
 
     family_dir = os.path.join(license_dir, upstream_conf.normalized_family_name)
@@ -264,8 +247,8 @@ def _create_package_content(
     # Get and add upstream files!
     upstream_dir_target = (
         (
-            f'{upstream_conf["repository_url"]}'
-            f'__{upstream_conf["branch"]}'
+            f'{upstream_conf.get("repository_url")}'
+            f'__{upstream_conf.get("branch")}'
             # Despite of '.' and '/' I'd expect the other replacements
             # not so important in this case.
         )
@@ -275,29 +258,31 @@ def _create_package_content(
         .replace("\\", "_")
     )
 
-    if upstream_conf["archive"]:
+    if upstream_conf.get("archive"):
         print("Downloading release archive...")
         with TemporaryDirectory() as tmp:
             archive_path = os.path.join(tmp, "archive.zip")
-            download_file(upstream_conf["archive"], archive_path)
+            download_file(upstream_conf.get("archive"), archive_path)
             with zipfile.ZipFile(archive_path, "r") as zip_ref:
                 zip_ref.extractall(tmp)
             print("DONE downloading and unzipping!")
             skipped = _copy_upstream_files_from_dir(
                 tmp,
-                upstream_conf["files"],
+                upstream_conf.get("files"),
                 write_file_to_package,
                 no_allowlist=no_allowlist,
             )
-            upstream_archive_url = upstream_conf["archive"]
+            upstream_archive_url = upstream_conf.get("archive")
     else:
         upstream_archive_url = None
         local_repo_path_marker = "local://"
-        if upstream_conf["repository_url"].startswith(local_repo_path_marker):
+        if upstream_conf.get("repository_url").startswith(local_repo_path_marker):
             print(
-                f'WARNING using "local://" hack for repository_url: {upstream_conf["repository_url"]}'
+                f'WARNING using "local://" hack for repository_url: {upstream_conf.get("repository_url")}'
             )
-            local_path = upstream_conf["repository_url"][len(local_repo_path_marker) :]
+            local_path = upstream_conf.get("repository_url")[
+                len(local_repo_path_marker) :
+            ]
             upstream_dir = os.path.expanduser(local_path)
         else:
             upstream_dir = os.path.join(repos_dir, upstream_dir_target)
@@ -306,15 +291,15 @@ def _create_package_content(
                 # of the repository for all members
                 shallow_clone_git(
                     upstream_dir,
-                    upstream_conf["repository_url"],
-                    upstream_conf["branch"],
+                    upstream_conf.get("repository_url"),
+                    upstream_conf.get("branch"),
                 )
         repo = pygit2.Repository(upstream_dir)
 
-        upstream_commit = repo.revparse_single(upstream_conf["branch"])
+        upstream_commit = repo.revparse_single(upstream_conf.get("branch"))
         upstream_commit_sha = upstream_commit.hex
 
-        # Copy all files from upstream_conf['files'] to package_family_dir
+        # Copy all files from upstream_conf.get('files') to package_family_dir
         # We are strict about what to allow, unexpected files
         # are not copied. Instead print a warning an suggest filing an
         # issue if the file is legitimate. A flag to explicitly
@@ -323,8 +308,8 @@ def _create_package_content(
         # Do we have a Font Bakery check for expected/allowed files? Would
         # be a good complement.
         skipped = _copy_upstream_files_from_git(
-            upstream_conf["branch"],
-            upstream_conf["files"],
+            upstream_conf.get("branch"),
+            upstream_conf.get("files"),
             repo,
             write_file_to_package,
             no_allowlist=no_allowlist,
@@ -338,11 +323,6 @@ def _create_package_content(
         # The allowlist can be ignored using the flag no_allowlist flag,
         # but the rest should be fixed in the files map, because it's
         # obviously wrong, not working, configuration.
-        # TODO: This case could (but should it?) be a repl-case to ask
-        # interactively, if the no_allowlist flag should be used then,
-        # if yes, _copy_upstream_files could be tried again. But given
-        # that the use case for the flag is a narrow one, I doubt the
-        # effort needed and the added complexity is worth it.
         raise ProgramAbortError("\n".join(message))
 
     # Get and add all files from google/fonts
@@ -364,7 +344,7 @@ def _create_package_content(
     # and also clear all comments.
     stripped = upstream_conf.stripped()
     stripped.save(os.path.join(package_family_dir, "upstream.yaml"), force=True)
-    print(f'DONE Creating package for {upstream_conf["name"]}!')
+    print(f'DONE Creating package for {upstream_conf.get("name")}!')
     return family_dir
 
 
@@ -398,20 +378,13 @@ def _check_git_target(target: str) -> None:
         )
 
         raise ProgramAbortError(
-            f"The target git repository has no remote for " f"GitHub google/fonts."
+            "The target git repository has no remote for GitHub google/fonts."
         )
 
 
 def _check_directory_target(target: str) -> None:
     if not os.path.isdir(target):
         raise ProgramAbortError(f'Target "{target}" is not a directory.')
-
-
-def _check_target(is_gf_git: bool, target: str) -> None:
-    if is_gf_git:
-        return _check_git_target(target)
-    else:
-        return _check_directory_target(target)
 
 
 def _make_pr(
@@ -583,7 +556,7 @@ def _git_make_commit(
     if add_commit:
         try:
             base_commit = repo.branches.local[local_branch].peel()
-        except KeyError as e:
+        except KeyError:
             pass
 
     if not base_commit:
@@ -638,7 +611,7 @@ def _git_make_commit(
     _print_package_report(target_label, package_contents)
 
 
-def _packagage_to_git(
+def _package_to_git(
     tmp_package_family_dir: str,
     target: str,
     family_dir: str,
@@ -699,7 +672,7 @@ def _dispatch_git(
     _make_pr(repo, target_branch, pr_upstream, push_upstream, pr_title, pr_message_body)
 
 
-def _packagage_to_dir(
+def _package_to_dir(
     tmp_package_family_dir: str,
     target: str,
     family_dir: str,
@@ -730,36 +703,6 @@ def _packagage_to_dir(
             package_contents.append((entry_name, filesize))
     print(f"Package Directory: {target_family_dir}")
     _print_package_report(target_label, package_contents)
-
-
-def _packages_to_target(
-    tmp_package_dir: str,
-    family_dirs: typing.List[str],
-    target: str,
-    is_gf_git: bool,
-    branch: str,
-    force: bool,
-    add_commit: bool,
-) -> None:
-    for i, family_dir in enumerate(family_dirs):
-        tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
-        # NOTE: if there are any files outside of family_dir that need moving
-        # that is not yet supported! The reason is, there's no case for this
-        # yet. So, if _create_package_content is changed to put files outside
-        # of family_dir, these targets will have to follow and implement it.
-        if is_gf_git:
-            if i > 0:
-                add_commit = True
-            _packagage_to_git(
-                tmp_package_family_dir,
-                target,
-                family_dir,
-                branch,
-                force,
-                add_commit,
-            )
-        else:
-            _packagage_to_dir(tmp_package_family_dir, target, family_dir, force)
 
 
 def _branch_name_from_family_dirs(family_dirs: typing.List[str]) -> str:
@@ -798,37 +741,13 @@ def _file_or_family_is_file(file_or_family: str) -> bool:
     )  # .yml is common, too
 
 
-def make_package(
-    file_or_families: typing.List[str],
-    target: str,
-    no_allowlist: bool,
-    is_gf_git: bool,
-    force: bool,
-    add_commit: bool,
-    pr: bool,
-    pr_upstream: str,
-    push_upstream: str,
-    upstream_yaml: bool,
-    allow_build: bool,
-    branch: typing.Union[str, None] = None,
-):
-
-    if upstream_yaml:
-        return output_upstream_yaml(
-            file_or_families[0] if file_or_families else None, target, force
-        )
-    # some flags can be set implicitly
-    pr = pr or bool(push_upstream) or bool(pr_upstream)
-    # set default
-    if not pr_upstream:
-        pr_upstream = "google/fonts"
-
-    is_gf_git = is_gf_git or bool(branch) or add_commit or pr
+def make_package(args: argparse.Namespace):
+    is_git = args.subcommand == "package-git"
     # Basic early checks. Raises if target does not qualify.
-    _check_target(is_gf_git, target)
-
-    # note: use branch if it is explicit (and if is_gf_git)
-    target_branch = branch if branch is not None else ""
+    if is_git:
+        _check_git_target(args.gf_git)
+    else:
+        _check_directory_target(args.directory)
 
     family_dirs: typing.List[str] = []
     with TemporaryDirectory() as tmp_dir:
@@ -837,13 +756,19 @@ def make_package(
         tmp_repos_dir = os.path.join(tmp_dir, "repos")
         os.makedirs(tmp_repos_dir, exist_ok=True)
 
-        for file_or_family in file_or_families:
-            is_file = _file_or_family_is_file(file_or_family)
+        for file_or_family in args.file_or_families:
+            if _file_or_family_is_file(file_or_family):
+                file = file_or_family
+                family_name = None
+            else:
+                file = None
+                family_name = file_or_family
             (
                 upstream_conf,
                 license_dir,
                 gf_dir_content,
-            ) = get_upstream_info(file_or_family, is_file)
+            ) = get_upstream_info(file, family_name)
+            assert isinstance(upstream_conf, UpstreamConfig)
             assert isinstance(license_dir, str)
             try:
                 family_dir = _create_package_content(
@@ -852,8 +777,8 @@ def make_package(
                     upstream_conf,
                     license_dir,
                     gf_dir_content,
-                    allow_build,
-                    no_allowlist,
+                    False,
+                    args.no_allowlist,
                 )
                 family_dirs.append(family_dir)
             except Exception:
@@ -871,23 +796,33 @@ def make_package(
             print("No families to package.")
         # done with collecting data for all file_or_families
 
-        if is_gf_git:
-            # need to have a unified branch for all file_or_families ...
-            # if there are more than one families ...
-            if not branch:
-                target_branch = _branch_name_from_family_dirs(family_dirs)
-        _packages_to_target(
-            tmp_package_dir,
-            family_dirs,
-            target,
-            is_gf_git,
-            target_branch,
-            force,
-            add_commit,
-        )
+        if is_git and not args.branch:
+            args.branch = _branch_name_from_family_dirs(family_dirs)
 
-    if pr and is_gf_git:
-        _dispatch_git(target, target_branch, pr_upstream, push_upstream)
+        for i, family_dir in enumerate(family_dirs):
+            tmp_package_family_dir = os.path.join(tmp_package_dir, family_dir)
+            # NOTE: if there are any files outside of family_dir that need moving
+            # that is not yet supported! The reason is, there's no case for this
+            # yet. So, if _create_package_content is changed to put files outside
+            # of family_dir, these targets will have to follow and implement it.
+            if is_git:
+                if i > 0:
+                    args.add_commit = True
+                _package_to_git(
+                    tmp_package_family_dir,
+                    args.gf_git,
+                    family_dir,
+                    args.branch,
+                    args.force,
+                    args.add_commit,
+                )
+            else:
+                _package_to_dir(
+                    tmp_package_family_dir, args.directory, family_dir, args.force
+                )
+
+    if is_git and args.pr:
+        _dispatch_git(args.gf_git, args.branch, args.pr_upstream, args.push_upstream)
 
 
 def _print_package_report(
