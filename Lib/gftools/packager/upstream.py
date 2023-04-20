@@ -347,37 +347,19 @@ def output_upstream_yaml(
     print(f"DONE upstream conf saved as {target}!")
 
 
-def _get_query_variables(
-    repo_owner, repo_name, family_name, reference="refs/heads/main"
-):
-    """
-    call like: get_query_variables('google', 'fonts', 'gelasio')
-
-    reference: see $ git help rev-parse
-              and git help revisions
-              and https://git-scm.com/book/en/v2/Git-Internals-Git-References
-    For a branch called "main", "refs/heads/main" is best
-    but "main" would work as well.
-    Tag names work as well, ideally "ref/tags/v0.6.8" but "v0.6.8" would
-    work too. The full name is less ambiguous.
-    """
-    return {
-        "repoOwner": repo_owner,
-        "repoName": repo_name,
-        "reference": reference,
-        "oflDir": f"{reference}:ofl/{family_name}",
-        "apacheDir": f"{reference}:apache/{family_name}",
-        "uflDir": f"{reference}:ufl/{family_name}",
-    }
-
-
 def get_gh_gf_family_entry(family_name):
     # needs input sanitation
     family_name_normal = _family_name_normal(family_name)
-    variables = _get_query_variables("google", "fonts", family_name_normal)
-
     result = GitHubClient("google", "fonts")._run_graphql(
-        GITHUB_GRAPHQL_GET_FAMILY_ENTRY, variables
+        GITHUB_GRAPHQL_GET_FAMILY_ENTRY,
+        {
+            "repoOwner": "google",
+            "repoName": "fonts",
+            "reference": "refs/heads/main",
+            "oflDir": f"refs/heads/main:ofl/{family_name_normal}",
+            "apacheDir": f"refs/heads/main:apache/{family_name_normal}",
+            "uflDir": f"refs/heads/main:ufl/{family_name_normal}",
+        },
     )
     return result
 
