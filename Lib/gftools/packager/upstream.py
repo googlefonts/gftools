@@ -3,6 +3,7 @@
 from pkg_resources import resource_filename
 import typing
 from typing import TYPE_CHECKING
+from collections import OrderedDict
 
 from strictyaml import (  # type: ignore
     Map,
@@ -96,74 +97,143 @@ upstream_yaml_stripped_schema = Map(
 )
 
 
-def format_upstream_yaml(upstream_yaml: YAML, compact: bool = True):
-    # removes comments to make it more compact to read
-    if compact:
-        description = "upstream configuration (no comments, normalized)"
-        content = as_document(upstream_yaml.data, upstream_yaml_schema).as_yaml()
-    else:
-        description = "upstream configuration"
-        content = upstream_yaml.as_yaml()
-    len_top_bars = (58 - len(description)) // 2
-    top = f'{"-"*len_top_bars} {description} {"-"*len_top_bars}'
-    return f"{top}\n" f"{content}" f'{"-"*len(top)}'
+class UpstreamConfig:
+    upstream_yaml: YAML
 
+    def __init__(self, upstream_yaml: YAML):
+        self.upstream_yaml = upstream_yaml
 
-def _load_upstream(
-    upstream_yaml_text: str,
-    use_template_schema: bool = False,
-) -> typing.Tuple[bool, YAML]:
-    try:
-        yaml_schema = (
-            upstream_yaml_schema
-            if not use_template_schema
-            else upstream_yaml_template_schema
+    @classmethod
+    def template(cls):
+        return cls.load(upstream_yaml_template, use_template_schema=True)
+
+    @classmethod
+    def load(
+        upstream_yaml_text: str,
+        use_template_schema: bool = False,
+    ):
+        try:
+            yaml_schema = (
+                upstream_yaml_schema
+                if not use_template_schema
+                else upstream_yaml_template_schema
+            )
+            yaml = dirty_load(upstream_yaml_text, yaml_schema, allow_flow_style=True)
+        except YAMLValidationError as err:
+            print("The configuration has schema errors:\n\n" f"{err}")
+            raise ProgramAbortError()
+        return UpstreamConfig(yaml)
+
+    @classmethod
+    def from_file(cls, filename, use_template_schema: bool = False):
+        with open(filename, "r+") as upstream_yaml_file:
+            upstream_yaml_text = upstream_yaml_file.read()
+            edited, upstream_conf_yaml = cls.load(
+                upstream_yaml_text,
+                use_template_schema=use_template_schema,
+            )
+            # "edited" is only true when upstream_yaml_text did not parse and
+            # was then edited successfully.
+            if edited:
+                upstream_yaml_file.seek(0)
+                upstream_yaml_file.truncate()
+                upstream_yaml_file.write(upstream_conf_yaml.as_yaml())
+        return UpstreamConfig(upstream_conf_yaml)
+
+    @classmethod
+    def from_scratch(
+        cls,
+        family_name: typing.Union[str, None] = None,
+        use_template_schema: bool = False,
+    ) -> YAML:
+
+        upstream_conf_yaml = dirty_load(
+            upstream_yaml_template, upstream_yaml_template_schema, allow_flow_style=True
         )
-        return False, dirty_load(upstream_yaml_text, yaml_schema, allow_flow_style=True)
-    except YAMLValidationError as err:
-        print("The configuration has schema errors:\n\n" f"{err}")
-        raise ProgramAbortError()
+        if family_name is not None:
+            upstream_conf_yaml["name"] = family_name
 
+        assert use_template_schema, "from_scratch called in non-interactive mode"
 
-def _upstream_conf_from_file(
-    filename: str,
-    use_template_schema: bool = False,
-) -> YAML:
-    """If this parses there will be no repl, the user can edit
-    the file directly on disk.
-    If it doesn't parse, there's a chance to edit until the yaml parses
-    and to change the result back to disk.
-    """
-    with open(filename, "r+") as upstream_yaml_file:
-        upstream_yaml_text = upstream_yaml_file.read()
-        edited, upstream_conf_yaml = _load_upstream(
-            upstream_yaml_text,
-            use_template_schema=use_template_schema,
+        return UpstreamConfig(upstream_conf_yaml)
+
+    def format(self, compact: bool = True):
+        # removes comments to make it more compact to read
+        if compact:
+            description = "upstream configuration (no comments, normalized)"
+            content = as_document(
+                self.upstream_yaml.data, upstream_yaml_schema
+            ).as_yaml()
+        else:
+            description = "upstream configuration"
+            content = self.as_text()
+        len_top_bars = (58 - len(description)) // 2
+        top = f'{"-"*len_top_bars} {description} {"-"*len_top_bars}'
+        return f"{top}\n" f"{content}" f'{"-"*len(top)}'
+
+    @property
+    def present_data(self):
+        """Returns a dictionary of values which are not None"""
+        return {k: v for k, v in self.upstream_conf.data.items() if v is not None}
+
+    @property
+    def all_data(self):
+        return self.upstream_conf.data
+
+    @property
+    def family_name(self):
+        return self.upstream_conf["name"].data
+
+    def as_text(self):
+        return self.upstream_conf.as_yaml()
+
+    def save(self, target, force=False):
+        try:
+            with open(target, "x" if not force else "w") as f:
+                f.write(self.as_text())
+        except FileExistsError:
+            if not force:
+                raise UserAbortError(
+                    "Can't override existing target file "
+                    f"{target}. "
+                    "Use --force to allow explicitly."
+                )
+        print(f"DONE upstream conf saved as {target}!")
+
+    def __getattr__(self, key):
+        return self.upstream_conf[key]
+
+    def save_backup(self):
+        family_name_normal = _family_name_normal(self.family_name)
+        count = 0
+        while True:
+            counter = "" if count == 0 else f"_{count}"
+            filename = f"./{family_name_normal}.upstream{counter}.yaml"
+            try:
+                # 'x': don't override existing files
+                with open(filename, "x") as f:
+                    f.write(self.as_text())
+            except FileExistsError:
+                # retry until the file could be created, file name changes
+                count += 1
+                continue
+            break
+        return filename
+
+    def stripped(self):
+        redundant_keys = {"name", "category", "designer", "repository_url"}
+        upstream_conf_stripped = OrderedDict(
+            (k, v) for k, v in self.upstream_conf.items() if k not in redundant_keys
         )
-        # "edited" is only true when upstream_yaml_text did not parse and
-        # was then edited successfully.
-        if edited:
-            upstream_yaml_file.seek(0)
-            upstream_yaml_file.truncate()
-            upstream_yaml_file.write(upstream_conf_yaml.as_yaml())
-    return upstream_conf_yaml
-
-
-def _upstream_conf_from_scratch(
-    family_name: typing.Union[str, None] = None,
-    use_template_schema: bool = False,
-) -> YAML:
-
-    upstream_conf_yaml = dirty_load(
-        upstream_yaml_template, upstream_yaml_template_schema, allow_flow_style=True
-    )
-    if family_name is not None:
-        upstream_conf_yaml["name"] = family_name
-
-    if use_template_schema:  # for -u/--upstream-yaml
-        return upstream_conf_yaml
-
-    raise UserAbortError()
+        # Don't keep an empty build key.
+        if "build" in upstream_conf_stripped and (
+            upstream_conf_stripped["build"] == ""
+            or upstream_conf_stripped["build"] is None
+        ):
+            del upstream_conf_stripped["build"]
+        return UpstreamConfig(
+            as_document(upstream_conf_stripped, upstream_yaml_stripped_schema)
+        )
 
 
 def _upstream_conf_from_yaml_metadata(
@@ -200,36 +270,28 @@ def _upstream_conf_from_yaml_metadata(
             }
         )
     if upstream_yaml_text is not None:
-        # Only drop into REPL mode if can't parse and validate,
-        # and use use_template_schema, because this is not the real deal
-        # yet and we can be very forgiving.
-        _, upstream_conf_yaml = _load_upstream(
+        upstream_conf = UpstreamConfig.load(
             upstream_yaml_text, use_template_schema=True
         )
-
-        # remove None values:
-        upstream_conf_yaml_data = {
-            k: v for k, v in upstream_conf_yaml.data.items() if v is not None
-        }
         # Override keys set by METADATA.pb before, if there's overlap.
-        upstream_conf.update(upstream_conf_yaml_data)
+        upstream_conf.update(upstream_conf.present_data)
 
-    upstream_conf_yaml = dirty_load(
+    upstream_conf = dirty_load(
         upstream_yaml_template, upstream_yaml_template_schema, allow_flow_style=True
     )
     for k, v in upstream_conf.items():
         if v is None:
             continue
-        upstream_conf_yaml[k] = v
+        upstream_conf[k] = v
 
-    upstream_yaml_text = upstream_conf_yaml.as_yaml()
+    upstream_yaml_text = upstream_conf.as_text()
     assert upstream_yaml_text is not None
 
-    _, upstream_conf_yaml = _load_upstream(
+    upstream_conf = UpstreamConfig.load(
         upstream_yaml_text,
         use_template_schema=use_template_schema,
     )
-    return upstream_conf_yaml
+    return upstream_conf
 
 
 def get_upstream_info(
@@ -241,18 +303,18 @@ def get_upstream_info(
     # the first task is to acquire an upstream_conf, the license dir and
     # if present the available files for the family in the google/fonts repo.
     license_dir: typing.Union[str, None] = None
-    upstream_conf_yaml = None
+    upstream_conf = None
     gf_dir_content: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
 
     if not is_file:
         family_name = file_or_family
     else:
         # load a upstream.yaml from disk
-        upstream_conf_yaml = _upstream_conf_from_file(
+        upstream_conf = UpstreamConfig.from_file(
             file_or_family,
             use_template_schema=use_template_schema,
         )
-        family_name = upstream_conf_yaml["name"].data
+        family_name = upstream_conf.family_name
 
     # TODO:_get_gf_dir_content: is implemented as github graphql query,
     # but, as an alternative, could also be answered with a local
@@ -273,18 +335,18 @@ def get_upstream_info(
         if require_license_dir:
             print("Assuming OFL")
             license_dir = "ofl"
-        if upstream_conf_yaml is None:
+        if upstream_conf is None:
             # if there was no local upstream yaml
-            upstream_conf_yaml = _upstream_conf_from_scratch(
+            upstream_conf = UpstreamConfig.from_scratch(
                 family_name,
                 use_template_schema=use_template_schema,
             )
     else:
         print(f'Font Family "{family_name}" is on Google Fonts under "{license_dir}".')
 
-    if upstream_conf_yaml is not None:
+    if upstream_conf is not None:
         # loaded from_file or created from_scratch
-        return upstream_conf_yaml, license_dir, gf_dir_content or {}
+        return upstream_conf, license_dir, gf_dir_content or {}
 
     upstream_yaml_text: typing.Union[str, None] = None
     metadata_text: typing.Union[str, None] = None
@@ -306,13 +368,13 @@ def get_upstream_info(
             "Unexpected: can't use google fonts family data " f"for {family_name}."
         )
 
-    upstream_conf_yaml = _upstream_conf_from_yaml_metadata(
+    upstream_conf = _upstream_conf_from_yaml_metadata(
         upstream_yaml_text,
         metadata_text,
         use_template_schema=use_template_schema,
     )
 
-    return upstream_conf_yaml, license_dir, gf_dir_content or {}
+    return upstream_conf, license_dir, gf_dir_content or {}
 
 
 def output_upstream_yaml(
@@ -321,30 +383,17 @@ def output_upstream_yaml(
     force: bool,
 ) -> None:
     if not file_or_family:
-        # just use the template
-        upstream_conf_yaml = dirty_load(
-            upstream_yaml_template, upstream_yaml_template_schema, allow_flow_style=True
-        )
+        # use the template
+        upstream_conf = UpstreamConfig.template()
     else:
         is_file = _file_or_family_is_file(file_or_family)
-        upstream_conf_yaml, _, _ = get_upstream_info(
+        upstream_conf, _, _ = get_upstream_info(
             file_or_family,
             is_file,
             require_license_dir=False,
             use_template_schema=True,
         )
-    # save!
-    try:
-        with open(target, "x" if not force else "w") as f:
-            f.write(upstream_conf_yaml.as_yaml())
-    except FileExistsError:
-        if not force:
-            raise UserAbortError(
-                "Can't override existing target file "
-                f"{target}. "
-                "Use --force to allow explicitly."
-            )
-    print(f"DONE upstream conf saved as {target}!")
+    upstream_conf.save(target, force=force)
 
 
 def get_gh_gf_family_entry(family_name):
