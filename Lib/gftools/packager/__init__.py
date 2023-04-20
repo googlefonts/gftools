@@ -17,10 +17,6 @@ from collections import OrderedDict
 import traceback
 from io import StringIO, BytesIO
 import pygit2  # type: ignore
-from strictyaml import (  # type: ignore
-    as_document,
-    YAML,
-)
 import functools
 from hashlib import sha1
 import humanize
@@ -47,9 +43,8 @@ from gftools.packager.constants import (
 )
 from gftools.packager.exceptions import UserAbortError, ProgramAbortError
 from gftools.packager.upstream import (
-    upstream_yaml_stripped_schema,
+    UpstreamConfig,
     get_upstream_info,
-    format_upstream_yaml,
     output_upstream_yaml,
 )
 
@@ -203,7 +198,7 @@ def _copy_upstream_files_from_dir(
 
 
 def _create_or_update_metadata_pb(
-    upstream_conf: YAML,
+    upstream_conf: UpstreamConfig,
     tmp_package_family_dir: str,
     upstream_commit_sha: str = None,
     upstream_archive_url: str = None,
@@ -251,17 +246,17 @@ def _create_or_update_metadata_pb(
 def _create_package_content(
     package_target_dir: str,
     repos_dir: str,
-    upstream_conf_yaml: YAML,
+    upstream_conf: UpstreamConfig,
     license_dir: str,
     gf_dir_content: dict,
     allow_build: bool,
     no_allowlist: bool = False,
 ) -> str:
-    print(f"Creating package with \n{format_upstream_yaml(upstream_conf_yaml)}")
-    upstream_conf = upstream_conf_yaml.data
+    print(f"Creating package with \n{upstream_conf.format()}")
+    upstream_conf = upstream_conf.all_data
     upstream_commit_sha = None
 
-    family_name_normal = _family_name_normal(upstream_conf["name"])
+    family_name_normal = _family_name_normal(upstream_conf.family_name)
     family_dir = os.path.join(license_dir, family_name_normal)
     package_family_dir = os.path.join(package_target_dir, family_dir)
     # putting state into functions, could be done with classes/methods as well
@@ -370,20 +365,8 @@ def _create_package_content(
     # create/update upstream.yaml
     # Remove keys that are also in METADATA.pb googlefonts/gftools#233
     # and also clear all comments.
-    redundant_keys = {"name", "category", "designer", "repository_url"}
-    upstream_conf_stripped = OrderedDict(
-        (k, v) for k, v in upstream_conf.items() if k not in redundant_keys
-    )
-    # Don't keep an empty build key.
-    if "build" in upstream_conf_stripped and (
-        upstream_conf_stripped["build"] == "" or upstream_conf_stripped["build"] is None
-    ):
-        del upstream_conf_stripped["build"]
-    upstream_conf_stripped_yaml = as_document(
-        upstream_conf_stripped, upstream_yaml_stripped_schema
-    )
-    with open(os.path.join(package_family_dir, "upstream.yaml"), "w") as f:
-        f.write(upstream_conf_stripped_yaml.as_yaml())
+    stripped = upstream_conf.stripped()
+    stripped.save(os.path.join(package_family_dir, "upstream.yaml"), force=True)
     print(f'DONE Creating package for {upstream_conf["name"]}!')
     return family_dir
 
@@ -752,24 +735,6 @@ def _packagage_to_dir(
     _print_package_report(target_label, package_contents)
 
 
-def _write_upstream_yaml_backup(upstream_conf_yaml: YAML) -> str:
-    family_name_normal = _family_name_normal(upstream_conf_yaml["name"].data)
-    count = 0
-    while True:
-        counter = "" if count == 0 else f"_{count}"
-        filename = f"./{family_name_normal}.upstream{counter}.yaml"
-        try:
-            # 'x': don't override existing files
-            with open(filename, "x") as f:
-                f.write(upstream_conf_yaml.as_yaml())
-        except FileExistsError:
-            # retry until the file could be created, file name changes
-            count += 1
-            continue
-        break
-    return filename
-
-
 def _packages_to_target(
     tmp_package_dir: str,
     family_dirs: typing.List[str],
@@ -878,7 +843,7 @@ def make_package(
         for file_or_family in file_or_families:
             is_file = _file_or_family_is_file(file_or_family)
             (
-                upstream_conf_yaml,
+                upstream_conf,
                 license_dir,
                 gf_dir_content,
             ) = get_upstream_info(file_or_family, is_file)
@@ -887,7 +852,7 @@ def make_package(
                 family_dir = _create_package_content(
                     tmp_package_dir,
                     tmp_repos_dir,
-                    upstream_conf_yaml,
+                    upstream_conf,
                     license_dir,
                     gf_dir_content,
                     allow_build,
@@ -898,9 +863,7 @@ def make_package(
                 error_io = StringIO()
                 traceback.print_exc(file=error_io)
                 error_io.seek(0)
-                upstream_yaml_backup_filename = _write_upstream_yaml_backup(
-                    upstream_conf_yaml
-                )
+                upstream_yaml_backup_filename = upstream_conf.save_backup()
                 print(
                     f"Upstream conf caused an error:"
                     f"\n-----\n\n{error_io.read()}\n-----\n"
