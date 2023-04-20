@@ -4,5 +4,3 @@ class UserAbortError(Exception):
 
 class ProgramAbortError(Exception):
     pass
-
-

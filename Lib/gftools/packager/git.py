@@ -263,7 +263,7 @@ def git_fetch_main(repo: pygit2.Repository, remote_name: str) -> None:
         stdout=subprocess.PIPE,
     )
 
-    print(f"DONE fetch")  # {_sizeof_fmt(stats.received_bytes)} '
+    print("DONE fetch")  # {_sizeof_fmt(stats.received_bytes)} '
     # f'{stats.indexed_objects} receive dobjects!')
 
 
@@ -291,7 +291,7 @@ def _git_makedirs_write(
     child_tree = tree_builder.get(name)
     try:
         child_tree_builder = repo.TreeBuilder(child_tree)
-    except TypeError as e:
+    except TypeError:
         # will raise TypeError if license_dir_tree is None i.e. not exisiting
         # but also if child_tree is not a pygit2.GIT_FILEMODE_TREE
 

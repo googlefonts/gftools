@@ -1,10 +1,10 @@
 # Things dealing with upstream.yaml files
 
-from pkg_resources import resource_filename
 import typing
 from typing import TYPE_CHECKING
 from collections import OrderedDict
 
+from pkg_resources import resource_filename
 from strictyaml import (  # type: ignore
     Map,
     UniqueSeq,
@@ -37,6 +37,8 @@ from gftools.packager.constants import (
 from gftools.packager.exceptions import UserAbortError, ProgramAbortError
 
 # Copied from packager, needs moving later
+
+
 def _file_or_family_is_file(file_or_family: str) -> bool:
     return file_or_family.endswith(".yaml") or file_or_family.endswith(
         ".yml"
