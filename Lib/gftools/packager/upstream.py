@@ -2,10 +2,6 @@
 
 from pkg_resources import resource_filename
 from collections import OrderedDict
-from tempfile import mkstemp
-import sys
-import subprocess
-import os
 import typing
 from typing import TYPE_CHECKING
 
@@ -34,15 +30,13 @@ else:
 from gftools.github import GitHubClient
 from gftools.packager.constants import (
     CATEGORIES,
-    CLEARLINE,
     GITHUB_GRAPHQL_GET_FAMILY_ENTRY,
     LICENSE_DIRS,
-    TOLEFT,
 )
 from gftools.packager import _file_or_family_is_file  # For now
 from gftools.packager import _family_name_normal  # For now
 from gftools.packager.exceptions import UserAbortError, ProgramAbortError
-from gftools.packager.interaction import user_input, get_editor_command
+from gftools.packager.interaction import user_input
 
 
 with open(resource_filename("gftools", "template.upstream.yaml")) as f:
@@ -117,114 +111,6 @@ def format_upstream_yaml(upstream_yaml: YAML, compact: bool = True):
     return f"{top}\n" f"{content}" f'{"-"*len(top)}'
 
 
-def _repl_upstream_conf(
-    initial_upstream_conf: str,
-    yes: bool = False,
-    quiet: bool = False,
-    use_template_schema=False,
-):
-    if yes:
-        raise UserAbortError()
-    # repl means "read-eval-print loop"
-    editor = get_editor_command()
-
-    # it would be nice to have a location where the file can be inspected
-    # after this program ends, similar to swp files of vim or how git stores
-    # such files. However, that should maybe be in the upstream repository
-    # rather than in the current working directory. Since I'm undecided
-    # I simply go with a temp file
-    _tempfilefd, upstream_yaml_file_name = mkstemp(suffix=".yaml", prefix="upstream")
-    try:
-        # Unlike TemporaryFile(), the user of mkstemp() is responsible for
-        # deleting the temporary file when done with it.
-        os.close(_tempfilefd)
-        print(f"temp file name is {upstream_yaml_file_name}")
-
-        last_good_conf = None
-        edit_challenge = initial_upstream_conf
-
-        while True:
-            # truncates the file on open
-            with open(upstream_yaml_file_name, "w") as upstream_yaml_file:
-                upstream_yaml_file.write(edit_challenge)
-            # open it in an editor
-            # NOTE the carriage return, this line will be removed again.
-            # not sure if this should go to stdout or stderr
-            print(
-                "hint: Waiting for your editor to close the file ...",
-                end="",
-                flush=True,
-                file=sys.stderr,
-            )
-            subprocess.run([editor, upstream_yaml_file_name])
-            print(CLEARLINE + TOLEFT, end="", flush=True, file=sys.stderr)
-
-            # read the file
-            with open(upstream_yaml_file_name, "r") as upstream_yaml_file:
-                updated_upstream_conf = upstream_yaml_file.read()
-
-            # parse the file
-            try:
-                yaml_schema = (
-                    upstream_yaml_schema
-                    if not use_template_schema
-                    else upstream_yaml_template_schema
-                )
-                last_good_conf = dirty_load(
-                    updated_upstream_conf, yaml_schema, allow_flow_style=True
-                )
-            except Exception as e:
-                answer = user_input(
-                    f"The configuration did not parse ({type(e).__name__}):\n\n" f"{e}",
-                    OrderedDict(
-                        f="fix last edit",
-                        r="retry last edit",
-                        s="start all over",
-                        q="quit program",
-                    ),
-                    # the default should always be an option that does
-                    # not require user interaction. That way we can
-                    # have an all -y/--no-confirm flag that always
-                    # chooses the default.
-                    default="q",
-                    yes=yes,
-                    quiet=quiet,
-                )
-                if answer == "f":
-                    edit_challenge = updated_upstream_conf
-                elif answer == "r":
-                    # edit_challenge = edit_challenge
-                    pass
-                elif answer == "s":
-                    edit_challenge = initial_upstream_conf
-                else:  # anser == 'q':
-                    raise UserAbortError()
-                continue
-
-            return last_good_conf
-            # This was thought as an extra check for the user, but I think it's
-            # rather anoying than helpful. Note, the user just edited and
-            # it parsed successfully.
-            # # Ask the user if this looks good.
-            # answer = user_input('Use this upstream configuration?\n'
-            #       f'{format_upstream_yaml(last_good_conf)}',
-            #       OrderedDict(y='yes',
-            #                   e='edit again',
-            #                   s='start all over',
-            #                   q='quit program'),
-            #       default='y', yes=yes, quiet=quiet)
-            # if answer == 'y':
-            #   return last_good_conf
-            # elif answer == 'e':
-            #   edit_challenge = last_good_conf.as_yaml()
-            # elif answer == 's':
-            #   edit_challenge = initial_upstream_conf
-            # else: # answer == 'q':
-            #   raise UserAbortError()
-    finally:
-        os.unlink(upstream_yaml_file_name)
-
-
 def _load_upstream(
     upstream_yaml_text: str,
     use_template_schema: bool = False,
@@ -290,11 +176,8 @@ def _upstream_conf_from_scratch(
 
     if use_template_schema and yes:  # for -u/--upstream-yaml
         return upstream_conf_yaml
-
-    template = upstream_conf_yaml.as_yaml()
-    return _repl_upstream_conf(
-        template, yes=yes, quiet=quiet, use_template_schema=use_template_schema
-    )
+    else:
+        raise UserAbortError()
 
 
 def _upstream_conf_from_yaml_metadata(
@@ -451,40 +334,6 @@ def get_upstream_info(
         quiet=quiet,
         use_template_schema=use_template_schema,
     )
-
-    return upstream_conf_yaml, license_dir, gf_dir_content or {}
-
-
-def edit_upstream_info(
-    upstream_conf_yaml: YAML, file_or_family: str, is_file: bool, yes: bool, quiet: bool
-) -> typing.Tuple[YAML, str, dict]:
-    license_dir = None
-    gf_dir_content: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
-
-    print(f"Edit upstream conf.")
-    upstream_conf_yaml = _repl_upstream_conf(
-        upstream_conf_yaml.as_yaml(), yes=yes, quiet=quiet
-    )
-    if is_file:
-        answer = user_input(
-            f"Save changed file {file_or_family}?",
-            OrderedDict(y="yes", n="no"),
-            default="y",
-            yes=yes,
-            quiet=quiet,
-        )
-        if answer == "y":
-            with open(file_or_family, "w") as upstream_yaml_file:
-                upstream_yaml_file.write(upstream_conf_yaml.as_yaml())
-    family_name = upstream_conf_yaml["name"].data
-    # if family_name can't be found:
-    #    license_dir is None, gf_dir_content is an empty dict
-    license_dir, gf_dir_content = _get_gf_dir_content(family_name)
-    if license_dir is None:
-        # The family is not specified or not found on google/fonts.
-        # Can also be an user input error, but we don't handle this yet/here.
-        print(f'Font Family "{family_name}" not found on Google Fonts.')
-        license_dir = _user_input_license(yes=yes, quiet=quiet)
 
     return upstream_conf_yaml, license_dir, gf_dir_content or {}
 
