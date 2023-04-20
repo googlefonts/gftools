@@ -32,6 +32,7 @@ from gftools.packager.constants import (
     CATEGORIES,
     GITHUB_GRAPHQL_GET_FAMILY_ENTRY,
     LICENSE_DIRS,
+    NOTO_GITHUB_URL,
 )
 
 from gftools.packager.exceptions import UserAbortError, ProgramAbortError
@@ -247,6 +248,22 @@ class UpstreamConfig:
         return UpstreamConfig(
             as_document(upstream_conf_stripped, upstream_yaml_stripped_schema)
         )
+
+    def fill_metadata(self, metadata):
+        """Copy information from upstream.yml into the metadata.pb"""
+        metadata.name = self.get("name")
+        for font in metadata.fonts:
+            font.name = self.get("name")
+        metadata.designer = self.get("designer")
+
+        metadata.category[:] = self.get("category")
+
+        # metadata.date_added # is handled well
+
+        metadata.source.repository_url = self.get("repository_url")
+
+        if self.get("repository_url").startswith(NOTO_GITHUB_URL):
+            metadata.is_noto = True
 
 
 def _upstream_conf_from_yaml_metadata(
