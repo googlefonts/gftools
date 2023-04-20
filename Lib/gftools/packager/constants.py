@@ -75,3 +75,10 @@ ALLOWED_FILES = {
     # version in google fonts or create it newly
 }
 
+# ANSI controls
+TOLEFT = "\u001b[1000D"  # Move all the way left (max 1000 steps
+CLEARLINE = "\u001b[2K"  # Clear the line
+# UP =  '\u001b[1A' # moves cursor 1 up
+# reset = (CLEARLINE + UP) * num_linebeaks + TOLEFT
+
+

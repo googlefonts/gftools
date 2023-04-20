@@ -7,7 +7,7 @@ Documentation at gftools/docs/gftools-packager/README.md
 
 import sys
 from gftools import packager
-from gftools.packager import UserAbortError, ProgramAbortError
+from gftools.packager.exceptions import UserAbortError, ProgramAbortError
 import argparse
 
 def _ansi_bold(text:str) ->str:
