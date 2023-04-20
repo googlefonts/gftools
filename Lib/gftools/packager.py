@@ -333,46 +333,13 @@ def _create_package_content(
         # enables making packages even when new, yet unknown files are required).
         # Do we have a Font Bakery check for expected/allowed files? Would
         # be a good complement.
-        if upstream_conf["build"]:
-            print(f'Found build command:\n  $ {upstream_conf["build"]}')
-            if not allow_build:
-                answer = user_input(
-                    f"Can't execute build command without explicit "
-                    "permission. Don't allow this lightly "
-                    "and review build command, build process and its dependencies prior. "
-                    "This support for building from sources is provisional, a "
-                    "discussion can be found at https://github.com/googlefonts/gftools/issues/231",
-                    OrderedDict(b="build", q="quit program"),
-                    default="q",
-                    yes=yes,
-                    quiet=quiet,
-                )
-                if answer == "q":
-                    raise UserAbortError(
-                        "Can't execute required build command. "
-                        "Use --allow-build to allow explicitly."
-                    )
-            with TemporaryDirectory() as tmp:
-                print(f"Building...")
-                subprocess.run(["git", "clone", upstream_dir, tmp], check=True)
-                subprocess.run(
-                    ["bash", "-c", upstream_conf["build"]], cwd=tmp, check=True
-                )
-                print(f"DONE building!")
-                skipped = _copy_upstream_files_from_dir(
-                    tmp,
-                    upstream_conf["files"],
-                    write_file_to_package,
-                    no_allowlist=no_allowlist,
-                )
-        else:
-            skipped = _copy_upstream_files_from_git(
-                upstream_conf["branch"],
-                upstream_conf["files"],
-                repo,
-                write_file_to_package,
-                no_allowlist=no_allowlist,
-            )
+        skipped = _copy_upstream_files_from_git(
+            upstream_conf["branch"],
+            upstream_conf["files"],
+            repo,
+            write_file_to_package,
+            no_allowlist=no_allowlist,
+        )
     if skipped:
         message = ["Some files from upstream_conf could not be copied."]
         for reason, items in skipped.items():
