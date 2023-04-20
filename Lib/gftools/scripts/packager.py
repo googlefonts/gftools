@@ -194,8 +194,6 @@ def main(args=None):
             if args.subcommand == "package-git":
                 if args.push_upstream and not args.pr:
                     parser.error("--push-upstream cannot be used without --pr")
-                if args.pr_upstream and not args.pr:
-                    parser.error("--pr-upstream cannot be used without --pr")
             packager.make_package(args)
 
     except UserAbortError as e:
