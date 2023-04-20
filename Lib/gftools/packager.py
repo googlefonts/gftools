@@ -46,7 +46,6 @@ from gftools.packager.constants import (
     GIT_NEW_BRANCH_PREFIX,
 )
 from gftools.packager.exceptions import UserAbortError, ProgramAbortError
-from gftools.packager.interaction import user_input
 from gftools.packager.upstream import (
     upstream_yaml_stripped_schema,
     get_upstream_info,
@@ -643,31 +642,14 @@ def _git_make_commit(
 
     commit = repo.get(commit_id)
     # create branch or add to an existing one if add_commit
-    while True:
-        try:
-            repo.branches.local.create(local_branch, commit, force=add_commit or force)
-        except pygit2.AlreadyExistsError:
-            # _pygit2.AlreadyExistsError: failed to write reference
-            #     'refs/heads/gftools_packager_ofl_gelasio': a reference with
-            #     that name already exists.
-            answer = user_input(
-                f"Can't override existing branch {local_branch}"
-                " without explicit permission.",
-                OrderedDict(f="force override", q="quit program"),
-                default="q",
-                yes=yes,
-                quiet=quiet,
-            )
-            if answer == "q":
-                raise UserAbortError(
-                    f"Can't override existing branch {local_branch}. "
-                    "Use --branch to specify another branch name. "
-                    "Use --force to allow explicitly."
-                )
-            else:  # answer == 'f'
-                force = True
-                continue
-        break
+    try:
+        repo.branches.local.create(local_branch, commit, force=add_commit or force)
+    except pygit2.AlreadyExistsError:
+        raise UserAbortError(
+            f"Can't override existing branch {local_branch}. "
+            "Use --branch to specify another branch name. "
+            "Use --force to allow explicitly."
+        )
 
     # only for reporting
     target_label = f"git branch {local_branch}"
@@ -757,20 +739,11 @@ def _packagage_to_dir(
     target_family_dir = os.path.join(target, family_dir)
     if os.path.exists(target_family_dir):
         if not force:
-            answer = user_input(
-                f"Can't override existing directory {target_family_dir}"
-                " without explicit permission.",
-                OrderedDict(f="force override", q="quit program"),
-                default="q",
-                yes=yes,
-                quiet=quiet,
+            raise UserAbortError(
+                "Can't override existing directory "
+                f"{target_family_dir}. "
+                "Use --force to allow explicitly."
             )
-            if answer == "q":
-                raise UserAbortError(
-                    "Can't override existing directory "
-                    f"{target_family_dir}. "
-                    "Use --force to allow explicitly."
-                )
         shutil.rmtree(target_family_dir)
     else:  # not exists
         os.makedirs(os.path.dirname(target_family_dir), exist_ok=True)
