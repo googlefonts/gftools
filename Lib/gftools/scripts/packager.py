@@ -77,20 +77,6 @@ for a_parser in [packager_parser, package_local_parser]:
         "be used regularly. Instead file an issue to add new "
         "files to the allowlist.",
     )
-    a_parser.add_argument(
-        "file_or_families",
-        metavar="name",
-        type=str,
-        nargs="*",
-        help="The family name(s) or file name(s) of upstream conf yaml "
-        'files to be packaged. If a name ends with the ".yaml" suffix, '
-        "it's treated as a file otherwise it's used as family name "
-        "and  packager tries to gather upstream configuration from "
-        "the google/fonts GitHub repository. If no name is specified, "
-        "no package will be created. This is useful to only make a "
-        "PR from an already created branch, not adding a commit, "
-        "use -b/--branch and see see -p/--pr.",
-    )
 
     a_parser.add_argument(
         "--force",
@@ -111,6 +97,18 @@ package_local_parser.add_argument(
     help="Package the font to a local directory for testing purposes. "
     "See -f/--force to allow changing non-empty directories. ",
 )
+package_local_parser.add_argument(
+    "file_or_families",
+    metavar="name",
+    type=str,
+    nargs="+",
+    help="The family name(s) or file name(s) of upstream conf yaml "
+    'files to be packaged. If a name ends with the ".yaml" suffix, '
+    "it's treated as a file otherwise it's used as family name "
+    "and  packager tries to gather upstream configuration from "
+    "the google/fonts GitHub repository.",
+)
+
 
 # Packager
 
@@ -123,6 +121,22 @@ packager_parser.add_argument(
     "create or override a branch from upstream main using a generated "
     "default branch name or a branch name specified with -b/--branch",
 )
+
+packager_parser.add_argument(
+    "file_or_families",
+    metavar="name",
+    type=str,
+    nargs="*",
+    help="The family name(s) or file name(s) of upstream conf yaml "
+    'files to be packaged. If a name ends with the ".yaml" suffix, '
+    "it's treated as a file otherwise it's used as family name "
+    "and  packager tries to gather upstream configuration from "
+    "the google/fonts GitHub repository. If no name is specified, "
+    "no package will be created. This is useful to only make a "
+    "PR from an already created branch, not adding a commit, "
+    "use -b/--branch and see see -p/--pr.",
+)
+
 
 packager_parser.add_argument(
     "-b",
