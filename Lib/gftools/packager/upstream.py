@@ -214,8 +214,11 @@ class UpstreamConfig:
                 )
         print(f"DONE upstream conf saved as {target}!")
 
-    def __getattr__(self, key):
+    def get(self, key):
         return self.upstream_yaml[key]
+
+    def set(self, key, value):
+        self.upstream_yaml[key] = value
 
     def save_backup(self):
         family_name_normal = self.normalized_family_name
@@ -284,33 +287,30 @@ def _upstream_conf_from_yaml_metadata(
             }
         )
     if upstream_yaml_text is not None:
-        upstream_conf = UpstreamConfig.load(
+        upstream_conf_yaml = UpstreamConfig.load(
             upstream_yaml_text, use_template_schema=True
         )
         # Override keys set by METADATA.pb before, if there's overlap.
-        upstream_conf.update(upstream_conf.present_data)
+        upstream_conf.update(upstream_conf_yaml.present_data)
 
-    upstream_conf = dirty_load(
-        upstream_yaml_template, upstream_yaml_template_schema, allow_flow_style=True
-    )
+    upstream_conf_yaml = UpstreamConfig.template()
     for k, v in upstream_conf.items():
         if v is None:
             continue
-        upstream_conf[k] = v
+        upstream_conf_yaml.set(k, v)
 
-    upstream_yaml_text = upstream_conf.as_text()
+    upstream_yaml_text = upstream_conf_yaml.as_text()
     assert upstream_yaml_text is not None
 
-    upstream_conf = UpstreamConfig.load(
+    return UpstreamConfig.load(
         upstream_yaml_text,
         use_template_schema=use_template_schema,
     )
-    return upstream_conf
 
 
 def get_upstream_info(
-    file_or_family: str,
-    is_file: bool,
+    file: str,
+    family_name: str,
     require_license_dir: bool = True,
     use_template_schema: bool = False,
 ) -> typing.Tuple[YAML, typing.Union[str, None], dict]:
@@ -320,12 +320,9 @@ def get_upstream_info(
     upstream_conf = None
     gf_dir_content: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
 
-    if not is_file:
-        family_name = file_or_family
-    else:
-        # load a upstream.yaml from disk
+    if file:
         upstream_conf = UpstreamConfig.from_file(
-            file_or_family,
+            file,
             use_template_schema=use_template_schema,
         )
         family_name = upstream_conf.family_name
@@ -400,10 +397,15 @@ def output_upstream_yaml(
         # use the template
         upstream_conf = UpstreamConfig.template()
     else:
-        is_file = _file_or_family_is_file(file_or_family)
+        if _file_or_family_is_file(file_or_family):
+            file = file_or_family
+            family_name = None
+        else:
+            family_name = file_or_family
+            file = None
         upstream_conf, _, _ = get_upstream_info(
-            file_or_family,
-            is_file,
+            file,
+            family_name,
             require_license_dir=False,
             use_template_schema=True,
         )

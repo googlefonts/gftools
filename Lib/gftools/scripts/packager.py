@@ -7,6 +7,7 @@ Documentation at gftools/docs/gftools-packager/README.md
 
 import sys
 from gftools import packager
+from gftools.packager import upstream
 from gftools.packager.exceptions import UserAbortError, ProgramAbortError
 import argparse
 
@@ -117,20 +118,16 @@ parser.add_argument(
                  'forward compatibility with new files and should not '
                  'be used regularly. Instead file an issue to add new '
                  'files to the allowlist.')
-parser.add_argument(
-            '-B', '--allow-build',
-            action='store_true',
-            help='Allow executing the bash command stored in the "build" '
-            'key of upstream-conf, if present. Don\'t allow this lightly '
-            'and review build command, build process and its dependencies prior. '
-            'This support for building from sources is provisional, a '
-            'discussion can be found at https://github.com/googlefonts/gftools/issues/231'
-            )
 
 def main(args=None):
     args = parser.parse_args(args)
     try:
-      packager.make_package(**args.__dict__)
+      if args.upstream_yaml:
+        return upstream.output_upstream_yaml(
+            args.file_or_families[0] if args.file_or_families else None, args.target, args.force
+        )
+      else:
+           packager.make_package(**args.__dict__)
     except UserAbortError as e:
       print('Aborted', f'{e}')
       sys.exit(1)
