@@ -138,17 +138,10 @@ class UpstreamConfig:
     def from_file(cls, filename, use_template_schema: bool = False):
         with open(filename, "r+") as upstream_yaml_file:
             upstream_yaml_text = upstream_yaml_file.read()
-            edited, upstream_conf_yaml = cls.load(
+            return cls.load(
                 upstream_yaml_text,
                 use_template_schema=use_template_schema,
             )
-            # "edited" is only true when upstream_yaml_text did not parse and
-            # was then edited successfully.
-            if edited:
-                upstream_yaml_file.seek(0)
-                upstream_yaml_file.truncate()
-                upstream_yaml_file.write(upstream_conf_yaml.as_yaml())
-        return UpstreamConfig(upstream_conf_yaml)
 
     @classmethod
     def from_scratch(
@@ -186,7 +179,6 @@ class UpstreamConfig:
         """Returns a dictionary of values which are not None"""
         return {k: v for k, v in self.upstream_yaml.data.items() if v is not None}
 
-    @property
     def all_data(self):
         return self.upstream_yaml.data
 
@@ -215,7 +207,7 @@ class UpstreamConfig:
         print(f"DONE upstream conf saved as {target}!")
 
     def get(self, key):
-        return self.upstream_yaml[key]
+        return self.upstream_yaml[key].data
 
     def set(self, key, value):
         self.upstream_yaml[key] = value
@@ -240,7 +232,9 @@ class UpstreamConfig:
     def stripped(self):
         redundant_keys = {"name", "category", "designer", "repository_url"}
         upstream_conf_stripped = OrderedDict(
-            (k, v) for k, v in self.upstream_yaml.items() if k not in redundant_keys
+            (k, v)
+            for k, v in self.upstream_yaml.data.items()
+            if k not in redundant_keys
         )
         # Don't keep an empty build key.
         if "build" in upstream_conf_stripped and (
@@ -388,28 +382,18 @@ def get_upstream_info(
     return upstream_conf, license_dir, gf_dir_content or {}
 
 
-def output_upstream_yaml(
-    file_or_family: typing.Union[str, None],
-    target: str,
-    force: bool,
-) -> None:
-    if not file_or_family:
+def output_upstream_yaml(args) -> None:
+    if not args.family:
         # use the template
         upstream_conf = UpstreamConfig.template()
     else:
-        if _file_or_family_is_file(file_or_family):
-            file = file_or_family
-            family_name = None
-        else:
-            family_name = file_or_family
-            file = None
         upstream_conf, _, _ = get_upstream_info(
-            file,
-            family_name,
+            None,
+            args.family,
             require_license_dir=False,
             use_template_schema=True,
         )
-    upstream_conf.save(target, force=force)
+    upstream_conf.save(args.target, force=args.force)
 
 
 def get_gh_gf_family_entry(family_name):
