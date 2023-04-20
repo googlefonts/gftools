@@ -41,7 +41,7 @@ from gftools.packager.constants import (
 )
 from gftools.packager import _file_or_family_is_file  # For now
 from gftools.packager import _family_name_normal  # For now
-from gftools.packager.exceptions import UserAbortError
+from gftools.packager.exceptions import UserAbortError, ProgramAbortError
 from gftools.packager.interaction import user_input, get_editor_command
 
 
@@ -225,10 +225,8 @@ def _repl_upstream_conf(
         os.unlink(upstream_yaml_file_name)
 
 
-def _load_or_repl_upstream(
+def _load_upstream(
     upstream_yaml_text: str,
-    yes: bool = False,
-    quiet: bool = False,
     use_template_schema: bool = False,
 ) -> typing.Tuple[bool, YAML]:
     try:
@@ -239,21 +237,8 @@ def _load_or_repl_upstream(
         )
         return False, dirty_load(upstream_yaml_text, yaml_schema, allow_flow_style=True)
     except YAMLValidationError as err:
-        answer = user_input(
-            "The configuration has schema errors:\n\n" f"{err}",
-            OrderedDict(e="edit", q="quit program"),
-            default="q",
-            yes=yes,
-            quiet=quiet,
-        )
-        if answer == "q":
-            raise UserAbortError()
-        return True, _repl_upstream_conf(
-            upstream_yaml_text,
-            yes=yes,
-            quiet=quiet,
-            use_template_schema=use_template_schema,
-        )
+        print("The configuration has schema errors:\n\n" f"{err}")
+        raise ProgramAbortError()
 
 
 def _upstream_conf_from_file(
@@ -269,10 +254,8 @@ def _upstream_conf_from_file(
     """
     with open(filename, "r+") as upstream_yaml_file:
         upstream_yaml_text = upstream_yaml_file.read()
-        edited, upstream_conf_yaml = _load_or_repl_upstream(
+        edited, upstream_conf_yaml = _load_upstream(
             upstream_yaml_text,
-            yes=yes,
-            quiet=quiet,
             use_template_schema=use_template_schema,
         )
         # "edited" is only true when upstream_yaml_text did not parse and
@@ -353,8 +336,8 @@ def _upstream_conf_from_yaml_metadata(
         # Only drop into REPL mode if can't parse and validate,
         # and use use_template_schema, because this is not the real deal
         # yet and we can be very forgiving.
-        _, upstream_conf_yaml = _load_or_repl_upstream(
-            upstream_yaml_text, yes=yes, quiet=quiet, use_template_schema=True
+        _, upstream_conf_yaml = _load_upstream(
+            upstream_yaml_text, use_template_schema=True
         )
 
         # remove None values:
@@ -392,10 +375,8 @@ def _upstream_conf_from_yaml_metadata(
             quiet=quiet,
             use_template_schema=use_template_schema,
         )
-    _, upstream_conf_yaml = _load_or_repl_upstream(
+    _, upstream_conf_yaml = _load_upstream(
         upstream_yaml_text,
-        yes=yes,
-        quiet=quiet,
         use_template_schema=use_template_schema,
     )
     return upstream_conf_yaml

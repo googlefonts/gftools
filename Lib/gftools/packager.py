@@ -51,7 +51,6 @@ from gftools.packager.upstream import (
     upstream_yaml_stripped_schema,
     get_upstream_info,
     format_upstream_yaml,
-    edit_upstream_info,
     output_upstream_yaml,
 )
 
@@ -956,91 +955,38 @@ def make_package(
 
         for file_or_family in file_or_families:
             is_file = _file_or_family_is_file(file_or_family)
-            edit = False
-            while True:  # repl
-                if not edit:
-                    (
-                        upstream_conf_yaml,
-                        license_dir,
-                        gf_dir_content,
-                    ) = get_upstream_info(file_or_family, is_file, yes, quiet)
-                else:
-                    (
-                        upstream_conf_yaml,
-                        license_dir,
-                        gf_dir_content,
-                    ) = edit_upstream_info(
-                        upstream_conf_yaml, file_or_family, is_file, yes, quiet
-                    )
-                    edit = False  # reset
-                assert isinstance(license_dir, str)
-                try:
-                    family_dir = _create_package_content(
-                        tmp_package_dir,
-                        tmp_repos_dir,
-                        upstream_conf_yaml,
-                        license_dir,
-                        gf_dir_content,
-                        allow_build,
-                        yes,
-                        quiet,
-                        no_allowlist,
-                    )
-                    family_dirs.append(family_dir)
-                except UserAbortError as e:
-                    # The user aborted already, no need to bother any further.
-                    # FIXME: however, we don't get to the point where we can save
-                    # the upstream conf to disk, and that may be desirable here!
-                    raise e
-                except Exception:
-                    error_io = StringIO()
-                    traceback.print_exc(file=error_io)
-                    error_io.seek(0)
-                    answer = user_input(
-                        f"Upstream conf caused an error:"
-                        f"\n-----\n\n{error_io.read()}\n-----\n"
-                        "How do you want to proceed?",
-                        OrderedDict(
-                            e="edit upstream conf and retry", q="raise and quit program"
-                        ),
-                        default="q",
-                        yes=yes,
-                        quiet=quiet,
-                    )
-                    if answer == "q":
-                        if not yes:
-                            # Should be possible to save to original file if is_file
-                            # but we should give that option only if the file would change.
-                            # Also, in edit_upstream_info it is possible to save to the
-                            # original file.
-                            answer = user_input(
-                                "Save upstream conf to disk?\nIt can be "
-                                "annoying having to redo all changes, which "
-                                "will be lost if you choose no.\n"
-                                "The saved file can be edited and used with "
-                                "the --file option.",
-                                OrderedDict(
-                                    y="yes—save to disk", n="no—discard changes"
-                                ),
-                                default="y",
-                                yes=yes,
-                                quiet=quiet,
-                            )
-                            if answer == "y":
-                                upstream_yaml_backup_filename = (
-                                    _write_upstream_yaml_backup(upstream_conf_yaml)
-                                )
-                                print(
-                                    f"Upstream conf has been saved to: {upstream_yaml_backup_filename}"
-                                )
-                        raise UserAbortError()
-                    else:
-                        # answer == 'e'
-                        # continue loop: go back to _get_upstream_info
-                        edit = True
-                        continue
-                # Done with file_or_family!
-                break  # break the REPL while loop.
+            (
+                upstream_conf_yaml,
+                license_dir,
+                gf_dir_content,
+            ) = get_upstream_info(file_or_family, is_file, yes, quiet)
+            assert isinstance(license_dir, str)
+            try:
+                family_dir = _create_package_content(
+                    tmp_package_dir,
+                    tmp_repos_dir,
+                    upstream_conf_yaml,
+                    license_dir,
+                    gf_dir_content,
+                    allow_build,
+                    yes,
+                    quiet,
+                    no_allowlist,
+                )
+                family_dirs.append(family_dir)
+            except Exception:
+                error_io = StringIO()
+                traceback.print_exc(file=error_io)
+                error_io.seek(0)
+                upstream_yaml_backup_filename = _write_upstream_yaml_backup(
+                    upstream_conf_yaml
+                )
+                print(
+                    f"Upstream conf caused an error:"
+                    f"\n-----\n\n{error_io.read()}\n-----\n"
+                    f"Upstream conf has been saved to: {upstream_yaml_backup_filename}"
+                )
+                raise UserAbortError()
         if not family_dirs:
             print("No families to package.")
         # done with collecting data for all file_or_families
