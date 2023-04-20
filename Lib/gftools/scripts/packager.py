@@ -26,14 +26,6 @@ parser = argparse.ArgumentParser(
     "https://github.com/googlefonts/gftools/issues",
 )
 
-parser.add_argument(
-    "--force",
-    action="store_true",
-    help="This allows the program to manipulate/change/delete data "
-    "in [target]. Without this flag only adding new items "
-    "is allowed.",
-)
-
 subparsers = parser.add_subparsers(
     dest="subcommand",
     title="subcommands",
@@ -99,6 +91,15 @@ for a_parser in [packager_parser, package_local_parser]:
         "PR from an already created branch, not adding a commit, "
         "use -b/--branch and see see -p/--pr.",
     )
+
+    a_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="This allows the program to manipulate/change/delete data "
+        "in [target]. Without this flag only adding new items "
+        "is allowed.",
+    )
+
 
 # Local Packager
 
@@ -180,6 +181,14 @@ upstream_parser.add_argument(
     nargs="?",
     type=str,
     help="A family name; if given, data about this family is retrieved from Google Fonts",
+)
+
+upstream_parser.add_argument(
+    "--force",
+    action="store_true",
+    help="This allows the program to manipulate/change/delete data "
+    "in [target]. Without this flag only adding new items "
+    "is allowed.",
 )
 
 
