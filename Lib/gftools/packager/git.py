@@ -28,7 +28,7 @@ def _git_tree_iterate(path, tree, topdown):
         yield path and os.path.join(*path) or ".", dirs, files
 
 
-def _git_tree_walk(path, tree, topdown=True):
+def git_tree_walk(path, tree, topdown=True):
     yield from _git_tree_iterate(path.split(os.sep), tree[path], topdown)
 
 

@@ -132,10 +132,7 @@ def main(args=None):
     try:
       packager.make_package(**args.__dict__)
     except UserAbortError as e:
-      print('Aborted',
-            'by user!' if not args.yes else \
-            'by program! User interaction required (don\'t use the -y/--no-confirm flag).',
-            f'{e}')
+      print('Aborted', f'{e}')
       sys.exit(1)
     except ProgramAbortError as e:
       print(f'Aborted by program: {e}')

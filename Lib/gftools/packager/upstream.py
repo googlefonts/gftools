@@ -33,9 +33,14 @@ from gftools.packager.constants import (
     GITHUB_GRAPHQL_GET_FAMILY_ENTRY,
     LICENSE_DIRS,
 )
-from gftools.packager import _file_or_family_is_file  # For now
-from gftools.packager import _family_name_normal  # For now
+
 from gftools.packager.exceptions import UserAbortError, ProgramAbortError
+
+# Copied from packager, needs moving later
+def _file_or_family_is_file(file_or_family: str) -> bool:
+    return file_or_family.endswith(".yaml") or file_or_family.endswith(
+        ".yml"
+    )  # .yml is common, too
 
 
 with open(resource_filename("gftools", "template.upstream.yaml")) as f:
@@ -97,6 +102,10 @@ upstream_yaml_stripped_schema = Map(
 )
 
 
+def normalize_family_name(name):
+    return name.lower().replace(" ", "").replace(".", "").replace("/", "")
+
+
 class UpstreamConfig:
     upstream_yaml: YAML
 
@@ -109,6 +118,7 @@ class UpstreamConfig:
 
     @classmethod
     def load(
+        cls,
         upstream_yaml_text: str,
         use_template_schema: bool = False,
     ):
@@ -174,18 +184,22 @@ class UpstreamConfig:
     @property
     def present_data(self):
         """Returns a dictionary of values which are not None"""
-        return {k: v for k, v in self.upstream_conf.data.items() if v is not None}
+        return {k: v for k, v in self.upstream_yaml.data.items() if v is not None}
 
     @property
     def all_data(self):
-        return self.upstream_conf.data
+        return self.upstream_yaml.data
 
     @property
     def family_name(self):
-        return self.upstream_conf["name"].data
+        return self.upstream_yaml["name"].data
+
+    @property
+    def normalized_family_name(self):
+        return normalize_family_name(self.family_name)
 
     def as_text(self):
-        return self.upstream_conf.as_yaml()
+        return self.upstream_yaml.as_yaml()
 
     def save(self, target, force=False):
         try:
@@ -201,10 +215,10 @@ class UpstreamConfig:
         print(f"DONE upstream conf saved as {target}!")
 
     def __getattr__(self, key):
-        return self.upstream_conf[key]
+        return self.upstream_yaml[key]
 
     def save_backup(self):
-        family_name_normal = _family_name_normal(self.family_name)
+        family_name_normal = self.normalized_family_name
         count = 0
         while True:
             counter = "" if count == 0 else f"_{count}"
@@ -223,7 +237,7 @@ class UpstreamConfig:
     def stripped(self):
         redundant_keys = {"name", "category", "designer", "repository_url"}
         upstream_conf_stripped = OrderedDict(
-            (k, v) for k, v in self.upstream_conf.items() if k not in redundant_keys
+            (k, v) for k, v in self.upstream_yaml.items() if k not in redundant_keys
         )
         # Don't keep an empty build key.
         if "build" in upstream_conf_stripped and (
@@ -398,7 +412,7 @@ def output_upstream_yaml(
 
 def get_gh_gf_family_entry(family_name):
     # needs input sanitation
-    family_name_normal = _family_name_normal(family_name)
+    family_name_normal = normalize_family_name(family_name)
     result = GitHubClient("google", "fonts")._run_graphql(
         GITHUB_GRAPHQL_GET_FAMILY_ENTRY,
         {

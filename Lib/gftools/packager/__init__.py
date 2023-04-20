@@ -63,8 +63,6 @@ else:
     import gftools.fonts_public_pb2 as fonts_pb2
 
 
-def _family_name_normal(family_name: str) -> str:
-    return family_name.lower().replace(" ", "").replace(".", "").replace("/", "")
 
 
 def _write_file_to_package(basedir: str, filename: str, data: bytes) -> None:
@@ -256,8 +254,7 @@ def _create_package_content(
     upstream_conf = upstream_conf.all_data
     upstream_commit_sha = None
 
-    family_name_normal = _family_name_normal(upstream_conf.family_name)
-    family_dir = os.path.join(license_dir, family_name_normal)
+    family_dir = os.path.join(license_dir, upstream_conf.normalized_family_name)
     package_family_dir = os.path.join(package_target_dir, family_dir)
     # putting state into functions, could be done with classes/methods as well
     write_file_to_package = functools.partial(
