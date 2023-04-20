@@ -1,7 +1,6 @@
 # Things dealing with upstream.yaml files
 
 from pkg_resources import resource_filename
-from collections import OrderedDict
 import typing
 from typing import TYPE_CHECKING
 
@@ -36,7 +35,6 @@ from gftools.packager.constants import (
 from gftools.packager import _file_or_family_is_file  # For now
 from gftools.packager import _family_name_normal  # For now
 from gftools.packager.exceptions import UserAbortError, ProgramAbortError
-from gftools.packager.interaction import user_input
 
 
 with open(resource_filename("gftools", "template.upstream.yaml")) as f:
@@ -129,8 +127,6 @@ def _load_upstream(
 
 def _upstream_conf_from_file(
     filename: str,
-    yes: bool = False,
-    quiet: bool = False,
     use_template_schema: bool = False,
 ) -> YAML:
     """If this parses there will be no repl, the user can edit
@@ -147,24 +143,14 @@ def _upstream_conf_from_file(
         # "edited" is only true when upstream_yaml_text did not parse and
         # was then edited successfully.
         if edited:
-            answer = user_input(
-                f"Save changed file {filename}?",
-                OrderedDict(y="yes", n="no"),
-                default="y",
-                yes=yes,
-                quiet=quiet,
-            )
-            if answer == "y":
-                upstream_yaml_file.seek(0)
-                upstream_yaml_file.truncate()
-                upstream_yaml_file.write(upstream_conf_yaml.as_yaml())
+            upstream_yaml_file.seek(0)
+            upstream_yaml_file.truncate()
+            upstream_yaml_file.write(upstream_conf_yaml.as_yaml())
     return upstream_conf_yaml
 
 
 def _upstream_conf_from_scratch(
     family_name: typing.Union[str, None] = None,
-    yes: bool = False,
-    quiet: bool = False,
     use_template_schema: bool = False,
 ) -> YAML:
 
@@ -174,17 +160,15 @@ def _upstream_conf_from_scratch(
     if family_name is not None:
         upstream_conf_yaml["name"] = family_name
 
-    if use_template_schema and yes:  # for -u/--upstream-yaml
+    if use_template_schema:  # for -u/--upstream-yaml
         return upstream_conf_yaml
-    else:
-        raise UserAbortError()
+
+    raise UserAbortError()
 
 
 def _upstream_conf_from_yaml_metadata(
     upstream_yaml_text: typing.Union[str, None],
     metadata_text: typing.Union[str, None],
-    yes: bool = False,
-    quiet: bool = False,
     use_template_schema: bool = False,
 ) -> YAML:
     """Make a package when the family is in the google/fonts repo.
@@ -251,8 +235,6 @@ def _upstream_conf_from_yaml_metadata(
 def get_upstream_info(
     file_or_family: str,
     is_file: bool,
-    yes: bool,
-    quiet: bool,
     require_license_dir: bool = True,
     use_template_schema: bool = False,
 ) -> typing.Tuple[YAML, typing.Union[str, None], dict]:
@@ -268,8 +250,6 @@ def get_upstream_info(
         # load a upstream.yaml from disk
         upstream_conf_yaml = _upstream_conf_from_file(
             file_or_family,
-            yes=yes,
-            quiet=quiet,
             use_template_schema=use_template_schema,
         )
         family_name = upstream_conf_yaml["name"].data
@@ -297,8 +277,6 @@ def get_upstream_info(
             # if there was no local upstream yaml
             upstream_conf_yaml = _upstream_conf_from_scratch(
                 family_name,
-                yes=yes,
-                quiet=quiet,
                 use_template_schema=use_template_schema,
             )
     else:
@@ -331,8 +309,6 @@ def get_upstream_info(
     upstream_conf_yaml = _upstream_conf_from_yaml_metadata(
         upstream_yaml_text,
         metadata_text,
-        yes=yes,
-        quiet=quiet,
         use_template_schema=use_template_schema,
     )
 
