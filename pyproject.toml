@@ -60,6 +60,8 @@ dependencies = [
   'nanoemoji>=0.15.0',
   'font-v',
   'humanize',
+  'python-editor',
+  'inquirer',
 ]
 
 [project.optional-dependencies]

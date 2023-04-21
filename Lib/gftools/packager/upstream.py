@@ -20,6 +20,8 @@ from strictyaml import (  # type: ignore
     as_document,
 )
 from google.protobuf import text_format  # type: ignore
+import editor
+import inquirer
 
 
 if TYPE_CHECKING:
@@ -109,8 +111,14 @@ def normalize_family_name(name):
     return name.lower().replace(" ", "").replace(".", "").replace("/", "")
 
 
+def confirm(msg, default=True):
+    return inquirer.prompt([inquirer.Confirm("c", message=msg, default=default)])["c"]
+
+
 class UpstreamConfig:
     upstream_yaml: YAML
+
+    interactive = False
 
     def __init__(self, upstream_yaml: YAML):
         self.upstream_yaml = upstream_yaml
@@ -125,26 +133,30 @@ class UpstreamConfig:
         upstream_yaml_text: str,
         use_template_schema: bool = False,
     ):
-        try:
-            yaml_schema = (
-                upstream_yaml_schema
-                if not use_template_schema
-                else upstream_yaml_template_schema
-            )
-            yaml = dirty_load(upstream_yaml_text, yaml_schema, allow_flow_style=True)
-        except YAMLValidationError as err:
-            print("The configuration has schema errors:\n\n" f"{err}")
-            raise ProgramAbortError()
+        yaml_schema = (
+            upstream_yaml_schema
+            if not use_template_schema
+            else upstream_yaml_template_schema
+        )
+        yaml = dirty_load(upstream_yaml_text, yaml_schema, allow_flow_style=True)
         return UpstreamConfig(yaml)
 
     @classmethod
     def from_file(cls, filename, use_template_schema: bool = False):
-        with open(filename, "r+") as upstream_yaml_file:
-            upstream_yaml_text = upstream_yaml_file.read()
-            return cls.load(
-                upstream_yaml_text,
-                use_template_schema=use_template_schema,
-            )
+        while True:
+            try:
+                with open(filename, "r+") as upstream_yaml_file:
+                    upstream_yaml_text = upstream_yaml_file.read()
+                    return cls.load(
+                        upstream_yaml_text,
+                        use_template_schema=use_template_schema,
+                    )
+            except YAMLValidationError as err:
+                print("The configuration has schema errors:\n\n" f"{err}")
+                if cls.interactive and confirm("Launch an editor to fix?"):
+                    editor.edit(filename=filename)
+                else:
+                    raise ProgramAbortError()
 
     @classmethod
     def from_scratch(
@@ -152,7 +164,6 @@ class UpstreamConfig:
         family_name: typing.Union[str, None] = None,
         use_template_schema: bool = False,
     ) -> YAML:
-
         upstream_conf_yaml = dirty_load(
             upstream_yaml_template, upstream_yaml_template_schema, allow_flow_style=True
         )

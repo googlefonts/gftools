@@ -62,7 +62,7 @@ upstream_parser = subparsers.add_parser(
         "yaml template. "
         "However, if name is given, this will also try to include all available "
         "information. "
-        "Use -f/--force to override existing file."
+        "Use --force to override existing file."
     ),
 )
 
@@ -78,6 +78,7 @@ for a_parser in [packager_parser, package_local_parser]:
         "files to the allowlist.",
     )
 
+for a_parser in [packager_parser, package_local_parser, upstream_parser]:
     a_parser.add_argument(
         "--force",
         action="store_true",
@@ -86,6 +87,12 @@ for a_parser in [packager_parser, package_local_parser]:
         "is allowed.",
     )
 
+    a_parser.add_argument(
+        "--interactive",
+        action="store_true",
+        default=False,
+        help="Spawn an editor if things go wrong.",
+    )
 
 # Local Packager
 
@@ -197,17 +204,11 @@ upstream_parser.add_argument(
     help="A family name; if given, data about this family is retrieved from Google Fonts",
 )
 
-upstream_parser.add_argument(
-    "--force",
-    action="store_true",
-    help="This allows the program to manipulate/change/delete data "
-    "in [target]. Without this flag only adding new items "
-    "is allowed.",
-)
-
 
 def main(args=None):
     args = parser.parse_args(args)
+    upstream.UpstreamConfig.interactive = args.interactive
+
     try:
         if args.subcommand == "generate-upstream":
             upstream.output_upstream_yaml(args)
