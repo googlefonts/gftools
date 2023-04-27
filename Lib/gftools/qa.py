@@ -10,7 +10,6 @@ except ModuleNotFoundError:
     raise ModuleNotFoundError(("gftools was installed without the QA "
         "dependencies. To install the dependencies, see the ReadMe, "
         "https://github.com/googlefonts/gftools#installation"))
-import ninja
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -66,7 +65,7 @@ class FontQA:
         dst = os.path.join(self.out, "Proof")
         mkdir(dst)
         ninja_proof(
-            fonts=self.fonts,
+            self.fonts,
             out=dst,
             imgs=imgs,
             filter_styles=None,
@@ -78,7 +77,7 @@ class FontQA:
         mkdir(out)
         cmd = (
             ["fontbakery", "check-"+profile, "-l", "INFO", "--succinct"]
-            + [f.reader.file.name for f in self.fonts]
+            + [f.path for f in self.fonts]
             + ["-C"]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
         )
