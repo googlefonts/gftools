@@ -32,33 +32,20 @@ from gftools.utils import (
 )
 import re
 from gftools.qa import FontQA
+from diffenator2.font import DFont
 
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
 
 def family_name_from_fonts(fonts):
-    results = []
-    for font in fonts:
-        family_name = font["name"].getName(1, 3, 1, 1033)
-        typo_family_name = font["name"].getName(16, 3, 1, 1033)
-
-        if typo_family_name:
-            results.append(typo_family_name.toUnicode())
-        elif family_name:
-            results.append(family_name.toUnicode())
-        else:
-            raise Exception(
-                "Font: {} has no family name records".format(
-                    os.path.basename(font.reader.file.name)
-                )
-            )
-    if len(set(results)) > 1:
+    results = set(f.family_name for f in fonts)
+    if len(results) > 1:
         raise Exception("Multiple family names found: [{}]".format(", ".join(results)))
-    return results[0]
+    return list(results)[0]
 
 
 def main(args=None):
@@ -196,9 +183,9 @@ def main(args=None):
         re_filter = re.compile(args.filter_fonts)
         fonts = [f for f in fonts if re_filter.search(f)]
 
-    ttfonts = [TTFont(f) for f in fonts if f.endswith((".ttf", ".otf"))
+    dfonts = [DFont(f) for f in fonts if f.endswith((".ttf", ".otf"))
                and "static" not in f]
-    family_name = family_name_from_fonts(ttfonts)
+    family_name = family_name_from_fonts(dfonts)
     family_on_gf = Google_Fonts_has_family(family_name)
 
     # Retrieve fonts_before and store in out dir
@@ -230,11 +217,11 @@ def main(args=None):
         )
 
     if fonts_before:
-        ttfonts_before = [TTFont(f) for f in fonts_before if f.endswith((".ttf", ".otf"))
+        dfonts_before = [DFont(f) for f in fonts_before if f.endswith((".ttf", ".otf"))
                           and "static" not in f]
-        qa = FontQA(ttfonts, ttfonts_before, args.out)
+        qa = FontQA(dfonts, dfonts_before, args.out)
     else:
-        qa = FontQA(ttfonts, out=args.out)
+        qa = FontQA(dfonts, out=args.out)
 
     if args.auto_qa and family_on_gf:
         qa.googlefonts_upgrade(args.imgs)
