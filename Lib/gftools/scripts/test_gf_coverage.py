@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# Copyright 2016 The Fontbakery Authors
+# Copyright 2017 The Google Fonts Tools Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+from __future__ import print_function
+import argparse
+import os
+import sys
+from glyphsets.codepoints import (CodepointsInFont,
+                                  CodepointsInNamelist,
+                                  nam_dir)
+
+
+NAM_FILES = [f for f in os.listdir(nam_dir)
+             if f.endswith(".nam")]
+
+
+def main(args=None):
+  parser = argparse.ArgumentParser(
+    description='Reports the missing codepoints in a font')
+  parser.add_argument('font')
+  args = parser.parse_args(args)
+
+  if args.font[-4:] != ".ttf":
+    sys.exit('Usage: {} fontfile.ttf'.format(sys.argv[0]))
+
+  expected = set()
+  for nam_file in NAM_FILES:
+    nam_filepath = os.path.join(nam_dir, nam_file)
+    expected.update(CodepointsInNamelist(nam_filepath))
+
+  diff = expected - CodepointsInFont(args.font)
+
+  print(args.font),
+  if bool(diff):
+    print('missing'),
+    for c in sorted(diff):
+      print('0x%04X' % (c)),
+  else:
+    print('OK')
+
+
+if __name__ == '__main__':
+  main()

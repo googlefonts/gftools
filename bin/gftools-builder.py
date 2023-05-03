@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 import argparse
+import os
+import sys
+
 from gftools.builder import GFBuilder
 from gftools.builder import __doc__ as GFBuilder_doc
 
@@ -52,11 +55,34 @@ parser.add_argument(
     default=False,
     help="Do not remove temporary files (instance_ufos/)")
 
-parser.add_argument("file", nargs="+", help="YAML build config file *or* source files")
+parser.add_argument("file", nargs="*", help="YAML build config file *or* source files")
 
 parser.add_argument("--dump-config", type=str, help="Config file to generate")
 
 args = parser.parse_args()
+
+if len(args.file) == 0:
+    # Try a few places to find one.
+    possible_config_files = list(filter(os.path.exists, [
+        "sources/builder.yaml",
+        "sources/builder.yml",
+        "sources/config.yaml",
+        "sources/config.yml",
+        "builder.yaml",
+        "builder.yml",
+        "config.yaml",
+        "config.yml",
+    ]))
+    if len(possible_config_files) > 0:
+        args.file = [possible_config_files[0]]
+        print(f"""
+No config file specified; found a potential one in {args.file[0]}.
+If this is not correct, please specify a config file manually.
+""", file=sys.stderr)
+    else:
+        parser.print_usage()
+        print("No config file specified")
+        sys.exit(1)
 
 if len(args.file) == 1 and (
     args.file[0].endswith(".yaml") or args.file[0].endswith(".yml")

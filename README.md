@@ -86,6 +86,5 @@ key = your-newly-generated-googlefonts-api-key
 **Upstream project repos**
 
 * https://github.com/schriftgestalt/GlyphsInfo
-* https://github.com/google/google-apputils
 * https://github.com/google/protobuf
 * https://github.com/behdad/fonttools
