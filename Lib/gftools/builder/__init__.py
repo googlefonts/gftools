@@ -107,6 +107,9 @@ required, all others have sensible defaults:
 * ``expandFeaturesToInstances``: Resolve all includes in the sources' features, so that generated instances can be compiled without errors. Defaults to ``true``.
 * ``reverseOutlineDirection``: Reverse the outline direction when compiling TTFs (no effect for OTFs). Defaults to fontmake's default.
 * ``removeOutlineOverlaps``: Remove overlaps when compiling fonts. Defaults to fontmake's default.
+* ``interpolate``: Enable fontmake --interpolate flag. Defaults to ``false``.
+* ``checkCompatibility``: Enable fontmake Multiple Master compatibility checking. Defaults to ``true``.
+* ``useMutatorMath``: Use MutatorMath to generate instances (supports extrapolation and anisotropic locations). Defaults to ``false``.
 """
 
 from fontmake.font_project import FontProject
@@ -310,6 +313,12 @@ class GFBuilder:
             self.config["addGftoolsVersion"] = True
         if "decomposeTransformedComponents" not in self.config:
             self.config["decomposeTransformedComponents"] = True
+        if "interpolate" not in self.config:
+            self.config["interpolate"] = False
+        if "useMutatorMath" not in self.config:
+            self.config["useMutatorMath"] = False
+        if "checkCompatibility" not in self.config:
+            self.config["checkCompatibility"] = True
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
@@ -331,12 +340,12 @@ class GFBuilder:
         if not ttFonts:
             return
 
-        self.gen_stat(ttFonts)
-        # We post process each variable font after generating the STAT tables
-        # because these tables are needed in order to fix the name tables.
         for ttFont in ttFonts:
             self.post_process_variable(ttFont.reader.file.name)
             self.outputs.add(ttFont.reader.file.name)
+
+        ttFonts = [TTFont(f.reader.file.name) for f in ttFonts]
+        self.gen_stat(ttFonts)
 
     def run_fontmake(self, source, args):
         if "output_dir" in args:
@@ -374,9 +383,12 @@ class GFBuilder:
         if "removeOutlineOverlaps" in self.config:
             args["remove_overlaps"] = self.config["removeOutlineOverlaps"]
 
+
         if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
+            args["check_compatibility"] = self.config["checkCompatibility"]
             FontProject().run_from_glyphs(source, **args)
         elif source.endswith(".designspace"):
+            args["check_compatibility"] = self.config["checkCompatibility"]
             FontProject().run_from_designspace(source, **args)
         elif source.endswith(".ufo"):
             FontProject().run_from_ufos([source], **args)
@@ -447,8 +459,6 @@ class GFBuilder:
     def build_static(self):
         if self.config["buildOTF"]:
             self.build_a_static_format("otf", self.config["otDir"], self.post_process)
-        if self.config["buildWebfont"]:
-            self.mkdir(self.config["woffDir"], clean=True)
         if self.config["buildTTF"]:
             if "instances" in self.config:
                 self.instantiate_static_fonts(
@@ -498,8 +508,10 @@ class GFBuilder:
                 "output_dir": directory,
                 "optimize_cff": CFFOptimization.SUBROUTINIZE,
             }
-            if self.config["buildVariable"]:
+            if self.config["buildVariable"] or self.config["interpolate"]:
                 args["interpolate"] = True
+            if self.config["useMutatorMath"]:
+                args["use_mutatormath"] = True
             self.logger.info("Creating static fonts from %s" % source)
             for fontfile in self.run_fontmake(source, args):
                 self.logger.info("Created static font %s" % fontfile)
@@ -521,7 +533,7 @@ class GFBuilder:
         self.logger.info("Postprocessing font %s" % filename)
         self.set_version(filename)
         font = TTFont(filename)
-        fix_font(
+        font = fix_font(
             font,
             include_source_fixes=self.config["includeSourceFixes"],
             fvar_instance_axis_dflts=self.config["fvarInstanceAxisDflts"]
@@ -579,11 +591,19 @@ class GFBuilder:
             font.save(font.reader.file.name)
 
     def move_webfont(self, filename):
-        wf_filename = filename.replace(".ttf", ".woff2")
-        os.rename(
-            wf_filename,
-            wf_filename.replace(self.config["ttDir"], self.config["woffDir"]),
-        )
+        woff_dir = self.config["woffDir"]
+        ttf_dir = self.config["ttDir"]
+        var_dir = self.config["vfDir"]
+
+        if not os.path.exists(self.config["woffDir"]):
+            self.mkdir(self.config["woffDir"])
+
+        src = filename.replace(".ttf", ".woff2")
+        dst = src
+        for p in (woff_dir, ttf_dir, var_dir):
+            dst = dst.replace(p, woff_dir)
+
+        shutil.move(src, dst)
 
 
 def main(args=None):

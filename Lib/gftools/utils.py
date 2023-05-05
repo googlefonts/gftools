@@ -217,7 +217,7 @@ def fonts_from_zip(zipfile, dst=None):
     """Unzip fonts. If not dst is given unzip as BytesIO objects"""
     fonts = []
     for filename in zipfile.namelist():
-        if filename.endswith(".ttf"):
+        if filename.endswith((".ttf", ".otf")):
             if dst:
                 target = os.path.join(dst, filename)
                 zipfile.extract(filename, dst)

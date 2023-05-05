@@ -69,7 +69,14 @@ def write_server_file(data):
         for directory in directories:
             # Skip subdirectories when parent is already seen
             plain_path = re.sub(r" # .*", "", directory)
-            if any(plain_path.startswith(this) for this in seen):
+            path = Path(plain_path)
+            if str(path.parent) in seen:
+                continue
+            # for the axis registry and lang subtrees, we list the file,
+            # not the dir
+            if any(d in path.parts for d in ("lang", "axisregistry")) \
+                and path.suffix != ".textproto":
+                print(f"filtering {path}")
                 continue
             seen.add(plain_path)
             filtered_directories.append(directory)
@@ -79,7 +86,7 @@ def write_server_file(data):
 
 
 def main(args=None):
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         print("Usage: gftools gen-push-lists /path/to/google/fonts")
         sys.exit()
 
@@ -137,7 +144,7 @@ def main(args=None):
             if "--- to production" in labels:
                 to_production[cat] |= directories
 
-    gf_repo_path = sys.argv[1]
+    gf_repo_path = sys.argv[2]
     sb_path = os.path.join(gf_repo_path, "to_sandbox.txt")
     prod_path = os.path.join(gf_repo_path, "to_production.txt")
 

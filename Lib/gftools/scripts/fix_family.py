@@ -58,7 +58,7 @@ def main(args=None):
         axis_dflts = parse_axis_dflts(args.fvar_instance_axis_dflts)
     else:
         axis_dflts = None
-    fix_family(fonts, args.include_source_fixes, args.rename_family, axis_dflts)
+    fonts = fix_family(fonts, args.include_source_fixes, args.rename_family, axis_dflts)
 
     if args.inplace:
         for font in fonts:

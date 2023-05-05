@@ -10,7 +10,6 @@ except ModuleNotFoundError:
     raise ModuleNotFoundError(("gftools was installed without the QA "
         "dependencies. To install the dependencies, see the ReadMe, "
         "https://github.com/googlefonts/gftools#installation"))
-import ninja
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -24,6 +23,11 @@ class FontQA:
 
     def diffenator(self, **kwargs):
         logger.info("Running Diffenator")
+        if not self.fonts_before:
+            logger.warning(
+                "Cannot run Diffenator since there are no fonts before"
+            )
+            return
         dst = os.path.join(self.out, "Diffenator")
         ninja_diff(
             self.fonts_before,
@@ -38,6 +42,11 @@ class FontQA:
     
     def diffbrowsers(self, imgs=False):
         logger.info("Running Diffbrowsers")
+        if not self.fonts_before:
+            logger.warning(
+                "Cannot run diffbrowsers since there are no fonts before"
+            )
+            return
         dst = os.path.join(self.out, "Diffbrowsers")
         mkdir(dst)
         ninja_diff(
@@ -56,7 +65,7 @@ class FontQA:
         dst = os.path.join(self.out, "Proof")
         mkdir(dst)
         ninja_proof(
-            fonts=self.fonts,
+            self.fonts,
             out=dst,
             imgs=imgs,
             filter_styles=None,
@@ -68,7 +77,7 @@ class FontQA:
         mkdir(out)
         cmd = (
             ["fontbakery", "check-"+profile, "-l", "INFO", "--succinct"]
-            + [f.reader.file.name for f in self.fonts]
+            + [f.path for f in self.fonts]
             + ["-C"]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
         )
@@ -86,6 +95,12 @@ class FontQA:
     def googlefonts_new(self, imgs=False):
         self.fontbakery()
         self.proof(imgs)
+
+    def render(self, imgs=False):
+        if self.fonts_before:
+            self.diffbrowsers(imgs)
+        else:
+            self.proof(imgs)
 
     def post_to_github(self, url):
         """Post Fontbakery report as a new issue or as a comment to an open
