@@ -70,8 +70,8 @@ def get_commits(repo):
     return res
 
 
-def get_issues(repo):
-    issues = list(repo.get_issues(state="all", since=datetime(2014, 1, 1)))
+def get_issues(repo, since=datetime(2014, 1, 1)):
+    issues = list(repo.get_issues(state="all", since=since))
     res = []
     for i in issues:
         if i.pull_request:  # ignore prs
@@ -98,6 +98,14 @@ def main(args=None):
         autoescape=select_autoescape(),
     )
 
+    data_out = os.path.join(os.path.dirname(args.out), "gf_repo_data.json")
+    if os.path.exists(data_out):
+        commit_data = json.load(open(data_out, encoding="utf8"))
+        last_run = datetime.fromisoformat(commit_data["last_run"])
+    else:
+        commit_data = {"issues": []}
+        last_run = datetime(2014, 1, 1)
+
     print("Getting commits")
     repo = pygit2.Repository(args.repo_path)
     commits = get_commits(repo)
@@ -105,7 +113,10 @@ def main(args=None):
     print("Getting issues")
     github = Github(os.environ["GH_TOKEN"])
     repo = github.get_repo("google/fonts")
-    issues = get_issues(repo)
+    issues = {i["title"]: i for i in get_issues(repo, since=last_run)}
+    old_issues = {i["title"]: i for i in commit_data["issues"]}
+    issues = list({**issues, **old_issues}.values())
+    issues.sort(key=lambda k: k["date"])
 
     print("Getting server files")
     sb_path = os.path.join(args.repo_path, "to_sandbox.txt")
@@ -114,20 +125,24 @@ def main(args=None):
     prod_families = parse_server_file(prod_path)
 
     template = env.get_template("index.html")
+
+    print("Writing json data")
+    commit_data = {
+        "last_run": datetime.now().strftime("%Y-%m-%d"),
+        "issues": issues,
+        "commits": commits,
+        "pushes": {
+            "sandbox": [i.to_json() for i in sb_families],
+            "production": [i.to_json() for i in prod_families],
+        }
+    }
+    json.dump(commit_data, open(data_out, "w", encoding="utf8"), indent=4)
+
+    print("Writing report")
     with open(args.out, "w") as doc:
         doc.write(
             template.render(
-                commit_data=json.dumps(
-                    {
-                        "issues": issues,
-                        "commits": commits,
-                        "pushes": {
-                            "sandbox": [i.to_json() for i in sb_families],
-                            "production": [i.to_json() for i in prod_families],
-                        }
-                    }
-                ),
-                current_year=datetime.now().year,
+                commit_data=json.dumps(commit_data)
             )
         )
 
