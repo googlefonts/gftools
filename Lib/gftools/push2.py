@@ -122,6 +122,16 @@ class PushItems(list):
         if to_pop:
             self.pop(to_pop)
         self.append(item)
+    
+    def missing_paths(self):
+        res = []
+        for item in self:
+            path = item.path
+            if any(p in ("lang", "axisregistry") for p in path.parts):
+                path = google_path_to_repo_path(path)
+            if not path.exists():
+                res.append(path)
+        return res
 
     def to_server_file(self, fp):
         from collections import defaultdict
@@ -145,7 +155,7 @@ class PushItems(list):
     
     @classmethod
     def from_server_file(cls, fp, status):
-        if isinstance(fp, str):
+        if isinstance(fp, (str, Path)):
             doc = open(fp)
         else:
             doc = fp
