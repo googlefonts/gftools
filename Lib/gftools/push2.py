@@ -134,7 +134,7 @@ class PushItems(list):
             if tag not in bins:
                 continue
             res.append(f"# {tag}")
-            for item in bins[tag]:
+            for item in sorted(bins[tag], key=lambda k: k.path):
                 res.append(f"{item.path} # {item.url}")
             res.append("")
         if isinstance(fp, str):
@@ -230,17 +230,3 @@ def google_path_to_repo_path(fp):
     elif "axisregistry" in fp.parts:
         return fp.parent / "Lib" / "axisregistry" / "data" / fp.name
     return fp
-
-
-def main():
-    traffic_jam = PushItems.from_traffic_jam()
-    
-    # Sandbox
-    traffic_sandbox = [i for i in traffic_jam if i.status == 'In Dev / PR Merged']
-    sandbox_file = PushItems.from_server_file("/Users/marcfoley/Type/fonts/to_sandbox.txt", 'In Dev / PR Merged')
-    sandbox = PushItems(set(traffic_sandbox + sandbox_file))
-    sandbox.to_server_file("to_sandbox.txt")
-
-
-if __name__ == "__main__":
-    main()
