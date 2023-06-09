@@ -82,6 +82,9 @@ class PushItem:
         assert metadata_file.exists(), f"no metadata for {self.path}"
         return read_proto(metadata_file, fonts_pb2.FamilyProto()).name
 
+    def to_json(self):
+        return {"path": str(self.path), "type": self.type, "status": self.status, "url": self.url}
+
 
 class PushItems(list):
 
@@ -245,6 +248,33 @@ def google_path_to_repo_path(fp):
     elif "axisregistry" in fp.parts:
         return fp.parent / "Lib" / "axisregistry" / "data" / fp.name
     return fp
+
+
+def lint_server_files(fp):
+    template = "{}: Following paths are not valid:\n{}\n\n"
+    footnote = (
+        "lang and axisregistry dir paths need to be transformed.\n"
+        "See https://github.com/googlefonts/gftools/issues/603"
+    )
+
+    prod_path = fp / "to_production.txt"
+    production_file = PushItems.from_server_file(prod_path, "In Sandbox")
+    prod_missing = "\n".join(map(str, production_file.missing_paths()))
+    prod_msg = template.format("to_production.txt", prod_missing)
+
+    sandbox_path = fp / "to_sandbox.txt"
+    sandbox_file = PushItems.from_server_file(sandbox_path, "In Dev / PR Merged")
+    sandbox_missing = "\n".join(map(str, sandbox_file.missing_paths()))
+    sandbox_msg = template.format("to_sandbox.txt", sandbox_missing)
+
+    if prod_missing and sandbox_missing:
+        raise ValueError(prod_msg + sandbox_msg + footnote)
+    elif prod_missing:
+        raise ValueError(prod_msg + footnote)
+    elif sandbox_missing:
+        raise ValueError(sandbox_msg + footnote)
+    else:
+        print("Server files have valid paths")
 
 
 # TODO refactor below server code once backend team have implemented a
