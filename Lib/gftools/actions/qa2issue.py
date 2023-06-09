@@ -11,7 +11,7 @@ provided, and labels it accordingly; if there is, it adds the text as a new comm
 """
 import argparse
 import subprocess
-from gftools.github import GitHubClient
+from gftools.gfgithub import GitHubClient
 
 if __name__ == "__main__":
     url_split = subprocess.check_output(["git", "remote", "get-url", "origin"]).decode("utf8").strip().split("/")

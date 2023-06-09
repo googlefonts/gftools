@@ -458,6 +458,8 @@ class GFBuilder:
 
     def build_static(self):
         if self.config["buildOTF"]:
+            import pdb
+            pdb.set_trace()
             self.build_a_static_format("otf", self.config["otDir"], self.post_process)
         if self.config["buildTTF"]:
             if "instances" in self.config:

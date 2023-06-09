@@ -4,6 +4,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from gftools.utils import read_proto
 import gftools.fonts_public_pb2 as fonts_pb2
+from github import Github
 
 
 SANDBOX_URL = "https://fonts.sandbox.google.com/metadata/fonts"
