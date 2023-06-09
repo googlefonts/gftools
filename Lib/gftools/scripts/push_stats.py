@@ -9,7 +9,7 @@ The report contains information regarding:
 Usage:
 gftools push-stats path/to/google/fonts/repo out.html
 """
-from gftools.push import parse_server_file
+from gftools.push2 import PushItems
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pkg_resources import resource_filename
 from datetime import datetime
@@ -120,9 +120,9 @@ def main(args=None):
 
     print("Getting server files")
     sb_path = os.path.join(args.repo_path, "to_sandbox.txt")
-    sb_families = parse_server_file(sb_path)
+    sb_families = PushItems.from_server_file(sb_path)
     prod_path = os.path.join(args.repo_path, "to_production.txt")
-    prod_families = parse_server_file(prod_path)
+    prod_families = PushItems.from_server_file(prod_path)
 
     template = env.get_template("index.html")
 
