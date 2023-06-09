@@ -31,8 +31,7 @@ gftools push-status /path/to/google/fonts/repo --lint
 """
 import argparse
 from pathlib import Path
-from gftools.push import push_report
-from gftools.push2 import PushItems
+from gftools.push2 import push_report, PushItems
 
 
 def lint_server_files(fp):
@@ -44,12 +43,12 @@ def lint_server_files(fp):
 
     prod_path = fp / "to_production.txt"
     production_file = PushItems.from_server_file(prod_path, "In Sandbox")
-    prod_missing = "\n".join(production_file.missing_paths())
+    prod_missing = "\n".join(map(str, production_file.missing_paths()))
     prod_msg = template.format("to_production.txt", prod_missing)
 
     sandbox_path = fp / "to_sandbox.txt"
     sandbox_file = PushItems.from_server_file(sandbox_path, "In Dev / PR Merged")
-    sandbox_missing = "\n".join(sandbox_file.missing_paths())
+    sandbox_missing = "\n".join(map(str, sandbox_file.missing_paths()))
     sandbox_msg = template.format("to_sandbox.txt", sandbox_missing)
 
     if prod_missing and sandbox_missing:
