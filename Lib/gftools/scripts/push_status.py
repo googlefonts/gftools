@@ -31,7 +31,7 @@ gftools push-status /path/to/google/fonts/repo --lint
 """
 import argparse
 from pathlib import Path
-from gftools.push2 import push_report, lint_server_files
+from gftools.push import push_report, lint_server_files
 import os
 
 def main(args=None):

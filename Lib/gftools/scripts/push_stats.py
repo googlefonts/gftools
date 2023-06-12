@@ -9,7 +9,7 @@ The report contains information regarding:
 Usage:
 gftools push-stats path/to/google/fonts/repo out.html
 """
-from gftools.push2 import PushItems
+from gftools.push import PushItems
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pkg_resources import resource_filename
 from datetime import datetime

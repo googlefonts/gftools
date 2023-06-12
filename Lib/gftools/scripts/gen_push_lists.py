@@ -15,7 +15,7 @@ gftools gen-push-lists /path/to/google/fonts
 """
 import sys
 import os
-from gftools.push2 import PushItems
+from gftools.push import PushItems
 
 
 def main(args=None):

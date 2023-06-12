@@ -1,5 +1,5 @@
 import pytest
-from gftools.push2 import PushItem, PushItems, PushCategory
+from gftools.push import PushItem, PushItems, PushCategory
 from pathlib import Path
 import os
 
