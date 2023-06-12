@@ -73,12 +73,17 @@ class PushItem:
 
     def __hash__(self):
         return hash((self.path, self.category, self.status, self.url))
-    
+
     def exists(self):
         return self.path.exists
-    
+
     def is_family(self):
-        return any(t for t in ("ofl", "apache", "ufl") if t in self.path.parts if "article" not in str(self.path))
+        return any(
+            t
+            for t in ("ofl", "apache", "ufl")
+            if t in self.path.parts
+            if "article" not in str(self.path)
+        )
 
     def family_name(self):
         assert self.is_family()
@@ -87,31 +92,41 @@ class PushItem:
         return read_proto(metadata_file, fonts_pb2.FamilyProto()).name
 
     def to_json(self):
-        return {"path": str(self.path), "type": self.category.value, "status": self.status, "url": self.url}
+        return {
+            "path": str(self.path),
+            "type": self.category.value,
+            "status": self.status,
+            "url": self.url,
+        }
 
 
 class PushItems(list):
-
     def add(self, item):
         # noto font projects projects often contain an article/ dir, we remove this
         if "article" in item.path.parts:
             item.path = item.path.parent
-        
+
         # for font families, we only want the dir e.g ofl/mavenpro/MavenPro[wght].ttf --> ofl/mavenpro
-        elif any(d in item.path.parts for d in ("ofl", "ufl", "apache")) \
-          and item.path.suffix in FAMILY_FILE_SUFFIXES:
+        elif (
+            any(d in item.path.parts for d in ("ofl", "ufl", "apache"))
+            and item.path.suffix in FAMILY_FILE_SUFFIXES
+        ):
             item.path = item.path.parent
 
         # for lang and axisregistry .textproto files, we need a transformed path
-        elif any(d in item.path.parts for d in ("lang", "axisregistry")) \
-          and item.path.suffix == ".textproto":
+        elif (
+            any(d in item.path.parts for d in ("lang", "axisregistry"))
+            and item.path.suffix == ".textproto"
+        ):
             item.path = repo_path_to_google_path(item.path)
-        
+
         # don't include any axisreg or lang file which don't end in textproto
-        elif any(d in item.path.parts for d in ("lang", "axisregistry")) \
-          and item.path.suffix != ".textproto":
+        elif (
+            any(d in item.path.parts for d in ("lang", "axisregistry"))
+            and item.path.suffix != ".textproto"
+        ):
             return
-        
+
         # Skip if path if it's a parent dir e.g ofl/ apache/ axisregistry/
         if len(item.path.parts) == 1:
             return
@@ -119,7 +134,7 @@ class PushItems(list):
         # Skip if path is a parent of an existing path
         if any(str(item.path) in str(p.path) for p in self):
             return
-        
+
         # Pop any push items which are a child of the item's path
         to_pop = None
         for idx, i in enumerate(self):
@@ -129,7 +144,7 @@ class PushItems(list):
         if to_pop:
             self.pop(to_pop)
         self.append(item)
-    
+
     def missing_paths(self):
         res = []
         for item in self:
@@ -142,10 +157,11 @@ class PushItems(list):
 
     def to_server_file(self, fp):
         from collections import defaultdict
+
         bins = defaultdict(set)
         for item in self:
             bins[item.category.value].add(item)
-        
+
         res = []
         for tag in PushCategory.values():
             if tag not in bins:
@@ -159,7 +175,7 @@ class PushItems(list):
         else:
             doc = fp
         doc.write("\n".join(res))
-    
+
     @classmethod
     def from_server_file(cls, fp, status):
         if isinstance(fp, (str, Path)):
@@ -184,10 +200,11 @@ class PushItems(list):
                 item = PushItem(Path(line.strip()), category, status, "")
                 results.add(item)
         return results
-    
+
     @classmethod
     def from_traffic_jam(cls):
         from gftools.gfgithub import GitHubClient
+
         g = GitHubClient("google", "fonts")
         data = g._run_graphql(GOOGLE_FONTS_TRAFFIC_JAM_QUERY, {})
 
@@ -199,8 +216,8 @@ class PushItems(list):
             if "labels" not in item["content"]:
                 print("PR missing labels. Skipping")
             labels = [i["name"] for i in item["content"]["labels"]["nodes"]]
-            
-            files = [Path(i["path"]) for i in item["content"]["files"]["nodes"]] 
+
+            files = [Path(i["path"]) for i in item["content"]["files"]["nodes"]]
             url = item["content"]["url"]
 
             # get pr state
@@ -225,9 +242,7 @@ class PushItems(list):
                 cat = PushCategory.OTHER
 
             for f in files:
-                results.add(
-                    PushItem(Path(f), cat, status, url)
-                )
+                results.add(PushItem(Path(f), cat, status, url))
         return results
 
 
@@ -306,7 +321,9 @@ def gf_server_metadata(url):
 
 
 def server_push_status(fp, url):
-    family_names = [i.family_name() for i in PushItems.from_server_file(fp, "") if i.is_family()]
+    family_names = [
+        i.family_name() for i in PushItems.from_server_file(fp, "") if i.is_family()
+    ]
 
     gf_meta = gf_server_metadata(url)
 
