@@ -1,5 +1,5 @@
 import pytest
-from gftools.push2 import PushItem, PushItems
+from gftools.push2 import PushItem, PushItems, PushCategory
 from pathlib import Path
 import os
 
@@ -200,17 +200,17 @@ def test_push_items_from_server_file(string, expected_size):
         # standard items
         (
             PushItems([
-                PushItem("a/b", "Upgrade", "dev", "45"),
-                PushItem("a/c", "New", "dev", "46"),
+                PushItem("a/b", PushCategory.UPGRADE, "dev", "45"),
+                PushItem("a/c", PushCategory.NEW, "dev", "46"),
             ]),
             "# New\na/c # 46\n\n# Upgrade\na/b # 45\n"
         ),
         # duplicate items
         (
             PushItems([
-                PushItem("a/b", "Upgrade", "dev", "45"),
-                PushItem("a/b", "Upgrade", "dev", "45"),
-                PushItem("a/b", "Upgrade", "dev", "45"),
+                PushItem("a/b", PushCategory.UPGRADE, "dev", "45"),
+                PushItem("a/b", PushCategory.UPGRADE, "dev", "45"),
+                PushItem("a/b", PushCategory.UPGRADE, "dev", "45"),
             ]),
             "# Upgrade\na/b # 45\n"
         ),

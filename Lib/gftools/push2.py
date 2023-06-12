@@ -4,6 +4,22 @@ import os
 from gftools.utils import read_proto
 import gftools.fonts_public_pb2 as fonts_pb2
 import requests
+from enum import Enum
+
+
+class PushCategory(Enum):
+    BLOCKED = "Blocked"
+    NEW = "New"
+    UPGRADE = "Upgrade"
+    METADATA = "Metadata / Description / License"
+    DESIGNER_PROFILE = "Designer profile"
+    KNOWLEDGE = "Knowledge"
+    AXIS_REGISTRY = "Axis Registry"
+    SAMPLE_TEXTS = "Sample texts"
+    OTHER = "Other"
+
+    def values():
+        return set(i.value for i in PushCategory)
 
 
 CATEGORIES = (
@@ -63,12 +79,12 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
 @dataclass
 class PushItem:
     path: Path
-    type: str
+    category: str
     status: str
     url: str
 
     def __hash__(self):
-        return hash((self.path, self.type, self.status, self.url))
+        return hash((self.path, self.category, self.status, self.url))
     
     def exists(self):
         return self.path.exists
@@ -83,13 +99,12 @@ class PushItem:
         return read_proto(metadata_file, fonts_pb2.FamilyProto()).name
 
     def to_json(self):
-        return {"path": str(self.path), "type": self.type, "status": self.status, "url": self.url}
+        return {"path": str(self.path), "type": self.category.value, "status": self.status, "url": self.url}
 
 
 class PushItems(list):
 
     def add(self, item):
-        """..."""
         # noto font projects projects often contain an article/ dir, we remove this
         if "article" in item.path.parts:
             item.path = item.path.parent
@@ -141,10 +156,10 @@ class PushItems(list):
         from collections import defaultdict
         bins = defaultdict(set)
         for item in self:
-            bins[item.type].add(item)
+            bins[item.category.value].add(item)
         
         res = []
-        for tag in CATEGORIES:
+        for tag in PushCategory.values():
             if tag not in bins:
                 continue
             res.append(f"# {tag}")
@@ -202,23 +217,24 @@ class PushItems(list):
 
             # get pr state
             if "-- blocked" in labels:
-                cat = "Blocked"
+                cat = PushCategory.BLOCKED
+
             if "I Font Upgrade" in labels or "I Small Fix" in labels:
-                cat = "Upgrade"
+                cat = PushCategory.UPGRADE
             elif "I New Font" in labels:
-                cat = "New"
+                cat = PushCategory.NEW
             elif "I Description/Metadata/OFL" in labels:
-                cat = "Metadata / Description / License"
+                cat = PushCategory.METADATA
             elif "I Designer profile" in labels:
-                cat = "Designer profile"
+                cat = PushCategory.DESIGNER_PROFILE
             elif "I Knowledge" in labels:
-                cat = "Knowledge"
+                cat = PushCategory.KNOWLEDGE
             elif "I Axis Registry" in labels:
-                cat = "Axis Registry"
+                cat = PushCategory.AXIS_REGISTRY
             elif "I Lang" in labels:
-                cat = "Sample texts"
+                cat = PushCategory.SAMPLE_TEXTS
             else:
-                cat = "Other"
+                cat = PushCategory.OTHER
 
             for f in files:
                 results.add(
