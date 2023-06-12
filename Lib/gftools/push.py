@@ -1,10 +1,12 @@
+from __future__ import annotations
 from pathlib import Path
 from dataclasses import dataclass
 import os
 from gftools.utils import read_proto
 import gftools.fonts_public_pb2 as fonts_pb2
-import requests
+import requests  # type: ignore[import]
 from enum import Enum
+from io import IOBase, TextIOWrapper
 
 
 class PushCategory(Enum):
@@ -18,8 +20,11 @@ class PushCategory(Enum):
     SAMPLE_TEXTS = "Sample texts"
     BLOCKED = "Blocked"
 
-    def values():
+    def values():  # type: ignore[misc]
         return [i.value for i in PushCategory]
+
+    def from_string(string: str):  # type: ignore[misc]
+        return next((i for i in PushCategory if i.value == string), None)
 
 
 FAMILY_FILE_SUFFIXES = frozenset([".ttf", ".otf", ".html", ".pb", ".txt"])
@@ -67,17 +72,17 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
 @dataclass
 class PushItem:
     path: Path
-    category: str
+    category: PushCategory
     status: str
     url: str
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.path, self.category, self.status, self.url))
 
-    def exists(self):
-        return self.path.exists
+    def exists(self) -> bool:
+        return self.path.exists()
 
-    def is_family(self):
+    def is_family(self) -> bool:
         return any(
             t
             for t in ("ofl", "apache", "ufl")
@@ -85,23 +90,24 @@ class PushItem:
             if "article" not in str(self.path)
         )
 
-    def family_name(self):
+    def family_name(self) -> str:
         assert self.is_family()
         metadata_file = self.path / "METADATA.pb"
         assert metadata_file.exists(), f"no metadata for {self.path}"
         return read_proto(metadata_file, fonts_pb2.FamilyProto()).name
 
-    def to_json(self):
+    def to_json(self) -> dict[str, str]:
+        type_ = self.category.value
         return {
             "path": str(self.path),
-            "type": self.category.value,
+            "type": type_,
             "status": self.status,
             "url": self.url,
         }
 
 
 class PushItems(list):
-    def add(self, item):
+    def add(self, item: PushItem):
         # noto font projects projects often contain an article/ dir, we remove this
         if "article" in item.path.parts:
             item.path = item.path.parent
@@ -145,7 +151,7 @@ class PushItems(list):
             self.pop(to_pop)
         self.append(item)
 
-    def missing_paths(self):
+    def missing_paths(self) -> list[Path]:
         res = []
         for item in self:
             path = item.path
@@ -155,7 +161,7 @@ class PushItems(list):
                 res.append(path)
         return res
 
-    def to_server_file(self, fp):
+    def to_server_file(self, fp: str | Path):
         from collections import defaultdict
 
         bins = defaultdict(set)
@@ -171,13 +177,13 @@ class PushItems(list):
                 res.append(f"{item.path} # {item.url}")
             res.append("")
         if isinstance(fp, str):
-            doc = open(fp, "w")
+            doc: TextIOWrapper = open(fp, "w")
         else:
-            doc = fp
+            doc: TextIOWrapper = fp  # type: ignore[no-redef]
         doc.write("\n".join(res))
 
     @classmethod
-    def from_server_file(cls, fp, status):
+    def from_server_file(cls, fp: str | Path | TextIOWrapper, status: str):
         if isinstance(fp, (str, Path)):
             doc = open(fp)
         else:
@@ -185,12 +191,12 @@ class PushItems(list):
         results = cls()
 
         lines = doc.read().split("\n")
-        category = "Unknown"
+        category = PushCategory.OTHER
         for line in lines:
             if not line:
                 continue
             if line.startswith("#"):
-                category = line[1:].strip()
+                category = PushCategory.from_string(line[1:].strip())
             elif "#" in line:
                 path, url = line.split("#")
                 item = PushItem(Path(path.strip()), category, status, url.strip())
@@ -249,7 +255,7 @@ class PushItems(list):
 # The internal Google fonts team store the axisregistry and lang directories
 # in a different location. The two functions below tranform paths to
 # whichever representation you need.
-def repo_path_to_google_path(fp):
+def repo_path_to_google_path(fp: Path):
     """lang/Lib/gflanguages/data/languages/.*.textproto --> lang/languages/.*.textproto"""
     # we rename lang paths due to: https://github.com/google/fonts/pull/4679
     if "gflanguages" in fp.parts:
@@ -260,7 +266,7 @@ def repo_path_to_google_path(fp):
     return fp
 
 
-def google_path_to_repo_path(fp):
+def google_path_to_repo_path(fp: Path):
     """lang/languages/.*.textproto --> lang/Lib/gflanguages/data/languages/.*.textproto"""
     if "lang" in fp.parts:
         return Path("lang/Lib/gflanguages/data/") / fp.relative_to("lang")
@@ -269,7 +275,7 @@ def google_path_to_repo_path(fp):
     return fp
 
 
-def lint_server_files(fp):
+def lint_server_files(fp: Path):
     template = "{}: Following paths are not valid:\n{}\n\n"
     footnote = (
         "lang and axisregistry dir paths need to be transformed.\n"
@@ -313,14 +319,14 @@ Existing families, last pushed:
 """
 
 
-def gf_server_metadata(url):
+def gf_server_metadata(url: str):
     """Get family json data from a Google Fonts metadata url"""
     # can't do requests.get("url").json() since request text starts with ")]}'"
     info = requests.get(url).json()
     return {i["family"]: i for i in info["familyMetadataList"]}
 
 
-def server_push_status(fp, url):
+def server_push_status(fp: Path, url: str):
     family_names = [
         i.family_name() for i in PushItems.from_server_file(fp, "") if i.is_family()
     ]
@@ -337,14 +343,14 @@ def server_push_status(fp, url):
     return new_families, existing_families
 
 
-def server_push_report(name, fp, server_url):
+def server_push_report(name: str, fp: Path, server_url: str):
     new_families, existing_families = server_push_status(fp, server_url)
     new = "\n".join(new_families) if new_families else "N/A"
     existing = "\n".join(existing_families) if existing_families else "N/A"
     print(PUSH_STATUS_TEMPLATE.format(name, new, existing))
 
 
-def push_report(fp):
+def push_report(fp: Path):
     prod_path = fp / "to_production.txt"
     server_push_report("Production", prod_path, PRODUCTION_URL)
 
