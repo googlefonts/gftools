@@ -8,30 +8,18 @@ from enum import Enum
 
 
 class PushCategory(Enum):
-    BLOCKED = "Blocked"
     NEW = "New"
     UPGRADE = "Upgrade"
-    METADATA = "Metadata / Description / License"
-    DESIGNER_PROFILE = "Designer profile"
-    KNOWLEDGE = "Knowledge"
-    AXIS_REGISTRY = "Axis Registry"
-    SAMPLE_TEXTS = "Sample texts"
     OTHER = "Other"
+    DESIGNER_PROFILE = "Designer profile"
+    AXIS_REGISTRY = "Axis Registry"
+    KNOWLEDGE = "Knowledge"
+    METADATA = "Metadata / Description / License"
+    SAMPLE_TEXTS = "Sample texts"
+    BLOCKED = "Blocked"
 
     def values():
-        return set(i.value for i in PushCategory)
-
-
-CATEGORIES = (
-    "New",
-    "Upgrade",
-    "Other",
-    "Designer profile",
-    "Axis Registry",
-    "Knowledge",
-    "Metadata / Description / License",
-    "Sample texts"
-)
+        return [i.value for i in PushCategory]
 
 
 FAMILY_FILE_SUFFIXES = frozenset([".ttf", ".otf", ".html", ".pb", ".txt"])
