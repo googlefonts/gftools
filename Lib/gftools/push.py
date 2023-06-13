@@ -36,7 +36,11 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
     projectV2(number: 74) {
       id
       title
-      items(last: 40) {
+      items(first: 100, after: "%s") {
+        totalCount
+        edges {
+          cursor
+        }
         nodes {
           id
           status: fieldValueByName(name: "Status") {
@@ -48,7 +52,7 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
           content {
             ... on PullRequest {
               id
-              files(first: 10) {
+              files(first: 100) {
                 nodes {
                   path
                 }
@@ -212,9 +216,18 @@ class PushItems(list):
         from gftools.gfgithub import GitHubClient
 
         g = GitHubClient("google", "fonts")
-        data = g._run_graphql(GOOGLE_FONTS_TRAFFIC_JAM_QUERY, {})
-
+        last_item = ""
+        data = g._run_graphql(GOOGLE_FONTS_TRAFFIC_JAM_QUERY % last_item, {})
         board_items = data["data"]["organization"]["projectV2"]["items"]["nodes"]
+
+        # paginate through items in board
+        last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1]["cursor"]
+        item_count = data["data"]["organization"]["projectV2"]["items"]["totalCount"]
+        while len(board_items) < item_count:
+            data = g._run_graphql(GOOGLE_FONTS_TRAFFIC_JAM_QUERY % last_item, {})
+            board_items += data["data"]["organization"]["projectV2"]["items"]["nodes"]
+            last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1]["cursor"]
+
         results = cls()
         for item in board_items:
             status = item.get("status", {}).get("name", None)
