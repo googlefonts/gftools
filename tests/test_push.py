@@ -175,11 +175,42 @@ def test_push_item_set(items, expected_size):
                 PushItem(
                     Path("ofl/notosans/DESCRIPTION.en_us.html"), "new", "dev", "1"
                 ),
+                PushItem(Path("ofl/notosans/upstream.yaml"), "new", "dev", "1"),
                 PushItem(Path("ofl/notosans/OFL.txt"), "new", "dev", "1"),
+                PushItem(
+                    Path("ofl/notosans/DESCRIPTION.en_us.html"), "new", "dev", "1"
+                ),
             ],
             PushItems(
                 [
                     PushItem(Path("ofl/notosans"), "new", "dev", "1"),
+                ]
+            ),
+        ),
+        # designer
+        (
+            [
+                PushItem(
+                    Path("catalog/designers/colophonfoundry/bio.html"),
+                    "new",
+                    "dev",
+                    "1",
+                ),
+                PushItem(
+                    Path("catalog/designers/colophonfoundry/colophonfoundry.png"),
+                    "new",
+                    "dev",
+                    "1",
+                ),
+                PushItem(
+                    Path("catalog/designers/colophonfoundry/info.pb"), "new", "dev", "1"
+                ),
+            ],
+            PushItems(
+                [
+                    PushItem(
+                        Path("catalog/designers/colophonfoundry"), "new", "dev", "1"
+                    ),
                 ]
             ),
         ),

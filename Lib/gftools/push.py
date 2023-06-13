@@ -27,7 +27,9 @@ class PushCategory(Enum):
         return next((i for i in PushCategory if i.value == string), None)
 
 
-FAMILY_FILE_SUFFIXES = frozenset([".ttf", ".otf", ".html", ".pb", ".txt"])
+FAMILY_FILE_SUFFIXES = frozenset(
+    [".ttf", ".otf", ".html", ".pb", ".txt", ".yaml", ".png"]
+)
 
 
 GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
@@ -112,13 +114,14 @@ class PushItem:
 
 class PushItems(list):
     def add(self, item: PushItem):
-        # noto font projects projects often contain an article/ dir, we remove this
-        if "article" in item.path.parts:
+        # noto font projects projects often contain an article/ dir, we remove this.
+        # Same for legacy VF projects which may have a static/ dir.
+        if "article" in item.path.parts or "static" in item.path.parts:
             item.path = item.path.parent
 
         # for font families, we only want the dir e.g ofl/mavenpro/MavenPro[wght].ttf --> ofl/mavenpro
         elif (
-            any(d in item.path.parts for d in ("ofl", "ufl", "apache"))
+            any(d in item.path.parts for d in ("ofl", "ufl", "apache", "designers"))
             and item.path.suffix in FAMILY_FILE_SUFFIXES
         ):
             item.path = item.path.parent
@@ -221,12 +224,16 @@ class PushItems(list):
         board_items = data["data"]["organization"]["projectV2"]["items"]["nodes"]
 
         # paginate through items in board
-        last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1]["cursor"]
+        last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1][
+            "cursor"
+        ]
         item_count = data["data"]["organization"]["projectV2"]["items"]["totalCount"]
         while len(board_items) < item_count:
             data = g._run_graphql(GOOGLE_FONTS_TRAFFIC_JAM_QUERY % last_item, {})
             board_items += data["data"]["organization"]["projectV2"]["items"]["nodes"]
-            last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1]["cursor"]
+            last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1][
+                "cursor"
+            ]
 
         results = cls()
         for item in board_items:
