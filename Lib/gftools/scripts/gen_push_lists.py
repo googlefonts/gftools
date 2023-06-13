@@ -15,7 +15,7 @@ gftools gen-push-lists /path/to/google/fonts
 """
 import sys
 import os
-from gftools.push import PushItems
+from gftools.push import PushItems, PushStatus
 
 
 def main(args=None):
@@ -29,15 +29,15 @@ def main(args=None):
 
     board_items = PushItems.from_traffic_jam()
 
-    sandbox_file = PushItems.from_server_file(to_sandbox_fp, "In Dev / PR Merged")
+    sandbox_file = PushItems.from_server_file(to_sandbox_fp, PushStatus.IN_DEV)
     for item in board_items:
-        if item.status == "In Dev / PR Merged":
+        if item.status == PushStatus.IN_DEV:
             sandbox_file.add(item)
     sandbox_file.to_server_file(to_sandbox_fp)
 
-    production_file = PushItems.from_server_file(to_production_fp, "In Sandbox")
+    production_file = PushItems.from_server_file(to_production_fp, PushStatus.IN_SANDBOX)
     for item in board_items:
-        if item.status == "In Sandbox":
+        if item.status == PushStatus.IN_SANDBOX:
             production_file.add(item)
     production_file.to_server_file(to_production_fp)
 

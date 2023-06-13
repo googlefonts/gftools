@@ -6,7 +6,7 @@ from gftools.utils import read_proto
 import gftools.fonts_public_pb2 as fonts_pb2
 import requests  # type: ignore[import]
 from enum import Enum
-from io import IOBase, TextIOWrapper
+from io import TextIOWrapper
 
 
 class PushCategory(Enum):
@@ -25,6 +25,16 @@ class PushCategory(Enum):
 
     def from_string(string: str):  # type: ignore[misc]
         return next((i for i in PushCategory if i.value == string), None)
+
+
+class PushStatus(Enum):
+    PR_GF = "PR GF"
+    IN_DEV = "In Dev / PR Merged"
+    IN_SANDBOX = "In Sandbox"
+    LIVE = "Live"
+
+    def from_string(string: str):  # type: ignore[misc]
+        return next((i for i in PushStatus if i.value == string), None)
 
 
 FAMILY_FILE_SUFFIXES = frozenset(
@@ -79,7 +89,7 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
 class PushItem:
     path: Path
     category: PushCategory
-    status: str
+    status: PushStatus
     url: str
 
     def __hash__(self) -> int:
@@ -107,7 +117,7 @@ class PushItem:
         return {
             "path": str(self.path),
             "type": type_,
-            "status": self.status,
+            "status": self.status.value,
             "url": self.url,
         }
 
@@ -173,6 +183,8 @@ class PushItems(list):
 
         bins = defaultdict(set)
         for item in self:
+            if item.category == PushCategory.BLOCKED:
+                continue
             bins[item.category.value].add(item)
 
         res = []
@@ -190,7 +202,7 @@ class PushItems(list):
         doc.write("\n".join(res))
 
     @classmethod
-    def from_server_file(cls, fp: str | Path | TextIOWrapper, status: str):
+    def from_server_file(cls, fp: str | Path | TextIOWrapper, status: PushStatus):
         if isinstance(fp, (str, Path)):
             doc = open(fp)
         else:
@@ -238,6 +250,8 @@ class PushItems(list):
         results = cls()
         for item in board_items:
             status = item.get("status", {}).get("name", None)
+            if status:
+                status = PushStatus.from_string(status)
 
             if "labels" not in item["content"]:
                 print("PR missing labels. Skipping")
@@ -247,10 +261,9 @@ class PushItems(list):
             url = item["content"]["url"]
 
             # get pr state
-            if "-- blocked" in labels:
+            if "--- blocked" in labels:
                 cat = PushCategory.BLOCKED
-
-            if "I Font Upgrade" in labels or "I Small Fix" in labels:
+            elif "I Font Upgrade" in labels or "I Small Fix" in labels:
                 cat = PushCategory.UPGRADE
             elif "I New Font" in labels:
                 cat = PushCategory.NEW
@@ -303,12 +316,12 @@ def lint_server_files(fp: Path):
     )
 
     prod_path = fp / "to_production.txt"
-    production_file = PushItems.from_server_file(prod_path, "In Sandbox")
+    production_file = PushItems.from_server_file(prod_path, PushStatus.IN_SANDBOX)
     prod_missing = "\n".join(map(str, production_file.missing_paths()))
     prod_msg = template.format("to_production.txt", prod_missing)
 
     sandbox_path = fp / "to_sandbox.txt"
-    sandbox_file = PushItems.from_server_file(sandbox_path, "In Dev / PR Merged")
+    sandbox_file = PushItems.from_server_file(sandbox_path, PushStatus.IN_DEV)
     sandbox_missing = "\n".join(map(str, sandbox_file.missing_paths()))
     sandbox_msg = template.format("to_sandbox.txt", sandbox_missing)
 

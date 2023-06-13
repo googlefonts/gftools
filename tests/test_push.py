@@ -1,5 +1,5 @@
 import pytest
-from gftools.push import PushItem, PushItems, PushCategory
+from gftools.push import PushItem, PushItems, PushCategory, PushStatus
 from pathlib import Path
 import os
 
@@ -13,23 +13,23 @@ TEST_FAMILY_DIR = Path(os.path.join(TEST_DIR, "ofl", "mavenpro"))
     "item1,item2,expected",
     [
         (
-            PushItem("ofl/mavenpro", "modified", "dev", "45"),
-            PushItem("ofl/mavenpro", "modified", "dev", "45"),
+            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
+            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
             True,
         ),
         (
-            PushItem("ofl/mavenpro", "modified", "dev", "45"),
-            PushItem("ofl/mavenpro", "modified", "dev", "46"),
+            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
+            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "46"),
             False,
         ),
         (
-            PushItem("ofl/mavenpro", "modified", "dev", "45"),
-            PushItem("ofl/mavenpro2", "modified", "dev", "45"),
+            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
+            PushItem("ofl/mavenpro2", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
             False,
         ),
         (
-            PushItem("ofl/mavenpro", "modified", "dev", "45"),
-            PushItem("ofl/mavenpro", "modified", "sandbox", "45"),
+            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
+            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_SANDBOX, "45"),
             False,
         ),
     ],
@@ -69,39 +69,68 @@ def test_push_item_set(items, expected_size):
     [
         # fonts filenames get removed
         (
-            [PushItem(Path("ofl/mavenpro/MavenPro[wght].ttf"), "update", "dev", "1")],
-            PushItems([PushItem(Path("ofl/mavenpro"), "update", "dev", "1")]),
+            [
+                PushItem(
+                    Path("ofl/mavenpro/MavenPro[wght].ttf"),
+                    "update",
+                    PushStatus.IN_DEV,
+                    "1",
+                )
+            ],
+            PushItems(
+                [PushItem(Path("ofl/mavenpro"), "update", PushStatus.IN_DEV, "1")]
+            ),
         ),
         # font family
         (
             [
-                PushItem(Path("ofl/mavenpro/MavenPro[wght].ttf"), "update", "dev", "1"),
                 PushItem(
-                    Path("ofl/mavenpro/MavenPro-Italic[wght].ttf"), "update", "dev", "1"
+                    Path("ofl/mavenpro/MavenPro[wght].ttf"),
+                    "update",
+                    PushStatus.IN_DEV,
+                    "1",
+                ),
+                PushItem(
+                    Path("ofl/mavenpro/MavenPro-Italic[wght].ttf"),
+                    "update",
+                    PushStatus.IN_DEV,
+                    "1",
                 ),
             ],
-            PushItems([PushItem(Path("ofl/mavenpro"), "update", "dev", "1")]),
+            PushItems(
+                [PushItem(Path("ofl/mavenpro"), "update", PushStatus.IN_DEV, "1")]
+            ),
         ),
         # axisregistry
         (
             [
                 PushItem(
                     Path("axisregistry/Lib/axisregistry/data/bounce.textproto"),
-                    "new",
-                    "dev",
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
                     "1",
                 ),
                 PushItem(
                     Path("axisregistry/Lib/axisregistry/data/morph.textproto"),
-                    "new",
-                    "dev",
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
                     "1",
                 ),
             ],
             PushItems(
                 [
-                    PushItem(Path("axisregistry/bounce.textproto"), "new", "dev", "1"),
-                    PushItem(Path("axisregistry/morph.textproto"), "new", "dev", "1"),
+                    PushItem(
+                        Path("axisregistry/bounce.textproto"),
+                        PushCategory.NEW,
+                        PushStatus.IN_DEV,
+                        "1",
+                    ),
+                    PushItem(
+                        Path("axisregistry/morph.textproto"),
+                        PushCategory.NEW,
+                        PushStatus.IN_DEV,
+                        "1",
+                    ),
                 ]
             ),
         ),
@@ -110,15 +139,18 @@ def test_push_item_set(items, expected_size):
             [
                 PushItem(
                     Path("lang/Lib/gflanguages/data/languages/aa_Latn.textproto"),
-                    "new",
-                    "dev",
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
                     "1",
                 ),
             ],
             PushItems(
                 [
                     PushItem(
-                        Path("lang/languages/aa_Latn.textproto"), "new", "dev", "1"
+                        Path("lang/languages/aa_Latn.textproto"),
+                        PushCategory.NEW,
+                        PushStatus.IN_DEV,
+                        "1",
                     ),
                 ]
             ),
@@ -126,64 +158,109 @@ def test_push_item_set(items, expected_size):
         # child
         (
             [
-                PushItem(Path("ofl/mavenpro"), "new", "dev", "1"),
-                PushItem(Path("ofl"), "new", "dev", "1"),
+                PushItem(
+                    Path("ofl/mavenpro"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                ),
+                PushItem(Path("ofl"), PushCategory.NEW, PushStatus.IN_DEV, "1"),
             ],
             PushItems(
                 [
-                    PushItem(Path("ofl/mavenpro"), "new", "dev", "1"),
+                    PushItem(
+                        Path("ofl/mavenpro"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
                 ]
             ),
         ),
         # parent
         (
             [
-                PushItem(Path("ofl"), "new", "dev", "1"),
-                PushItem(Path("ofl/mavenpro"), "new", "dev", "1"),
+                PushItem(Path("ofl"), PushCategory.NEW, PushStatus.IN_DEV, "1"),
+                PushItem(
+                    Path("ofl/mavenpro"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                ),
             ],
             PushItems(
                 [
-                    PushItem(Path("ofl/mavenpro"), "new", "dev", "1"),
+                    PushItem(
+                        Path("ofl/mavenpro"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
                 ]
             ),
         ),
         # parent dir
         (
             [
-                PushItem(Path("ofl"), "new", "dev", "1"),
-                PushItem(Path("apache"), "new", "dev", "1"),
-                PushItem(Path("lang/authors.txt"), "new", "dev", "1"),
+                PushItem(Path("ofl"), PushCategory.NEW, PushStatus.IN_DEV, "1"),
+                PushItem(Path("apache"), PushCategory.NEW, PushStatus.IN_DEV, "1"),
+                PushItem(
+                    Path("lang/authors.txt"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                ),
             ],
             PushItems(),
         ),
         # noto article
         (
             [
-                PushItem(Path("ofl/notosans/article"), "new", "dev", "1"),
+                PushItem(
+                    Path("ofl/notosans/article"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
+                ),
             ],
             PushItems(
                 [
-                    PushItem(Path("ofl/notosans"), "new", "dev", "1"),
+                    PushItem(
+                        Path("ofl/notosans"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
                 ]
             ),
         ),
         # noto full
         (
             [
-                PushItem(Path("ofl/notosans/article"), "new", "dev", "1"),
-                PushItem(Path("ofl/notosans/NotoSans[wght].ttf"), "new", "dev", "1"),
                 PushItem(
-                    Path("ofl/notosans/DESCRIPTION.en_us.html"), "new", "dev", "1"
+                    Path("ofl/notosans/article"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
                 ),
-                PushItem(Path("ofl/notosans/upstream.yaml"), "new", "dev", "1"),
-                PushItem(Path("ofl/notosans/OFL.txt"), "new", "dev", "1"),
                 PushItem(
-                    Path("ofl/notosans/DESCRIPTION.en_us.html"), "new", "dev", "1"
+                    Path("ofl/notosans/NotoSans[wght].ttf"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
+                ),
+                PushItem(
+                    Path("ofl/notosans/DESCRIPTION.en_us.html"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
+                ),
+                PushItem(
+                    Path("ofl/notosans/upstream.yaml"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
+                ),
+                PushItem(
+                    Path("ofl/notosans/OFL.txt"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
+                ),
+                PushItem(
+                    Path("ofl/notosans/DESCRIPTION.en_us.html"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
                 ),
             ],
             PushItems(
                 [
-                    PushItem(Path("ofl/notosans"), "new", "dev", "1"),
+                    PushItem(
+                        Path("ofl/notosans"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
                 ]
             ),
         ),
@@ -192,24 +269,30 @@ def test_push_item_set(items, expected_size):
             [
                 PushItem(
                     Path("catalog/designers/colophonfoundry/bio.html"),
-                    "new",
-                    "dev",
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
                     "1",
                 ),
                 PushItem(
                     Path("catalog/designers/colophonfoundry/colophonfoundry.png"),
-                    "new",
-                    "dev",
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
                     "1",
                 ),
                 PushItem(
-                    Path("catalog/designers/colophonfoundry/info.pb"), "new", "dev", "1"
+                    Path("catalog/designers/colophonfoundry/info.pb"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
                 ),
             ],
             PushItems(
                 [
                     PushItem(
-                        Path("catalog/designers/colophonfoundry"), "new", "dev", "1"
+                        Path("catalog/designers/colophonfoundry"),
+                        PushCategory.NEW,
+                        PushStatus.IN_DEV,
+                        "1",
                     ),
                 ]
             ),
@@ -244,7 +327,7 @@ def test_push_items_from_server_file(string, expected_size):
     data = StringIO()
     data.write(string)
     data.seek(0)
-    items = PushItems.from_server_file(data, "dev")
+    items = PushItems.from_server_file(data, PushStatus.IN_DEV)
     assert len(items) == expected_size
 
 
@@ -255,8 +338,8 @@ def test_push_items_from_server_file(string, expected_size):
         (
             PushItems(
                 [
-                    PushItem("a/b", PushCategory.UPGRADE, "dev", "45"),
-                    PushItem("a/c", PushCategory.NEW, "dev", "46"),
+                    PushItem("a/b", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
+                    PushItem("a/c", PushCategory.NEW, PushStatus.IN_DEV, "46"),
                 ]
             ),
             "# New\na/c # 46\n\n# Upgrade\na/b # 45\n",
@@ -265,9 +348,9 @@ def test_push_items_from_server_file(string, expected_size):
         (
             PushItems(
                 [
-                    PushItem("a/b", PushCategory.UPGRADE, "dev", "45"),
-                    PushItem("a/b", PushCategory.UPGRADE, "dev", "45"),
-                    PushItem("a/b", PushCategory.UPGRADE, "dev", "45"),
+                    PushItem("a/b", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
+                    PushItem("a/b", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
+                    PushItem("a/b", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
                 ]
             ),
             "# Upgrade\na/b # 45\n",
@@ -291,5 +374,5 @@ def test_push_items_to_server_file(items, expected):
     ],
 )
 def test_push_items_missing_paths(path, expected):
-    items = PushItems([PushItem(path, "a", "a", "a")])
+    items = PushItems([PushItem(path, "a", PushStatus.IN_DEV, "a")])
     assert items.missing_paths() == expected
