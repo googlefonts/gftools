@@ -221,7 +221,7 @@ class PushItems(list):
 
     @classmethod
     def from_server_file(
-        cls, fp: str | Path | TextIOWrapper, status: PushStatus, push_list: PushList
+        cls, fp: str | Path | TextIOWrapper, status: PushStatus = None, push_list: PushList = None
     ):
         if isinstance(fp, (str, Path)):
             doc = open(fp)
@@ -388,7 +388,7 @@ def gf_server_metadata(url: str):
 
 def server_push_status(fp: Path, url: str):
     family_names = [
-        i.family_name() for i in PushItems.from_server_file(fp, "") if i.is_family()
+        i.family_name() for i in PushItems.from_server_file(fp, None, None) if i.is_family()
     ]
 
     gf_meta = gf_server_metadata(url)
