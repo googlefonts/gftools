@@ -1,5 +1,5 @@
 import pytest
-from gftools.push import PushItem, PushItems, PushCategory, PushStatus
+from gftools.push import PushItem, PushItems, PushCategory, PushStatus, PushList
 from pathlib import Path
 import os
 
@@ -202,7 +202,7 @@ def test_push_item_set(items, expected_size):
         (
             [
                 PushItem(
-                    Path("ofl/notosans/article"),
+                    Path("ofl/notosans/article/index.html"),
                     PushCategory.NEW,
                     PushStatus.IN_DEV,
                     "1",
@@ -327,7 +327,7 @@ def test_push_items_from_server_file(string, expected_size):
     data = StringIO()
     data.write(string)
     data.seek(0)
-    items = PushItems.from_server_file(data, PushStatus.IN_DEV)
+    items = PushItems.from_server_file(data, PushStatus.IN_DEV, PushList.TO_SANDBOX)
     assert len(items) == expected_size
 
 

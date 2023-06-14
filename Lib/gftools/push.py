@@ -142,7 +142,10 @@ class PushItems(list):
         # noto font projects projects often contain an article/ dir, we remove this.
         # Same for legacy VF projects which may have a static/ dir.
         if "article" in item.path.parts or "static" in item.path.parts:
-            item.path = item.path.parent
+            if item.path.is_dir():
+                item.path = item.path.parent
+            else:
+                item.path = item.path.parent.parent
 
         # for font families, we only want the dir e.g ofl/mavenpro/MavenPro[wght].ttf --> ofl/mavenpro
         elif (
@@ -217,7 +220,9 @@ class PushItems(list):
         doc.write("\n".join(res))
 
     @classmethod
-    def from_server_file(cls, fp: str | Path | TextIOWrapper, status: PushStatus):
+    def from_server_file(
+        cls, fp: str | Path | TextIOWrapper, status: PushStatus, push_list: PushList
+    ):
         if isinstance(fp, (str, Path)):
             doc = open(fp)
         else:
@@ -233,11 +238,13 @@ class PushItems(list):
                 category = PushCategory.from_string(line[1:].strip())
             elif "#" in line:
                 path, url = line.split("#")
-                item = PushItem(Path(path.strip()), category, status, url.strip())
+                item = PushItem(
+                    Path(path.strip()), category, status, url.strip(), push_list
+                )
                 results.add(item)
             # some paths may not contain a PR, still add them
             else:
-                item = PushItem(Path(line.strip()), category, status, "")
+                item = PushItem(Path(line.strip()), category, status, "", push_list)
                 results.add(item)
         return results
 

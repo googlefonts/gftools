@@ -29,8 +29,8 @@ def main(args=None):
 
     # get existing push items
     board_items = PushItems.from_traffic_jam()
-    sandbox_file = PushItems.from_server_file(to_sandbox_fp, PushStatus.IN_DEV)
-    production_file = PushItems.from_server_file(to_production_fp, PushStatus.IN_SANDBOX)
+    sandbox_file = PushItems.from_server_file(to_sandbox_fp, PushStatus.IN_DEV, PushList.TO_SANDBOX)
+    production_file = PushItems.from_server_file(to_production_fp, PushStatus.IN_SANDBOX, PushList.TO_PRODUCTION)
 
     sandbox_board = PushItems([i for i in board_items if i.push_list == PushList.TO_SANDBOX])
     production_board = PushItems([i for i in board_items if i.push_list == PushList.TO_PRODUCTION])
