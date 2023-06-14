@@ -37,6 +37,15 @@ class PushStatus(Enum):
         return next((i for i in PushStatus if i.value == string), None)
 
 
+class PushList(Enum):
+    TO_SANDBOX = "to_sandbox"
+    TO_PRODUCTION = "to_production"
+    BLOCKED = "blocked"
+
+    def from_string(string: str):  # type: ignore[misc]
+        return next((i for i in PushList if i.value == string), None)
+
+
 FAMILY_FILE_SUFFIXES = frozenset(
     [".ttf", ".otf", ".html", ".pb", ".txt", ".yaml", ".png"]
 )
@@ -96,9 +105,10 @@ class PushItem:
     category: PushCategory
     status: PushStatus
     url: str
+    push_list: PushList = None
 
     def __hash__(self) -> int:
-        return hash((self.path, self.category, self.status, self.url))
+        return hash((self.path, self.url))
 
     def exists(self) -> bool:
         return self.path.exists()
@@ -258,6 +268,10 @@ class PushItems(list):
             if status:
                 status = PushStatus.from_string(status)
 
+            push_list = item.get("list", None)
+            if push_list:
+                push_list = PushList.from_string(push_list.get("name", None))
+
             if "labels" not in item["content"]:
                 print("PR missing labels. Skipping")
                 continue
@@ -266,12 +280,8 @@ class PushItems(list):
             files = [Path(i["path"]) for i in item["content"]["files"]["nodes"]]
             url = item["content"]["url"]
 
-            # get pr state
-            list_ = item["list"]
-            if list_ and list_["name"] == "blocked":
-                print(f"skipping {files}")
-                cat = PushCategory.BLOCKED
-            elif "--- blocked" in labels:
+            # get category
+            if "--- blocked" in labels:
                 cat = PushCategory.BLOCKED
             elif "I Font Upgrade" in labels or "I Small Fix" in labels:
                 cat = PushCategory.UPGRADE
@@ -291,7 +301,7 @@ class PushItems(list):
                 cat = PushCategory.OTHER
 
             for f in files:
-                results.add(PushItem(Path(f), cat, status, url))
+                results.add(PushItem(Path(f), cat, status, url, push_list))
         return results
 
 

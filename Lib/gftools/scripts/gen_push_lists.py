@@ -15,7 +15,7 @@ gftools gen-push-lists /path/to/google/fonts
 """
 import sys
 import os
-from gftools.push import PushItems, PushStatus
+from gftools.push import PushItems, PushStatus, PushList
 
 
 def main(args=None):
@@ -27,19 +27,20 @@ def main(args=None):
     to_sandbox_fp = os.path.join(gf_path, "to_sandbox.txt")
     to_production_fp = os.path.join(gf_path, "to_production.txt")
 
+    # get existing push items
     board_items = PushItems.from_traffic_jam()
-
     sandbox_file = PushItems.from_server_file(to_sandbox_fp, PushStatus.IN_DEV)
-    for item in board_items:
-        if item.status == PushStatus.IN_DEV:
-            sandbox_file.add(item)
-    sandbox_file.to_server_file(to_sandbox_fp)
-
     production_file = PushItems.from_server_file(to_production_fp, PushStatus.IN_SANDBOX)
-    for item in board_items:
-        if item.status == PushStatus.IN_SANDBOX:
-            production_file.add(item)
-    production_file.to_server_file(to_production_fp)
+
+    sandbox_board = PushItems([i for i in board_items if i.push_list == PushList.TO_SANDBOX])
+    production_board = PushItems([i for i in board_items if i.push_list == PushList.TO_PRODUCTION])
+    live_board = PushItems([i for i in board_items if i.status == PushStatus.LIVE])
+
+    to_sandbox = PushItems((set(sandbox_file) | set(sandbox_board)) - set(production_board))
+    to_production = PushItems((set(production_file) | set(production_board)) - set(live_board))
+
+    to_sandbox.to_server_file(to_sandbox_fp)
+    to_production.to_server_file(to_production_fp)
 
 
 if __name__ == "__main__":
