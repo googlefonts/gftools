@@ -264,6 +264,49 @@ def test_push_item_set(items, expected_size):
                 ]
             ),
         ),
+        # multi notosans
+        (
+            [
+                PushItem(
+                    Path("ofl/notosanspsalterpahlavi/METADATA.pb"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                ),
+                PushItem(
+                    Path("ofl/notosans/METADATA.pb"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                ),
+            ],
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/notosanspsalterpahlavi"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                    PushItem(
+                        Path("ofl/notosans"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                ]
+            )
+        ),
+        # multi notosans 2
+        (
+            [
+                PushItem(
+                    Path("ofl/notosans/METADATA.pb"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                ),
+                PushItem(
+                    Path("ofl/notosanspsalterpahlavi/METADATA.pb"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                ),
+
+            ],
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/notosans"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                    PushItem(
+                        Path("ofl/notosanspsalterpahlavi"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                ]
+            )
+        ),
         # designer
         (
             [
