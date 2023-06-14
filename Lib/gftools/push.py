@@ -60,6 +60,11 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
               name
             }
           }
+          list: fieldValueByName(name: "List") {
+            ... on ProjectV2ItemFieldSingleSelectValue {
+              name
+            }
+          }
           type
           content {
             ... on PullRequest {
@@ -255,13 +260,18 @@ class PushItems(list):
 
             if "labels" not in item["content"]:
                 print("PR missing labels. Skipping")
+                continue
             labels = [i["name"] for i in item["content"]["labels"]["nodes"]]
 
             files = [Path(i["path"]) for i in item["content"]["files"]["nodes"]]
             url = item["content"]["url"]
 
             # get pr state
-            if "--- blocked" in labels:
+            list_ = item["list"]
+            if list_ and list_["name"] == "blocked":
+                print(f"skipping {files}")
+                cat = PushCategory.BLOCKED
+            elif "--- blocked" in labels:
                 cat = PushCategory.BLOCKED
             elif "I Font Upgrade" in labels or "I Small Fix" in labels:
                 cat = PushCategory.UPGRADE
