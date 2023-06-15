@@ -296,6 +296,8 @@ class PushItems(list):
             last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1][
                 "cursor"
             ]
+        # sort items by pr number
+        board_items.sort(key=lambda k: k["content"]["url"])
 
         results = cls()
         for item in board_items:
