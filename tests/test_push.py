@@ -503,7 +503,7 @@ def test_push_items_from_server_file(string, expected_size):
                 ]
             ),
             (True, True),
-            "# Upgrade\nofl/mavenpro # 45\n",
+            f"# Upgrade\nofl/mavenpro # 45\n",
         ),
     ],
 )

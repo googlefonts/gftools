@@ -220,12 +220,12 @@ class PushItems(list):
             res.append(f"# {tag}")
             for item in sorted(bins[tag], key=lambda k: k.path):
                 if item.exists():
-                    res.append(f"{item.path} # {item.url}")
+                    res.append(f"{item.path.as_posix()} # {item.url}")
                 else:
                     if item.url:
-                        res.append(f"# Deleted: {item.path} # {item.url}")
+                        res.append(f"# Deleted: {item.path.as_posix()} # {item.url}")
                     else:
-                        res.append(f"# Deleted: {item.path}")
+                        res.append(f"# Deleted: {item.path.as_posix()}")
             res.append("")
         if isinstance(fp, str):
             doc: TextIOWrapper = open(fp, "w")
