@@ -514,6 +514,7 @@ def test_push_items_to_server_file(items, create_dirs, expected):
     # We need to mock the item paths because if they don't exist, the server_file
     # should mention that they're deleted
     with tempfile.TemporaryDirectory() as tmp_dir:
+        cwd = os.getcwd()
         os.chdir(tmp_dir)
         for item, create_dir in zip(items, create_dirs):
             new_path = tmp_dir / item.path
@@ -523,6 +524,7 @@ def test_push_items_to_server_file(items, create_dirs, expected):
         out = StringIO()
         items.to_server_file(out)
         out.seek(0)
+        os.chdir(cwd)
         assert out.read() == expected
 
 
