@@ -32,12 +32,12 @@ def main(args=None):
     sandbox_file = PushItems.from_server_file(to_sandbox_fp, PushStatus.IN_DEV, PushList.TO_SANDBOX)
     production_file = PushItems.from_server_file(to_production_fp, PushStatus.IN_SANDBOX, PushList.TO_PRODUCTION)
 
-    sandbox_board = PushItems([i for i in board_items if i.push_list == PushList.TO_SANDBOX])
-    production_board = PushItems([i for i in board_items if i.push_list == PushList.TO_PRODUCTION])
-    live_board = PushItems([i for i in board_items if i.status == PushStatus.LIVE])
+    sandbox_board = board_items.to_sandbox()
+    production_board = board_items.to_production()
+    live_board = board_items.live()
 
-    to_sandbox = PushItems((set(sandbox_file) | set(sandbox_board)) - set(production_board))
-    to_production = PushItems((set(production_file) | set(production_board)) - set(live_board))
+    to_sandbox = (sandbox_file + sandbox_board) - production_board
+    to_production = (production_file + production_board) - live_board
 
     to_sandbox.to_server_file(to_sandbox_fp)
     to_production.to_server_file(to_production_fp)

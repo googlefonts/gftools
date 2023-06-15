@@ -142,6 +142,30 @@ class PushItem:
 
 
 class PushItems(list):
+    def __add__(self, other):
+        from copy import deepcopy
+
+        new = deepcopy(self)
+        for i in other:
+            new.add(i)
+        return new
+
+    def __sub__(self, other):
+        subbed = [i for i in self if i not in other]
+        new = PushItems()
+        for i in subbed:
+            new.add(i)
+        return new
+
+    def to_sandbox(self):
+        return PushItems([i for i in self if i.push_list == PushList.TO_SANDBOX])
+
+    def to_production(self):
+        return PushItems([i for i in self if i.push_list == PushList.TO_PRODUCTION])
+
+    def live(self):
+        return PushItems([i for i in self if i.status == PushStatus.LIVE])
+
     def add(self, item: PushItem):
         # noto font projects projects often contain an article/ dir, we remove this.
         # Same for legacy VF projects which may have a static/ dir.
