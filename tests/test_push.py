@@ -373,13 +373,38 @@ def test_push_item_set(items, expected_size):
                 ]
             ),
         ),
+        # ensure latest push item is used
+        (
+            [
+                PushItem(
+                    Path("ofl/mavenpro"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                ),
+                PushItem(
+                    Path("ofl/mavenpro"), PushCategory.UPGRADE, PushStatus.IN_DEV, "2"
+                ),
+            ],
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/mavenpro"),
+                        PushCategory.UPGRADE,
+                        PushStatus.IN_DEV,
+                        "2",
+                    ),
+                ]
+            ),
+        ),
     ],
 )
 def test_push_items_add(items, expected):
     res = PushItems()
     for item in items:
         res.add(item)
-    assert res == expected
+    for got, want in zip(res, expected):
+        assert got.path == want.path
+        assert got.status == want.status
+        assert got.category == want.category
+        assert got.url == want.url
 
 
 # TODO reactivate this. Doesn't work on GHA

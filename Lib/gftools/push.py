@@ -176,18 +176,22 @@ class PushItems(list):
         if len(item.path.parts) == 1:
             return
 
-        # Skip if path is a parent of an existing path
-        if any(item.path.parts[-1] in p.path.parts for p in self):
-            return
+        # Pop any existing item which has the same path. We always want the latest
+        existing_idx = next(
+            (idx for idx, i in enumerate(self) if i.path == item.path), None
+        )
+        if existing_idx != None:
+            self.pop(existing_idx)
 
         # Pop any push items which are a child of the item's path
         to_pop = None
         for idx, i in enumerate(self):
-            if i.path.parts[-1] in item.path.parts:
+            if i.path.parts[-1] in item.path.parts or i.path == item.path:
                 to_pop = idx
                 break
         if to_pop:
             self.pop(to_pop)
+
         self.append(item)
 
     def missing_paths(self) -> list[Path]:
