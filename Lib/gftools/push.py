@@ -108,10 +108,14 @@ class PushItem:
     push_list: PushList = None
 
     def __hash__(self) -> int:
-        return hash((self.path, self.url))
+        return hash(self.path)
+
+    def __eq__(self, other):
+        return self.path == other.path
 
     def exists(self) -> bool:
-        return self.path.exists()
+        path = google_path_to_repo_path(self.path)
+        return path.exists()
 
     def is_family(self) -> bool:
         return any(
@@ -211,7 +215,13 @@ class PushItems(list):
                 continue
             res.append(f"# {tag}")
             for item in sorted(bins[tag], key=lambda k: k.path):
-                res.append(f"{item.path} # {item.url}")
+                if item.exists():
+                    res.append(f"{item.path} # {item.url}")
+                else:
+                    if item.url:
+                        res.append(f"# Deleted: {item.path} # {item.url}")
+                    else:
+                        res.append(f"# Deleted: {item.path}")
             res.append("")
         if isinstance(fp, str):
             doc: TextIOWrapper = open(fp, "w")
@@ -221,7 +231,10 @@ class PushItems(list):
 
     @classmethod
     def from_server_file(
-        cls, fp: str | Path | TextIOWrapper, status: PushStatus = None, push_list: PushList = None
+        cls,
+        fp: str | Path | TextIOWrapper,
+        status: PushStatus = None,
+        push_list: PushList = None,
     ):
         if isinstance(fp, (str, Path)):
             doc = open(fp)
@@ -234,6 +247,17 @@ class PushItems(list):
         for line in lines:
             if not line:
                 continue
+
+            if line.startswith("# Deleted"):
+                parts = line.split()
+                for part in parts:
+                    if (
+                        google_path_to_repo_path(Path(part)) != Path(part)
+                        or Path(part).exists()
+                    ):
+                        line = part
+                        break
+
             if line.startswith("#"):
                 category = PushCategory.from_string(line[1:].strip())
             elif "#" in line:
@@ -326,7 +350,7 @@ def repo_path_to_google_path(fp: Path):
     return fp
 
 
-def google_path_to_repo_path(fp: Path):
+def google_path_to_repo_path(fp: Path) -> Path:
     """lang/languages/.*.textproto --> lang/Lib/gflanguages/data/languages/.*.textproto"""
     if "lang" in fp.parts:
         return Path("lang/Lib/gflanguages/data/") / fp.relative_to("lang")
@@ -388,7 +412,9 @@ def gf_server_metadata(url: str):
 
 def server_push_status(fp: Path, url: str):
     family_names = [
-        i.family_name() for i in PushItems.from_server_file(fp, None, None) if i.is_family()
+        i.family_name()
+        for i in PushItems.from_server_file(fp, None, None)
+        if i.is_family()
     ]
 
     gf_meta = gf_server_metadata(url)

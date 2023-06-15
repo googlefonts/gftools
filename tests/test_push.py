@@ -13,24 +13,40 @@ TEST_FAMILY_DIR = Path(os.path.join(TEST_DIR, "ofl", "mavenpro"))
     "item1,item2,expected",
     [
         (
-            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
-            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
+            PushItem(
+                Path("ofl/mavenpro"), PushCategory.UPGRADE, PushStatus.IN_DEV, "45"
+            ),
+            PushItem(
+                Path("ofl/mavenpro"), PushCategory.UPGRADE, PushStatus.IN_DEV, "45"
+            ),
             True,
         ),
         (
-            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
-            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "46"),
+            PushItem(
+                Path("ofl/mavenpro"), PushCategory.UPGRADE, PushStatus.IN_DEV, "45"
+            ),
+            PushItem(
+                Path("ofl/mavenpro"), PushCategory.UPGRADE, PushStatus.IN_DEV, "46"
+            ),
+            True,
+        ),
+        (
+            PushItem(
+                Path("ofl/mavenpro"), PushCategory.UPGRADE, PushStatus.IN_DEV, "45"
+            ),
+            PushItem(
+                Path("ofl/mavenpro2"), PushCategory.UPGRADE, PushStatus.IN_DEV, "45"
+            ),
             False,
         ),
         (
-            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
-            PushItem("ofl/mavenpro2", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
-            False,
-        ),
-        (
-            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
-            PushItem("ofl/mavenpro", PushCategory.UPGRADE, PushStatus.IN_SANDBOX, "45"),
-            False,
+            PushItem(
+                Path("ofl/mavenpro"), PushCategory.UPGRADE, PushStatus.IN_DEV, "45"
+            ),
+            PushItem(
+                Path("ofl/mavenpro"), PushCategory.UPGRADE, PushStatus.IN_SANDBOX, "45"
+            ),
+            True,
         ),
     ],
 )
@@ -268,33 +284,47 @@ def test_push_item_set(items, expected_size):
         (
             [
                 PushItem(
-                    Path("ofl/notosanspsalterpahlavi/METADATA.pb"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    Path("ofl/notosanspsalterpahlavi/METADATA.pb"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
                 ),
                 PushItem(
-                    Path("ofl/notosans/METADATA.pb"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    Path("ofl/notosans/METADATA.pb"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
                 ),
             ],
             PushItems(
                 [
                     PushItem(
-                        Path("ofl/notosanspsalterpahlavi"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                        Path("ofl/notosanspsalterpahlavi"),
+                        PushCategory.NEW,
+                        PushStatus.IN_DEV,
+                        "1",
                     ),
                     PushItem(
                         Path("ofl/notosans"), PushCategory.NEW, PushStatus.IN_DEV, "1"
                     ),
                 ]
-            )
+            ),
         ),
         # multi notosans 2
         (
             [
                 PushItem(
-                    Path("ofl/notosans/METADATA.pb"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    Path("ofl/notosans/METADATA.pb"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
                 ),
                 PushItem(
-                    Path("ofl/notosanspsalterpahlavi/METADATA.pb"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    Path("ofl/notosanspsalterpahlavi/METADATA.pb"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
                 ),
-
             ],
             PushItems(
                 [
@@ -302,10 +332,13 @@ def test_push_item_set(items, expected_size):
                         Path("ofl/notosans"), PushCategory.NEW, PushStatus.IN_DEV, "1"
                     ),
                     PushItem(
-                        Path("ofl/notosanspsalterpahlavi"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                        Path("ofl/notosanspsalterpahlavi"),
+                        PushCategory.NEW,
+                        PushStatus.IN_DEV,
+                        "1",
                     ),
                 ]
-            )
+            ),
         ),
         # designer
         (
@@ -350,7 +383,7 @@ def test_push_items_add(items, expected):
 
 
 # TODO reactivate this. Doesn't work on GHA
-#def test_push_items_from_traffic_jam():
+# def test_push_items_from_traffic_jam():
 #    items = PushItems.from_traffic_jam()
 #    # traffic board shouldn't be empty
 #    assert (
@@ -376,38 +409,96 @@ def test_push_items_from_server_file(string, expected_size):
 
 
 @pytest.mark.parametrize(
-    "items,expected",
+    "items,create_dirs,expected",
     [
         # standard items
         (
             PushItems(
                 [
-                    PushItem("a/b", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
-                    PushItem("a/c", PushCategory.NEW, PushStatus.IN_DEV, "46"),
+                    PushItem(
+                        Path("ofl/mavenpro"),
+                        PushCategory.UPGRADE,
+                        PushStatus.IN_DEV,
+                        "45",
+                    ),
+                    PushItem(
+                        Path("ofl/amatic"), PushCategory.NEW, PushStatus.IN_DEV, "46"
+                    ),
                 ]
             ),
-            "# New\na/c # 46\n\n# Upgrade\na/b # 45\n",
+            (True, True),
+            "# New\nofl/amatic # 46\n\n# Upgrade\nofl/mavenpro # 45\n",
+        ),
+        # deleted item
+        (
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/mavenpro"),
+                        PushCategory.UPGRADE,
+                        PushStatus.IN_DEV,
+                        "45",
+                    ),
+                    PushItem(
+                        Path("ofl/amatic"), PushCategory.NEW, PushStatus.IN_DEV, "46"
+                    ),
+                    PushItem(
+                        Path("ofl/opensans"),
+                        PushCategory.UPGRADE,
+                        PushStatus.IN_DEV,
+                        "47",
+                    ),
+                ]
+            ),
+            (True, False, True),
+            "# New\n# Deleted: ofl/amatic # 46\n\n# Upgrade\nofl/mavenpro # 45\nofl/opensans # 47\n",
         ),
         # duplicate items
         (
             PushItems(
                 [
-                    PushItem("a/b", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
-                    PushItem("a/b", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
-                    PushItem("a/b", PushCategory.UPGRADE, PushStatus.IN_DEV, "45"),
+                    PushItem(
+                        Path("ofl/mavenpro"),
+                        PushCategory.UPGRADE,
+                        PushStatus.IN_DEV,
+                        "45",
+                    ),
+                    PushItem(
+                        Path("ofl/mavenpro"),
+                        PushCategory.UPGRADE,
+                        PushStatus.IN_DEV,
+                        "45",
+                    ),
+                    PushItem(
+                        Path("ofl/mavenpro"),
+                        PushCategory.UPGRADE,
+                        PushStatus.IN_DEV,
+                        "45",
+                    ),
                 ]
             ),
-            "# Upgrade\na/b # 45\n",
+            (True, True),
+            "# Upgrade\nofl/mavenpro # 45\n",
         ),
     ],
 )
-def test_push_items_to_server_file(items, expected):
+def test_push_items_to_server_file(items, create_dirs, expected):
     from io import StringIO
+    import tempfile
 
-    out = StringIO()
-    items.to_server_file(out)
-    out.seek(0)
-    assert out.read() == expected
+    # We need to mock the item paths because if they don't exist, the server_file
+    # should mention that they're deleted
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        os.chdir(tmp_dir)
+        for item, create_dir in zip(items, create_dirs):
+            new_path = tmp_dir / item.path
+            if create_dir:
+                os.makedirs(new_path, exist_ok=True)
+
+        out = StringIO()
+        items.to_server_file(out)
+        out.seek(0)
+        assert out.read() == expected
 
 
 @pytest.mark.parametrize(
