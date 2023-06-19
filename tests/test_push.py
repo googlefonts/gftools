@@ -1,4 +1,5 @@
 import pytest
+import operator
 from gftools.push import PushItem, PushItems, PushCategory, PushStatus, PushList
 from pathlib import Path
 import os
@@ -78,6 +79,83 @@ def test_push_item_eq(item1, item2, expected):
 def test_push_item_set(items, expected_size):
     new_items = PushItems(set(items))
     assert len(new_items) == expected_size
+
+
+@pytest.mark.parametrize(
+    """operator,item1,item2,expected""",
+    [
+        # add items together
+        (
+            operator.add,
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/mavenpro"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                ]
+            ),
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/mavenpro"),
+                        PushCategory.NEW,
+                        PushStatus.IN_SANDBOX,
+                        "1",
+                    ),
+                    PushItem(
+                        Path("ofl/amatic"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                ]
+            ),
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/mavenpro"),
+                        PushCategory.NEW,
+                        PushStatus.IN_SANDBOX,
+                        "1",
+                    ),
+                    PushItem(
+                        Path("ofl/amatic"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                ]
+            ),
+        ),
+        # sub items
+        (
+            operator.sub,
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/mavenpro"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                    PushItem(
+                        Path("ofl/amatic"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                ]
+            ),
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/mavenpro"),
+                        PushCategory.NEW,
+                        PushStatus.IN_SANDBOX,
+                        "1",
+                    ),
+                ]
+            ),
+            PushItems(
+                [
+                    PushItem(
+                        Path("ofl/amatic"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                ]
+            ),
+        ),
+    ],
+)
+def test_push_items_operators(operator, item1, item2, expected):
+    assert operator(item1, item2) == expected
 
 
 @pytest.mark.parametrize(
