@@ -136,7 +136,7 @@ class PushItem:
         status = None if not self.status else self.status.value
         url = None if not self.url else self.url
         return {
-            "path": str(self.path),
+            "path": str(self.path.as_posix()),
             "category": category,
             "status": status,
             "url": url,
