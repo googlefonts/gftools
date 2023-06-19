@@ -41,7 +41,7 @@ from hashlib import sha1
 from fontTools.ttLib import TTFont # type: ignore
 from gflanguages import LoadLanguages
 from gftools.util import google_fonts as fonts
-from gftools.github import GitHubClient
+from gftools.gfgithub import GitHubClient
 from gftools.utils import download_file
 
 # ignore type because mypy error: Module 'google.protobuf' has no

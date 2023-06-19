@@ -22,19 +22,21 @@ import unittest
 import subprocess
 from gftools.scripts import _get_subcommands
 
+CWD = os.path.dirname(__file__)
+TEST_DIR = os.path.join(CWD, "..", "data", "test")
 
 class TestGFToolsScripts(unittest.TestCase):
     """Functional tests to determine whether each script can execute successfully"""
     def setUp(self):
-        self.example_dir = os.path.join('data', 'test', 'cabin')
+        self.example_dir = os.path.join(TEST_DIR, 'cabin')
         self.example_font = os.path.join(self.example_dir, 'Cabin-Regular.ttf')
-        self.example_family = glob(os.path.join("data", "test", "mavenpro", "*.ttf"))
-        self.example_vf_font = os.path.join("data", "test", 'Lora-Roman-VF.ttf')
-        self.example_vf_stat = os.path.join("data", "test", 'lora_stat.yaml')
-        self.example_glyphs_file = os.path.join("data", "test", 'Lora.glyphs')
-        self.example_builder_config = os.path.join("data", "test", 'builder_test.yaml')
-        self.example_builder_config_2_sources = os.path.join("data", "test", "Libre-Bodoni", "sources", "config.yaml")
-        self.src_vtt_font = os.path.join("data", "test", "Inconsolata[wdth,wght].ttf")
+        self.example_family = glob(os.path.join(TEST_DIR, "mavenpro", "*.ttf"))
+        self.example_vf_font = os.path.join(TEST_DIR, 'Lora-Roman-VF.ttf')
+        self.example_vf_stat = os.path.join(TEST_DIR, 'lora_stat.yaml')
+        self.example_glyphs_file = os.path.join(TEST_DIR, 'Lora.glyphs')
+        self.example_builder_config = os.path.join(TEST_DIR, 'builder_test.yaml')
+        self.example_builder_config_2_sources = os.path.join(TEST_DIR, "Libre-Bodoni", "sources", "config.yaml")
+        self.src_vtt_font = os.path.join(TEST_DIR, "Inconsolata[wdth,wght].ttf")
         self.gf_family_dir = os.path.join('data', 'test', 'mock_googlefonts', 'ofl', 'abel')
         self.nam_file = os.path.join('data', 'test', 'arabic_unique-glyphs.nam')
         self.dir_before_tests = os.listdir(self.example_dir)

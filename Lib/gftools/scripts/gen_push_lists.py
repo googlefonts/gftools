@@ -13,76 +13,9 @@ pull requests must use labels.
 Usage:
 gftools gen-push-lists /path/to/google/fonts
 """
-from gftools.push import parse_server_file
-from github import Github
-from collections import defaultdict
-import os
-import re
 import sys
-from pathlib import Path
-from gftools.push import repo_path_to_google_path
-
-
-def pr_directories(pr):
-    results = set()
-    files = pr.get_files()
-    for f in files:
-        path = Path(f.filename)
-        if path.suffix == ".textproto" and any(d in path.parts for d in ("lang", "axisregistry")):
-            results.add(repo_path_to_google_path(path))
-        else:
-            path = path.parent
-            # If a noto article has been updated, just return the family dir
-            # ofl/notosans/article --> ofl/notosans
-            if "article" in path.parts:
-                path = path.parent
-            results.add(str(path))
-    return results
-
-
-def write_server_file(data):
-    doc = []
-    categories_to_write = []
-    for cat in (
-        "New",
-        "Upgrade",
-        "Other",
-        "Designer profile",
-        "Axis Registry",
-        "Knowledge",
-        "Metadata / Description / License",
-        "Sample texts"
-    ):
-        if cat in data:
-            categories_to_write.append(cat)
-
-    for cat in data:
-        if cat not in categories_to_write:
-            print(f"{cat} isn't sorted appending to end of doc")
-            categories_to_write.append(cat)
-
-    seen = set()
-    for cat in categories_to_write:
-        doc.append(f"# {cat}")
-        directories = sorted(data[cat], key=lambda f: len(f))
-        filtered_directories = []
-        for directory in directories:
-            # Skip subdirectories when parent is already seen
-            plain_path = re.sub(r" # .*", "", directory)
-            path = Path(plain_path)
-            if str(path.parent) in seen:
-                continue
-            # for the axis registry and lang subtrees, we list the file,
-            # not the dir
-            if any(d in path.parts for d in ("lang", "axisregistry")) \
-                and path.suffix != ".textproto":
-                print(f"filtering {path}")
-                continue
-            seen.add(plain_path)
-            filtered_directories.append(directory)
-        doc.append("\n".join(sorted(filtered_directories)))
-        doc.append("")
-    return "\n".join(doc)
+import os
+from gftools.push import PushItems, PushStatus, PushList
 
 
 def main(args=None):
@@ -90,83 +23,28 @@ def main(args=None):
         print("Usage: gftools gen-push-lists /path/to/google/fonts")
         sys.exit()
 
-    to_sandbox = defaultdict(set)
-    to_production = defaultdict(set)
+    gf_path = sys.argv[2]
+    to_sandbox_fp = os.path.join(gf_path, "to_sandbox.txt")
+    to_production_fp = os.path.join(gf_path, "to_production.txt")
 
-    github = Github(os.environ["GH_TOKEN"])
-    repo = github.get_repo("google/fonts")
+    # get existing push items
+    board_items = PushItems.from_traffic_jam()
+    sandbox_file = PushItems.from_server_file(
+        to_sandbox_fp, PushStatus.IN_DEV, PushList.TO_SANDBOX
+    )
+    production_file = PushItems.from_server_file(
+        to_production_fp, PushStatus.IN_SANDBOX, PushList.TO_PRODUCTION
+    )
 
-    projects = repo.get_projects()
-    traffic_jam = next((p for p in projects if p.name == "Traffic Jam"), None)
-    if not traffic_jam:
-        raise ValueError("Traffic Jam column has been deleted or renamed")
-    columns = traffic_jam.get_columns()
+    sandbox_board = board_items.to_sandbox()
+    production_board = board_items.to_production()
+    live_board = board_items.live()
 
-    seen_directories = set()
-    print("Analysing pull requests in traffic jam. This may take a while!")
-    for col in columns:
-        if col.name not in set(
-            ["Just merged / In transit", "In Sandbox list", "In Production list"]
-        ):
-            continue
-        cards = col.get_cards()
-        for card in cards:
-            content = card.get_content()
-            if not hasattr(content, "labels"):
-                print(f"skipping {card}. No labels!")
-                continue
+    to_sandbox = (sandbox_file + sandbox_board) - production_board
+    to_production = (production_file + production_board) - live_board
 
-            labels = set(l.name for l in content.labels)
-            pr = content.as_pull_request()
-            directories = set(f"{directory} # {pr.html_url}" for directory in pr_directories(pr))
-
-            if "-- blocked" in labels or "--- Live" in labels:
-                continue
-            seen_directories |= set(d.replace(" ", "").lower() for d in directories)
-            if "I Font Upgrade" in labels or "I Small Fix" in labels:
-                cat = "Upgrade"
-            elif "I New Font" in labels:
-                cat = "New"
-            elif "I Description/Metadata/OFL" in labels:
-                cat = "Metadata / Description / License"
-            elif "I Designer profile" in labels:
-                cat = "Designer profile"
-            elif "I Knowledge" in labels:
-                cat = "Knowledge"
-            elif "I Axis Registry" in labels:
-                cat = "Axis Registry"
-            elif "I Lang" in labels:
-                cat = "Sample texts"
-            else:
-                cat = "Other"
-            if "--- to sandbox" in labels:
-                to_sandbox[cat] |= directories
-            if "--- to production" in labels:
-                to_production[cat] |= directories
-
-    gf_repo_path = sys.argv[2]
-    sb_path = os.path.join(gf_repo_path, "to_sandbox.txt")
-    prod_path = os.path.join(gf_repo_path, "to_production.txt")
-
-    # Keep paths which have been entered manually which do not belong to
-    # a label. These need to be manually deleted as well.
-    existing_sandbox = parse_server_file(sb_path)
-    for i in existing_sandbox:
-        if str(i.raw.replace(" ", "").lower()) not in seen_directories:
-            to_sandbox[i.type].add(str(i.raw))
-
-    existing_production = parse_server_file(prod_path)
-    for i in existing_production:
-        if str(i.raw.replace(" ", "").lower()) not in seen_directories:
-            to_production[i.type].add(str(i.raw))
-
-    with open(sb_path, "w") as sb_doc:
-        sb_doc.write(write_server_file(to_sandbox))
-
-    with open(prod_path, "w") as prod_doc:
-        prod_doc.write(write_server_file(to_production))
-
-    print("Done!")
+    to_sandbox.to_server_file(to_sandbox_fp)
+    to_production.to_server_file(to_production_fp)
 
 
 if __name__ == "__main__":

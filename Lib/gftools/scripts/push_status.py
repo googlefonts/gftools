@@ -31,8 +31,8 @@ gftools push-status /path/to/google/fonts/repo --lint
 """
 import argparse
 from pathlib import Path
-from gftools.push import lint_server_files, push_report
-
+from gftools.push import push_report, lint_server_files
+import os
 
 def main(args=None):
     parser = argparse.ArgumentParser()
@@ -41,6 +41,10 @@ def main(args=None):
         "--lint", action="store_true", help="Check server files have correct paths"
     )
     args = parser.parse_args(args)
+
+    if "ofl" not in os.listdir("."):
+        raise ValueError("tool must be run from a google/fonts dir")
+
     if args.lint:
         lint_server_files(args.path)
     else:

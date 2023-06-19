@@ -2,7 +2,7 @@ import logging
 import os
 import subprocess
 
-from gftools.github import GitHubClient
+from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
 try:
     from diffenator2 import ninja_diff, ninja_proof
