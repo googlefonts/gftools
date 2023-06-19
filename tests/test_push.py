@@ -616,3 +616,40 @@ def test_push_items_to_server_file(items, create_dirs, expected):
 def test_push_items_missing_paths(path, expected):
     items = PushItems([PushItem(path, "a", PushStatus.IN_DEV, "a")])
     assert items.missing_paths() == expected
+
+
+@pytest.mark.parametrize(
+    """item,expected""",
+    [
+        (
+            PushItem(
+                Path("ofl/mavenpro"),
+                PushCategory.UPGRADE,
+                PushStatus.IN_DEV,
+                "45",
+            ),
+            {'path': 'ofl/mavenpro', 'category': 'Upgrade', 'status': 'In Dev / PR Merged', 'url': '45'}
+        ),
+        (
+            PushItem(
+                Path("ofl/mavenpro"),
+                None,
+                None,
+                "45",
+            ),
+            {'path': 'ofl/mavenpro', 'category': None, 'status': None, 'url': '45'}
+        ),
+        (
+            PushItem(
+                Path("ofl/mavenpro"),
+                None,
+                None,
+                None,
+            ),
+            {'path': 'ofl/mavenpro', 'category': None, 'status': None, 'url': None}
+        ),
+
+    ]
+)
+def test_push_items_to_json(item, expected):
+    assert item.to_json() == expected
