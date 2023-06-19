@@ -132,12 +132,14 @@ class PushItem:
         return read_proto(metadata_file, fonts_pb2.FamilyProto()).name
 
     def to_json(self) -> dict[str, str]:
-        type_ = self.category.value
+        category = None if not self.category else self.category.value
+        status = None if not self.status else self.status.value
+        url = None if not self.url else self.url
         return {
-            "path": str(self.path),
-            "type": type_,
-            "status": self.status.value,
-            "url": self.url,
+            "path": str(self.path.as_posix()),
+            "category": category,
+            "status": status,
+            "url": url,
         }
 
 
