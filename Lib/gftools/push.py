@@ -19,6 +19,7 @@ class PushCategory(Enum):
     METADATA = "Metadata / Description / License"
     SAMPLE_TEXTS = "Sample texts"
     BLOCKED = "Blocked"
+    DELETED = "Deleted"
 
     def values():  # type: ignore[misc]
         return [i.value for i in PushCategory]
@@ -223,6 +224,8 @@ class PushItems(list):
     def missing_paths(self) -> list[Path]:
         res = []
         for item in self:
+            if item.category == PushCategory.DELETED:
+                continue
             path = item.path
             if any(p in ("lang", "axisregistry") for p in path.parts):
                 path = google_path_to_repo_path(path)
@@ -274,32 +277,29 @@ class PushItems(list):
 
         lines = doc.read().split("\n")
         category = PushCategory.OTHER
+        deleted = False
         for line in lines:
             if not line:
                 continue
 
             if line.startswith("# Deleted"):
-                parts = line.split()
-                for part in parts:
-                    if (
-                        google_path_to_repo_path(Path(part)) != Path(part)
-                        or Path(part).exists()
-                    ):
-                        line = part
-                        break
+                line = line.replace("# Deleted: ", "")
+                deleted = True
 
             if line.startswith("#"):
                 category = PushCategory.from_string(line[1:].strip())
+
             elif "#" in line:
                 path, url = line.split("#")
                 item = PushItem(
-                    Path(path.strip()), category, status, url.strip(), push_list
+                    Path(path.strip()), category if not deleted else PushCategory.DELETED, status, url.strip(), push_list
                 )
                 results.add(item)
             # some paths may not contain a PR, still add them
             else:
-                item = PushItem(Path(line.strip()), category, status, "", push_list)
+                item = PushItem(Path(line.strip()), category if not deleted else PushCategory.DELETED, status, "", push_list)
                 results.add(item)
+            deleted = False
         return results
 
     @classmethod
