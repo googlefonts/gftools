@@ -292,12 +292,22 @@ class PushItems(list):
             elif "#" in line:
                 path, url = line.split("#")
                 item = PushItem(
-                    Path(path.strip()), category if not deleted else PushCategory.DELETED, status, url.strip(), push_list
+                    Path(path.strip()),
+                    category if not deleted else PushCategory.DELETED,
+                    status,
+                    url.strip(),
+                    push_list,
                 )
                 results.add(item)
             # some paths may not contain a PR, still add them
             else:
-                item = PushItem(Path(line.strip()), category if not deleted else PushCategory.DELETED, status, "", push_list)
+                item = PushItem(
+                    Path(line.strip()),
+                    category if not deleted else PushCategory.DELETED,
+                    status,
+                    "",
+                    push_list,
+                )
                 results.add(item)
             deleted = False
         return results
