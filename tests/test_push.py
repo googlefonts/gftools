@@ -499,6 +499,7 @@ def test_push_items_add(items, expected):
     [
         ("ofl/noto # 2", 1),
         ("# New\nofl/noto # 2\nofl/foobar # 3\n\n# Upgrade\nofl/mavenPro # 4", 3),
+        ("# New\nofl/noto\n# Deleted: lang/languages/wsg_Gong.textproto # 5", 2)
     ],
 )
 def test_push_items_from_server_file(string, expected_size):
