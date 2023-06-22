@@ -867,9 +867,17 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
                                   upstream_archive_url:str=None) -> None:
   metadata_file_name = os.path.join(tmp_package_family_dir, 'METADATA.pb')
   try:
-    subprocess.run(['gftools', 'add-font', tmp_package_family_dir]
-                                , check=True, stdout=subprocess.PIPE
-                                , stderr=subprocess.PIPE)
+    subprocess.run(
+      [
+        'gftools',
+        'add-font',
+        tmp_package_family_dir,
+        "--github_url",
+        upstream_conf["repository_url"],
+      ],
+      check=True, stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE
+    )
   except subprocess.CalledProcessError as e:
     print(str(e.stderr, 'utf-8'), file=sys.stderr)
     raise e
