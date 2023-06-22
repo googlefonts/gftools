@@ -7,11 +7,11 @@ This project contains tools used for working with the Google Fonts collection, p
 
 The tools and files under this directory are available under the Apache License v2.0, for details see [LICENSE](LICENSE)
 
-## Google Fonts Official Glyph Sets (Encodings)
+## Google Fonts Official Glyph Sets
 
 The glyph sets useful for type designers that were previously hosted in this repository have been moved to:
 
-<https://github.com/googlefonts/glyphsets/tree/main/Lib/glyphsets/encodings>
+<https://github.com/googlefonts/glyphsets/tree/main/GF_glyphsets>
 
 ## Tool Usage Examples
 
