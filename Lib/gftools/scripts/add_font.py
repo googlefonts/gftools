@@ -70,6 +70,9 @@ parser.add_argument("--min_pct_ext", type=float, default=0.01, help='What percen
                    ' for a -ext subset.')
 parser.add_argument("--lang", type=str, help='Path to lang metadata package', default=None)
 parser.add_argument("directory", type=str, help='A directory containing a font family')
+parser.add_argument("--github_url", type=str, default=None,
+  help="The font family's github url which gets written to new description files"
+)
 
 
 def _FileFamilyStyleWeights(fontdir):
@@ -301,7 +304,12 @@ def main(args=None):
   if os.path.isfile(desc):
     print('DESCRIPTION.en_us.html exists')
   else:
-    _WriteTextFile(desc, 'N/A')
+    desc_text = "N/A"
+    if args.github_url:
+      pattern = r'(https?://)?(www\.)?'
+      cleaned_url = re.sub(pattern, '', args.github_url)
+      desc_text += f'\n<p>To contribute, please see <a href="{args.github_url}">{cleaned_url}</a>.</p>'
+    _WriteTextFile(desc, desc_text)
 
 
 if __name__ == '__main__':
