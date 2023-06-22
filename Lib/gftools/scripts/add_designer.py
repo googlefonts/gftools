@@ -83,6 +83,8 @@ def gen_hrefs(urls):
             res[url] = "Facebook"
         elif "instagram" in url:
             res[url] = "Instagram"
+        elif "github" in url:
+            res[url] = "Github"
         else:
             # https://www.mysite.com --> mysite.com
             res[url] = url.split("//")[1]
