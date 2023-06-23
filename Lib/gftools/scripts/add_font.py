@@ -59,6 +59,7 @@ from axisregistry import AxisRegistry
 from glyphsets.codepoints import SubsetsInFont
 from google.protobuf import text_format
 from pkg_resources import resource_filename
+from gftools.utils import remove_url_prefix
 
 axis_registry = AxisRegistry()
 
@@ -306,9 +307,8 @@ def main(args=None):
   else:
     desc_text = "N/A"
     if args.github_url:
-      pattern = r'(https?://)?(www\.)?'
-      cleaned_url = re.sub(pattern, '', args.github_url)
-      desc_text += f'\n<p>To contribute, please see <a href="{args.github_url}">{cleaned_url}</a>.</p>'
+      human_url = remove_url_prefix(args.github_url)
+      desc_text += f'\n<p>To contribute, please see <a href="{args.github_url}">{human_url}</a>.</p>'
     _WriteTextFile(desc, desc_text)
 
 
