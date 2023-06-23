@@ -34,6 +34,7 @@ from unidecode import unidecode
 from PIL import Image
 from gftools.designers_pb2 import DesignerInfoProto
 from google.protobuf import text_format
+from gftools.utils import remove_url_prefix
 
 
 def process_image(fp):
@@ -87,7 +88,7 @@ def gen_hrefs(urls):
             res[url] = "Github"
         else:
             # https://www.mysite.com --> mysite.com
-            res[url] = url.split("//")[1]
+            res[url] = remove_url_prefix(url)
     return " | ".join(f'<a href="{k}">{v}</a>' for k,v in res.items())
 
 

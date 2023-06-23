@@ -28,6 +28,7 @@ from pkg_resources import resource_filename
 from google.protobuf import text_format
 import json
 from PIL import Image
+import re
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -499,3 +500,9 @@ def parse_axis_dflts(string):
         res[k] = float(v)
     return res
 
+
+def remove_url_prefix(url):
+    """https://www.google.com --> google.com"""
+    pattern = r'(https?://)?(www\.)?'
+    cleaned_url = re.sub(pattern, '', url)
+    return cleaned_url
