@@ -26,29 +26,29 @@ from gftools.util.google_fonts import Metadata, WriteProto, LanguageComments
 from gflanguages import LoadLanguages
 
 
-def main(directory):
-  for path_obj in Path(directory).rglob("METADATA.pb"):
-      try:
-        metadata = Metadata(path_obj)
-      except Exception as e:
-        print(f"{path_obj} doesn't conform to font schema: {e}")
-        continue
-      first_font = path_obj.parent / metadata.fonts[0].filename
-      ignore_latin = path_obj.parent.name.startswith("noto")
-      script = primary_script(TTFont(first_font), ignore_latin=ignore_latin)
-      if not script or script == "Latn":
-        continue
+def main(args=None):
+    import argparse
 
-      print("%s -> %s" % (path_obj.parent.name, script))
-      metadata.primary_script = script
+    parser = argparse.ArgumentParser(description='Walk a directory tree and set the primary script')
+    parser.add_argument("directory")
+    args = parser.parse_args(args)
+    for path_obj in Path(args.directory).rglob("METADATA.pb"):
+        try:
+            metadata = Metadata(path_obj)
+        except Exception as e:
+            print(f"{path_obj} doesn't conform to font schema: {e}")
+            continue
+        first_font = path_obj.parent / metadata.fonts[0].filename
+        ignore_latin = path_obj.parent.name.startswith("noto")
+        script = primary_script(TTFont(first_font), ignore_latin=ignore_latin)
+        if not script or script == "Latn":
+            continue
 
-      language_comments = LanguageComments(LoadLanguages())
-      WriteProto(metadata, path_obj, comments=language_comments)
+        print("%s -> %s" % (path_obj.parent.name, script))
+        metadata.primary_script = script
+
+        language_comments = LanguageComments(LoadLanguages())
+        WriteProto(metadata, path_obj, comments=language_comments)
 
 if __name__ == '__main__':
-  import argparse
-  
-  parser = argparse.ArgumentParser(description='Walk a directory tree and set the primary script')
-  parser.add_argument('directory', metavar='DIR')
-  args = parser.parse_args()
-  main(args.directory)
+    main()
