@@ -59,7 +59,8 @@ from axisregistry import AxisRegistry
 from glyphsets.codepoints import SubsetsInFont
 from google.protobuf import text_format
 from pkg_resources import resource_filename
-from gftools.utils import remove_url_prefix
+from gftools.utils import remove_url_prefix, primary_script
+
 
 axis_registry = AxisRegistry()
 
@@ -154,6 +155,10 @@ def _MakeMetadata(args, is_new):
     metadata.category.append('SANS_SERIF')
     metadata.date_added = time.strftime('%Y-%m-%d')
     subsets = ['menu'] + subsets_in_font
+    with ttLib.TTFont(file_family_style_weights[0][0]) as ttfont:
+      script = primary_script(ttfont)
+      if script not in ("Latn", "Cyrl", "Grek",):
+        metadata.primary_script = script
 
   metadata.license = font_license
   subsets = sorted(subsets)

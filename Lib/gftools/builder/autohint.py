@@ -1,8 +1,7 @@
 from ttfautohint import ttfautohint
 from fontTools.ttLib import TTFont
 from ttfautohint.options import parse_args as ttfautohint_parse_args
-from fontTools import unicodedata
-from collections import Counter
+from gftools.utils import primary_script
 import sys
 
 AUTOHINT_SCRIPTS = [
@@ -65,24 +64,11 @@ AUTOHINT_SCRIPTS = [
 ]
 
 
-def autohint_script_tag(ttFont):
-    script_count = Counter()
-    for x in ttFont.getBestCmap().keys():
-        for script in unicodedata.script_extension(chr(x)):
-            if script[0] != "Z":
-                script_count[script] += 1
-    # If there isn't a clear winner, give up
-    if (
-        len(script_count) > 2
-        and script_count.most_common(2)[0][1] < 2 * script_count.most_common(2)[1][1]
-    ):
-        return
-
-    most_common = script_count.most_common(1)
-    if most_common:
-        script = most_common[0][0].lower()
-        if script in AUTOHINT_SCRIPTS:
-            return script
+def autohint_script_tag(ttFont, discount_latin=False):
+    script = primary_script(ttFont, discount_latin=discount_latin)
+    if script in AUTOHINT_SCRIPTS:
+        return script
+    return
 
 
 def autohint(infile, outfile, args=None, add_script=False):
@@ -93,5 +79,7 @@ def autohint(infile, outfile, args=None, add_script=False):
             script = autohint_script_tag(font)
             if script:
                 args.append("-D" + script)
-
-    ttfautohint(**ttfautohint_parse_args([infile, outfile, *args]))
+    args_dict = ttfautohint_parse_args([infile, outfile, *args])
+    if not args_dict:
+        raise ValueError("Could not parse arguments")
+    ttfautohint(**args_dict)
