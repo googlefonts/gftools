@@ -30,6 +30,9 @@ It should be instantiated with a configuration file, typically
           rangeMinValue: 1
           nominalValue: 1
           rangeMaxValue: 50
+        - name: Regular
+          value: 400
+          flags: 2
         ...
     statFormat4:
       - name: Green
@@ -79,7 +82,8 @@ required, all others have sensible defaults:
     axes and values as demonstrated above, or a dictionary mapping each
     variable font to a per-source list. If neither `stylespaceFile` or
     `stat` are provided, a STAT table is generated automatically using
-    `gftools.stat`.
+    `gftools.stat`. The Flags key's values are explained in the [OpenType
+    spec](https://learn.microsoft.com/en-us/typography/opentype/spec/stat#flags).
 
 -   `instances`: A list of static font TTF instances to generate from
     each variable font as demonstrated above. If this argument isn\'t
