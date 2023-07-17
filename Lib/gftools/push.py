@@ -8,6 +8,7 @@ import requests  # type: ignore[import]
 from enum import Enum
 from io import TextIOWrapper
 import pygit2
+import subprocess
 
 
 def _get_google_fonts_remote(repo):
@@ -20,6 +21,9 @@ def _get_google_fonts_remote(repo):
 def branch_matches_google_fonts_main(path):
     repo = pygit2.Repository(path)
     remote_name = _get_google_fonts_remote(repo)
+
+    # fetch latest remote data from branch main
+    subprocess.run(["git", "fetch", remote_name, "main"])
 
     # Check local is in sync with remote
     diff = repo.diff(repo.head, f"{remote_name}/main")
