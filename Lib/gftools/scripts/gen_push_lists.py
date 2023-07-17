@@ -29,6 +29,13 @@ def main(args=None):
         sys.exit()
 
     gf_path = sys.argv[2]
+    if not "ofl" in os.listdir(gf_path):
+        raise ValueError(
+            f"'{gf_path}' does not contain an 'ofl' dir so it isn't a google/fonts repo."
+        )
+    cwd = os.getcwd()
+
+    os.chdir(gf_path)
     branch_matches_google_fonts_main(gf_path)
     to_sandbox_fp = os.path.join(gf_path, "to_sandbox.txt")
     to_production_fp = os.path.join(gf_path, "to_production.txt")
@@ -51,6 +58,8 @@ def main(args=None):
 
     to_sandbox.to_server_file(to_sandbox_fp)
     to_production.to_server_file(to_production_fp)
+
+    os.chdir(cwd)
 
 
 if __name__ == "__main__":
