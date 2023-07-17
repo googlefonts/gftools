@@ -213,7 +213,7 @@ class PushItems(list):
         # Pop any push items which are a child of the item's path
         to_pop = None
         for idx, i in enumerate(self):
-            if i.path.parts[-1] in item.path.parts or i.path == item.path:
+            if str(i.path.parent) in str(i.path) or i.path == item.path:
                 to_pop = idx
                 break
         if to_pop:

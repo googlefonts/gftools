@@ -472,6 +472,43 @@ def test_push_items_operators(operator, item1, item2, expected):
                 ]
             ),
         ),
+        # Ensure Knowledge articles are unique
+        (
+            [
+                PushItem(
+                    Path("cc-by-sa/knowledge/glossary/terms/xopq_axis/content.md"),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
+                ),
+                PushItem(
+                    Path(
+                        "cc-by-sa/knowledge/modules/using_type/lessons/the_complications_of_typographic_size/content.md"
+                    ),
+                    PushCategory.NEW,
+                    PushStatus.IN_DEV,
+                    "1",
+                ),
+            ],
+            PushItems(
+                [
+                    PushItem(
+                        Path("cc-by-sa/knowledge/glossary/terms/xopq_axis/content.md"),
+                        PushCategory.NEW,
+                        PushStatus.IN_DEV,
+                        "1",
+                    ),
+                    PushItem(
+                        Path(
+                            "cc-by-sa/knowledge/modules/using_type/lessons/the_complications_of_typographic_size/content.md"
+                        ),
+                        PushCategory.NEW,
+                        PushStatus.IN_DEV,
+                        "1",
+                    ),
+                ]
+            ),
+        ),
     ],
 )
 def test_push_items_add(items, expected):
@@ -499,7 +536,7 @@ def test_push_items_add(items, expected):
     [
         ("ofl/noto # 2", 1),
         ("# New\nofl/noto # 2\nofl/foobar # 3\n\n# Upgrade\nofl/mavenPro # 4", 3),
-        ("# New\nofl/noto\n# Deleted: lang/languages/wsg_Gong.textproto # 5", 2)
+        ("# New\nofl/noto\n# Deleted: lang/languages/wsg_Gong.textproto # 5", 2),
     ],
 )
 def test_push_items_from_server_file(string, expected_size):
@@ -629,7 +666,12 @@ def test_push_items_missing_paths(path, expected):
                 PushStatus.IN_DEV,
                 "45",
             ),
-            {'path': 'ofl/mavenpro', 'category': 'Upgrade', 'status': 'In Dev / PR Merged', 'url': '45'}
+            {
+                "path": "ofl/mavenpro",
+                "category": "Upgrade",
+                "status": "In Dev / PR Merged",
+                "url": "45",
+            },
         ),
         (
             PushItem(
@@ -638,7 +680,7 @@ def test_push_items_missing_paths(path, expected):
                 None,
                 "45",
             ),
-            {'path': 'ofl/mavenpro', 'category': None, 'status': None, 'url': '45'}
+            {"path": "ofl/mavenpro", "category": None, "status": None, "url": "45"},
         ),
         (
             PushItem(
@@ -647,10 +689,9 @@ def test_push_items_missing_paths(path, expected):
                 None,
                 None,
             ),
-            {'path': 'ofl/mavenpro', 'category': None, 'status': None, 'url': None}
+            {"path": "ofl/mavenpro", "category": None, "status": None, "url": None},
         ),
-
-    ]
+    ],
 )
 def test_push_items_to_json(item, expected):
     assert item.to_json() == expected
