@@ -15,7 +15,12 @@ gftools gen-push-lists /path/to/google/fonts
 """
 import sys
 import os
-from gftools.push import PushItems, PushStatus, PushList
+from gftools.push import (
+    PushItems,
+    PushStatus,
+    PushList,
+    branch_matches_google_fonts_main,
+)
 
 
 def main(args=None):
@@ -24,6 +29,7 @@ def main(args=None):
         sys.exit()
 
     gf_path = sys.argv[2]
+    branch_matches_google_fonts_main(gf_path)
     to_sandbox_fp = os.path.join(gf_path, "to_sandbox.txt")
     to_production_fp = os.path.join(gf_path, "to_production.txt")
 

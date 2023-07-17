@@ -7,6 +7,28 @@ import gftools.fonts_public_pb2 as fonts_pb2
 import requests  # type: ignore[import]
 from enum import Enum
 from io import TextIOWrapper
+import pygit2
+
+
+def _get_google_fonts_remote(repo):
+    for remote in repo.remotes:
+        if "google/fonts.git" in remote.url:
+            return remote.name
+    raise ValueError("Cannot find remote with url https://www.github.com/google/fonts")
+
+
+def branch_matches_google_fonts_main(path):
+    repo = pygit2.Repository(path)
+    remote_name = _get_google_fonts_remote(repo)
+
+    # Check local is in sync with remote
+    diff = repo.diff(repo.head, f"{remote_name}/main")
+    if diff.stats.files_changed != 0:
+        raise ValueError(
+            "Your local branch is not in sync with the google/fonts "
+            "main branch. Please pull or remove any commits."
+        )
+    return True
 
 
 class PushCategory(Enum):
