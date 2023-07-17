@@ -26,10 +26,6 @@ It should be instantiated with a configuration file, typically
       - name: Weight
         tag: wght
         values:
-        - name: Hairline
-          rangeMinValue: 1
-          nominalValue: 1
-          rangeMaxValue: 50
         - name: Regular
           value: 400
           flags: 2
