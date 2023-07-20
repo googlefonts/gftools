@@ -110,6 +110,7 @@ required, all others have sensible defaults:
 * ``interpolate``: Enable fontmake --interpolate flag. Defaults to ``false``.
 * ``checkCompatibility``: Enable fontmake Multiple Master compatibility checking. Defaults to ``true``.
 * ``useMutatorMath``: Use MutatorMath to generate instances (supports extrapolation and anisotropic locations). Defaults to ``false``.
+* ``glyphData``: An array of custom GlyphData XML files for with glyph info (production name, script, category, subCategory, etc.). Used only for Glyphs sources.
 """
 
 from fontmake.font_project import FontProject
@@ -386,6 +387,8 @@ class GFBuilder:
 
         if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
             args["check_compatibility"] = self.config["checkCompatibility"]
+            if "glyphData" in self.config:
+                args["glyph_data"] = self.config["glyphData"]
             FontProject().run_from_glyphs(source, **args)
         elif source.endswith(".designspace"):
             args["check_compatibility"] = self.config["checkCompatibility"]
