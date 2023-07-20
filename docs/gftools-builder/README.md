@@ -158,3 +158,7 @@ required, all others have sensible defaults:
 
 -   `removeOutlineOverlaps`: Remove overlaps when compiling fonts.
     Defaults to fontmake\'s default.
+
+-   `glyphData`: An array of custom GlyphData XML files for with glyph
+    info (production name, script, category, subCategory, etc.).
+    Used only for Glyphs sources.
