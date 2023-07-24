@@ -89,5 +89,6 @@ schema = Map(
         Optional("expandFeaturesToInstances"): Bool(),
         Optional("version"): Str(),
         Optional("addGftoolsVersion"): Bool(),
+        Optional("glyphData"): Seq(Str()),
     }
 )
