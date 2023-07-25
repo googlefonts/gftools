@@ -88,11 +88,8 @@ required, all others have sensible defaults:
 
 -   `buildVariable`: Build variable fonts. Defaults to true.
 
--   
-
-    `buildStatic`: Build static fonts (OTF or TTF depending on `$buildOTF`
-
-    :   and \`[\$buildTTF]{.title-ref}). Defaults to true.
+-   `buildStatic`: Build static fonts (OTF or TTF depending on `$buildOTF`
+    and `$buildTTF`). Defaults to true.
 
 -   `buildOTF`: Build OTF fonts. Defaults to true.
 
