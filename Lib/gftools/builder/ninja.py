@@ -122,7 +122,7 @@ class NinjaBuilder(GFBuilder):
         self.designspaces = []
         for source in self.config["sources"]:
             if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
-                builder = UFOBuilder(glyphsLib.GSFont(source), instance_dir="instance_ufo")
+                builder = UFOBuilder(glyphsLib.load(source), instance_dir="instance_ufo")
                 # This is a sneaky way of skipping the hard work of
                 # converting all the glyphs and stuff, and just gettting
                 # a minimal designspace
