@@ -190,7 +190,7 @@ class NinjaBuilder(GFBuilder):
         # because these tables are needed in order to fix the name tables.
         self.w.comment("Variable font post-processing")
         for t in targets:
-            self.post_process(t, implicit=stampfile)
+            self.post_process_variable(t, implicit=stampfile)
 
     def gen_stat(self, axis_tags, targets):
         self.w.comment("Generate STAT tables")
@@ -312,11 +312,11 @@ class NinjaBuilder(GFBuilder):
                 webfont_filename, "webfont", filename, implicit=filename + ".fixstamp"
             )
 
-    def post_process_variable(self, filename):
-        self.post_process(filename)
+    def post_process_variable(self, filename, implicit=None):
+        self.post_process(filename, implicit=implicit)
         if self.config["buildWebfont"]:
             webfont_filename = filename.replace(".ttf", ".woff2").replace(
-                self.config["ttDir"], self.config["woffDir"]
+                self.config["vfDir"], self.config["woffDir"]
             )
             self.w.build(
                 webfont_filename, "webfont", filename, implicit=filename + ".fixstamp"
