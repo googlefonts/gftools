@@ -4,10 +4,15 @@ import ninja
 import glyphsLib
 from glyphsLib.builder.builders import UFOBuilder
 import sys
+import ufoLib2
 import yaml
 import os
 from gftools.builder import GFBuilder
-from fontTools.designspaceLib import DesignSpaceDocument
+from fontTools.designspaceLib import (
+    DesignSpaceDocument,
+    SourceDescriptor,
+    InstanceDescriptor,
+)
 from pathlib import Path
 
 UNSUPPORTED = ["stylespaceFile", "statFormat4", "ttfaUseScript", "vttSources"]
@@ -67,7 +72,9 @@ class NinjaBuilder(GFBuilder):
             args = {}
         self.w.newline()
         self.w.comment("Convert glyphs file to UFO")
-        self.w.rule("glyphs2ufo", "fontmake -o ufo --instance-dir instance_ufo -g $in", **args)
+        self.w.rule(
+            "glyphs2ufo", "fontmake -o ufo --instance-dir instance_ufo -g $in", **args
+        )
 
         if self.config["buildVariable"]:
             self.w.comment("Build a variable font from Designspace")
@@ -122,7 +129,9 @@ class NinjaBuilder(GFBuilder):
         self.designspaces = []
         for source in self.config["sources"]:
             if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
-                builder = UFOBuilder(glyphsLib.load(source), instance_dir="instance_ufo")
+                builder = UFOBuilder(
+                    glyphsLib.load(source), instance_dir="instance_ufo"
+                )
                 # This is a sneaky way of skipping the hard work of
                 # converting all the glyphs and stuff, and just gettting
                 # a minimal designspace
@@ -144,6 +153,26 @@ class NinjaBuilder(GFBuilder):
                     )
                 )
                 self.w.build(designspace_and_ufos, "glyphs2ufo", source)
+            elif source.endswith(".ufo"):
+                # Wrap this in a basic designspace
+                designspace_path = source.replace(".ufo", ".designspace")
+                ufo = ufoLib2.Font.open(source)
+
+                designspace = DesignSpaceDocument()
+                source_descriptor = SourceDescriptor()
+                source_descriptor.path = source
+
+                instance = InstanceDescriptor()
+                instance.styleName = ufo.info.styleName
+                instance.familyName = ufo.info.familyName
+                instance.path = os.path.join(
+                    "instance_ttf",
+                    ufo.info.familyName + "-" + ufo.info.styleName + ".ufo",
+                ).replace(" ", "")
+
+                designspace.addSource(source_descriptor)
+                designspace.addInstance(instance)
+                designspace.write(designspace_path)
             else:
                 designspace_path = source
                 designspace = DesignSpaceDocument.fromfile(designspace_path)
