@@ -642,17 +642,26 @@ def main(args=None):
 
     args = parser.parse_args(args)
 
+    from gftools.builder._ninja import NinjaBuilder
+
+    try:
+        builder_class = NinjaBuilder
+    except ImportError as e:
+        builder_class = GFBuilder
+
     if len(args.file) == 1 and (
         args.file[0].endswith(".yaml") or args.file[0].endswith(".yml")
     ):
-        builder = GFBuilder(configfile=args.file[0])
+        builder_args = dict(configfile=args.file[0])
     else:
         config={"sources": args.file}
         if args.stylespace:
             config["stylespaceFile"] = args.stylespace
         if args.family_name:
             config["familyName"] = args.family_name
-        builder = GFBuilder(config=config)
+        builder_args = dict(config=config)
+
+    builder = builder_class(**builder_args)
 
     if args.no_autohint:
         builder.config["autohintTTF"] = False
@@ -672,7 +681,11 @@ def main(args=None):
             fp.write(yaml.dump(config, Dumper=yaml.SafeDumper))
         sys.exit()
 
-    builder.build()
+    try:
+        builder.build()
+    except NotImplementedError:
+        builder = GFBuilder(**builder_args)
+        builder.build()
 
 if __name__ == "__main__":
     main()
