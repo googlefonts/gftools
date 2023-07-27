@@ -14,6 +14,10 @@ UNSUPPORTED = ["stylespaceFile", "statFormat4", "ttfaUseScript", "vttSources"]
 
 
 class NinjaBuilder(GFBuilder):
+    def __init__(self, **kwargs):
+        self.old_cwd = os.getcwd()
+        super().__init__(**kwargs)
+
     def build(self):
         # In some cases we want to fall back to GFBuilder
         for unsupported_key in UNSUPPORTED:
@@ -22,6 +26,7 @@ class NinjaBuilder(GFBuilder):
                     "%s configuration parameter not supported by ninja builder, "
                     "falling back to classic GFBuilder" % unsupported_key
                 )
+                os.chdir(self.old_cwd)
                 raise NotImplementedError()
 
         self.w = Writer(open("build.ninja", "w"))
