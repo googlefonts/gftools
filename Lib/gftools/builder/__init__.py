@@ -139,6 +139,7 @@ from defcon import Font
 import argparse
 import logging
 import os
+import platform
 import re
 import shutil
 import statmake.classes
@@ -643,11 +644,13 @@ def main(args=None):
     args = parser.parse_args(args)
 
     from gftools.builder._ninja import NinjaBuilder
+    builder_class = GFBuilder
 
     try:
-        builder_class = NinjaBuilder
+        if platform.system() != "Windows":
+            builder_class = NinjaBuilder
     except ImportError as e:
-        builder_class = GFBuilder
+        pass
 
     if len(args.file) == 1 and (
         args.file[0].endswith(".yaml") or args.file[0].endswith(".yml")
