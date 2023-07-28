@@ -152,6 +152,8 @@ def _MakeMetadata(args, is_new):
       metadata.primary_script = old_metadata.primary_script
     if old_metadata.sample_text:
       metadata.sample_text.CopyFrom(old_metadata.sample_text)
+    if old_metadata.minisite_url:
+      metadata.minisite_url.CopyFrom(old_metadata.minisite_url)
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category.append('SANS_SERIF')
