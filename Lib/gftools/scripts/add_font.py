@@ -152,6 +152,12 @@ def _MakeMetadata(args, is_new):
       metadata.primary_script = old_metadata.primary_script
     if old_metadata.sample_text:
       metadata.sample_text.CopyFrom(old_metadata.sample_text)
+    if old_metadata.minisite_url:
+      metadata.minisite_url = old_metadata.minisite_url
+    if old_metadata.registry_default_overrides:
+      metadata.registry_default_overrides.update(old_metadata.registry_default_overrides)
+    if old_metadata.source:
+      metadata.source.CopyFrom(old_metadata.source)
   else:
     metadata.designer = 'UNKNOWN'
     metadata.category.append('SANS_SERIF')
