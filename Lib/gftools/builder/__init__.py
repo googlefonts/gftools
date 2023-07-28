@@ -643,11 +643,12 @@ def main(args=None):
 
     args = parser.parse_args(args)
 
-    from gftools.builder._ninja import NinjaBuilder
     builder_class = GFBuilder
 
     try:
         if platform.system() != "Windows":
+            from gftools.builder._ninja import NinjaBuilder
+
             builder_class = NinjaBuilder
     except ImportError as e:
         pass
