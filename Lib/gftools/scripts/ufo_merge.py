@@ -15,6 +15,12 @@ logging.getLogger("fontTools.feaLib.parser").setLevel(logging.ERROR)
 
 parser = ArgumentParser(description=__doc__)
 
+
+logger.info(
+    "\nThis tool has been deprecated. "
+    "Please use https://github.com/googlefonts/ufomerge instead.\n"
+)
+
 gs = parser.add_argument_group("glyph selection")
 gs.add_argument("-g", "--glyphs", help="Glyphs to add from UFO 2", default="")
 gs.add_argument("-G", "--glyphs-file", help="File containing glyphs to add from UFO 2")
