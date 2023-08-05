@@ -258,7 +258,7 @@ class GFBuilder:
     def determine_variability(self):
         is_variable = []
         for fp in self.config["sources"]:
-            if fp.endswith("glyphs"):
+            if fp.endswith(("glyphs", "glyphspackage")):
                 src = glyphsLib.GSFont(fp)
                 is_variable.append(len(src.masters) > 1)
             elif fp.endswith("ufo"):
