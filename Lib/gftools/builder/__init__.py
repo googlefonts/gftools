@@ -389,6 +389,9 @@ class GFBuilder:
             args["check_compatibility"] = self.config["checkCompatibility"]
             if "glyphData" in self.config:
                 args["glyph_data"] = self.config["glyphData"]
+            # The following line should be removed once we require
+            # fontmake >= 3.7.1
+            args["ufo_structure"] = "package"
             FontProject().run_from_glyphs(source, **args)
         elif source.endswith(".designspace"):
             args["check_compatibility"] = self.config["checkCompatibility"]
