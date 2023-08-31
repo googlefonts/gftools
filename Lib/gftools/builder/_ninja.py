@@ -130,7 +130,7 @@ class NinjaBuilder(GFBuilder):
         for source in self.config["sources"]:
             if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
                 builder = UFOBuilder(
-                    glyphsLib.load(source), instance_dir="instance_ufo"
+                    glyphsLib.load(source), instance_dir="../instance_ufo"
                 )
                 # This is a sneaky way of skipping the hard work of
                 # converting all the glyphs and stuff, and just gettting
@@ -267,10 +267,7 @@ class NinjaBuilder(GFBuilder):
         instance_filenames = []
         for instance in designspace.instances:
             fn = instance.filename
-            if "/" in fn:
-                ufo = Path(fn)
-            else:
-                ufo = Path(path).parent / fn
+            ufo = Path(path).parent / fn
             instance_filenames.append(ufo)
         return instance_filenames
 
