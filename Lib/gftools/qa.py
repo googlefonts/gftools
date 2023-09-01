@@ -40,7 +40,7 @@ class FontQA:
             diffenator=True,
             diffbrowsers=False,
         )
-    
+
     def diffbrowsers(self, imgs=False):
         logger.info("Running Diffbrowsers")
         if not self.fonts_before:
@@ -88,6 +88,16 @@ class FontQA:
             cmd.extend(extra_args)
         subprocess.call(cmd)
 
+        fontbakery_report = os.path.join(self.out, "Fontbakery", "report.md")
+        if not os.path.isfile(fontbakery_report):
+            logger.warning(
+                "Cannot Post Github message because no Fontbakery report exists"
+            )
+            return
+        with open(fontbakery_report) as doc:
+            msg = doc.read()
+            self.post_to_github(msg)
+
     def googlefonts_upgrade(self, imgs=False):
         self.fontbakery()
         self.diffenator()
@@ -103,19 +113,7 @@ class FontQA:
         else:
             self.proof(imgs)
 
-    def post_to_github(self):
-        """Post fontbakery report to GitHub"""
-        fontbakery_report = os.path.join(self.out, "Fontbakery", "report.md")
-        if not os.path.isfile(fontbakery_report):
-            logger.warning(
-                "Cannot Post Github message because no Fontbakery report exists"
-            )
-            return
-        with open(fontbakery_report) as doc:
-            msg = doc.read()
-            self._post_to_github(msg)
-
-    def _post_to_github(self, text):
+    def post_to_github(self, text):
         """Post text as a new issue or as a comment to an open
         PR"""
         if not self.url:

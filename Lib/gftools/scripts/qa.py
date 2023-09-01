@@ -246,8 +246,6 @@ def main(args=None):
     if args.proof:
         qa.proof()
 
-    qa.post_to_github()
-
 
 if __name__ == "__main__":
     main()
