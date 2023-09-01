@@ -216,12 +216,20 @@ def main(args=None):
             family_name, fonts_before_dir
         )
 
+    url = None
+    if args.out_url:
+        url = args.out_url
+    elif args.out_github and args.pull_request:
+        url = args.pull_request
+    elif args.out_github and args.github_dir:
+        url = args.github_dir
+
     if fonts_before:
         dfonts_before = [DFont(f) for f in fonts_before if f.endswith((".ttf", ".otf"))
                           and "static" not in f]
-        qa = FontQA(dfonts, dfonts_before, args.out)
+        qa = FontQA(dfonts, dfonts_before, args.out, url=url)
     else:
-        qa = FontQA(dfonts, out=args.out)
+        qa = FontQA(dfonts, out=args.out, url=url)
 
     if args.auto_qa and family_on_gf:
         qa.googlefonts_upgrade(args.imgs)
@@ -238,12 +246,7 @@ def main(args=None):
     if args.proof:
         qa.proof()
 
-    if args.out_url:
-        qa.post_to_github(args.out_url)
-    elif args.out_github and args.pull_request:
-        qa.post_to_github(args.pull_request)
-    elif args.out_github and args.github_dir:
-        qa.post_to_github(args.github_dir)
+    qa.post_to_github()
 
 
 if __name__ == "__main__":
