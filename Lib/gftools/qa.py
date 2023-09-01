@@ -1,6 +1,7 @@
 import logging
 import os
 import subprocess
+import traceback
 
 from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
@@ -20,6 +21,20 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def report_exceptions(meth):
+    def safe_call(self, *args, **kwargs):
+        try:
+            meth(self, *args, **kwargs)
+        except Exception as e:
+            msg = f"Call to {meth.__name__} failed:\n{e}"
+            print(msg)
+            print()
+            print(traceback.format_exc())
+            self.post_to_github(msg+"\n\n"+"See CI logs for more details")
+
+    return safe_call
+
+
 class FontQA:
     def __init__(self, fonts, fonts_before=None, out="out", url=None):
         self.fonts = fonts
@@ -27,6 +42,7 @@ class FontQA:
         self.out = out
         self.url = url
 
+    @report_exceptions
     def diffenator(self, **kwargs):
         logger.info("Running Diffenator")
         if not self.fonts_before:
@@ -44,6 +60,7 @@ class FontQA:
             diffbrowsers=False,
         )
 
+    @report_exceptions
     def diffbrowsers(self, imgs=False):
         logger.info("Running Diffbrowsers")
         if not self.fonts_before:
@@ -62,6 +79,7 @@ class FontQA:
             diffbrowsers=True,
         )
 
+    @report_exceptions
     def proof(self, imgs=False):
         logger.info("Running proofing tools")
         dst = os.path.join(self.out, "Proof")
@@ -73,6 +91,7 @@ class FontQA:
             filter_styles=None,
         )
 
+    @report_exceptions
     def fontbakery(self, profile="googlefonts", html=False, extra_args=None):
         logger.info("Running Fontbakery")
         out = os.path.join(self.out, "Fontbakery")
