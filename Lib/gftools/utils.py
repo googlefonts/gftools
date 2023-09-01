@@ -160,7 +160,7 @@ def download_files_in_github_pr(
 
 
 def download_files_in_github_dir(
-    url,
+    orig_url,
     dst,
     filter_files=[],
     overwrite=True
@@ -180,11 +180,17 @@ def download_files_in_github_dir(
     list of paths to downloaded files
     """
     gh = Github(os.environ["GH_TOKEN"])
-    url = parse_github_dir_url(url)
+    url = parse_github_dir_url(orig_url)
     repo_slug = "{}/{}".format(url.user, url.repo)
     repo = gh.get_repo(repo_slug)
-    files = [f for f in repo.get_contents(url.dir, ref=url.branch)
-             if f.type == 'file']
+    try:
+        files = [
+            f for f in repo.get_contents(url.dir, ref=url.branch) if f.type == "file"
+        ]
+    except Exception as e:
+        raise ValueError(
+            f"Could not download from {orig_url}:\n{e}\n(Did the content get deleted?)"
+        ) from e
 
     mkdir(dst, overwrite=overwrite)
     results = []
