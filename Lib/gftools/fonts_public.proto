@@ -59,7 +59,7 @@ message FamilyProto {
   //    HANDWRITING
   //    MONOTYPE
   //    SYMBOLS
-  repeated string classifications = 42;
+  repeated string classifications = 23;
 
   // Next = 24
 }
