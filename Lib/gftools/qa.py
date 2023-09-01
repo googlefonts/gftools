@@ -4,12 +4,17 @@ import subprocess
 
 from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
+
 try:
     from diffenator2 import ninja_diff, ninja_proof
 except ModuleNotFoundError:
-    raise ModuleNotFoundError(("gftools was installed without the QA "
-        "dependencies. To install the dependencies, see the ReadMe, "
-        "https://github.com/googlefonts/gftools#installation"))
+    raise ModuleNotFoundError(
+        (
+            "gftools was installed without the QA "
+            "dependencies. To install the dependencies, see the ReadMe, "
+            "https://github.com/googlefonts/gftools#installation"
+        )
+    )
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -25,9 +30,7 @@ class FontQA:
     def diffenator(self, **kwargs):
         logger.info("Running Diffenator")
         if not self.fonts_before:
-            logger.warning(
-                "Cannot run Diffenator since there are no fonts before"
-            )
+            logger.warning("Cannot run Diffenator since there are no fonts before")
             return
         dst = os.path.join(self.out, "Diffenator")
         ninja_diff(
@@ -44,9 +47,7 @@ class FontQA:
     def diffbrowsers(self, imgs=False):
         logger.info("Running Diffbrowsers")
         if not self.fonts_before:
-            logger.warning(
-                "Cannot run diffbrowsers since there are no fonts before"
-            )
+            logger.warning("Cannot run diffbrowsers since there are no fonts before")
             return
         dst = os.path.join(self.out, "Diffbrowsers")
         mkdir(dst)
@@ -60,7 +61,7 @@ class FontQA:
             diffenator=False,
             diffbrowsers=True,
         )
-    
+
     def proof(self, imgs=False):
         logger.info("Running proofing tools")
         dst = os.path.join(self.out, "Proof")
@@ -77,7 +78,7 @@ class FontQA:
         out = os.path.join(self.out, "Fontbakery")
         mkdir(out)
         cmd = (
-            ["fontbakery", "check-"+profile, "-l", "INFO", "--succinct"]
+            ["fontbakery", "check-" + profile, "-l", "INFO", "--succinct"]
             + [f.path for f in self.fonts]
             + ["-C"]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
