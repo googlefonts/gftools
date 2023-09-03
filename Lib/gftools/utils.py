@@ -513,11 +513,12 @@ def remove_url_prefix(url):
 
 def primary_script(ttFont, ignore_latin=True):
     g = classifyGlyphs(lambda uv:list(ftunicodedata.script_extension(chr(uv))), ttFont.getBestCmap(), gsub=ttFont.get("GSUB"))
-    badkeys = [key for key in g.keys() if key.startswith("Z")]
-    if "Latn" in g and ignore_latin:
+    badkeys = ["Zinh", "Zyyy", "Zzzz"]
+    if ignore_latin:
         badkeys.append("Latn")
     for badkey in badkeys:
-        del g[badkey]
+        if badkey in g:
+            del g[badkey]
     script_count = Counter({k:len(v) for k,v in g.items()})
 
     # If there isn't a clear winner, give up
