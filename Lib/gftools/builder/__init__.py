@@ -652,8 +652,8 @@ def main(args=None):
         if platform.system() != "Windows":
             from gftools.builder._ninja import NinjaBuilder
 
-        if not args.no_ninja:
-            builder_class = NinjaBuilder
+            if not args.no_ninja:
+                builder_class = NinjaBuilder
     except ImportError as e:
         pass
 
