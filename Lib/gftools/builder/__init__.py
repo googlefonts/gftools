@@ -624,6 +624,12 @@ def main(args=None):
     )
     parser.add_argument("--family-name", help="Font family name")
     parser.add_argument(
+        "--no-ninja",
+        action="store_true",
+        default=False,
+        help="Don't use ninja to orchestrate builds",
+    )
+    parser.add_argument(
         "--no-autohint",
         action="store_true",
         default=False,
@@ -649,6 +655,7 @@ def main(args=None):
         if platform.system() != "Windows":
             from gftools.builder._ninja import NinjaBuilder
 
+        if not args.no_ninja:
             builder_class = NinjaBuilder
     except ImportError as e:
         pass
