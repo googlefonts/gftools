@@ -148,6 +148,26 @@ import sys
 import tempfile
 
 
+DEFAULTS = {
+    "buildStatic": True,
+    "buildOTF": True,
+    "buildTTF": True,
+    "autohintTTF": True,
+    "ttfaUseScript": False,
+    "logLevel": "INFO",
+    "cleanUp": True,
+    "includeSourceFixes": False,
+    "fvarInstanceAxisDflts": None,
+    "flattenComponents": True,
+    "addGftoolsVersion": True,
+    "decomposeTransformedComponents": True,
+    "interpolate": False,
+    "useMutatorMath": False,
+    "checkCompatibility": True,
+    "overlaps": "booleanOperations",
+}
+
+
 class GFBuilder:
     schema = schema
 
@@ -289,38 +309,12 @@ class GFBuilder:
 
         if "buildVariable" not in self.config:
             self.config["buildVariable"] = self.determine_variability()
-        if "buildStatic" not in self.config:
-            self.config["buildStatic"] = True
-        if "buildOTF" not in self.config:
-            self.config["buildOTF"] = True
-        if "buildTTF" not in self.config:
-            self.config["buildTTF"] = True
+
+        # Merge in defaults
+        self.config = {**DEFAULTS, **self.config}
+
         if "buildWebfont" not in self.config:
             self.config["buildWebfont"] = self.config["buildStatic"]
-        if "autohintTTF" not in self.config:
-            self.config["autohintTTF"] = True
-        if "ttfaUseScript" not in self.config:
-            self.config["ttfaUseScript"] = False
-        if "logLevel" not in self.config:
-            self.config["logLevel"] = "INFO"
-        if "cleanUp" not in self.config:
-            self.config["cleanUp"] = True
-        if "includeSourceFixes" not in self.config:
-            self.config["includeSourceFixes"] = False
-        if "fvarInstanceAxisDflts" not in self.config:
-            self.config["fvarInstanceAxisDflts"] = None
-        if "flattenComponents" not in self.config:
-            self.config["flattenComponents"] = True
-        if "addGftoolsVersion" not in self.config:
-            self.config["addGftoolsVersion"] = True
-        if "decomposeTransformedComponents" not in self.config:
-            self.config["decomposeTransformedComponents"] = True
-        if "interpolate" not in self.config:
-            self.config["interpolate"] = False
-        if "useMutatorMath" not in self.config:
-            self.config["useMutatorMath"] = False
-        if "checkCompatibility" not in self.config:
-            self.config["checkCompatibility"] = True
 
     def build_variable(self):
         self.mkdir(self.config["vfDir"], clean=True)
