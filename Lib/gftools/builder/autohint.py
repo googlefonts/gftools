@@ -65,7 +65,7 @@ AUTOHINT_SCRIPTS = [
 
 
 def autohint_script_tag(ttFont, discount_latin=False):
-    script = primary_script(ttFont, discount_latin=discount_latin)
+    script = primary_script(ttFont, ignore_latin=discount_latin)
     if script in AUTOHINT_SCRIPTS:
         return script
     return
