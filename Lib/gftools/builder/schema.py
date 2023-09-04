@@ -90,5 +90,6 @@ schema = Map(
         Optional("version"): Str(),
         Optional("addGftoolsVersion"): Bool(),
         Optional("glyphData"): Seq(Str()),
+        Optional("overlaps"): Enum(["booleanOperations", "pathops", "None"])
     }
 )

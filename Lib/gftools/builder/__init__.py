@@ -111,6 +111,7 @@ required, all others have sensible defaults:
 * ``checkCompatibility``: Enable fontmake Multiple Master compatibility checking. Defaults to ``true``.
 * ``useMutatorMath``: Use MutatorMath to generate instances (supports extrapolation and anisotropic locations). Defaults to ``false``.
 * ``glyphData``: An array of custom GlyphData XML files for with glyph info (production name, script, category, subCategory, etc.). Used only for Glyphs sources.
+* ``overlaps``: Overlaps handling library. Either ``booleanOperations``, ``pathops`` or ``None``, to keep overlaps.
 """
 
 from fontmake.font_project import FontProject
@@ -376,9 +377,11 @@ class GFBuilder:
         is_ttf = args["output"][0] in {"ttf", "ttf-interpolatable", "variable"}
         if "reverseOutlineDirection" in self.config and is_ttf:
             args["reverse_direction"] = self.config["reverseOutlineDirection"]
-        if "removeOutlineOverlaps" in self.config:
-            args["remove_overlaps"] = self.config["removeOutlineOverlaps"]
-
+        args["remove_overlaps"] = not self.config.get("removeOutlineOverlaps", True)
+        if self.config["overlaps"] == "None":
+            args["remove_overlaps"] = False
+        else:
+            args["overlaps_backend"] = self.config["overlaps"]
 
         if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
             args["check_compatibility"] = self.config["checkCompatibility"]
