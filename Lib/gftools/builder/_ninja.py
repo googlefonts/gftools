@@ -186,6 +186,10 @@ class NinjaBuilder(GFBuilder):
             my_args.append("--filter FlattenComponentsFilter")
         if self.config["decomposeTransformedComponents"]:
             my_args.append("--filter DecomposeTransformedComponentsFilter")
+        if not self.config.get("removeOutlineOverlaps", True) or self.config["overlaps"] == "None":
+            my_args.append("--keep-overlaps")
+        elif self.config["overlaps"] == "pathops":
+            my_args.append("--overlaps-backend pathops")
         if "output_dir" in args:
             my_args.append("--output-dir " + args["output_dir"])
         if "output_path" in args:
