@@ -159,3 +159,6 @@ required, all others have sensible defaults:
 -   `glyphData`: An array of custom GlyphData XML files for with glyph
     info (production name, script, category, subCategory, etc.).
     Used only for Glyphs sources.
+
+-   `overlaps`: An overlaps handling library (either `pathops`, `booleanOperations`
+    or `None` to disable overlaps remove). Defaults to `booleanOperations`.
