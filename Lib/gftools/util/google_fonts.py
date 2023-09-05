@@ -30,6 +30,7 @@ import os
 import re
 import sys
 import glob
+import unicodedata
 from pkg_resources import resource_filename
 
 if __name__ == '__main__':
@@ -41,7 +42,6 @@ import gftools.fonts_public_pb2 as fonts_pb2
 from fontTools import ttLib
 from gflanguages import LoadLanguages
 from google.protobuf import text_format
-from hyperglot import parse
 
 
 
@@ -459,8 +459,6 @@ def LicenseFromPath(path):
   return _EntryForEndOfPath(path, _KNOWN_LICENSE_DIRS)
 
 
-# Note:      This function uses hyperglot, which is licensed GPLv3
-# See also:  https://github.com/googlefonts/gftools/issues/498
 def SupportedLanguages(ttFont, languages=LoadLanguages()):
   """Get languages supported by given ttFont.
 
@@ -474,10 +472,17 @@ def SupportedLanguages(ttFont, languages=LoadLanguages()):
   for lang in languages.values():
     if not lang.HasField('exemplar_chars') or not lang.exemplar_chars.HasField('base'):
       continue
-    base = parse.parse_chars(lang.exemplar_chars.base,
-                             decompose=False,
-                             retainDecomposed=False)
-    if set(base).issubset(chars):
+    base = set()
+    for base_chars in lang.exemplar_chars.base.split():
+      if len(base_chars) > 1:
+        base_chars = base_chars.lstrip("{").rstrip("}")
+      normalized_base_chars = unicodedata.normalize("NFC", base_chars)
+      if normalized_base_chars != base_chars:
+        for char in normalized_base_chars:
+          base.add(char)
+      for char in base_chars:
+        base.add(char)
+    if base.issubset(chars):
       supported.append(lang)
   return supported
 
