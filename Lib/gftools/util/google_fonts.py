@@ -31,7 +31,6 @@ import re
 import sys
 import glob
 import unicodedata
-from pkg_resources import resource_filename
 
 if __name__ == '__main__':
   # some of the imports here wouldn't work otherwise
