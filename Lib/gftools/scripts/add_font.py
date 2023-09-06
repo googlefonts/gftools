@@ -150,7 +150,7 @@ def _MakeMetadata(args, is_new):
       metadata.display_name = old_metadata.display_name
     if old_metadata.primary_script:
       metadata.primary_script = old_metadata.primary_script
-    if old_metadata.sample_text:
+    if old_metadata.sample_text and old_metadata.sample_text.ByteSize():
       metadata.sample_text.CopyFrom(old_metadata.sample_text)
     if old_metadata.minisite_url:
       metadata.minisite_url = old_metadata.minisite_url
