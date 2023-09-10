@@ -62,7 +62,7 @@ class NinjaBuilder(GFBuilder):
             if os.path.exists(temporary):
                 os.remove(temporary)
 
-        #Clean up temp build files
+        # Clean up temp build files
         search_directory = os.getcwd()
         target_names = ["build.ninja", ".ninja_log", "instance_ufo", "master_ufo"]
         for root, dirs, files in os.walk(search_directory, topdown=False):
