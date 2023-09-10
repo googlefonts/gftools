@@ -71,11 +71,11 @@ class NinjaBuilder(GFBuilder):
                     file_path = os.path.join(root, file)
                     os.remove(file_path)
                     print(f"Removed file: {file_path}")
-        for dir_name in dirs:
-            if dir_name in target_names:
-                dir_path = os.path.join(root, dir_name)
-                shutil.rmtree(dir_path)
-                print(f"Removed directory: {dir_path}")
+            for dir_name in dirs[:]:
+                if dir_name in target_names:
+                    dir_path = os.path.join(root, dir_name)
+                    shutil.rmtree(dir_path)
+                    print(f"Removed directory: {dir_path}")
 
         print("Done building fonts!")
 
