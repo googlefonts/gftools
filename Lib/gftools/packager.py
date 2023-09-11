@@ -59,6 +59,8 @@ else:
 
 CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'HANDWRITING', 'MONOSPACE']
 
+CLASSIFICATIONS = ['DISPLAY', 'HANDWRITING', 'MONOTYPE', 'SYMBOLS']
+
 from pkg_resources import resource_filename
 with open(resource_filename('gftools', 'template.upstream.yaml')) as f:
   upstream_yaml_template = f.read()
@@ -208,6 +210,8 @@ upstream_yaml_schema = Map({
     'repository_url': Str(), # TODO: custom validation please
     'branch': Str(),
     Optional('archive', default=''): EmptyNone() | Str(),
+    Optional('classifications', default=None): EmptyNone() | UniqueSeq(Enum(CLASSIFICATIONS)),
+    Optional('stroke', default=None): EmptyNone() | Str(),
     'category': UniqueSeq(Enum(CATEGORIES)),
     'designer': Str(),
     Optional('build', default=''): EmptyNone() | Str(),
@@ -228,6 +232,8 @@ upstream_yaml_template_schema = Map({
     'branch': EmptyNone() | Str(),
     Optional('archive', default=''): EmptyNone() | Str(),
     Optional('category', default=None):  EmptyNone() | UniqueSeq(Enum(CATEGORIES)),
+    Optional('classifications', default=None): EmptyNone() | UniqueSeq(Enum(CLASSIFICATIONS)),
+    Optional('stroke', default=None): EmptyNone() | Str(),
     Optional('designer', default=''): EmptyNone() |Str(),
     Optional('build', default=''): EmptyNone() | Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
@@ -237,6 +243,8 @@ upstream_yaml_stripped_schema = Map({ # TODO: custom validation please
     # Only optional until it can be in METADATA.pb
     Optional('repository_url', default=''): Str(),
     'branch': EmptyNone() | Str(),
+    Optional('classifications', default=None): EmptyNone() | UniqueSeq(Enum(CLASSIFICATIONS)),
+    Optional('stroke', default=None): EmptyNone() | Str(),
     Optional('archive', default=''): EmptyNone() | Str(),
     Optional('build', default=''): EmptyNone() | Str(),
     'files': EmptyDict() | MapPattern(Str(), Str())
@@ -619,7 +627,9 @@ def _upstream_conf_from_yaml_metadata(
     upstream_conf.update({
       'designer': metadata.designer or None,
       'category': list(metadata.category) or None,
-      'name': metadata.name  or None,
+      'classifications': list(metadata.classifications) or None,
+      'stroke': metadata.stroke or None,
+      'name': metadata.name or None,
       # we won't get this just now in most cases!
       'repository_url': metadata.source.repository_url or None,
     })
@@ -895,6 +905,12 @@ def _create_or_update_metadata_pb(upstream_conf: YAML,
 
   metadata.category[:] = upstream_conf['category']
 
+  if "classifications" in upstream_conf and upstream_conf['classifications']:
+    metadata.classifications[:] = upstream_conf["classifications"]
+
+  if "stroke" in upstream_conf and upstream_conf["stroke"]:
+    metadata.stroke = upstream_conf["stroke"]
+
   # metadata.date_added # is handled well
 
   metadata.source.repository_url = upstream_conf['repository_url']
@@ -1036,7 +1052,7 @@ def _create_package_content(package_target_dir: str, repos_dir: str,
   # create/update upstream.yaml
   # Remove keys that are also in METADATA.pb googlefonts/gftools#233
   # and also clear all comments.
-  redundant_keys = {'name', 'category', 'designer', 'repository_url'}
+  redundant_keys = {'name', 'category', 'designer', 'repository_url', 'stroke', 'classifications'}
   upstream_conf_stripped = OrderedDict((k, v) for k, v in upstream_conf.items() \
                                                   if k not in redundant_keys)
   # Don't keep an empty build key.
