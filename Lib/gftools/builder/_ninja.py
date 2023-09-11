@@ -7,6 +7,7 @@ import sys
 import ufoLib2
 import yaml
 import os
+import shutil
 from gftools.builder import GFBuilder
 from fontTools.designspaceLib import (
     DesignSpaceDocument,
@@ -60,6 +61,23 @@ class NinjaBuilder(GFBuilder):
         for temporary in self.temporaries:
             if os.path.exists(temporary):
                 os.remove(temporary)
+
+        # Clean up temp build files
+        search_directory = os.getcwd()
+        target_names = ["build.ninja", ".ninja_log", "instance_ufo", "master_ufo"]
+        for root, dirs, files in os.walk(search_directory, topdown=False):
+            for file in files:
+                if file in target_names:
+                    file_path = os.path.join(root, file)
+                    os.remove(file_path)
+                    print(f"Removed file: {file_path}")
+            for dir_name in dirs:
+                if dir_name in target_names:
+                    dir_path = os.path.join(root, dir_name)
+                    shutil.rmtree(dir_path)
+                    print(f"Removed directory: {dir_path}")
+
+        print("Done building fonts!")
 
         if errcode:
             sys.exit(errcode)
