@@ -144,6 +144,10 @@ def _MakeMetadata(args, is_new):
     subsets = set(old_metadata.subsets) | set(subsets_in_font)
     metadata.languages[:] = old_metadata.languages
     metadata.fallbacks.extend(old_metadata.fallbacks)
+    if old_metadata.classifications:
+      metadata.classifications[:] = old_metadata.classifications
+    if old_metadata.stroke:
+      metadata.stroke = old_metadata.stroke
     if old_metadata.is_noto:
       metadata.is_noto = True
     if old_metadata.display_name:
