@@ -28,14 +28,15 @@ category:
   # - HANDWRITING
 
 # A family's broad classifications: display, handwriting, monospace, and
-# symbols (not text). The values are in all uppercase:
+# symbols (not text). Use multiple classifications if appropriate.
+# The values are in all uppercase:
 classifications:
   # - DISPLAY
   # - HANDWRITING
-  # - MONOTYPE
+  # - MONOSPACE
   # - SYMBOLS
 
-# Stroke of the letter forms: serif, sans serif, or slab serif.  A family
+# Stroke of the letter forms: serif, sans serif, or slab serif. A family
 # has a single stroke and may have none at all. The values are strings that
 # in all uppercase with spaces replaced by underscores:
 stroke:

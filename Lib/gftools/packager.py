@@ -59,7 +59,7 @@ else:
 
 CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'HANDWRITING', 'MONOSPACE']
 
-CLASSIFICATIONS = ['DISPLAY', 'HANDWRITING', 'MONOTYPE', 'SYMBOLS']
+CLASSIFICATIONS = ['DISPLAY', 'HANDWRITING', 'MONOSPACE', 'SYMBOLS']
 
 from pkg_resources import resource_filename
 with open(resource_filename('gftools', 'template.upstream.yaml')) as f:
