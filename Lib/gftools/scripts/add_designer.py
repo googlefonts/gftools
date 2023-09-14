@@ -163,7 +163,7 @@ def main(args=None):
             raise ValueError("The pandas library is required to read Excel spreadsheets")
 
         df = pd.read_excel(args.spreadsheet)
-        entry = df.loc[df["Name"] == args.name]
+        entry = df.loc[df["Designer Name"] == args.name]
         if len(entry) == 0:
             raise ValueError(f"Spreadsheet doesn't contain name '{args.name}'")
         bio = entry["Bio"].item()
