@@ -59,6 +59,8 @@ dependencies = [
   'bumpfontversion',
   'nanoemoji>=0.15.0',
   'font-v',
+  'ninja',
+  'networkx'
 ]
 
 [project.optional-dependencies]
@@ -66,7 +68,6 @@ qa = [
   "fontbakery",
   "diffenator2>=0.2.0"
 ]
-ninja = [ "ninja" ]
 
 [project.scripts]
 gftools = "gftools.scripts:main"
