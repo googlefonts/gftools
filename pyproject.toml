@@ -64,6 +64,8 @@ dependencies = [
   'beautifulsoup4',
   'rich',
   'packaging'
+  'ninja',
+  'networkx'
 ]
 
 [project.optional-dependencies]
@@ -72,7 +74,6 @@ qa = [
   "diffenator2>=0.2.0",
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
 ]
-ninja = [ "ninja" ]
 
 [project.scripts]
 gftools = "gftools.scripts:main"
