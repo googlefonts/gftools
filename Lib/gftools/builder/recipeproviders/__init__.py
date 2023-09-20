@@ -14,6 +14,7 @@ def get_file(path):
 @dataclass
 class RecipeProviderBase:
     config: dict
+    builder: "gftools.builder.GFBuilder"
 
     def write_recipe(self):
         raise NotImplementedError

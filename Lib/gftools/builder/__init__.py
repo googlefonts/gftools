@@ -39,13 +39,6 @@ class GFBuilder:
             self.config["recipe_provider"] = "googlefonts"
 
         if "recipe_provider" in self.config:
-            # Convert any glyphs sources to DS
-            # newsources = []
-            # for source in self.config["sources"]:
-            #     if source.endswith((".glyphs", ".glyphspackage")):
-            #         source = self.glyphs_to_ufo(source)
-            #     newsources.append(source)
-            # self.config["sources"] = newsources
             # Store the automatic recipe but allow user-defined steps to override
             automatic_recipe = self.call_recipe_provider()
             self.config["recipe"] = automatic_recipe | self.config.get("recipe",{})
@@ -53,7 +46,7 @@ class GFBuilder:
 
     def call_recipe_provider(self):
         provider = get_provider(self.config["recipe_provider"])
-        return provider(self.config).write_recipe()
+        return provider(self.config, self).write_recipe()
 
     def validate_recipe(self, config):
         recipe = self.config["recipe"]

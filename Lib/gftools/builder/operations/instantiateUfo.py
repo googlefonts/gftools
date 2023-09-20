@@ -19,7 +19,7 @@ class InstantiateUFO(FontmakeOperationBase):
             raise ValueError("No instance name specified")
         # Ensure the instance is defined in the font
         desired = self.original["instance_name"]
-        if not self.relevant_instance:
+        if "target" not in self.original and not self.relevant_instance:
             raise ValueError(
                 f"Instance {desired} not found in {self.first_source.path}"
             )
@@ -34,6 +34,8 @@ class InstantiateUFO(FontmakeOperationBase):
         
     @property
     def targets(self):
+        if "target" in self.original:
+            return [ File(self.original["target"]) ]
         instance = self.relevant_instance
         assert instance is not None
         assert instance.filename is not None

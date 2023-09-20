@@ -1,6 +1,8 @@
+import os
 from dataclasses import dataclass
 from functools import cached_property
-import os
+
+import ufoLib2
 from fontTools.designspaceLib import InstanceDescriptor
 from glyphsLib.builder import UFOBuilder
 
@@ -68,3 +70,16 @@ class File:
             return self.designspace.instances
         else:  # UFO
             return [InstanceDescriptor(filename=self.basename)]
+
+    @cached_property
+    def family_name(self):
+        # Figure out target name
+        if self.is_glyphs:
+            name = self.gsfont.familyName.replace(" ", "")
+        elif self.designspace.sources[0].familyName:
+            return self.designspace.sources[0].familyName
+        else:
+            self.designspace.loadSourceFonts(ufoLib2.Font.open)
+            self.designspace.sources[0].font.info.familyName
+        return name
+
