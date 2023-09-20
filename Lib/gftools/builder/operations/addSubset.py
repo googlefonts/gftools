@@ -27,7 +27,11 @@ class AddSubset(OperationBase):
     
     @property
     def targets(self):
-        dspath = os.path.join(self._target.name, self.first_source.basename.rsplit(".", 1)[0] + ".designspace")
+        if "directory" in self.original:
+            target = self.original["directory"]
+        else:
+            target = self._target.name
+        dspath = os.path.join(target, self.first_source.basename.rsplit(".", 1)[0] + ".designspace")
         return [ File(dspath) ]
 
     @property
