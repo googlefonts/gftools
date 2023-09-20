@@ -38,7 +38,11 @@ class File:
     @property
     def is_designspace(self):
         return self.extension == "designspace"
-    
+
+    @property
+    def is_font_source(self):
+        return (self.is_glyphs or self.is_ufo or self.is_designspace)
+
     @cached_property
     def gsfont(self):
         if self.is_glyphs:
