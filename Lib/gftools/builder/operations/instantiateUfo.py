@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List
 from gftools.builder.file import File
 from gftools.builder.operations import FontmakeOperationBase
@@ -31,6 +32,10 @@ class InstantiateUFO(FontmakeOperationBase):
         if len(relevant_instance) == 0:
             return None
         return relevant_instance[0]
+
+    @property
+    def instance_dir(self):
+        return Path(self.first_source.path).parent  / "instance_ufos" 
         
     @property
     def targets(self):
@@ -39,15 +44,17 @@ class InstantiateUFO(FontmakeOperationBase):
         instance = self.relevant_instance
         assert instance is not None
         assert instance.filename is not None
-        if self.first_source.is_glyphs:
-            return [ File("instance_ufos/"+os.path.basename(instance.filename)) ]
-        return [ File(instance.filename) ]
+        # if self.first_source.is_glyphs:
+        return [ File(str(self.instance_dir / os.path.basename(instance.filename))) ]
+        # return [ File(instance.filename) ]
 
     @property
     def variables(self):
         vars = super().variables
         if self.first_source.is_glyphs:
-            vars["fontmake_args"] += "--instance-dir instance_ufos/ "
+            vars["fontmake_args"] += f"--instance-dir '{self.instance_dir}'"
+        else:
+            vars["fontmake_args"] += f"--output-dir '{self.instance_dir}'"
         vars["instance_name"] = self.original["instance_name"]
         return vars
     
