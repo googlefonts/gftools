@@ -12,6 +12,7 @@ def rewrap(text):
     paras = text.split("\n\n")
     return "\n\n".join("\n".join(wrap(dedent(para), width=72)) for para in paras)
 
+
 EXAMPLES = """
 
 gftools-add-ds-subsets \\
@@ -33,6 +34,8 @@ Where subsets.yaml is:
     - start: 0x10100
       end: 0x10133
 """
+
+
 def main(args=None):
     import argparse
 
@@ -60,7 +63,8 @@ and a `path` key specifying the file within the repository.
 
 Example usage:
 """
-        ) + EXAMPLES,
+        )
+        + EXAMPLES,
     )
     parser.add_argument(
         "--googlefonts",

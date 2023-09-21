@@ -22,9 +22,15 @@ logging.basicConfig(level=logging.INFO)
 SUBSET_SOURCES = {
     "Noto Sans": ("notofonts/latin-greek-cyrillic", "sources/NotoSans.glyphspackage"),
     "Noto Serif": ("notofonts/latin-greek-cyrillic", "sources/NotoSerif.glyphspackage"),
-    "Noto Sans Devanagari": ("notofonts/devanagari", "sources/NotoSansDevanagari.glyphspackage"),
-    "Noto Serif Devanagari": ("notofonts/devanagari", "sources/NotoSerifDevanagari.glyphspackage"),
-    "Noto Sans Linear B": ("notofonts/linear-b", "sources/NotoSansLinearB.designspace")
+    "Noto Sans Devanagari": (
+        "notofonts/devanagari",
+        "sources/NotoSansDevanagari.glyphspackage",
+    ),
+    "Noto Serif Devanagari": (
+        "notofonts/devanagari",
+        "sources/NotoSerifDevanagari.glyphspackage",
+    ),
+    "Noto Sans Linear B": ("notofonts/linear-b", "sources/NotoSansLinearB.designspace"),
 }
 
 
@@ -62,17 +68,18 @@ def prepare_minimal_subsets(subsets):
             for r in subset["ranges"]:
                 for cp in range(r["start"], r["end"] + 1):
                     unicodes.append(cp)
-        key = (yaml.dump(subset["from"]), subset.get("layoutHandling"), subset.get("force"))
+        key = (
+            yaml.dump(subset["from"]),
+            subset.get("layoutHandling"),
+            subset.get("force"),
+        )
         unicodes_by_donor[key] |= set(unicodes)
 
     # Now rebuild the subset dictionary, but this time with the codepoints
     # amalgamated into minimal sets.
     newsubsets = []
     for (donor, layouthandling, force), unicodes in unicodes_by_donor.items():
-        newsubsets.append({
-                "from": yaml.safe_load(donor),
-                "unicodes": list(unicodes)
-        })
+        newsubsets.append({"from": yaml.safe_load(donor), "unicodes": list(unicodes)})
         if layouthandling:
             newsubsets[-1]["layoutHandling"] = layouthandling
         if force:
@@ -81,7 +88,9 @@ def prepare_minimal_subsets(subsets):
 
 
 class SubsetMerger:
-    def __init__(self, input_ds, output_ds, subsets, googlefonts=False, cache="../subset-files"):
+    def __init__(
+        self, input_ds, output_ds, subsets, googlefonts=False, cache="../subset-files"
+    ):
         self.input = input_ds
         self.output = output_ds
         self.subsets = prepare_minimal_subsets(subsets)
@@ -96,9 +105,7 @@ class SubsetMerger:
         added_subsets = False
         for master in ds.sources:
             # Clone the UFO before doing anything clever with it.
-            newpath = os.path.join(
-                outpath, os.path.basename(master.path)
-            )
+            newpath = os.path.join(outpath, os.path.basename(master.path))
             original_ufo = ufoLib2.Font.open(master.path)
             original_ufo.save(newpath, overwrite=True)
 
@@ -132,7 +139,9 @@ class SubsetMerger:
         if subset.get("force"):
             existing_handling = "replace"
         layout_handling = subset.get("layoutHandling", "subset")
-        logger.info(f"Merge {subset['from']} from {source_ufo} into {ds_source.filename} with {existing_handling} and {layout_handling}")
+        logger.info(
+            f"Merge {subset['from']} from {source_ufo} into {ds_source.filename} with {existing_handling} and {layout_handling}"
+        )
         merge_ufos(
             target_ufo,
             source_ufo,
@@ -168,7 +177,7 @@ class SubsetMerger:
             else:
                 logger.info("Building UFO file for subset font " + font_name)
                 path = self.glyphs_to_ufo(path)
-        
+
         # Now we have an appropriate designspace containing the subset;
         # find the actual UFO that corresponds to the location we are
         # trying to add to.
@@ -191,7 +200,7 @@ class SubsetMerger:
                 "output_dir": directory,
                 "master_dir": directory,
                 "designspace_path": output,
-            }
+            },
         )
         if self.googlefonts:
             ds = DesignSpaceDocument.fromfile(output)
@@ -221,7 +230,9 @@ class SubsetMerger:
                 break
 
         if not target:
-            logger.info(f"Couldn't find a master from {font_name} for location {location}, trying instances")
+            logger.info(
+                f"Couldn't find a master from {font_name} for location {location}, trying instances"
+            )
             # We didn't find an exact match in the masters; maybe we will
             # be able to interpolate an instance which matches.
             for instance in source_ds.instances:
@@ -234,7 +245,7 @@ class SubsetMerger:
                     self.generate_subset_instances(source_ds, font_name, instance)
                     target = instance
                     break
-        
+
         if target:
             logger.info(f"Adding subset from {font_name} for location {location}")
             return target
@@ -253,7 +264,7 @@ class SubsetMerger:
         logger.info(f"Generate UFO instances for {font_name}")
         ufos = FontProject().interpolate_instance_ufos(source_ds, include=instance.name)
         self.subset_instances[source_ds] = ufos
-        
+
         # We won't return an individual instance; instead we update the
         # path in the donor's designspace object so that it can be taken from there
         for instance, ufo in zip(source_ds.instances, ufos):
