@@ -1,9 +1,11 @@
+from collections import defaultdict
 import copy
 import os
 
 import ufoLib2
 
 from gftools.builder.recipeproviders.googlefonts import DEFAULTS, GFBuilder
+from gftools.util.styles import STYLE_NAMES
 
 name = "Noto builder"
 
@@ -69,9 +71,60 @@ class NotoBuilder(GFBuilder):
                     "directory": "full-designspace",
                 },
                 {"operation": "buildVariable"},
-                {"operation": "fix"},
             ]
             self.slim(target, tags)
+
+            # Googlefonts vf
+            target = os.path.join(
+                "../",
+                "fonts",
+                familyname_path,
+                "googlefonts",
+                "variable",
+                f"{sourcebase}[{axis_tags}].ttf",
+            )
+            self.recipe[target] = [
+                {"source": source.path},
+                {
+                    "operation": "addSubset",
+                    "subsets": self.config["includeSubsets"],
+                    "directory": "full-designspace",
+                },
+                {"operation": "buildVariable"},
+                {"operation": "fix"},
+            ]
+        else:
+            # GF VF, no subsets
+            target = os.path.join(
+                "../",
+                "fonts",
+                familyname_path,
+                "googlefonts",
+                "variable",
+                f"{sourcebase}[{axis_tags}].ttf",
+            )
+            self.recipe[target] = [
+                {"source": source.path},
+                {"operation": "buildVariable"},
+                {"operation": "fix"},
+            ]
+
+    def build_STAT(self):
+        # In each directory, add buildStat to one recipe with a needs:
+        # of all the other VFs in that directory
+        variables_by_directory = defaultdict(list)
+        for variable in self.recipe.keys():
+            variables_by_directory[os.path.dirname(variable)].append(variable)
+        for variables in variables_by_directory.values():
+            if len(variables) > 1:
+                last_target = variables[-1]
+                others = variables[:-1]
+                self.recipe[last_target].append(
+                    {
+                        "postprocess": "buildStat",
+                        "needs": list(set(others) - set([last_target])),
+                    }
+                )
 
     def build_a_static(self, source, instance, output):
         familyname_path = source.family_name.replace(" ", "")
@@ -88,28 +141,42 @@ class NotoBuilder(GFBuilder):
 
         instancebase = os.path.splitext(os.path.basename(instance.filename))[0]
         target = os.path.join(
-            "fonts", familyname_path, "unhinted", output, f"{instancebase}.{output}"
+            "../",
+            "fonts",
+            familyname_path,
+            "unhinted",
+            output,
+            f"{instancebase}.{output}",
         )
         self.recipe[target] = steps
 
         # Hinted static
         if output == "ttf":
             target = os.path.join(
-                "../", "fonts", familyname_path, "hinted", output, f"{instancebase}.{output}"
+                "../",
+                "fonts",
+                familyname_path,
+                "hinted",
+                output,
+                f"{instancebase}.{output}",
             )
             steps = copy.deepcopy(steps) + [
                 {
                     "operation": "autohint",
                     "autohint_args": "--fail-ok --auto-script --discount-latin",
                 },
-                {"operation": "fix"},
             ]
             self.recipe[target] = steps
 
         # Full static
         if "includeSubsets" in self.config:
             target = os.path.join(
-                "../", "fonts", familyname_path, "full", output, f"{instancebase}.{output}"
+                "../",
+                "fonts",
+                familyname_path,
+                "full",
+                output,
+                f"{instancebase}.{output}",
             )
             steps = [
                 {"source": source.path},
@@ -121,19 +188,59 @@ class NotoBuilder(GFBuilder):
                 {
                     "operation": "instantiateUfo",
                     "instance_name": instance.name,
-                    "target": "full-designspace/instance_ufos/" + os.path.basename(instance.filename),
+                    "target": "full-designspace/instance_ufos/"
+                    + os.path.basename(instance.filename),
                 },
                 {"operation": "buildTTF" if output == "ttf" else "buildOTF"},
             ]
             if output == "ttf":
-                steps.extend([
-                    {
-                        "operation": "autohint",
-                        "autohint_args": "--fail-ok --auto-script --discount-latin",
-                    },
-                    {"operation": "fix"},
-                ])
+                steps.extend(
+                    [
+                        {
+                            "operation": "autohint",
+                            "autohint_args": "--fail-ok --auto-script --discount-latin",
+                        },
+                    ]
+                )
             self.recipe[target] = steps
+
+            # Googlefonts static
+            if output == "ttf" and instance.styleName in STYLE_NAMES:
+                target = os.path.join(
+                    "../",
+                    "fonts",
+                    familyname_path,
+                    "googlefonts",
+                    output,
+                    f"{instancebase}.{output}",
+                )
+                steps = copy.deepcopy(steps) + [
+                    {"operation": "fix"},
+                ]
+                self.recipe[target] = steps
+        elif output == "ttf" and instance.styleName in STYLE_NAMES:
+            # GF static, no subsets
+            target = os.path.join(
+                "../",
+                "fonts",
+                familyname_path,
+                "googlefonts",
+                "ttf",
+                f"{instancebase}.{output}",
+            )
+            self.recipe[target] = [
+                {"source": source.path},
+                {
+                    "operation": "instantiateUfo",
+                    "instance_name": instance.name,
+                },
+                {"operation": "buildTTF"},
+                {
+                    "operation": "autohint",
+                    "autohint_args": "--fail-ok --auto-script --discount-latin",
+                },
+                {"operation": "fix"},
+            ]
 
     def slim(self, target, tags):
         axis_tags = ",".join(sorted(tags))
