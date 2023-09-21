@@ -35,6 +35,7 @@ class NotoBuilder(GFBuilder):
 
         # Unhinted variable
         target = os.path.join(
+            "../",
             "fonts",
             familyname_path,
             "unhinted",
@@ -53,6 +54,7 @@ class NotoBuilder(GFBuilder):
         # Full variable
         if "includeSubsets" in self.config:
             target = os.path.join(
+                "../",
                 "fonts",
                 familyname_path,
                 "full",
@@ -70,14 +72,6 @@ class NotoBuilder(GFBuilder):
                 {"operation": "fix"},
             ]
             self.slim(target, tags)
-
-    def build_all_statics(self):
-        if not self.config.get("buildStatic", True):
-            return
-        for source in self.sources:
-            for instance in source.instances:
-                self.build_a_static(source, instance, output="ttf")
-                self.build_a_static(source, instance, output="otf")
 
     def build_a_static(self, source, instance, output):
         familyname_path = source.family_name.replace(" ", "")
@@ -101,7 +95,7 @@ class NotoBuilder(GFBuilder):
         # Hinted static
         if output == "ttf":
             target = os.path.join(
-                "fonts", familyname_path, "hinted", output, f"{instancebase}.{output}"
+                "../", "fonts", familyname_path, "hinted", output, f"{instancebase}.{output}"
             )
             steps = copy.deepcopy(steps) + [
                 {
@@ -115,7 +109,7 @@ class NotoBuilder(GFBuilder):
         # Full static
         if "includeSubsets" in self.config:
             target = os.path.join(
-                "fonts", familyname_path, "full", output, f"{instancebase}.{output}"
+                "../", "fonts", familyname_path, "full", output, f"{instancebase}.{output}"
             )
             steps = [
                 {"source": source.path},
