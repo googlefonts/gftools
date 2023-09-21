@@ -40,7 +40,10 @@ class OperationBase:
     def write_rules(cls, writer):
         name = cls.__module__.split(".")[-1]
         writer.comment(name + ": " + cls.description)
-        writer.rule(name, cls.rule + " $stamp")
+        if os.name == 'nt':
+            writer.rule(name, "cmd /c " + cls.rule + " $stamp")
+        else:
+            writer.rule(name, cls.rule + " $stamp")
         writer.newline()
 
     @property
