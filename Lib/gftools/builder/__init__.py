@@ -34,18 +34,17 @@ class GFBuilder:
         self.used_operations = set([])
         self.graph = nx.DiGraph()
 
-        if "recipe_provider" not in self.config and "recipe" not in self.config:
-            # Turn everything to glyphs now, it makes life easier
-            self.config["recipe_provider"] = "googlefonts"
+        if "recipeProvider" not in self.config and "recipe" not in self.config:
+            self.config["recipeProvider"] = "googlefonts"
 
-        if "recipe_provider" in self.config:
+        if "recipeProvider" in self.config:
             # Store the automatic recipe but allow user-defined steps to override
             automatic_recipe = self.call_recipe_provider()
             self.config["recipe"] = automatic_recipe | self.config.get("recipe",{})
         self.validate_recipe(self.config)
 
     def call_recipe_provider(self):
-        provider = get_provider(self.config["recipe_provider"])
+        provider = get_provider(self.config["recipeProvider"])
         return provider(self.config, self).write_recipe()
 
     def validate_recipe(self, config):
