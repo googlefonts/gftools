@@ -55,7 +55,7 @@ class OperationBase:
 
     @cached_property
     def stamppath(self):
-        return os.path.basename(NamedTemporaryFile().name + f".{self.opname}stamp")
+        return NamedTemporaryFile().name + f".{self.opname}stamp"
 
     @property
     def variables(self):
