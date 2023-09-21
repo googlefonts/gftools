@@ -27,9 +27,13 @@ DEFAULTS = {
     "overlaps": "booleanOperations",
 }
 
+
 class GFBuilder(RecipeProviderBase):
     def write_recipe(self):
         self.config = {**DEFAULTS, **self.config}
+        self.config["buildWebfont"] = (
+            self.config.get("buildWebfont") or self.config["buildStatic"]
+        )
         # Find variable fonts
         self.recipe = {}
         self.build_all_variables()
@@ -38,43 +42,51 @@ class GFBuilder(RecipeProviderBase):
 
     def build_all_variables(self):
         if not self.config.get("buildVariable", True):
-             return
+            return
         for source in self.sources:
-            if (source.is_glyphs and len(source.gsfont.masters) < 2) \
-                or source.is_ufo \
-                or (source.is_designspace and len(source.designspace.sources) < 2):
+            if (
+                (source.is_glyphs and len(source.gsfont.masters) < 2)
+                or source.is_ufo
+                or (source.is_designspace and len(source.designspace.sources) < 2)
+            ):
                 continue
             self.build_a_variable(source)
         self.build_STAT()
-    
+
     def build_STAT(self):
         # Add buildStat to a variable target, it'll do for all of them
         all_variables = list(self.recipe.keys())
-        if len(self.sources) > 1:
+        if len(all_variables) > 1:
             last_target = all_variables[-1]
-            self.recipe[last_target].append({
-                "postprocess": "buildStat",
-                "needs": list(set(all_variables) - set([last_target]))
-            })
-    
+            self.recipe[last_target].append(
+                {
+                    "postprocess": "buildStat",
+                    "needs": list(set(all_variables) - set([last_target])),
+                }
+            )
+
     def build_a_variable(self, source):
         # Figure out target name
         sourcebase = os.path.splitext(source.basename)[0]
         if source.is_glyphs:
-            tags = [ ax.axisTag for ax in source.gsfont.axes]
+            tags = [ax.axisTag for ax in source.gsfont.axes]
         elif source.is_designspace:
-            tags = [ ax.tag for ax in source.designspace.axes]
+            tags = [ax.tag for ax in source.designspace.axes]
         else:
             raise ValueError("Unknown source type")
         axis_tags = ",".join(sorted(tags))
 
         target = os.path.join(self.config["vfDir"], f"{sourcebase}[{axis_tags}].ttf")
-        self.recipe[target] = [
+        steps = [
             {"source": source.path},
             {"operation": "buildVariable"},
             # XXX set version
-            { "operation": "fix" },
+            {"operation": "fix"},
         ]
+        self.recipe[target] = steps
+        if self.config["buildWebfont"]:
+            target = os.path.join(self.config["woffDir"], f"{sourcebase}[{axis_tags}].woff2")
+            self.recipe[target] = steps + [{"operation": "compress"}]
 
     def build_all_statics(self):
         if not self.config.get("buildStatic", True):
@@ -98,10 +110,12 @@ class GFBuilder(RecipeProviderBase):
             steps.append(
                 {"operation": "instantiateUfo", "instance_name": instance.name}
             )
-        steps.append(
-            {"operation": "buildTTF" if output == "ttf" else "buildOTF"}
-        )
+        steps.append({"operation": "buildTTF" if output == "ttf" else "buildOTF"})
         steps.append({"operation": "fix"})
         instancebase = os.path.splitext(os.path.basename(instance.filename))[0]
         target = os.path.join(outdir, f"{instancebase}.{output}")
         self.recipe[target] = steps
+
+        if self.config["buildWebfont"] and output == "ttf":
+            target = os.path.join(self.config["woffDir"], f"{instancebase}.woff2")
+            self.recipe[target] = steps + [{"operation": "compress"}]
