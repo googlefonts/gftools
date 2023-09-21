@@ -279,7 +279,7 @@ class GFBuilder:
         else:
             print("Could not parse ninja build file")
 
-def main():
+def main(args=None):
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -287,7 +287,7 @@ def main():
     parser.add_argument("--no-ninja", help="Do not run ninja", action="store_true")
     parser.add_argument("--generate", help="Just generate and output recipe from recipe builder", action="store_true")
     parser.add_argument("config", help="Path to config file")
-    args = parser.parse_args()
+    args = parser.parse_args(args)
     pd = GFBuilder(args.config)
     if args.generate:
         print(yaml.dump(pd.config))
