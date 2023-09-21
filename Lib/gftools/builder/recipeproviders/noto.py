@@ -1,6 +1,7 @@
-from collections import defaultdict
 import copy
 import os
+import sys
+from collections import defaultdict
 
 import ufoLib2
 
@@ -15,6 +16,7 @@ class NotoBuilder(GFBuilder):
         self.config = {**DEFAULTS, **self.config}
         # Convert any glyphs sources to DS
         newsources = []
+        self.config["original_sources"] = self.config["sources"]
         for source in self.config["sources"]:
             if source.endswith((".glyphs", ".glyphspackage")):
                 source = self.builder.glyphs_to_ufo(source)
@@ -49,6 +51,31 @@ class NotoBuilder(GFBuilder):
             {"operation": "buildVariable"},
             {"operation": "fix"},
         ]
+        
+        # UI variable
+        if self.config.get("buildUIVF"):
+            # Find my glyphs source
+            glyphs_source = self.config["original_sources"][
+                self.config["sources"].index(source.path)
+            ]
+            uivftarget = os.path.join(
+                "../",
+                "fonts",
+                familyname_path,
+                "unhinted",
+                "variable",
+                f"{sourcebase}-UI-VF.ttf",
+            )
+            self.recipe[uivftarget] = [
+                {"source": source.path},
+                {"operation": "buildVariable"},
+                {"operation": "fix"},
+                {"operation": "exec",
+                 "exe": sys.executable,
+                 "args": f"-m notobuilder.builduivf -o '{uivftarget}' '{target}' '{glyphs_source}'",
+                 "needs": [target]
+                },
+            ]
 
         # Slim variable
         self.slim(target, tags)
@@ -114,6 +141,8 @@ class NotoBuilder(GFBuilder):
         # of all the other VFs in that directory
         variables_by_directory = defaultdict(list)
         for variable in self.recipe.keys():
+            if "UI-VF" in variable:
+                continue
             variables_by_directory[os.path.dirname(variable)].append(variable)
         for variables in variables_by_directory.values():
             if len(variables) > 1:
