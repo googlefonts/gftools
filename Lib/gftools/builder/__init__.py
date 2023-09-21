@@ -3,7 +3,7 @@ import importlib
 from os import chdir
 from pathlib import Path
 import subprocess
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, gettempdir
 from typing import Tuple
 import yaml
 from dataclasses import dataclass
@@ -206,7 +206,7 @@ class GFBuilder:
                         elif step.targets: #  Step already knows its own target
                             binary = step.targets[0]
                         else:
-                            binary = File(os.path.basename(NamedTemporaryFile().name))
+                            binary = File(NamedTemporaryFile().name)
                             self.graph.add_node(binary)
                             step.set_target(binary)
                         self.graph.add_edge(current, binary, operation=step)
@@ -246,7 +246,7 @@ class GFBuilder:
                     g.set_style("filled")
                     g.set_fillcolor("#ffcccc")
                     g.set_label("Stamp")
-                elif g.get_label() and g.get_label().startswith('"tmp'):
+                elif g.get_label() and g.get_label().startswith('"'+gettempdir()):
                     g.set_style("filled")
                     g.set_fillcolor("#ffcccc")
                     g.set_label("Tempfile")
