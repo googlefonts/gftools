@@ -26,7 +26,7 @@ class InstantiateUFO(FontmakeOperationBase):
             )
     
     @cached_property
-    def relevant_instance(self) -> InstanceDescriptor | None:
+    def relevant_instance(self):
         desired = self.original["instance_name"]
         relevant_instance = [i for i in self.first_source.instances if i.name == desired]
         if len(relevant_instance) == 0:

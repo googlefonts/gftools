@@ -40,7 +40,7 @@ class GFBuilder:
         if "recipeProvider" in self.config:
             # Store the automatic recipe but allow user-defined steps to override
             automatic_recipe = self.call_recipe_provider()
-            self.config["recipe"] = automatic_recipe | self.config.get("recipe",{})
+            self.config["recipe"] = { **automatic_recipe, **self.config.get("recipe",{}) }
         self.validate_recipe(self.config)
 
     # The builder proceeds in four steps. The first step is to prepare

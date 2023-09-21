@@ -15,8 +15,8 @@ from gftools.builder.file import File
 class OperationBase:
     postprocess: bool = False
     original: dict = field(default_factory=dict)
-    _targets: set[File] = field(default_factory=set)
-    _sources: set[File] = field(default_factory=set)
+    _targets: set = field(default_factory=set) # [File]
+    _sources: set = field(default_factory=set) # [File]
     implicit: set = field(default_factory=set)
 
     in_place = False
