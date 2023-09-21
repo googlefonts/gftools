@@ -45,14 +45,17 @@ class GFBuilder(RecipeProviderBase):
                 or (source.is_designspace and len(source.designspace.sources) < 2):
                 continue
             self.build_a_variable(source)
-        # Add buildStat to all variable targets
+        self.build_STAT()
+    
+    def build_STAT(self):
+        # Add buildStat to a variable target, it'll do for all of them
         all_variables = list(self.recipe.keys())
         if len(self.sources) > 1:
-            for target, recipe in self.recipe.items():
-                recipe.append({
-                    "postprocess": "buildStat",
-                    "needs": list(set(all_variables) - set([target]))
-                })
+            last_target = all_variables[-1]
+            self.recipe[last_target].append({
+                "postprocess": "buildStat",
+                "needs": list(set(all_variables) - set([last_target]))
+            })
     
     def build_a_variable(self, source):
         # Figure out target name
