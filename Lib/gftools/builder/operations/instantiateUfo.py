@@ -7,6 +7,7 @@ import os
 import gftools.builder
 from functools import cached_property
 from glyphsLib.builder import UFOBuilder
+from ninja.ninja_syntax import Writer, escape_path
 from fontTools.designspaceLib import InstanceDescriptor
 
 
@@ -52,9 +53,9 @@ class InstantiateUFO(FontmakeOperationBase):
     def variables(self):
         vars = super().variables
         if self.first_source.is_glyphs:
-            vars["fontmake_args"] += f"--instance-dir '{self.instance_dir}'"
+            vars["fontmake_args"] += f"--instance-dir {escape_path(str(self.instance_dir))}"
         else:
-            vars["fontmake_args"] += f"--output-dir '{self.instance_dir}'"
+            vars["fontmake_args"] += f"--output-dir {escape_path(str(self.instance_dir))}"
         vars["instance_name"] = self.original["instance_name"]
         return vars
     
