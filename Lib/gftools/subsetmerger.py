@@ -1,11 +1,13 @@
 import logging
 import os
 import re
+import shutil
 import sys
 from collections import defaultdict
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from zipfile import ZipFile
 
-import pygit2
 import ufoLib2
 import yaml
 from fontmake.font_project import FontProject
@@ -15,6 +17,7 @@ from strictyaml import HexInt, Map, Optional, Seq, Str, Enum
 from ufomerge import merge_ufos
 
 from gftools.util.styles import STYLE_NAMES
+from gftools.utils import download_file
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -167,7 +170,7 @@ class SubsetMerger:
             font_name = "%s/%s" % (repo, path)
         path = os.path.join(self.cache_dir, repo, path)
 
-        self.clone_for_subsetting(repo)
+        self.download_for_subsetting(repo)
 
         # We're doing a UFO-UFO merge, so Glyphs files will need to be converted
         if path.endswith((".glyphs", ".glyphspackage")):
@@ -272,10 +275,15 @@ class SubsetMerger:
                 os.path.dirname(source_ds.path), instance.filename
             )
 
-    def clone_for_subsetting(self, repo):
-        dest = os.path.join(self.cache_dir, repo)
+    def download_for_subsetting(self, fullrepo):
+        dest = os.path.join(self.cache_dir, fullrepo)
         if os.path.exists(dest):
             return
-        os.makedirs(dest)
-        logger.info(f"Cloning {repo}")
-        pygit2.clone_repository(f"https://github.com/{repo}", dest)
+        user, repo = fullrepo.split("/")
+        os.makedirs(os.path.join(self.cache_dir, user))
+        repo_zipball = f"https://github.com/{fullrepo}/archive/refs/heads/main.zip"
+        logger.info(f"Downloading {fullrepo}")
+        repo_zip = ZipFile(download_file(repo_zipball))
+        with TemporaryDirectory() as d:
+            repo_zip.extractall(d)
+            shutil.move(os.path.join(d, repo + "-main"), dest)
