@@ -127,7 +127,7 @@ class NotoBuilder(GFBuilder):
                 {
                     "operation": "instantiateUfo",
                     "instance_name": instance.name,
-                    "target": "full-designspace/" + os.path.basename(instance.filename),
+                    "target": "full-designspace/instance_ufos/" + os.path.basename(instance.filename),
                 },
                 {"operation": "buildTTF" if output == "ttf" else "buildOTF"},
             ]
