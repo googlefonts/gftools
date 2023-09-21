@@ -9,7 +9,7 @@ import yaml
 from dataclasses import dataclass
 import os.path
 import networkx as nx
-from ninja.ninja_syntax import Writer
+from ninja.ninja_syntax import Writer, escape_path
 from fontmake.font_project import FontProject
 
 from gftools.builder.file import File
@@ -247,7 +247,7 @@ class GFBuilder:
             edge["operation"].validate()
             actions[(source, edge["operation"])].append(target)
             if not list(self.graph.successors(target)):
-                final_targets.append(target.path)
+                final_targets.append(escape_path(target.path))
 
         for (source, operation), targets in actions.items():
             operation.build(self.writer)
