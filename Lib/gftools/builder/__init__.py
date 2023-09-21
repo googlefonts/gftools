@@ -43,6 +43,11 @@ class GFBuilder:
             self.config["recipe"] = automatic_recipe | self.config.get("recipe",{})
         self.validate_recipe(self.config)
 
+    # The builder proceeds in four steps. The first step is to prepare
+    # the recipe, in YAML-like objects. If there isn't a recipe, we use
+    # a recipe provider to create one. Once we have one, we do some basic
+    # validation checks on the recipe.
+
     def call_recipe_provider(self):
         provider = get_provider(self.config["recipeProvider"])
         return provider(self.config, self).write_recipe()
@@ -62,6 +67,9 @@ class GFBuilder:
                 elif "postprocess" in step:
                     seen_postprocess = True
 
+    # The next step is to turn the recipe into a set of Python objects;
+    # these can store a bit more information than our simple YAML-like
+    # data.
     def config_to_objects(self):
         recipe = self.config["recipe"]
         for target, steps in recipe.items():
@@ -114,6 +122,9 @@ class GFBuilder:
         obj.postprocess = True
         return obj
 
+    # The third step is to build a graph and sew together the objects
+    # such that the output step of one is fed is the input to the next,
+    # and vice versa.
     def build_graph(self):
         Copy().write_rules(self.writer)
         for target, steps in self.config["recipe"].items():
@@ -147,14 +158,18 @@ class GFBuilder:
         binary = None
         for ix, step in enumerate(steps):
             if isinstance(step, File):
+                # This is a source: entry, saying that we should either
+                # start the build process with a particular source, or
+                # switch to a new source midway through.
                 if current:
                     if current.path is None:
                         current.path = step.path
                         current = step
                     elif current.path != step.path:
-                        # The operation which produced `current` also
-                        # produced this source (we assume). So walk backwards,
-                        # find the operation, and add this as an out-node
+                        # We did something, and now we are switching source.
+                        # We assume that this new source has been produced
+                        # by the previous operation. So walk backwards,
+                        # find that operation, and add this as an out-node.
                         parents = list(self.graph.predecessors(current))
                         if len(parents) != 1:
                             raise ValueError(
@@ -165,17 +180,21 @@ class GFBuilder:
                         self.graph.add_edge(parents[0], step, **edge)
                 current = step
             else:
+                # This is an ordinary operation.
                 if current is None:
+                    # We need to start somewhere!
                     raise ValueError(f"Operation without source in target {target}")
+
                 # If there is an edge from the source to the operation, then follow it
-                # Otherwise, create a new node
+                # This means that another target has also depended on this operation.
                 existing_edge = edge_with_operation(self.graph[current], step)
                 # XXX handle postprocessing operations here
                 previous = current
                 if existing_edge:
                     # print(f"Found an edge from {current.path} via {step.opname}")
                     current = existing_edge
-                    # If we are expecting a different target name, copy it
+                    # If we are expecting a different target name, copy the
+                    # file to rename it.
                     if current.path != target.path and step == last_operation:
                         # print(f"Expected it to be {target.path}, copying")
                         copy_operation = Copy()
@@ -184,6 +203,8 @@ class GFBuilder:
                         self.graph.add_edge(current, target, operation=copy_operation)
                         current = target
                 else:
+                    # We are the first to run this operation, so we need to
+                    # create a new edge in the graph.
                     if step.postprocess:
                         # In a post-processing step, we expect:
                         # The target is the stamp file
@@ -214,6 +235,8 @@ class GFBuilder:
                     # )
                     current = binary
 
+    # Finally we walk the graph. We do another validation pass to make
+    # sure that the operations make sense, and then we emit the ninja rules.
     def walk_graph(self):
         actions = defaultdict(list)
         final_targets = []
