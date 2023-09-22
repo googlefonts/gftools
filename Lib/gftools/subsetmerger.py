@@ -108,8 +108,23 @@ class SubsetMerger:
         outpath = Path(self.output).parent
         added_subsets = False
         for master in ds.sources:
+            newpath = os.path.join(outpath, os.path.basename(master.path))
+            target_ufo = open_ufo(master.path)
+
+            master.path = newpath
+
             for subset in self.subsets:
-                added_subsets |= self.add_subset(ds, master, subset)
+                added_subsets |= self.add_subset(target_ufo, ds, master, subset)
+
+            if self.json or master.path.endswith(".json"):
+                if not master.path.endswith(".json"):
+                    master.path += ".json"
+                    if master.filename:
+                        master.filename += ".json"
+                target_ufo.json_dump(open(master.path, "wb"))
+            else:
+                target_ufo.save(master.path, overwrite=True)
+
         if not added_subsets:
             raise ValueError("Could not match *any* subsets for this font")
 
@@ -120,7 +135,7 @@ class SubsetMerger:
 
         ds.write(self.output)
 
-    def add_subset(self, ds, ds_source, subset):
+    def add_subset(self, target_ufo, ds, ds_source, subset):
         # First, we find a donor UFO that matches the location of the
         # UFO to merge.
         location = dict(ds_source.location)
@@ -129,9 +144,6 @@ class SubsetMerger:
         source_ufo = self.obtain_upstream(subset["from"], location)
         if not source_ufo:
             return False
-
-        # Open it up and send it to ufomerge, using the options supplied.
-        target_ufo = open_ufo(ds_source.path)
         existing_handling = "skip"
         if subset.get("force"):
             existing_handling = "replace"
@@ -146,14 +158,6 @@ class SubsetMerger:
             existing_handling=existing_handling,
             layout_handling=layout_handling,
         )
-        if self.json:
-            if not ds_source.path.endswith(".json"):
-                ds_source.path += ".json"
-                if ds_source.filename:
-                    ds_source.filename += ".json"
-                target_ufo.json_dump(open(ds_source.path+".json", "wb"))
-        else:
-            target_ufo.save(ds_source.path, overwrite=True)
         return True
 
     def obtain_upstream(self, upstream, location):
