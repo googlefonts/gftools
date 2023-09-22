@@ -26,9 +26,12 @@ def edge_with_operation(node, operation):
 
 class GFBuilder:
     def __init__(self, config):
-        with open(config, "r") as file:
-            self.config = yaml.safe_load(file)
-        chdir(Path(config).resolve().parent)
+        if isinstance(config, dict):
+            self.config = config
+        else:
+            with open(config, "r") as file:
+                self.config = yaml.safe_load(file)
+            chdir(Path(config).resolve().parent)
         self.writer = Writer(open("build.ninja", "w"))
         self.named_files = {}
         self.used_operations = set([])
