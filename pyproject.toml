@@ -46,7 +46,7 @@ dependencies = [
   'vttlib',
   'pygit2',
   'strictyaml',
-  'fontmake>=3.3.0',
+  'fontmake[json]>=3.3.0',
   'skia-pathops',
   'statmake',
   'PyYAML',

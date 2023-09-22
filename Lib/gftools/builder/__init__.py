@@ -99,11 +99,11 @@ class GFBuilder:
         FontProject().run_from_glyphs(
             str(source.resolve()),
             **{
-                "format": ["ufo"],
                 "output": ["ufo"],
                 "output_dir": directory,
                 "master_dir": directory,
                 "designspace_path": output,
+                "ufo_structure": "json"
             },
         )
         return source.with_suffix(".designspace").name

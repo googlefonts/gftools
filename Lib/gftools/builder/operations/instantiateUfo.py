@@ -46,12 +46,13 @@ class InstantiateUFO(FontmakeOperationBase):
         assert instance is not None
         assert instance.filename is not None
         # if self.first_source.is_glyphs:
-        return [ File(str(self.instance_dir / os.path.basename(instance.filename))) ]
+        return [ File(str(self.instance_dir / (os.path.basename(instance.filename)+".json"))) ]
         # return [ File(instance.filename) ]
 
     @property
     def variables(self):
         vars = super().variables
+        vars["fontmake_args"] += " --ufo-structure=json "
         if self.first_source.is_glyphs:
             vars["fontmake_args"] += f"--instance-dir {escape_path(str(self.instance_dir))}"
         else:
