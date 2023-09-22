@@ -13,7 +13,7 @@ import yaml
 from fontmake.font_project import FontProject
 from fontTools.designspaceLib import DesignSpaceDocument
 from glyphsets import GFGlyphData
-from strictyaml import HexInt, Map, Optional, Seq, Str, Enum
+from strictyaml import HexInt, Int, Map, Optional, Seq, Str, Enum
 from ufomerge import merge_ufos
 
 from gftools.util.styles import STYLE_NAMES
@@ -42,7 +42,7 @@ subsets_schema = Seq(
         {
             "from": Enum(SUBSET_SOURCES.keys()) | Map({"repo": Str(), "path": Str()}),
             Optional("name"): Str(),
-            Optional("ranges"): Seq(Map({"start": HexInt(), "end": HexInt()})),
+            Optional("ranges"): Seq(Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})),
             Optional("layoutHandling"): Str(),
             Optional("force"): Str(),
         }
