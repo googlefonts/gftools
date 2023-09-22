@@ -48,10 +48,10 @@ class NotoBuilder(GFBuilder):
         )
         self.recipe[target] = [
             {"source": source.path},
-            {"operation": "buildVariable"},
+            {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
             {"operation": "fix"},
         ]
-        
+
         # UI variable
         if self.config.get("buildUIVF"):
             # Find my glyphs source
@@ -68,12 +68,13 @@ class NotoBuilder(GFBuilder):
             )
             self.recipe[uivftarget] = [
                 {"source": source.path},
-                {"operation": "buildVariable"},
+                {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
                 {"operation": "fix"},
-                {"operation": "exec",
-                 "exe": sys.executable,
-                 "args": f"-m notobuilder.builduivf -o '{uivftarget}' '{target}' '{glyphs_source}'",
-                 "needs": [target]
+                {
+                    "operation": "exec",
+                    "exe": sys.executable,
+                    "args": f"-m notobuilder.builduivf -o '{uivftarget}' '{target}' '{glyphs_source}'",
+                    "needs": [target],
                 },
             ]
 
@@ -97,7 +98,7 @@ class NotoBuilder(GFBuilder):
                     "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
                 },
-                {"operation": "buildVariable"},
+                {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
             ]
             self.slim(target, tags)
 
@@ -117,7 +118,7 @@ class NotoBuilder(GFBuilder):
                     "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
                 },
-                {"operation": "buildVariable"},
+                {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
                 {"operation": "fix"},
             ]
         else:
@@ -132,7 +133,7 @@ class NotoBuilder(GFBuilder):
             )
             self.recipe[target] = [
                 {"source": source.path},
-                {"operation": "buildVariable"},
+                {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
                 {"operation": "fix"},
             ]
 
@@ -165,7 +166,10 @@ class NotoBuilder(GFBuilder):
                 "operation": "instantiateUfo",
                 "instance_name": instance.name,
             },
-            {"operation": "buildTTF" if output == "ttf" else "buildOTF"},
+            {
+                "operation": "buildTTF" if output == "ttf" else "buildOTF",
+                "fontmake_args": self.fontmake_args(),
+            },
         ]
 
         instancebase = os.path.splitext(os.path.basename(instance.filename))[0]
@@ -218,9 +222,13 @@ class NotoBuilder(GFBuilder):
                     "operation": "instantiateUfo",
                     "instance_name": instance.name,
                     "target": "full-designspace/instance_ufos/"
-                    + os.path.basename(instance.filename)+".json",
+                    + os.path.basename(instance.filename)
+                    + ".json",
                 },
-                {"operation": "buildTTF" if output == "ttf" else "buildOTF"},
+                {
+                    "operation": "buildTTF" if output == "ttf" else "buildOTF",
+                    "fontmake_args": self.fontmake_args(),
+                },
             ]
             if output == "ttf":
                 steps.extend(
@@ -263,7 +271,7 @@ class NotoBuilder(GFBuilder):
                     "operation": "instantiateUfo",
                     "instance_name": instance.name,
                 },
-                {"operation": "buildTTF"},
+                {"operation": "buildTTF", "fontmake_args": self.fontmake_args()},
                 {
                     "operation": "autohint",
                     "autohint_args": "--fail-ok --auto-script --discount-latin",
