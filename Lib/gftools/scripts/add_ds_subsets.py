@@ -78,6 +78,9 @@ Example usage:
     parser.add_argument("--file", "-f", help="Source file within GitHub repository")
     parser.add_argument("--name", "-n", help="Name of subset to use from glyphset")
     parser.add_argument("--codepoints", "-c", help="Range of codepoints to subset")
+    parser.add_argument(
+        "--json", "-j", action="store_true", help="Use JSON structured UFOs"
+    )
 
     parser.add_argument("--output", "-o", help="Output designspace file")
 
@@ -122,7 +125,7 @@ Example usage:
                     }
                 )
     SubsetMerger(
-        args.input, args.output, subsets, googlefonts=args.googlefonts
+        args.input, args.output, subsets, googlefonts=args.googlefonts, json=args.json
     ).add_subsets()
 
 

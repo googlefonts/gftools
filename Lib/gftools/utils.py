@@ -19,6 +19,7 @@ from zipfile import ZipFile
 import sys
 import os
 import shutil
+import ufoLib2
 import unicodedata
 from unidecode import unidecode
 from collections import namedtuple
@@ -536,3 +537,12 @@ def primary_script(ttFont, ignore_latin=True):
     most_common = script_count.most_common(1)
     if most_common:
         return most_common[0][0]
+
+
+def open_ufo(path):
+    if os.path.isdir(path):
+        return ufoLib2.Font.open(path)
+    elif path.endswith(".json"):
+        return ufoLib2.Font.json_load(open(path, "rb"))
+    else:  # Maybe a .ufoz
+        return ufoLib2.Font.open(path)

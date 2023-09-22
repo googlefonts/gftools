@@ -10,7 +10,7 @@ from gftools.builder.operations import OperationBase
 
 class AddSubset(OperationBase):
     description = "Add a subset from another font"
-    rule = "gftools-add-ds-subsets -y $yaml -o $out $in"
+    rule = "gftools-add-ds-subsets -j -y $yaml -o $out $in"
 
     def validate(self):
         # Ensure there is a new name

@@ -6,6 +6,8 @@ import ufoLib2
 from fontTools.designspaceLib import InstanceDescriptor
 from glyphsLib.builder import UFOBuilder
 
+from gftools.utils import open_ufo
+
 
 @dataclass
 class File:
@@ -35,7 +37,7 @@ class File:
 
     @property
     def is_ufo(self):
-        return self.extension == "ufo"
+        return self.extension == "ufo" or ".ufo.json" in self.path
 
     @property
     def is_designspace(self):
@@ -79,7 +81,7 @@ class File:
         elif self.designspace.sources[0].familyName:
             return self.designspace.sources[0].familyName
         else:
-            self.designspace.loadSourceFonts(ufoLib2.Font.open)
+            self.designspace.loadSourceFonts(open_ufo)
             self.designspace.sources[0].font.info.familyName
         return name
 
