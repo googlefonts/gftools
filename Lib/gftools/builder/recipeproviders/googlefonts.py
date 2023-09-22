@@ -40,6 +40,14 @@ class GFBuilder(RecipeProviderBase):
         self.build_all_statics()
         return self.recipe
 
+    def fontmake_args(self):
+        args = "--filter ... "
+        if self.config.get("flattenComponents", True):
+            args += "--filter FlattenComponentsFilter "
+        if self.config.get("decomposeTransformedComponents", True):
+            args += "--filter DecomposeTransformedComponentsFilter "
+        return args
+
     def build_all_variables(self):
         if not self.config.get("buildVariable", True):
             return
@@ -79,13 +87,15 @@ class GFBuilder(RecipeProviderBase):
         target = os.path.join(self.config["vfDir"], f"{sourcebase}[{axis_tags}].ttf")
         steps = [
             {"source": source.path},
-            {"operation": "buildVariable"},
+            {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
             # XXX set version
             {"operation": "fix"},
         ]
         self.recipe[target] = steps
         if self.config["buildWebfont"]:
-            target = os.path.join(self.config["woffDir"], f"{sourcebase}[{axis_tags}].woff2")
+            target = os.path.join(
+                self.config["woffDir"], f"{sourcebase}[{axis_tags}].woff2"
+            )
             self.recipe[target] = steps + [{"operation": "compress"}]
 
     def build_all_statics(self):
@@ -110,7 +120,12 @@ class GFBuilder(RecipeProviderBase):
             steps.append(
                 {"operation": "instantiateUfo", "instance_name": instance.name}
             )
-        steps.append({"operation": "buildTTF" if output == "ttf" else "buildOTF"})
+        steps.append(
+            {
+                "operation": "buildTTF" if output == "ttf" else "buildOTF",
+                "fontmake_args": self.fontmake_args(),
+            }
+        )
         steps.append({"operation": "fix"})
         instancebase = os.path.splitext(os.path.basename(instance.filename))[0]
         target = os.path.join(outdir, f"{instancebase}.{output}")

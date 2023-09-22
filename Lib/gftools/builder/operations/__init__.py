@@ -123,13 +123,17 @@ class FontmakeOperationBase(OperationBase):
     @property
     def variables(self):
         vars = defaultdict(str)
+        for k,v in self.original.items():
+            if k != "needs":
+                vars[k] = v
+
         if self.first_source.is_glyphs:
             vars["fontmake_type"] = "-g"
         elif self.first_source.is_designspace:
             vars["fontmake_type"] = "-m"
         elif self.first_source.is_ufo:
             vars["fontmake_type"] = "-u"
-        
+
         return vars
 
 known_operations = {}
