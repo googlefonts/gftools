@@ -129,8 +129,14 @@ def main(args=None):
         help=(
             "Post report data to a github pr. This can be used with any font "
             "fetching method."
-        )
+        ),
     )
+    check_group.add_argument(
+        "--extra-fontbakery-args",
+        help="Additional arguments to FontBakery",
+        nargs="*",
+    )
+
     parser.add_argument("--imgs", action="store_true", help="Gen images using Selenium")
     parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args(args)
@@ -238,7 +244,7 @@ def main(args=None):
     if args.render:
         qa.render(args.imgs)
     if args.fontbakery:
-        qa.fontbakery()
+        qa.fontbakery(extra_args=args.extra_fontbakery_args)
     if args.diffenator:
         qa.diffenator()
     if args.diffbrowsers:
