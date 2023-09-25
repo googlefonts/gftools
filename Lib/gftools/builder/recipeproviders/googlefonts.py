@@ -64,7 +64,7 @@ class GFBuilder(RecipeProviderBase):
     def build_STAT(self):
         # Add buildStat to a variable target, it'll do for all of them
         all_variables = list(self.recipe.keys())
-        if len(all_variables) > 1:
+        if len(all_variables) > 0:
             last_target = all_variables[-1]
             self.recipe[last_target].append(
                 {

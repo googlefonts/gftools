@@ -146,7 +146,7 @@ class NotoBuilder(GFBuilder):
                 continue
             variables_by_directory[os.path.dirname(variable)].append(variable)
         for variables in variables_by_directory.values():
-            if len(variables) > 1:
+            if len(variables) > 0:
                 last_target = variables[-1]
                 others = variables[:-1]
                 self.recipe[last_target].append(
