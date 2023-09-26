@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import os.path
 import networkx as nx
 from ninja.ninja_syntax import Writer, escape_path
-from ninja import ninja
+from ninja import _program
 from fontmake.font_project import FontProject
 
 from gftools.builder.file import File
@@ -302,4 +302,4 @@ def main(args=None):
     if args.graph:
         pd.draw_graph()
     if not args.no_ninja:
-        ninja()
+        raise SystemExit(_program('ninja', []))
