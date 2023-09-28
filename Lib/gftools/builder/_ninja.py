@@ -134,7 +134,7 @@ class NinjaBuilder(GFBuilder):
         self.w.comment("Run the ttfautohint in-place and touch a stamp file")
         self.w.rule(
             "autohint",
-            "ttfautohint $in $in.autohinted && mv $in.autohinted $in && touch $in.autohintstamp",
+            "gftools-autohint $in && touch $in.autohintstamp",
             **args,
         )
 
