@@ -148,7 +148,9 @@ class NinjaBuilder(GFBuilder):
         for source in self.config["sources"]:
             if source.endswith(".glyphs") or source.endswith(".glyphspackage"):
                 builder = UFOBuilder(
-                    glyphsLib.load(source), instance_dir="../instance_ufo"
+                    glyphsLib.load(source),
+                    instance_dir="../instance_ufo",
+                    minimal=True
                 )
                 # This is a sneaky way of skipping the hard work of
                 # converting all the glyphs and stuff, and just gettting
