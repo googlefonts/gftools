@@ -33,7 +33,7 @@ class GFBuilder(RecipeProviderBase):
     def write_recipe(self):
         self.config = {**DEFAULTS, **self.config}
         self.config["buildWebfont"] = (
-            self.config.get("buildWebfont") or self.config["buildStatic"]
+            self.config.get("buildWebfont", self.config.get("buildStatic", True))
         )
         # Find variable fonts
         self.recipe = {}
