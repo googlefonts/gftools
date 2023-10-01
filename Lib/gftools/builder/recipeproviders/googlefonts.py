@@ -1,3 +1,4 @@
+import copy
 import os
 from gftools.builder.recipeproviders import RecipeProviderBase
 
@@ -96,7 +97,7 @@ class GFBuilder(RecipeProviderBase):
             target = os.path.join(
                 self.config["woffDir"], f"{sourcebase}[{axis_tags}].woff2"
             )
-            self.recipe[target] = steps + [{"operation": "compress"}]
+            self.recipe[target] = copy.deepcopy(steps) + [{"operation": "compress"}]
 
     def build_all_statics(self):
         if not self.config.get("buildStatic", True):
@@ -133,4 +134,4 @@ class GFBuilder(RecipeProviderBase):
 
         if self.config["buildWebfont"] and output == "ttf":
             target = os.path.join(self.config["woffDir"], f"{instancebase}.woff2")
-            self.recipe[target] = steps + [{"operation": "compress"}]
+            self.recipe[target] = copy.deepcopy(steps) + [{"operation": "compress"}]
