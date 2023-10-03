@@ -180,8 +180,8 @@ class GFBuilder:
                                 f"Multiple rules apparently produced {current.path}"
                             )
                         edge = self.graph[parents[0]][current]
-                        # print("Adding edge, ", parents[0], step, edge)
-                        self.graph.add_edge(parents[0], step, **edge)
+                        edge["operation"]._targets = [step]
+                        current.path = step.path
                 current = step
             else:
                 # This is an ordinary operation.
