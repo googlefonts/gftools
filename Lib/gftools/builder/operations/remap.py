@@ -3,7 +3,7 @@ from gftools.builder.operations import OperationBase
 
 class Remap(OperationBase):
     description = "Rename a font's cmap table"
-    rule = "gftools-remap-font -o $out $in $mappings"
+    rule = "gftools-remap-font -o $out $args $in $mappings"
 
     def validate(self):
         # Ensure there is a new name
