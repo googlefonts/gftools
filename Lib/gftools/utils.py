@@ -30,8 +30,10 @@ import json
 from PIL import Image
 import re
 from fontTools import unicodedata as ftunicodedata
+from fontTools.ttLib import TTFont
 from ufo2ft.util import classifyGlyphs
 from collections import Counter
+from collections import defaultdict
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -40,9 +42,12 @@ else:
 # =====================================
 # HELPER FUNCTIONS
 
-def download_family_from_Google_Fonts(family, dst=None):
+PROD_FAMILY_DOWNLOAD = 'https://fonts.google.com/download?family={}'
+
+
+def download_family_from_Google_Fonts(family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD):
     """Download a font family from Google Fonts"""
-    url = 'https://fonts.google.com/download?family={}'.format(
+    url = dl_url.format(
         family.replace(' ', '%20')
     )
     fonts_zip = ZipFile(download_file(url))
@@ -536,3 +541,24 @@ def primary_script(ttFont, ignore_latin=True):
     most_common = script_count.most_common(1)
     if most_common:
         return most_common[0][0]
+
+
+def autovivification(items):
+    if items == None:
+        return None
+    if isinstance(items, (list, tuple)):
+        return [autovivification(v) for v in items]
+    if isinstance(items, (float, int, str, bool)):
+        return items
+    d = defaultdict(lambda: defaultdict(defaultdict))
+    d.update({k: autovivification(v) for k,v in items.items()})
+    return d
+
+
+def font_version(font: TTFont):
+    version_id = font["name"].getName(5, 3, 1, 0x409)
+    if not version_id:
+        version = str(font["head"].fontRevision)
+    else:
+        version = version_id.toUnicode()
+    return version
