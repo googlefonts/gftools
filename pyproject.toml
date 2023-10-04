@@ -59,6 +59,7 @@ dependencies = [
   'bumpfontversion',
   'nanoemoji>=0.15.0',
   'font-v',
+  'beautifulsoup4'
 ]
 
 [project.optional-dependencies]
