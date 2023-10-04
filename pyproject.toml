@@ -60,6 +60,7 @@ dependencies = [
   'nanoemoji>=0.15.0',
   'font-v',
   'afdko',
+  'beautifulsoup4'
 ]
 
 [project.optional-dependencies]
