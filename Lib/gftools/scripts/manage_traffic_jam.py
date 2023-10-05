@@ -46,7 +46,7 @@ PRODUCTION_URL = "https://fonts.google.com"
 try:
     subprocess.run("gh", stdout=subprocess.DEVNULL).returncode == 0
 except:
-    raise SystemError("Github Hub is not installed. https://hub.github.com/")
+    raise SystemError("GitHub CLI is not installed. https://github.com/cli/cli#installation")
 
 
 class ItemChecker:
