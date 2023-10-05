@@ -104,7 +104,8 @@ class GFBuilder:
                 "output_dir": directory,
                 "master_dir": directory,
                 "designspace_path": output,
-                "ufo_structure": "json"
+                "ufo_structure": "json",
+                "glyph_data": self.config.get("glyphData")
             },
         )
         return source.with_suffix(".designspace").name
