@@ -45,17 +45,13 @@ else:
 PROD_FAMILY_DOWNLOAD = 'https://fonts.google.com/download?family={}'
 
 
-def download_family_from_Google_Fonts(family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD):
+def download_family_from_Google_Fonts(family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True):
     """Download a font family from Google Fonts"""
     url = dl_url.format(
         family.replace(' ', '%20')
     )
     fonts_zip = ZipFile(download_file(url))
-    if dst:
-        fonts = fonts_from_zip(fonts_zip, dst)
-        # Remove static fonts if the family is a variable font
-        return [f for f in fonts if "static" not in f]
-    return fonts_from_zip(fonts_zip)
+    return fonts_from_zip(fonts_zip, dst, ignore_static)
 
 
 def Google_Fonts_has_family(name):
@@ -228,18 +224,21 @@ def download_file(url, dst_path=None):
         downloaded_file.write(request.content)
 
 
-def fonts_from_zip(zipfile, dst=None):
+def fonts_from_zip(zipfile, dst=None, ignore_static=True):
     """Unzip fonts. If not dst is given unzip as BytesIO objects"""
-    fonts = []
+    res = []
     for filename in zipfile.namelist():
-        if filename.endswith((".ttf", ".otf")):
-            if dst:
-                target = os.path.join(dst, filename)
-                zipfile.extract(filename, dst)
-                fonts.append(target)
-            else:
-                fonts.append(BytesIO(zipfile.read(filename)))
-    return fonts
+        if ignore_static and filename.startswith("static"):
+            continue
+        if not filename.endswith(("otf", "ttf")):
+            continue
+        if dst:
+            target = os.path.join(dst, filename)
+            zipfile.extract(filename, dst)
+            res.append(target)
+        else:
+            res.append(BytesIO(zipfile.read(filename)))
+    return res
 
 
 def cmp(x, y):
