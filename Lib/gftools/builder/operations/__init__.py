@@ -133,6 +133,8 @@ class FontmakeOperationBase(OperationBase):
             vars["fontmake_type"] = "-m"
         elif self.first_source.is_ufo:
             vars["fontmake_type"] = "-u"
+        if "--verbose" not in vars["fontmake_args"]:
+            vars["fontmake_args"] += " --verbose WARNING "
 
         return vars
 
