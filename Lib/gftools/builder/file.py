@@ -51,7 +51,7 @@ class File:
     def gsfont(self):
         if self.is_glyphs:
             import glyphsLib
-            return glyphsLib.GSFont(self.path)
+            return glyphsLib.load(self.path)
         return None
 
     @cached_property
