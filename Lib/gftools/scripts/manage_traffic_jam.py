@@ -129,6 +129,8 @@ class ItemChecker:
         pprint(res)
 
     def update_server(self, push_item: PushItem, servers: GFServers):
+        if not push_item.merged:
+            return
         item = push_item.item()
         if item == None:
             log.warning(f"Cannot update server for {push_item}.")
@@ -167,6 +169,9 @@ def main(args=None):
     parser.add_argument(
         "-f", "--filter", choices=(None, "lists", "in_dev", "in_sandbox"), default=None
     )
+    parser.add_argument(
+        "-p", "--show-open-prs", action="store_true", default=False
+    )
     parser.add_argument("-s", "--server-data", default=(Path("~") / ".gf_server_data.json").expanduser())
     args = parser.parse_args(args)
 
@@ -183,6 +188,8 @@ def main(args=None):
     os.chdir(args.fonts_repo)
 
     push_items = PushItems.from_traffic_jam()
+    if not args.show_open_prs:
+        push_items = PushItems(i for i in push_items if i.merged == True)
     if args.filter == "lists":
         prod_path = args.fonts_repo / "to_production.txt"
         production_file = PushItems.from_server_file(prod_path, PushStatus.IN_SANDBOX)
