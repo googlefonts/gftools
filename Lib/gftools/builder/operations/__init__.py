@@ -41,9 +41,13 @@ class OperationBase:
         name = cls.__module__.split(".")[-1]
         writer.comment(name + ": " + cls.description)
         if os.name == 'nt':
-            writer.rule(name, "cmd /c " + cls.rule + " $stamp")
+            cmd = "cmd /c " + cls.rule + " $stamp"
         else:
-            writer.rule(name, cls.rule + " $stamp")
+            cmd = cls.rule + " $stamp"
+        writer.rule(name,
+            sys.executable + " -m gftools.builder.jobrunner " + cmd,
+            description=name
+        )
         writer.newline()
 
     @property
