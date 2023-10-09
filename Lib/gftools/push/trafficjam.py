@@ -19,23 +19,28 @@ log = logging.getLogger("gftools.servers")
 # home directory. Environment variables can also be used instead.
 config = ConfigParser()
 config.read(os.path.join(os.path.expanduser("~"), ".gf_push_config.ini"))
-
-TRAFFIC_JAM_ID = (
-    os.environ.get("TRAFFIC_JAM_ID") or config["board_meta"]["traffic_jam_id"]
-)
-STATUS_FIELD_ID = (
-    os.environ.get("STATUS_FIELD_ID") or config["board_meta"]["status_field_id"]
-)
-LIST_FIELD_ID = os.environ.get("LIST_FIELD_ID") or config["board_meta"]["list_field_id"]
-PR_GF_ID = os.environ.get("PR_GF_ID") or config["board_meta"]["pr_gf_id"]
-IN_DEV_ID = os.environ.get("IN_DEV_ID") or config["board_meta"]["in_dev_id"]
-IN_SANDBOX_ID = os.environ.get("IN_SANDBOX_ID") or config["board_meta"]["in_sandbox_id"]
-LIVE_ID = os.environ.get("LIVE_ID") or config["board_meta"]["live_id"]
-TO_SANDBOX_ID = os.environ.get("TO_SANDBOX_ID") or config["board_meta"]["to_sandbox_id"]
-TO_PRODUCTION_ID = (
-    os.environ.get("TO_PRODUCTION_ID") or config["board_meta"]["to_production_id"]
-)
-BLOCKED_ID = os.environ.get("BLOCKED_ID") or config["board_meta"]["blocked_id"]
+if config:
+    TRAFFIC_JAM_ID = config["board_meta"]["traffic_jam_id"]
+    STATUS_FIELD_ID = config["board_meta"]["status_field_id"]
+    LIST_FIELD_ID = config["board_meta"]["list_field_id"]
+    PR_GF_ID = config["board_meta"]["pr_gf_id"]
+    IN_DEV_ID = config["board_meta"]["in_dev_id"]
+    IN_SANDBOX_ID = config["board_meta"]["in_sandbox_id"]
+    LIVE_ID = config["board_meta"]["live_id"]
+    TO_SANDBOX_ID = config["board_meta"]["to_sandbox_id"]
+    TO_PRODUCTION_ID = config["board_meta"]["to_production_id"]
+    BLOCKED_ID = config["board_meta"]["blocked_id"]
+else:
+    TRAFFIC_JAM_ID = os.environ.get("TRAFFIC_JAM_ID")
+    STATUS_FIELD_ID = os.environ.get("STATUS_FIELD_ID")
+    LIST_FIELD_ID = os.environ.get("LIST_FIELD_ID")
+    PR_GF_ID = os.environ.get("PR_GF_ID")
+    IN_DEV_ID = os.environ.get("IN_DEV_ID")
+    IN_SANDBOX_ID = os.environ.get("IN_SANDBOX_ID")
+    LIVE_ID = os.environ.get("LIVE_ID")
+    TO_SANDBOX_ID = os.environ.get("TO_SANDBOX_ID")
+    TO_PRODUCTION_ID = os.environ.get("TO_PRODUCTION_ID")
+    BLOCKED_ID = os.environ.get("BLOCKED_ID")
 
 
 class STATUS_OPTION_IDS(Enum):

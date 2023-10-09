@@ -21,19 +21,18 @@ log = logging.getLogger("gftools.servers")
 # home directory. Environment variables can also be used instead.
 config = ConfigParser()
 config.read(os.path.join(os.path.expanduser("~"), ".gf_push_config.ini"))
-
-SANDBOX_META_URL = os.environ.get("SANDBOX_META_URL") or config["urls"]["sandbox_meta"]
-PRODUCTION_META_URL = (
-    os.environ.get("PRODUCTION_META_URL") or config["urls"]["production_meta"]
-)
-DEV_META_URL = os.environ.get("DEV_META_URL") or config["urls"]["dev_meta"]
-SANDBOX_FAMILY_DOWNLOAD = (
-    os.environ.get("SANDBOX_FAMILY_DOWNLOAD")
-    or config["urls"]["sandbox_family_download"]
-)
-DEV_FAMILY_DOWNLOAD = (
-    os.environ.get("DEV_FAMILY_DOWNLOAD") or config["urls"]["dev_family_download"]
-)
+if config:
+    SANDBOX_META_URL = config["urls"]["sandbox_meta"]
+    PRODUCTION_META_URL = config["urls"]["production_meta"]
+    DEV_META_URL = config["urls"]["dev_meta"]
+    SANDBOX_FAMILY_DOWNLOAD = config["urls"]["sandbox_family_download"]
+    DEV_FAMILY_DOWNLOAD = config["urls"]["dev_family_download"]
+else:
+    SANDBOX_META_URL = os.environ.get("SANDBOX_META_URL")
+    PRODUCTION_META_URL = os.environ.get("PRODUCTION_META_URL")
+    DEV_META_URL = os.environ.get("DEV_META_URL")
+    SANDBOX_FAMILY_DOWNLOAD = os.environ.get("SANDBOX_FAMILY_DOWNLOAD")
+    DEV_FAMILY_DOWNLOAD = os.environ.get("DEV_FAMILY_DOWNLOAD")
 
 
 @cache
