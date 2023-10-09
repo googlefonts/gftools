@@ -19,9 +19,10 @@ log = logging.getLogger("gftools.servers")
 # This module uses api endpoints which shouldn't be public. Ask
 # Marc Foley for the .gf_push_config.ini file. Place this file in your
 # home directory. Environment variables can also be used instead.
-config = ConfigParser()
-config.read(os.path.join(os.path.expanduser("~"), ".gf_push_config.ini"))
-if config:
+config_fp = os.path.join(os.path.expanduser("~"), ".gf_push_config.ini")
+if os.path.exists(config_fp):
+    config = ConfigParser()
+    config.read(config_fp)
     SANDBOX_META_URL = config["urls"]["sandbox_meta"]
     PRODUCTION_META_URL = config["urls"]["production_meta"]
     DEV_META_URL = config["urls"]["dev_meta"]
