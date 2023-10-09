@@ -48,6 +48,8 @@ jobs:
         run: |
           pip install '.[qa]'
           pip install mypy pytest
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Run Tests
         run: |
           pytest tests
