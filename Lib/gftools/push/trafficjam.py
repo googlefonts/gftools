@@ -17,9 +17,10 @@ log = logging.getLogger("gftools.servers")
 # This module uses api endpoints which shouldn't be public. Ask
 # Marc Foley for the .gf_push_config.ini file. Place this file in your
 # home directory. Environment variables can also be used instead.
-config = ConfigParser()
-config.read(os.path.join(os.path.expanduser("~"), ".gf_push_config.ini"))
-if config:
+config_fp = os.path.join(os.path.expanduser("~"), ".gf_push_config.ini")
+if os.path.exists(config_fp):
+    config = ConfigParser()
+    config.read(config_fp)
     TRAFFIC_JAM_ID = config["board_meta"]["traffic_jam_id"]
     STATUS_FIELD_ID = config["board_meta"]["status_field_id"]
     LIST_FIELD_ID = config["board_meta"]["list_field_id"]
