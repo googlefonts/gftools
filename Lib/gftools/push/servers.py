@@ -152,11 +152,11 @@ class GFServers(Itemer):
 
     def save(self, fp: str | Path):
         data = self.to_json()
-        json.dump(data, open(fp, "w"), indent=4)
+        json.dump(data, open(fp, "w", encoding="utf8"), indent=4)
 
     @classmethod
     def open(cls, fp: str | Path):
-        data = json.load(open(fp))
+        data = json.load(open(fp, encoding="utf8"))
         return cls.from_dict(data)
     
     @classmethod

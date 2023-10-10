@@ -150,7 +150,7 @@ class FamilyMeta(Itemer):
     def from_fp(cls, fp: Path):
         meta_fp = fp / "METADATA.pb"
         data = ReadProto(FamilyProto(), meta_fp)
-        description = open(fp / "DESCRIPTION.en_us.html").read()
+        description = open(fp / "DESCRIPTION.en_us.html", encoding="utf8").read()
         stroke = data.category[0] if not data.stroke else data.stroke.replace(" ", "_").upper()
         return cls(
             name=data.name,
@@ -202,7 +202,7 @@ class Designer(Itemer):
         bio_fp = fp / "bio.html"
         if not bio_fp.exists():
             return cls(name, None)
-        with open(bio_fp) as doc:
+        with open(bio_fp, encoding="utf8") as doc:
             bio = doc.read()
             return cls(name, bio)
 

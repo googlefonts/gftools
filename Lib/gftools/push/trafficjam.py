@@ -374,7 +374,7 @@ class PushItems(list):
                         res.append(f"# Deleted: {item.path.as_posix()}")
             res.append("")
         if isinstance(fp, str):
-            doc: TextIOWrapper = open(fp, "w")
+            doc: TextIOWrapper = open(fp, "w", encoding="utf8")
         else:
             doc: TextIOWrapper = fp  # type: ignore[no-redef]
         doc.write("\n".join(res))
@@ -387,7 +387,7 @@ class PushItems(list):
         push_list: Optional[PushList] = None,
     ):
         if isinstance(fp, (str, Path)):
-            doc = open(fp)
+            doc = open(fp, encoding="utf8")
         else:
             doc = fp
         results = cls()
