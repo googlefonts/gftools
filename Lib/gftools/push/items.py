@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 from abc import ABC
 from dataclasses import dataclass
@@ -44,14 +45,14 @@ class Family(Itemer):
     version: str
 
     @classmethod
-    def from_ttfont(cls, fp: str | Path):
+    def from_ttfont(cls, fp: "str | Path"):
         ttFont = TTFont(fp)
         name = ttFont["name"].getBestFamilyName()
         version = font_version(ttFont)
         return cls(name, version)
 
     @classmethod
-    def from_fp(cls, fp: str | Path):
+    def from_fp(cls, fp: "str | Path"):
         ttf = list(fp.glob("*.ttf"))[0] # type: ignore
         return cls.from_ttfont(ttf)
     
@@ -207,4 +208,4 @@ class Designer(Itemer):
             return cls(name, bio)
 
 
-Items = Axis | Designer | Family | FamilyMeta
+Items = "Axis | Designer | Family | FamilyMeta"

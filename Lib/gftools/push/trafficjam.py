@@ -350,7 +350,7 @@ class PushItems(list):
                 res.append(path)
         return res
 
-    def to_server_file(self, fp: str | Path):
+    def to_server_file(self, fp: "str | Path"):
         from collections import defaultdict
 
         bins = defaultdict(set)
@@ -382,7 +382,7 @@ class PushItems(list):
     @classmethod
     def from_server_file(
         cls,
-        fp: str | Path | TextIOWrapper,
+        fp: "str | Path | TextIOWrapper",
         status: Optional[PushStatus] = None,
         push_list: Optional[PushList] = None,
     ):

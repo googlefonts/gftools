@@ -1,3 +1,4 @@
+from __future__ import annotations
 import json
 import logging
 import os
@@ -150,12 +151,12 @@ class GFServers(Itemer):
             res[f"In {server.name}"] = server.compare_push_item(item)
         return res
 
-    def save(self, fp: str | Path):
+    def save(self, fp: "str | Path"):
         data = self.to_json()
         json.dump(data, open(fp, "w", encoding="utf8"), indent=4)
 
     @classmethod
-    def open(cls, fp: str | Path):
+    def open(cls, fp: "str | Path"):
         data = json.load(open(fp, encoding="utf8"))
         return cls.from_dict(data)
     
