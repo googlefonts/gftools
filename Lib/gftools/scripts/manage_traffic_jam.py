@@ -29,7 +29,7 @@ import logging
 from typing import Optional
 from configparser import ConfigParser
 
-log = logging.getLogger("gftools.manage_traffic_jam")
+log = logging.getLogger("gftools.push")
 
 # This module uses api endpoints which shouldn't be public. Ask
 # Marc Foley for the .gf_push_config.ini file. Place this file in your
@@ -173,7 +173,10 @@ def main(args=None):
         "-p", "--show-open-prs", action="store_true", default=False
     )
     parser.add_argument("-s", "--server-data", default=(Path("~") / ".gf_server_data.json").expanduser())
+    parser.add_argument("-l", "--log-level", choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"), default="INFO")
     args = parser.parse_args(args)
+
+    logging.basicConfig(level=args.log_level)
 
     branch_matches_google_fonts_main(args.fonts_repo)
 

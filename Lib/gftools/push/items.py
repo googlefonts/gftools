@@ -17,7 +17,7 @@ from google.protobuf.json_format import MessageToDict # type: ignore
 from typing import Optional
 
 
-log = logging.getLogger("gftools.items")
+log = logging.getLogger("gftools.push")
 
 
 def jsonify(item):

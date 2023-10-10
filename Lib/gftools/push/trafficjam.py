@@ -13,7 +13,7 @@ from functools import cached_property
 from gftools.push.items import Axis, Designer, Family, FamilyMeta
 from gftools.push.utils import google_path_to_repo_path, repo_path_to_google_path
 
-log = logging.getLogger("gftools.servers")
+log = logging.getLogger("gftools.push")
 
 # This module uses api endpoints which shouldn't be public. Ask
 # Marc Foley for the .gf_push_config.ini file. Place this file in your

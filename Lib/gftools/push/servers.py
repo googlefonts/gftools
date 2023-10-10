@@ -13,7 +13,7 @@ from gftools.utils import (
     PROD_FAMILY_DOWNLOAD,
 )
 
-log = logging.getLogger("gftools.servers")
+log = logging.getLogger("gftools.push")
 
 
 
@@ -114,7 +114,7 @@ class GFServer(Itemer):
         for family_data in families_data:
             family_name = family_data["family"]
             last_modified = family_data["lastModified"]
-            if last_modified > last_checked:
+            if last_modified >= last_checked:
                 log.info(f"Updating {family_name}")
                 if self.update_family(family_name):
                     self.update_family_designers(family_name)
