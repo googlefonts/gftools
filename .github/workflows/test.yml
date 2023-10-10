@@ -30,8 +30,6 @@ jobs:
         run: |
           pip install '.[qa]'
           pip install mypy pytest
-#      - name: Setup tmate session
-#        uses: mxschmitt/action-tmate@v3
       - name: Run Tests
         env:
           DEV_FAMILY_DOWNLOAD: ${{ secrets.DEV_FAMILY_DOWNLOAD }}
@@ -54,6 +52,3 @@ jobs:
           BLOCKED_ID: ${{ secrets.BLOCKED_ID }}
         run: |
           pytest tests
-
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
