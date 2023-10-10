@@ -155,7 +155,7 @@ class FamilyMeta(Itemer):
         stroke = data.category[0] if not data.stroke else data.stroke.replace(" ", "_").upper()
         return cls(
             name=data.name,
-            designer=data.designer.split(","),
+            designer=data.designer.split(", "),
             license=data.license.lower(),
             category=data.category[0],
             subsets=sorted([s for s in data.subsets if s != "menu"]),
@@ -172,7 +172,7 @@ class FamilyMeta(Itemer):
         )
         return cls(
             name=meta["family"],
-            designer=[i["name"] for i in meta["designers"]],
+            designer=sorted([i["name"].strip() for i in meta["designers"]]),
             license=meta["license"].lower(),
             category=meta["category"].replace(" ", "_").upper(),
             subsets=sorted(list(meta["coverage"].keys())),

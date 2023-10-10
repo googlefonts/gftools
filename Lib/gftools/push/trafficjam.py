@@ -8,6 +8,7 @@ from enum import Enum
 from io import TextIOWrapper
 from pathlib import Path
 from typing import Optional, Any
+from functools import cached_property
 
 from gftools.push.items import Axis, Designer, Family, FamilyMeta
 from gftools.push.utils import google_path_to_repo_path, repo_path_to_google_path
@@ -199,6 +200,7 @@ class PushItem:
             "url": url,
         }
 
+    @cached_property
     def item(self):
         if self.category in [PushCategory.NEW, PushCategory.UPGRADE]:
             return Family.from_fp(self.path)

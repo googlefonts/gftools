@@ -4,7 +4,7 @@ import logging
 import os
 from configparser import ConfigParser
 from datetime import datetime
-from functools import cache
+from functools import lru_cache
 from pathlib import Path
 
 import requests # type: ignore
@@ -37,7 +37,7 @@ else:
     DEV_FAMILY_DOWNLOAD = os.environ.get("DEV_FAMILY_DOWNLOAD")
 
 
-@cache
+@lru_cache
 def gf_server_metadata(url: str):
     """Get family json data from a Google Fonts metadata url"""
     # can't do requests.get("url").json() since request text starts with ")]}'"
@@ -46,7 +46,7 @@ def gf_server_metadata(url: str):
     return {i["family"]: i for i in info["familyMetadataList"]}
 
 
-@cache
+@lru_cache
 def gf_server_family_metadata(url: str, family: str):
     """Get metadata for family on a server"""
     # can't do requests.get("url").json() since request text starts with ")]}'"

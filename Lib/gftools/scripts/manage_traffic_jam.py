@@ -50,7 +50,7 @@ except:
 
 
 class ItemChecker:
-    def __init__(self, push_items: PushItems, gf_fp: str | Path, servers: GFServers):
+    def __init__(self, push_items: PushItems, gf_fp: "str | Path", servers: GFServers):
         self.push_items = push_items
         self.gf_fp = gf_fp
         self.servers = servers
@@ -59,7 +59,7 @@ class ItemChecker:
     def __enter__(self):
         return self
     
-    def __exit__(self):
+    def __exit__(self, exception_type, exception_value, exception_traceback):
         self.git_checkout_main()
 
     def user_input(self, item: PushItem):
@@ -74,10 +74,10 @@ class ItemChecker:
         if "s" in user_input:
             self.skip_pr = item.url
         if "i" in user_input:
-            self.vim_diff(item.item())
+            self.vim_diff(item.item)
             self.user_input(item)
         if "q" in user_input:
-            self.__exit__()
+            self.__exit__(None, None, None)
             sys.exit()
 
     def git_checkout_item(self, push_item: PushItem):
@@ -109,7 +109,7 @@ class ItemChecker:
 
     def display_item(self, push_item: PushItem):
         res = {}
-        item = push_item.item()
+        item = push_item.item
         if item:
             comparison = self.servers.compare_item(item)
             if push_item.category in [PushCategory.UPGRADE, PushCategory.NEW]:
@@ -131,7 +131,7 @@ class ItemChecker:
     def update_server(self, push_item: PushItem, servers: GFServers):
         if not push_item.merged:
             return
-        item = push_item.item()
+        item = push_item.item
         if item == None:
             log.warning(f"Cannot update server for {push_item}.")
             return
