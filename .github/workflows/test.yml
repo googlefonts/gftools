@@ -8,24 +8,6 @@ on:
 
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  DEV_FAMILY_DOWNLOAD: ${{ secrets.DEV_FAMILY_DOWNLOAD }}
-  DEV_META_URL: ${{ secrets.DEV_META_URL }}
-  DEV_URL: ${{ secrets.DEV_URL }}
-  PRODUCTION_META_URL: ${{ secrets.PRODUCTION_META_URL }}
-  PRODUCTION_URL: ${{ secrets.PRODUCTION_URL}}
-  SANDBOX_FAMILY_DOWNLOAD: ${{ secrets.SANDBOX_FAMILY_DOWNLOAD }}
-  SANDBOX_META_URL: ${{ secrets.SANDBOX_META_URL }}
-  SANDBOX_URL: ${{ secrets.SANDBOX_URL }}
-  TRAFFIC_JAM_ID: ${{ secrets.TRAFFIC_JAM_ID }}
-  STATUS_FIELD_ID: ${{ secrets.STATUS_FIELD_ID }}
-  LIST_FIELD_ID: ${{ secrets.LIST_FIELD_ID }}
-  PR_GF_ID: ${{ secrets.PR_GF_ID }}
-  IN_DEV_ID: ${{ secrets.IN_DEV_ID }}
-  IN_SANDBOX_ID: ${{ secrets.IN_SANDBOX_ID }}
-  LIVE_ID: ${{ secrets.LIVE_ID }}
-  TO_SANDBOX_ID: ${{ secrets.TO_SANDBOX_ID }}
-  TO_PRODUCTION_ID: ${{ secrets.TO_PRODUCTION_ID }}
-  BLOCKED_ID: ${{ secrets.BLOCKED_ID }}
 
 jobs:
   build:
