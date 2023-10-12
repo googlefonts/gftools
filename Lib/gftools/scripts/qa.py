@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-
 def family_name_from_fonts(fonts):
     results = set(f.family_name for f in fonts)
     if len(results) > 1:
@@ -55,31 +54,38 @@ def main(args=None):
 
     font_group = parser.add_argument_group(title="Fonts to qa")
     font_input_group = font_group.add_mutually_exclusive_group(required=True)
-    font_input_group.add_argument("-f", "--fonts", nargs="+",
-        help="Paths to fonts")
-    font_input_group.add_argument("-pr", "--pull-request",
-        help="Get fonts from a Github pull request")
-    font_input_group.add_argument("-gh", "--github-dir",
-        help="Get fonts from a Github directory")
-    font_input_group.add_argument("-gf", "--googlefonts",
-        help="Get fonts from Google Fonts")
-    font_input_group.add_argument("-ar", "--archive",
-        help="Get fonts from a zip file URL")
+    font_input_group.add_argument("-f", "--fonts", nargs="+", help="Paths to fonts")
+    font_input_group.add_argument(
+        "-pr", "--pull-request", help="Get fonts from a Github pull request"
+    )
+    font_input_group.add_argument(
+        "-gh", "--github-dir", help="Get fonts from a Github directory"
+    )
+    font_input_group.add_argument(
+        "-gf", "--googlefonts", help="Get fonts from Google Fonts"
+    )
+    font_input_group.add_argument(
+        "-ar", "--archive", help="Get fonts from a zip file URL"
+    )
 
     font_before_group = parser.add_argument_group(title="Fonts before input")
     font_before_input_group = font_before_group.add_mutually_exclusive_group(
         required=False
     )
     font_before_input_group.add_argument(
-        "-fb", "--fonts-before", nargs="+",
-        help="Paths to previous fonts"
+        "-fb", "--fonts-before", nargs="+", help="Paths to previous fonts"
     )
-    font_before_input_group.add_argument("-prb", "--pull-request-before",
-        help="Get previous fonts from a Github pull request")
-    font_before_input_group.add_argument("-ghb", "--github-dir-before",
-        help="Get previous fonts from a Github dir")
-    font_before_input_group.add_argument("-arb", "--archive-before",
-        help="Get previous fonts from a zip file URL")
+    font_before_input_group.add_argument(
+        "-prb",
+        "--pull-request-before",
+        help="Get previous fonts from a Github pull request",
+    )
+    font_before_input_group.add_argument(
+        "-ghb", "--github-dir-before", help="Get previous fonts from a Github dir"
+    )
+    font_before_input_group.add_argument(
+        "-arb", "--archive-before", help="Get previous fonts from a zip file URL"
+    )
     font_before_input_group.add_argument(
         "-gfb",
         "--googlefonts-before",
@@ -97,16 +103,13 @@ def main(args=None):
     check_group.add_argument(
         "--diffenator", action="store_true", help="Run Fontdiffenator"
     )
+    check_group.add_argument("--proof", action="store_true", help="Run HTML proofs")
     check_group.add_argument(
-        "--proof", action="store_true", help="Run HTML proofs"
+        "--render",
+        action="store_true",
+        help="Run diffbrowsers if fonts_before exist, otherwise run proof",
     )
-    check_group.add_argument(
-        "--render", action="store_true",
-        help="Run diffbrowsers if fonts_before exist, otherwise run proof"
-    )
-    check_group.add_argument(
-        "--fontbakery", action="store_true", help="Run FontBakery"
-    )
+    check_group.add_argument("--fontbakery", action="store_true", help="Run FontBakery")
     check_group.add_argument(
         "--diffbrowsers", action="store_true", help="Run Diffbrowsers"
     )
@@ -129,8 +132,14 @@ def main(args=None):
         help=(
             "Post report data to a github pr. This can be used with any font "
             "fetching method."
-        )
+        ),
     )
+    check_group.add_argument(
+        "--extra-fontbakery-args",
+        help="Additional arguments to FontBakery",
+        nargs="*",
+    )
+
     parser.add_argument("--imgs", action="store_true", help="Gen images using Selenium")
     parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args(args)
@@ -149,9 +158,10 @@ def main(args=None):
             args.render,
         ]
     ):
-        raise Exception("Terminating. No checks selected. Run gftools qa "
-                        "--help to see all possible commands.")
-
+        raise Exception(
+            "Terminating. No checks selected. Run gftools qa "
+            "--help to see all possible commands."
+        )
 
     # Retrieve fonts and store in out dir
     mkdir(args.out)
@@ -183,15 +193,22 @@ def main(args=None):
         re_filter = re.compile(args.filter_fonts)
         fonts = [f for f in fonts if re_filter.search(f)]
 
-    dfonts = [DFont(f) for f in fonts if f.endswith((".ttf", ".otf"))
-               and "static" not in f]
+    dfonts = [
+        DFont(f) for f in fonts if f.endswith((".ttf", ".otf")) and "static" not in f
+    ]
     family_name = family_name_from_fonts(dfonts)
     family_on_gf = Google_Fonts_has_family(family_name)
 
     # Retrieve fonts_before and store in out dir
     fonts_before = None
-    if any([args.fonts_before, args.pull_request_before, args.github_dir_before, args.archive_before]) or \
-           (args.googlefonts_before and family_on_gf):
+    if any(
+        [
+            args.fonts_before,
+            args.pull_request_before,
+            args.github_dir_before,
+            args.archive_before,
+        ]
+    ) or (args.googlefonts_before and family_on_gf):
         fonts_before_dir = os.path.join(args.out, "fonts_before")
         mkdir(fonts_before_dir, overwrite=False)
     if args.fonts_before:
@@ -199,9 +216,7 @@ def main(args=None):
         fonts_before = args.fonts_before
     elif args.pull_request_before:
         fonts_before = download_files_in_github_pr(
-            args.pull_request_before,
-            fonts_before_dir,
-            ignore_static_dir=False
+            args.pull_request_before, fonts_before_dir, ignore_static_dir=False
         )
     elif args.github_dir_before:
         fonts_before = download_files_in_github_dir(
@@ -212,9 +227,7 @@ def main(args=None):
             args.archive_before, fonts_before_dir
         )
     elif args.googlefonts_before and family_on_gf:
-        fonts_before = download_family_from_Google_Fonts(
-            family_name, fonts_before_dir
-        )
+        fonts_before = download_family_from_Google_Fonts(family_name, fonts_before_dir)
 
     url = None
     if args.out_url:
@@ -225,8 +238,11 @@ def main(args=None):
         url = args.github_dir
 
     if fonts_before:
-        dfonts_before = [DFont(f) for f in fonts_before if f.endswith((".ttf", ".otf"))
-                          and "static" not in f]
+        dfonts_before = [
+            DFont(f)
+            for f in fonts_before
+            if f.endswith((".ttf", ".otf")) and "static" not in f
+        ]
         qa = FontQA(dfonts, dfonts_before, args.out, url=url)
     else:
         qa = FontQA(dfonts, out=args.out, url=url)
@@ -238,7 +254,7 @@ def main(args=None):
     if args.render:
         qa.render(args.imgs)
     if args.fontbakery:
-        qa.fontbakery()
+        qa.fontbakery(extra_args=args.extra_fontbakery_args)
     if args.diffenator:
         qa.diffenator()
     if args.diffbrowsers:
