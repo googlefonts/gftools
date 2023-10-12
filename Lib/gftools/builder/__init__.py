@@ -132,6 +132,7 @@ from ufo2ft.filters.flattenComponents import FlattenComponentsFilter
 from ufo2ft.filters.decomposeTransformedComponents import DecomposeTransformedComponentsFilter
 from vttLib.transfer import merge_from_file as merge_vtt_hinting
 from vttLib import compile_instructions as compile_vtt_hinting
+from afdko.otfautohint.__main__ import main as otfautohint
 import difflib
 import gftools
 import glyphsLib
@@ -299,6 +300,8 @@ class GFBuilder:
             self.config["buildWebfont"] = self.config["buildStatic"]
         if "autohintTTF" not in self.config:
             self.config["autohintTTF"] = True
+        if "autohintOTF" not in self.config:
+            self.config["autohintOTF"] = True
         if "ttfaUseScript" not in self.config:
             self.config["ttfaUseScript"] = False
         if "logLevel" not in self.config:
@@ -462,7 +465,7 @@ class GFBuilder:
 
     def build_static(self):
         if self.config["buildOTF"]:
-            self.build_a_static_format("otf", self.config["otDir"], self.post_process)
+            self.build_a_static_format("otf", self.config["otDir"], self.post_process_static_otf)
         if self.config["buildTTF"]:
             if "instances" in self.config:
                 self.instantiate_static_fonts(
@@ -548,6 +551,12 @@ class GFBuilder:
         self.logger.debug("Deprecated method .post_process_ttf called, update code to use .post_process_static_ttf")
         self.post_process_static_ttf(filename)
 
+    def post_process_static_otf(self, filename):
+        if self.config["autohintOTF"]:
+            self.logger.debug("Autohinting")
+            otfautohint([filename])
+        self.post_process(filename)
+
     def post_process_static_ttf(self, filename):
         if self.config["autohintTTF"]:
             self.logger.debug("Autohinting")
@@ -556,6 +565,11 @@ class GFBuilder:
         self.build_webfont(filename)
 
     def post_process_variable(self, filename):
+        # We don't currently emit variable OTFs, but if we ever do,
+        # this will suddenly work!
+        if self.config["autohintOTF"] and "glyf" not in TTFont(filename):
+            self.logger.debug("Autohinting")
+            otfautohint([filename])
         self.post_process(filename)
         self.build_webfont(filename)
 
@@ -670,6 +684,7 @@ def main(args=None):
 
     if args.no_autohint:
         builder.config["autohintTTF"] = False
+        builder.config["autohintOTF"] = False
 
     if args.no_clean_up:
         builder.config["cleanUp"] = False
