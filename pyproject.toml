@@ -59,6 +59,7 @@ dependencies = [
   'bumpfontversion',
   'nanoemoji>=0.15.0',
   'font-v',
+  'afdko',
 ]
 
 [project.optional-dependencies]
