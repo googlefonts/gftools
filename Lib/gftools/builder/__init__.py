@@ -121,7 +121,7 @@ from fontTools.ttLib.woff2 import main as woff2_main
 from fontv.libfv import FontVersion
 from gftools.builder.schema import schema
 from gftools.builder.autohint import autohint
-from gftools.fix import fix_font
+from gftools.fix import fix_font, fix_hinted_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.utils import font_is_italic, font_familyname, font_stylename
 from gftools.instancer import gen_static_font
@@ -592,6 +592,7 @@ class GFBuilder:
             gasp_tbl.gaspRange = {8: 10, 65535: 15}
             gasp_tbl.version = 1
             font['gasp'] = gasp_tbl
+            fix_hinted_font(font)
             font.save(font.reader.file.name)
 
     def move_webfont(self, filename):
