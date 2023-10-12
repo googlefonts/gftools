@@ -78,8 +78,8 @@ class GFBuilder(RecipeProviderBase):
             args += " --keep-direction"
         if self.config.get("removeOutlineOverlaps") is False:
             args += " --keep-overlaps"
-        if self.config.get("glyphData"):
-            args += " --glyph-data " + self.config["glyphData"]
+        for gd in self.config.get("glyphData", []):
+            args += " --glyph-data " + gd
         if self.config.get("expandFeaturesToInstances"):
             args += " --expand-features-to-instances"
         return args
