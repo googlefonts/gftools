@@ -138,6 +138,13 @@ class NinjaBuilder(GFBuilder):
             **args,
         )
 
+        self.w.comment("Run otfautohint in-place and touch a stamp file")
+        self.w.rule(
+            "autohint-otf",
+            "otfautohint $in && touch $in.autohintstamp",
+            **args,
+        )
+
         self.w.comment("Create a web font")
         self.w.rule("webfont", f"fonttools ttLib.woff2 compress -o $out $in", **args)
 
@@ -355,6 +362,14 @@ class NinjaBuilder(GFBuilder):
             self.w.build(
                 webfont_filename, "webfont", filename, implicit=filename + ".fixstamp"
             )
+
+    def post_process_static_otf(self, filename):
+        if self.config["autohintOTF"]:
+            self.w.build(filename + ".autohintstamp", "autohint-otf", filename)
+            self.temporaries.append(filename + ".autohintstamp")
+            self.post_process(filename, implicit=filename + ".autohintstamp")
+        else:
+            self.post_process(filename)
 
     def post_process_variable(self, filename, implicit=None):
         self.post_process(filename, implicit=implicit)
