@@ -62,6 +62,8 @@ from pkg_resources import resource_filename
 from gftools.utils import remove_url_prefix, primary_script
 
 
+RELAXED_SUBSETS = ["math", "symbols"]
+
 axis_registry = AxisRegistry()
 
 
@@ -70,6 +72,8 @@ parser.add_argument("--min_pct", type=int, default=50, help='What percentage of 
                      ' for a non-ext subset.')
 parser.add_argument("--min_pct_ext", type=float, default=0.01, help='What percentage of subset codepoints have to be supported'
                    ' for a -ext subset.')
+parser.add_argument("--min_relaxed_pct", type=int, default=0.5, help='What percentage of subset codepoints have to be supported'
+                     f' for a relaxed subset ({", ".join(RELAXED_SUBSETS)}).')
 parser.add_argument("--lang", type=str, help='Path to lang metadata package', default=None)
 parser.add_argument("directory", type=str, help='A directory containing a font family')
 parser.add_argument("--github_url", type=str, default=None,
@@ -135,6 +139,12 @@ def _MakeMetadata(args, is_new):
   subsets_in_font = [s[0] for s in SubsetsInFont(
     first_file, args.min_pct, args.min_pct_ext
   )]
+
+  relaxed_subsets = set(RELAXED_SUBSETS) & set([s[0] for s in SubsetsInFont(
+    first_file, args.min_relaxed_pct, args.min_relaxed_pct
+  )])
+
+  subsets_in_font = list(set(subsets_in_font) | relaxed_subsets)
 
   if not is_new:
     old_metadata = fonts.ReadProto(fonts_pb2.FamilyProto(), old_metadata_file)
