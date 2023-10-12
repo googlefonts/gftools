@@ -208,6 +208,10 @@ class NinjaBuilder(GFBuilder):
             my_args.append("--output-dir " + args["output_dir"])
         if "output_path" in args:
             my_args.append("--output-path " + args["output_path"])
+        if not self.config.get("removeOutlineOverlaps", True):
+            my_args.append("--keep-overlaps")
+        if not self.config.get("reverseOutlineDirection", True):
+            my_args.append("--keep-direction")
         return " ".join(my_args)
 
     def build_variable(self):
