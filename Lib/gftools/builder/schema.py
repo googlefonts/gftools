@@ -75,6 +75,7 @@ schema = Map(
         Optional("woffDir"): Str(),
         Optional("cleanUp"): Bool(),
         Optional("autohintTTF"): Bool(),
+        Optional("autohintOTF"): Bool(),
         Optional("axisOrder"): Seq(Str()),
         Optional("flattenComponents"): Bool(),
         Optional("decomposeTransformedComponents"): Bool(),

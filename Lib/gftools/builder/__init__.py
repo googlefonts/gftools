@@ -299,6 +299,8 @@ class GFBuilder:
             self.config["buildWebfont"] = self.config["buildStatic"]
         if "autohintTTF" not in self.config:
             self.config["autohintTTF"] = True
+        if "autohintOTF" not in self.config:
+            self.config["autohintOTF"] = True
         if "ttfaUseScript" not in self.config:
             self.config["ttfaUseScript"] = False
         if "logLevel" not in self.config:
@@ -669,6 +671,7 @@ def main(args=None):
 
     if args.no_autohint:
         builder.config["autohintTTF"] = False
+        builder.config["autohintOTF"] = False
 
     if args.no_clean_up:
         builder.config["cleanUp"] = False
