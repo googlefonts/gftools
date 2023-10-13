@@ -113,7 +113,7 @@ def main(args=None):
             codepoint = ord(codepoint)
         mapping[codepoint] = newglyph
         if newglyph not in font.getGlyphOrder():
-            print(f"Glyph {newglyph} (to be mapped to {codepoint}) not found in font")
+            print(f"Glyph '{newglyph}' (to be mapped to U+{codepoint:04X}) not found in font")
             sys.exit(1)
         if codepoint in cmap:
             glyph_mapping[cmap[codepoint]] = newglyph
