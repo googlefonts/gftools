@@ -1,0 +1,181 @@
+{
+  "axisRegistry": [
+    {
+      "tag": "wght",
+      "displayName": "Weight",
+      "min": 1,
+      "defaultValue": 400,
+      "max": 1000,
+      "precision": 0,
+      "description": "Adjust the style from lighter to bolder in typographic color, by varying stroke weights, spacing and kerning, and other aspects of the type. This typically changes overall width, and so may be used in conjunction with Width and Grade axes.",
+      "fallbackOnly": false,
+      "illustrationUrl": "https://fonts.gstatic.com/s/img/axisregistry/weight_445408692.svg",
+      "fallbacks": [
+        {
+          "name": "Thin",
+          "value": 100,
+          "displayName": ""
+        },
+        {
+          "name": "ExtraLight",
+          "value": 200,
+          "displayName": ""
+        },
+        {
+          "name": "Light",
+          "value": 300,
+          "displayName": ""
+        },
+        {
+          "name": "Regular",
+          "value": 400,
+          "displayName": ""
+        },
+        {
+          "name": "Medium",
+          "value": 500,
+          "displayName": ""
+        },
+        {
+          "name": "SemiBold",
+          "value": 600,
+          "displayName": ""
+        },
+        {
+          "name": "Bold",
+          "value": 700,
+          "displayName": ""
+        },
+        {
+          "name": "ExtraBold",
+          "value": 800,
+          "displayName": ""
+        },
+        {
+          "name": "Black",
+          "value": 900,
+          "displayName": ""
+        }
+      ]
+    }
+  ],
+  "familyMetadataList": [
+    {
+      "family": "Allan",
+      "displayName": null,
+      "category": "Display",
+      "stroke": "Serif",
+      "classifications": [
+        "Display"
+      ],
+      "size": 85912,
+      "subsets": [
+        "menu",
+        "latin",
+        "latin-ext"
+      ],
+      "fonts": {
+        "400": {
+          "thickness": 4,
+          "slant": 5,
+          "width": 5,
+          "lineHeight": 1.142578125
+        },
+        "700": {
+          "thickness": 6,
+          "slant": 5,
+          "width": 5,
+          "lineHeight": 1.25
+        }
+      },
+      "axes": [],
+      "designers": [
+        "Anton Koovit"
+      ],
+      "lastModified": "2023-08-25",
+      "dateAdded": "2010-12-15",
+      "popularity": 801,
+      "trending": 1126,
+      "defaultSort": 799,
+      "androidFragment": null,
+      "isNoto": false,
+      "colorCapabilities": [],
+      "primaryScript": "",
+      "primaryLanguage": ""
+    },
+    {
+      "family": "Maven Pro",
+      "displayName": null,
+      "category": "Sans Serif",
+      "stroke": "Sans Serif",
+      "classifications": [],
+      "size": 90712,
+      "subsets": [
+        "menu",
+        "latin",
+        "latin-ext",
+        "vietnamese"
+      ],
+      "fonts": {
+        "400": {
+          "thickness": 4,
+          "slant": 1,
+          "width": 7,
+          "lineHeight": 1.175
+        },
+        "500": {
+          "thickness": 5,
+          "slant": 1,
+          "width": 7,
+          "lineHeight": 1.175
+        },
+        "600": {
+          "thickness": null,
+          "slant": null,
+          "width": null,
+          "lineHeight": 1.175
+        },
+        "700": {
+          "thickness": 6,
+          "slant": 1,
+          "width": 7,
+          "lineHeight": 1.175
+        },
+        "800": {
+          "thickness": null,
+          "slant": null,
+          "width": null,
+          "lineHeight": 1.175
+        },
+        "900": {
+          "thickness": 7,
+          "slant": 1,
+          "width": 8,
+          "lineHeight": 1.175
+        }
+      },
+      "axes": [
+        {
+          "tag": "wght",
+          "min": 400,
+          "max": 900,
+          "defaultValue": 400
+        }
+      ],
+      "designers": [
+        "Joe Prince"
+      ],
+      "lastModified": "2023-09-14",
+      "dateAdded": "2011-05-25",
+      "popularity": 97,
+      "trending": 1182,
+      "defaultSort": 94,
+      "androidFragment": null,
+      "isNoto": false,
+      "colorCapabilities": [],
+      "primaryScript": "",
+      "primaryLanguage": ""
+    }
+  ],
+  "promotedScript": null
+}

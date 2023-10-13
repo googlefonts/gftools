@@ -1,12 +1,12 @@
 import pytest
 import operator
-from gftools.push import PushItem, PushItems, PushCategory, PushStatus, PushList
+from gftools.push.trafficjam import PushItem, PushItems, PushCategory, PushStatus, PushList
 from pathlib import Path
 import os
 
 
 CWD = os.path.dirname(__file__)
-TEST_DIR = os.path.join(CWD, "..", "data", "test", "gf_fonts")
+TEST_DIR = os.path.join(CWD, "..", "..", "data", "test", "gf_fonts")
 TEST_FAMILY_DIR = Path(os.path.join(TEST_DIR, "ofl", "mavenpro"))
 
 

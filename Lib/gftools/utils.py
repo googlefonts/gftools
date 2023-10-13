@@ -30,8 +30,10 @@ import json
 from PIL import Image
 import re
 from fontTools import unicodedata as ftunicodedata
+from fontTools.ttLib import TTFont
 from ufo2ft.util import classifyGlyphs
 from collections import Counter
+from collections import defaultdict
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -40,17 +42,16 @@ else:
 # =====================================
 # HELPER FUNCTIONS
 
-def download_family_from_Google_Fonts(family, dst=None):
+PROD_FAMILY_DOWNLOAD = 'https://fonts.google.com/download?family={}'
+
+
+def download_family_from_Google_Fonts(family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True):
     """Download a font family from Google Fonts"""
-    url = 'https://fonts.google.com/download?family={}'.format(
+    url = dl_url.format(
         family.replace(' ', '%20')
     )
     fonts_zip = ZipFile(download_file(url))
-    if dst:
-        fonts = fonts_from_zip(fonts_zip, dst)
-        # Remove static fonts if the family is a variable font
-        return [f for f in fonts if "static" not in f]
-    return fonts_from_zip(fonts_zip)
+    return fonts_from_zip(fonts_zip, dst, ignore_static)
 
 
 def Google_Fonts_has_family(name):
@@ -223,18 +224,21 @@ def download_file(url, dst_path=None):
         downloaded_file.write(request.content)
 
 
-def fonts_from_zip(zipfile, dst=None):
+def fonts_from_zip(zipfile, dst=None, ignore_static=True):
     """Unzip fonts. If not dst is given unzip as BytesIO objects"""
-    fonts = []
+    res = []
     for filename in zipfile.namelist():
-        if filename.endswith((".ttf", ".otf")):
-            if dst:
-                target = os.path.join(dst, filename)
-                zipfile.extract(filename, dst)
-                fonts.append(target)
-            else:
-                fonts.append(BytesIO(zipfile.read(filename)))
-    return fonts
+        if ignore_static and filename.startswith("static"):
+            continue
+        if not filename.endswith(("otf", "ttf")):
+            continue
+        if dst:
+            target = os.path.join(dst, filename)
+            zipfile.extract(filename, dst)
+            res.append(target)
+        else:
+            res.append(BytesIO(zipfile.read(filename)))
+    return res
 
 
 def cmp(x, y):
@@ -536,3 +540,24 @@ def primary_script(ttFont, ignore_latin=True):
     most_common = script_count.most_common(1)
     if most_common:
         return most_common[0][0]
+
+
+def autovivification(items):
+    if items == None:
+        return None
+    if isinstance(items, (list, tuple)):
+        return [autovivification(v) for v in items]
+    if isinstance(items, (float, int, str, bool)):
+        return items
+    d = defaultdict(lambda: defaultdict(defaultdict))
+    d.update({k: autovivification(v) for k,v in items.items()})
+    return d
+
+
+def font_version(font: TTFont):
+    version_id = font["name"].getName(5, 3, 1, 0x409)
+    if not version_id:
+        version = str(font["head"].fontRevision)
+    else:
+        version = version_id.toUnicode()
+    return version
