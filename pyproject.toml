@@ -59,13 +59,9 @@ dependencies = [
   'bumpfontversion',
   'nanoemoji>=0.15.0',
   'font-v',
-<<<<<<< HEAD
   'afdko',
-  'beautifulsoup4'
-=======
   'beautifulsoup4',
   'rich'
->>>>>>> 6b3405b (include rosa fixes)
 ]
 
 [project.optional-dependencies]
