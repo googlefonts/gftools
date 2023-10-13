@@ -179,7 +179,7 @@ def _MakeMetadata(args, is_new):
     subsets = ['menu'] + subsets_in_font
     with ttLib.TTFont(file_family_style_weights[0][0]) as ttfont:
       script = primary_script(ttfont)
-      if script not in ("Latn", "Cyrl", "Grek",):
+      if script is not None and script not in ("Latn", "Cyrl", "Grek",):
         metadata.primary_script = script
 
   metadata.license = font_license
