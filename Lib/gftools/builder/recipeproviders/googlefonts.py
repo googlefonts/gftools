@@ -78,8 +78,6 @@ class GFBuilder(RecipeProviderBase):
             args += " --keep-direction"
         if self.config.get("removeOutlineOverlaps") is False:
             args += " --keep-overlaps"
-        for gd in self.config.get("glyphData", []):
-            args += " --glyph-data " + gd
         if self.config.get("expandFeaturesToInstances"):
             args += " --expand-features-to-instances"
         return args
@@ -142,6 +140,10 @@ class GFBuilder(RecipeProviderBase):
 
         axis_tags = ",".join(sorted(tags))
 
+        if source.is_glyphs:
+            for gd in self.config.get("glyphData", []):
+                vf_args += " --glyph-data " + gd
+
         target = os.path.join(self.config["vfDir"], f"{sourcebase}[{axis_tags}].ttf")
         steps = [
             {"source": source.path},
@@ -185,6 +187,11 @@ class GFBuilder(RecipeProviderBase):
         instancebase = os.path.splitext(os.path.basename(instance.filename))[0]
         target = os.path.join(outdir, f"{instancebase}.{output}")
 
+        static_args = ""
+        if source.is_glyphs:
+            for gd in self.config.get("glyphData", []):
+                static_args += " --glyph-data " + gd
+
         steps = [
             {"source": source.path},
         ]
@@ -195,7 +202,7 @@ class GFBuilder(RecipeProviderBase):
         steps.append(
             {
                 "operation": "buildTTF" if output == "ttf" else "buildOTF",
-                "fontmake_args": self.fontmake_args(),
+                "fontmake_args": self.fontmake_args() + static_args,
             }
         )
         if self.config.get("autohintTTF"):
