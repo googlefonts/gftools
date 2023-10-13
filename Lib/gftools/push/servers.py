@@ -7,14 +7,21 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-import requests # type: ignore
-from gftools.push.items import Axis, AxisFallback, Designer, Family, FamilyMeta, Itemer, Items
+import requests  # type: ignore
+from gftools.push.items import (
+    Axis,
+    AxisFallback,
+    Designer,
+    Family,
+    FamilyMeta,
+    Itemer,
+    Items,
+)
 from gftools.utils import (
     PROD_FAMILY_DOWNLOAD,
 )
 
 log = logging.getLogger("gftools.push")
-
 
 
 # This module uses api endpoints which shouldn't be public. Ask
@@ -60,7 +67,12 @@ def gf_server_family_metadata(url: str, family: str):
 
 
 class GFServer(Itemer):
-    def __init__(self, name: str, url: str=PRODUCTION_META_URL, dl_url: str=PROD_FAMILY_DOWNLOAD):
+    def __init__(
+        self,
+        name: str,
+        url: str = PRODUCTION_META_URL,
+        dl_url: str = PROD_FAMILY_DOWNLOAD,
+    ):
         self.name = name
         self.url = url
         self.dl_url = dl_url
@@ -122,7 +134,6 @@ class GFServer(Itemer):
 
 
 class GFServers(Itemer):
-
     DEV = "dev"
     SANDBOX = "sandbox"
     PRODUCTION = "production"
@@ -131,7 +142,9 @@ class GFServers(Itemer):
     def __init__(self):
         self.last_checked = datetime.fromordinal(1).isoformat().split("T")[0]
         self.dev = GFServer(GFServers.DEV, DEV_META_URL, DEV_FAMILY_DOWNLOAD)
-        self.sandbox = GFServer(GFServers.SANDBOX, SANDBOX_META_URL, SANDBOX_FAMILY_DOWNLOAD)
+        self.sandbox = GFServer(
+            GFServers.SANDBOX, SANDBOX_META_URL, SANDBOX_FAMILY_DOWNLOAD
+        )
         self.production = GFServer(
             GFServers.PRODUCTION, PRODUCTION_META_URL, PROD_FAMILY_DOWNLOAD
         )
@@ -159,7 +172,7 @@ class GFServers(Itemer):
     def open(cls, fp: "str | Path"):
         data = json.load(open(fp, encoding="utf8"))
         return cls.from_dict(data)
-    
+
     @classmethod
     def from_dict(cls, data):
         inst = cls()

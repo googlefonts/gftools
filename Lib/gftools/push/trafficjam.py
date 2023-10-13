@@ -327,7 +327,7 @@ class PushItems(list):
             (idx for idx, i in enumerate(self) if i.path == item.path), None
         )
         if existing_idx != None:
-            self.pop(existing_idx) # type: ignore
+            self.pop(existing_idx)  # type: ignore
 
         # Pop any push items which are a child of the item's path
         to_pop = None
@@ -413,7 +413,7 @@ class PushItems(list):
                 item = PushItem(
                     Path(path.strip()),
                     category if not deleted else PushCategory.DELETED,
-                    status, # type: ignore
+                    status,  # type: ignore
                     url.strip(),
                     push_list,
                 )
@@ -423,7 +423,7 @@ class PushItems(list):
                 item = PushItem(
                     Path(line.strip()),
                     category if not deleted else PushCategory.DELETED,
-                    status, # type: ignore
+                    status,  # type: ignore
                     "",
                     push_list,
                 )
@@ -450,7 +450,9 @@ class PushItems(list):
             data = None
             while not data:
                 try:
-                    data = g._run_graphql(GOOGLE_FONTS_TRAFFIC_JAM_QUERY % last_item, {})
+                    data = g._run_graphql(
+                        GOOGLE_FONTS_TRAFFIC_JAM_QUERY % last_item, {}
+                    )
                 except:
                     data = None
             board_items += data["data"]["organization"]["projectV2"]["items"]["nodes"]

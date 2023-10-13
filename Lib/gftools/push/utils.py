@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-import pygit2 # type: ignore
+import pygit2  # type: ignore
 
 
 def _get_google_fonts_remote(repo):

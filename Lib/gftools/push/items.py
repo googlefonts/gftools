@@ -3,17 +3,21 @@ import logging
 from abc import ABC
 from dataclasses import dataclass
 
-from fontTools.ttLib import TTFont # type: ignore
+from fontTools.ttLib import TTFont  # type: ignore
 from gftools.designers_pb2 import DesignerInfoProto
 from gftools.fonts_public_pb2 import FamilyProto
 from gftools.push.utils import google_path_to_repo_path
 from gftools.util.google_fonts import ReadProto
-from gftools.utils import font_version, download_family_from_Google_Fonts, PROD_FAMILY_DOWNLOAD
+from gftools.utils import (
+    font_version,
+    download_family_from_Google_Fonts,
+    PROD_FAMILY_DOWNLOAD,
+)
 import zipfile
-from bs4 import BeautifulSoup # type: ignore
+from bs4 import BeautifulSoup  # type: ignore
 from pathlib import Path
 from axisregistry.axes_pb2 import AxisProto
-from google.protobuf.json_format import MessageToDict # type: ignore
+from google.protobuf.json_format import MessageToDict  # type: ignore
 from typing import Optional
 
 
@@ -53,15 +57,15 @@ class Family(Itemer):
 
     @classmethod
     def from_fp(cls, fp: "str | Path"):
-        ttf = list(fp.glob("*.ttf"))[0] # type: ignore
+        ttf = list(fp.glob("*.ttf"))[0]  # type: ignore
         return cls.from_ttfont(ttf)
-    
+
     @classmethod
-    def from_gf_json(cls, data, dl_url: str=PROD_FAMILY_DOWNLOAD):
+    def from_gf_json(cls, data, dl_url: str = PROD_FAMILY_DOWNLOAD):
         return cls.from_gf(data["family"], dl_url)
 
     @classmethod
-    def from_gf(cls, name: str, dl_url: str=PROD_FAMILY_DOWNLOAD):
+    def from_gf(cls, name: str, dl_url: str = PROD_FAMILY_DOWNLOAD):
         try:
             fonts = download_family_from_Google_Fonts(name, dl_url=dl_url)
             ttFont = TTFont(fonts[0])
@@ -122,11 +126,10 @@ class Axis(Itemer):
             max_value=data["maxValue"],
             precision=data["precision"],
             fallback=[
-                AxisFallback(name=f["name"], value=f["value"])
-                for f in data["fallback"]
+                AxisFallback(name=f["name"], value=f["value"]) for f in data["fallback"]
             ],
             fallback_only=data["fallbackOnly"],
-            description=data["description"]
+            description=data["description"],
         )
 
     def to_json(self):
@@ -152,7 +155,11 @@ class FamilyMeta(Itemer):
         meta_fp = fp / "METADATA.pb"
         data = ReadProto(FamilyProto(), meta_fp)
         description = open(fp / "DESCRIPTION.en_us.html", encoding="utf8").read()
-        stroke = data.category[0] if not data.stroke else data.stroke.replace(" ", "_").upper()
+        stroke = (
+            data.category[0]
+            if not data.stroke
+            else data.stroke.replace(" ", "_").upper()
+        )
         return cls(
             name=data.name,
             designer=data.designer.split(", "),
@@ -162,7 +169,7 @@ class FamilyMeta(Itemer):
             stroke=stroke,
             classifications=[c.lower() for c in data.classifications],
             description=parse_html(description),
-            primary_script=None if data.primary_script == "" else data.primary_script
+            primary_script=None if data.primary_script == "" else data.primary_script,
         )
 
     @classmethod
@@ -179,12 +186,18 @@ class FamilyMeta(Itemer):
             stroke=stroke,
             classifications=[c.lower() for c in meta["classifications"]],
             description=parse_html(meta["description"]),
-            primary_script=None if meta["primaryScript"] == "" else meta["primaryScript"]
+            primary_script=None
+            if meta["primaryScript"] == ""
+            else meta["primaryScript"],
         )
 
 
 def parse_html(string: str):
-    return BeautifulSoup(string.replace("\n", " ").replace("  ", " "), features="lxml").prettify().strip()
+    return (
+        BeautifulSoup(string.replace("\n", " ").replace("  ", " "), features="lxml")
+        .prettify()
+        .strip()
+    )
 
 
 @dataclass

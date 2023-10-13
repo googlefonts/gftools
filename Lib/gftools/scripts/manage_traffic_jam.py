@@ -46,7 +46,9 @@ PRODUCTION_URL = "https://fonts.google.com"
 try:
     subprocess.run("gh", stdout=subprocess.DEVNULL).returncode == 0
 except:
-    raise SystemError("GitHub CLI is not installed. https://github.com/cli/cli#installation")
+    raise SystemError(
+        "GitHub CLI is not installed. https://github.com/cli/cli#installation"
+    )
 
 
 class ItemChecker:
@@ -55,10 +57,10 @@ class ItemChecker:
         self.gf_fp = gf_fp
         self.servers = servers
         self.skip_pr: Optional[str] = None
-    
+
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.git_checkout_main()
 
@@ -86,7 +88,7 @@ class ItemChecker:
             subprocess.call(cmd)
         else:
             self.git_checkout_main()
-    
+
     def git_checkout_main(self):
         cmd = ["git", "checkout", "main", "-f"]
         subprocess.call(cmd)
@@ -113,17 +115,30 @@ class ItemChecker:
         if item:
             comparison = self.servers.compare_item(item)
             if push_item.category in [PushCategory.UPGRADE, PushCategory.NEW]:
-                res.update({
-                    **comparison,
-                    **push_item.__dict__,
-                    **{
-                        "dev url": "{}/specimen/{}".format(DEV_URL, item.name.replace(" ", "+")),
-                        "sandbox url": "{}/specimen/{}".format(SANDBOX_URL, item.name.replace(" ", "+")),
-                        "prod url": "{}/specimen/{}".format(PRODUCTION_URL, item.name.replace(" ", "+")),
+                res.update(
+                    {
+                        **comparison,
+                        **push_item.__dict__,
+                        **{
+                            "dev url": "{}/specimen/{}".format(
+                                DEV_URL, item.name.replace(" ", "+")
+                            ),
+                            "sandbox url": "{}/specimen/{}".format(
+                                SANDBOX_URL, item.name.replace(" ", "+")
+                            ),
+                            "prod url": "{}/specimen/{}".format(
+                                PRODUCTION_URL, item.name.replace(" ", "+")
+                            ),
+                        },
                     }
-                })
+                )
             else:
-                res.update({**comparison,**push_item.__dict__,})
+                res.update(
+                    {
+                        **comparison,
+                        **push_item.__dict__,
+                    }
+                )
         else:
             res.update(push_item.__dict__)
         pprint(res)
@@ -169,11 +184,16 @@ def main(args=None):
     parser.add_argument(
         "-f", "--filter", choices=(None, "lists", "in_dev", "in_sandbox"), default=None
     )
+    parser.add_argument("-p", "--show-open-prs", action="store_true", default=False)
     parser.add_argument(
-        "-p", "--show-open-prs", action="store_true", default=False
+        "-s", "--server-data", default=(Path("~") / ".gf_server_data.json").expanduser()
     )
-    parser.add_argument("-s", "--server-data", default=(Path("~") / ".gf_server_data.json").expanduser())
-    parser.add_argument("-l", "--log-level", choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"), default="INFO")
+    parser.add_argument(
+        "-l",
+        "--log-level",
+        choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
+        default="INFO",
+    )
     args = parser.parse_args(args)
 
     logging.basicConfig(level=args.log_level)
@@ -181,7 +201,9 @@ def main(args=None):
     branch_matches_google_fonts_main(args.fonts_repo)
 
     if not args.server_data.exists():
-        log.warn(f"{args.server_data} not found. Generating file. This may take a while")
+        log.warn(
+            f"{args.server_data} not found. Generating file. This may take a while"
+        )
         servers = GFServers()
     else:
         servers = GFServers.open(args.server_data)
