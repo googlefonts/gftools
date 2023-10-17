@@ -206,6 +206,15 @@ and determines the target files to build and the steps to take in order
 to build them, and under the hood, it adds a *recipe* to the
 configuration.
 
+Hence, to fully customize the build process, your configuration file
+can provide its own recipe. This can be done in two ways: (1) If you
+add a `recipe` map to your config file *without* specifying a
+`recipeProvider`, then your provided recipe is what gets built. (2)
+If you add a `recipe` map *and* specify a `recipeProvider`, the
+recipe provider generates a recipe first, and your recipe is then
+overlaid on top of it, allowing you to customize certain targets
+or add additional ones.
+
 To see the recipe that it generates internally, you can use the `--generate`
 flag, like so: `gftools builder --generate sources/config.yaml`;
 this will emit a new configuration file, with the recipe attached:
