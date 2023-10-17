@@ -205,7 +205,7 @@ class GFBuilder(RecipeProviderBase):
                 "fontmake_args": self.fontmake_args() + static_args,
             }
         )
-        if self.config.get("autohintTTF"):
+        if self.config.get("autohintTTF") and output == "ttf":
             if self.config.get("ttfaUseScript"):
                 args = "--auto-script"
             else:
