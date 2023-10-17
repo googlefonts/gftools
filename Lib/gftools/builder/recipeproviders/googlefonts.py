@@ -54,7 +54,7 @@ class GFBuilder(RecipeProviderBase):
             "buildWebfont", self.config.get("buildStatic", True)
         )
         if "stat" in self.config:
-            self.statfile = NamedTemporaryFile(delete=False)
+            self.statfile = NamedTemporaryFile(delete=False, mode="w+")
             yaml.dump(self.config["stat"], self.statfile)
             self.statfile.close()
         else:
