@@ -109,7 +109,10 @@ class GFBuilder(RecipeProviderBase):
 
     def build_STAT(self):
         # Add buildStat to a variable target, it'll do for all of them
-        all_variables = list(self.recipe.keys())
+
+        # We've built a bunch of variables here, but we may also have
+        # some woff2 we added as part of the process, so ignore them.
+        all_variables = [ x for x in self.recipe.keys() if x.endswith("ttf") ]
         if len(all_variables) > 0:
             last_target = all_variables[-1]
             if self.statfile:
