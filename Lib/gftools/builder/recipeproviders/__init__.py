@@ -37,6 +37,13 @@ def get_provider(provider):
     classes = [
         (name, cls)
         for name, cls in inspect.getmembers(mod, inspect.isclass)
-        if "RecipeProviderBase" not in name and issubclass(cls, RecipeProviderBase)
+        if "RecipeProviderBase" not in name
+        and issubclass(cls, RecipeProviderBase)
+        and provider in cls.__module__
     ]
-    return classes[-1][1]
+    if len(classes) > 1:
+        raise ValueError(
+            "Multiple recipe providers found in module %s: %s"
+            % (provider, [x[0] for x in classes])
+        )
+    return classes[0][1]
