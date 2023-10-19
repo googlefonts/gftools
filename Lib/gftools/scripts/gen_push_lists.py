@@ -15,12 +15,12 @@ gftools gen-push-lists /path/to/google/fonts
 """
 import sys
 import os
-from gftools.push import (
+from gftools.push.trafficjam import (
     PushItems,
     PushStatus,
     PushList,
-    branch_matches_google_fonts_main,
 )
+from gftools.push.utils import branch_matches_google_fonts_main
 
 
 def main(args=None):
