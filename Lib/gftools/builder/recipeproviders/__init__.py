@@ -6,10 +6,12 @@ from gftools.builder.file import File
 
 filecache = {}
 
+
 def get_file(path):
     if path not in filecache:
         filecache[path] = File(path)
     return filecache[path]
+
 
 @dataclass
 class RecipeProviderBase:
@@ -18,7 +20,7 @@ class RecipeProviderBase:
 
     def write_recipe(self):
         raise NotImplementedError
-    
+
     @property
     def sources(self) -> List[File]:
         return [get_file(p) for p in self.config["sources"]]
@@ -27,7 +29,7 @@ class RecipeProviderBase:
 def get_provider(provider):
     # First try gftools.builder.recipeproviders.X
     try:
-        mod = importlib.import_module("gftools.builder.recipeproviders."+provider)
+        mod = importlib.import_module("gftools.builder.recipeproviders." + provider)
     except ModuleNotFoundError:
         # Then try X
         try:
