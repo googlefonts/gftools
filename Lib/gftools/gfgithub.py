@@ -3,6 +3,7 @@ import pprint
 import requests
 import typing
 import urllib
+import time
 
 
 GITHUB_GRAPHQL_API = 'https://api.github.com/graphql'
@@ -93,7 +94,7 @@ class GitHubClient:
             }
         )
 
-    def pr_files(self, pr_number: int):
+    def pr_files(self, pr_number: int, sleep=4):
         res = []
         cur_page = 1
         url = self.rest_url(f"pulls/{pr_number}/files", per_page="100", page=str(cur_page))
@@ -103,4 +104,8 @@ class GitHubClient:
             cur_page += 1
             url = self.rest_url(f"pulls/{pr_number}/files", per_page="100", page=str(cur_page))
             request = self._get(url)
+            # sleep so we don't hit api rate limits. We should get at least 1k
+            # requests per hour so sleeping for 4 secs by default means we
+            # shouldn't hit any issues.
+            time.sleep(sleep)
         return res
