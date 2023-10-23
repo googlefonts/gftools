@@ -93,8 +93,14 @@ class GitHubClient:
             }
         )
 
-
-
-
-
-
+    def pr_files(self, pr_number: int):
+        res = []
+        cur_page = 1
+        url = self.rest_url(f"pulls/{pr_number}/files", per_page="100", page=str(cur_page))
+        request = self._get(url)
+        while request:
+            res += request
+            cur_page += 1
+            url = self.rest_url(f"pulls/{pr_number}/files", per_page="100", page=str(cur_page))
+            request = self._get(url)
+        return res
