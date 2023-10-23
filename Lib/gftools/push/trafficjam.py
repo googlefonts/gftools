@@ -9,7 +9,6 @@ from io import TextIOWrapper
 from pathlib import Path
 from typing import Optional, Any
 from functools import cached_property
-import math
 
 from gftools.push.items import Axis, Designer, Family, FamilyMeta
 from gftools.push.utils import google_path_to_repo_path, repo_path_to_google_path
