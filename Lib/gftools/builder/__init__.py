@@ -209,12 +209,8 @@ class GFBuilder:
         if self.config["buildVariable"]:
             self.build_variable()
             # transfer vf vtt hints now in case static fonts are instantiated
-            if "vttSources" in self.config:
-                self.build_vtt(self.config['vfDir'])
         if self.config["buildStatic"]:
             self.build_static()
-            if "vttSources" in self.config:
-                self.build_vtt(self.config['ttDir'])
         # All done
         self.logger.info(
             "Building %s completed. All done!" % (
@@ -561,6 +557,8 @@ class GFBuilder:
         if self.config["autohintTTF"]:
             self.logger.debug("Autohinting")
             autohint(filename, filename, add_script=self.config["ttfaUseScript"])
+        if "vttSources" in self.config:
+            self.build_vtt(self.config['ttDir'], filename)
         self.post_process(filename)
         self.build_webfont(filename)
 
@@ -570,6 +568,8 @@ class GFBuilder:
         if self.config["autohintOTF"] and "glyf" not in TTFont(filename):
             self.logger.debug("Autohinting")
             otfautohint([filename])
+        if "vttSources" in self.config:
+            self.build_vtt(self.config['vfDir'], filename)
         self.post_process(filename)
         self.build_webfont(filename)
 
@@ -590,24 +590,27 @@ class GFBuilder:
         fv.write_version_string()
 
 
-    def build_vtt(self, font_dir):
-        for font, vtt_source in self.config['vttSources'].items():
-            if font not in os.listdir(font_dir):
-                continue
-            self.logger.debug(f"Compiling hint file {vtt_source} into {font}")
-            font_path = os.path.join(font_dir, font)
-            font = TTFont(font_path)
-            merge_vtt_hinting(font, vtt_source, keep_cvar=True)
-            compile_vtt_hinting(font, ship=True)
+    def build_vtt(self, font_dir, font):
+        font = os.path.basename(font)
+        if font not in self.config["vttSources"]:
+            return
+        vtt_source = self.config['vttSources'][font]
+        if font not in os.listdir(font_dir):
+            return
+        self.logger.debug(f"Compiling hint file {vtt_source} into {font}")
+        font_path = os.path.join(font_dir, font)
+        font = TTFont(font_path)
+        merge_vtt_hinting(font, vtt_source, keep_cvar=True)
+        compile_vtt_hinting(font, ship=True)
 
-            # Add a gasp table which is optimised for VTT hinting
-            # https://googlefonts.github.io/how-to-hint-variable-fonts/
-            gasp_tbl = newTable("gasp")
-            gasp_tbl.gaspRange = {8: 10, 65535: 15}
-            gasp_tbl.version = 1
-            font['gasp'] = gasp_tbl
-            fix_hinted_font(font)
-            font.save(font.reader.file.name)
+        # Add a gasp table which is optimised for VTT hinting
+        # https://googlefonts.github.io/how-to-hint-variable-fonts/
+        gasp_tbl = newTable("gasp")
+        gasp_tbl.gaspRange = {8: 10, 65535: 15}
+        gasp_tbl.version = 1
+        font['gasp'] = gasp_tbl
+        fix_hinted_font(font)
+        font.save(font.reader.file.name)
 
     def move_webfont(self, filename):
         woff_dir = self.config["woffDir"]
