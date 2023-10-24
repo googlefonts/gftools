@@ -69,6 +69,13 @@ class ItemChecker:
             "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], quit: [q]?: "
         )
 
+        if "*" in user_input:
+            item.bump_pushlist()
+            for sub_item in self.push_items:
+                if sub_item.url != item.url:
+                    continue
+                sub_item.push_list = item.push_list
+            self.skip_pr = item.url
         if "y" in user_input:
             item.bump_pushlist()
         if "b" in user_input:

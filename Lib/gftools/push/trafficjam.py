@@ -130,7 +130,9 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
           content {
             ... on PullRequest {
               id
+              number
               files(first: 100) {
+                totalCount
                 nodes {
                   path
                 }
@@ -462,6 +464,19 @@ class PushItems(list):
             log.info(f"Getting items up to {last_item}")
         # sort items by pr number
         board_items.sort(key=lambda k: k["content"]["url"])
+
+        # get files for prs which have more than 100 changed files
+        for item in board_items:
+            changed_files = item["content"]["files"]["totalCount"]
+            if changed_files <= 100:
+                continue
+            pr_number = item['content']['number']
+            pr_url = item["content"]["url"]
+            log.warn(
+                f"{pr_url} has {changed_files} changed files. Attempting to fetch them."
+            )
+            files = g.pr_files(pr_number)
+            item["content"]["files"]["nodes"] = [{"path": f["filename"]} for f in files]
 
         results = cls()
         for item in board_items:
