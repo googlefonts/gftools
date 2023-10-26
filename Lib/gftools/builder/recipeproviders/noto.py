@@ -2,7 +2,7 @@ import copy
 import os
 import sys
 from collections import defaultdict
-from strictyaml import Map, Seq, Str, Optional, HexInt, Bool
+from strictyaml import Map, Seq, Str, Optional, HexInt, Bool, YAML
 
 import ufoLib2
 
@@ -38,10 +38,10 @@ class NotoBuilder(GFBuilder):
         newsources = []
         self.config["original_sources"] = self.config["sources"]
         for source in self.config["sources"]:
-            if source.endswith((".glyphs", ".glyphspackage")):
-                source = self.builder.glyphs_to_ufo(source)
+            if source.data.endswith((".glyphs", ".glyphspackage")):
+                source = self.builder.glyphs_to_ufo(source.data)
             newsources.append(source)
-        self.config["sources"] = newsources
+        self.config["sources"] = YAML(newsources)
         # Find variable fonts
         self.recipe = {}
         self.build_all_variables()
@@ -115,7 +115,7 @@ class NotoBuilder(GFBuilder):
                 {"source": source.path},
                 {
                     "operation": "addSubset",
-                    "subsets": self.config["includeSubsets"],
+                    "subsets": self.config["includeSubsets"].data,
                     "directory": "full-designspace",
                 },
                 {"operation": "buildVariable", "args": self.fontmake_args()},
@@ -135,7 +135,7 @@ class NotoBuilder(GFBuilder):
                 {"source": source.path},
                 {
                     "operation": "addSubset",
-                    "subsets": self.config["includeSubsets"],
+                    "subsets": self.config["includeSubsets"].data,
                     "directory": "full-designspace",
                 },
                 {"operation": "buildVariable", "args": self.fontmake_args()},
@@ -168,13 +168,11 @@ class NotoBuilder(GFBuilder):
         for variables in variables_by_directory.values():
             if len(variables) > 0:
                 last_target = variables[-1]
-                others = variables[:-1]
-                self.recipe[last_target].append(
-                    {
-                        "postprocess": "buildStat",
-                        "needs": list(set(others) - set([last_target])),
-                    }
-                )
+                other_variables = list(set(variables) - set([last_target]))
+                build_stat_step = {"postprocess": "buildStat"}
+                if other_variables:
+                    build_stat_step["needs"] = other_variables
+                self.recipe[last_target].append(build_stat_step)
 
     def build_a_static(self, source, instance, output):
         familyname_path = source.family_name.replace(" ", "")
@@ -235,7 +233,7 @@ class NotoBuilder(GFBuilder):
                 {"source": source.path},
                 {
                     "operation": "addSubset",
-                    "subsets": self.config["includeSubsets"],
+                    "subsets": self.config["includeSubsets"].data,
                     "directory": "full-designspace",
                 },
                 {

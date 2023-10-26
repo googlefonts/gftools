@@ -34,6 +34,8 @@ BASE_SCHEMA = MapCombined({
 class GFBuilder:
     def __init__(self, config):
         if isinstance(config, dict):
+            self.config = YAML(config)
+        elif isinstance(config, YAML):
             self.config = config
         else:
             with open(config, "r") as file:
