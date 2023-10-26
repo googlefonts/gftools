@@ -115,7 +115,7 @@ class GFBuilder(RecipeProviderBase):
 
         # We've built a bunch of variables here, but we may also have
         # some woff2 we added as part of the process, so ignore them.
-        all_variables = [ x for x in self.recipe.keys() if x.endswith("ttf") ]
+        all_variables = [x for x in self.recipe.keys() if x.endswith("ttf")]
         if len(all_variables) > 0:
             last_target = all_variables[-1]
             if self.statfile:
@@ -124,9 +124,9 @@ class GFBuilder(RecipeProviderBase):
                 args = {}
             other_variables = list(set(all_variables) - set([last_target]))
             build_stat_step = {
-                    "postprocess": "buildStat",
-                    **args,
-                }
+                "postprocess": "buildStat",
+                **args,
+            }
             if other_variables:
                 build_stat_step["needs"] = other_variables
             self.recipe[last_target].append(build_stat_step)
