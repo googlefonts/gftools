@@ -3,6 +3,7 @@ import importlib
 import inspect
 from typing import List
 from gftools.builder.file import File
+from strictyaml import YAML
 
 filecache = {}
 
@@ -27,10 +28,10 @@ class RecipeProviderBase:
 
 
 def boolify(s):
-    # Could be YAML(true), YAML(false) or None
-    if s is None:
-        return False
-    return bool(s.data)
+    # Could be YAML(true), YAML(false) or bool, or None
+    if isinstance(s, YAML):
+        return bool(s.data)
+    return s
 
 def get_provider(provider):
     # First try gftools.builder.recipeproviders.X
