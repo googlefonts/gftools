@@ -28,6 +28,7 @@ DEFAULTS = {
     "buildOTF": True,
     "buildTTF": True,
     "autohintTTF": True,
+    "autohintOTF": True,
     "ttfaUseScript": False,
     "logLevel": "WARN",
     "cleanUp": True,
@@ -217,6 +218,8 @@ class GFBuilder(RecipeProviderBase):
             if self.config.get("ttfaUseScript"):
                 args += " --auto-script"
             steps.append({"operation": "autohint", "args": args})
+        if boolify(self.config.get("autohintOTF")) and output == "otf":
+            steps.append({"operation": "autohintOTF"})
         if os.path.basename(target) in self.config.get("vttSources", {}):
             steps.append(
                 {
