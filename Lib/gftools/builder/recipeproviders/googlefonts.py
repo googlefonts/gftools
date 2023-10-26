@@ -4,7 +4,7 @@ import logging
 from tempfile import NamedTemporaryFile
 
 import yaml
-from gftools.builder.recipeproviders import RecipeProviderBase
+from gftools.builder.recipeproviders import RecipeProviderBase, boolify
 
 logger = logging.getLogger("GFBuilder")
 
@@ -119,13 +119,14 @@ class GFBuilder(RecipeProviderBase):
                 args = {"other_args": "--src " + self.statfile.name}
             else:
                 args = {}
-            self.recipe[last_target].append(
-                {
+            other_variables = list(set(all_variables) - set([last_target]))
+            build_stat_step = {
                     "postprocess": "buildStat",
-                    "needs": list(set(all_variables) - set([last_target])),
                     **args,
                 }
-            )
+            if other_variables:
+                build_stat_step["needs"] = other_variables
+            self.recipe[last_target].append(build_stat_step)
 
     def build_a_variable(self, source):
         # Figure out target name
@@ -208,11 +209,10 @@ class GFBuilder(RecipeProviderBase):
                 "fontmake_args": self.fontmake_args() + static_args,
             }
         )
-        if self.config.get("autohintTTF") and output == "ttf":
+        if boolify(self.config.get("autohintTTF")) and output == "ttf":
+            args = "--fail-ok "
             if self.config.get("ttfaUseScript"):
-                args = "--auto-script"
-            else:
-                args = ""
+                args += " --auto-script"
             steps.append({"operation": "autohint", "autohint_args": args})
         if os.path.basename(target) in self.config.get("vttSources", {}):
             steps.append(

@@ -5,13 +5,13 @@ from pathlib import Path
 import subprocess
 from tempfile import NamedTemporaryFile, gettempdir
 from typing import Tuple
-import yaml
 from dataclasses import dataclass
 import os.path
 import networkx as nx
 from ninja.ninja_syntax import Writer, escape_path
 from ninja import _program
 from fontmake.font_project import FontProject
+from strictyaml import Map, MapCombined, MapPattern, Optional, Seq, Str, load, YAML, Any
 
 from gftools.builder.file import File
 from gftools.builder.operations import OperationBase, known_operations
@@ -24,6 +24,12 @@ def edge_with_operation(node, operation):
             return newnode
     return None
 
+BASE_SCHEMA = MapCombined({
+    Optional("recipe"): MapPattern(Str(), Seq(Any())),
+    Optional("recipeProvider"): Str(),
+    },
+    Str(), Any()
+)
 
 class GFBuilder:
     def __init__(self, config):
@@ -31,12 +37,13 @@ class GFBuilder:
             self.config = config
         else:
             with open(config, "r") as file:
-                self.config = yaml.safe_load(file)
+                self.config = load(file.read(), BASE_SCHEMA)
             chdir(Path(config).resolve().parent)
         self.writer = Writer(open("build.ninja", "w"))
         self.named_files = {}
         self.used_operations = set([])
         self.graph = nx.DiGraph()
+        self.recipe = None # This will be the de-YAMLified version
 
         if "recipeProvider" not in self.config and "recipe" not in self.config:
             self.config["recipeProvider"] = "googlefonts"
@@ -53,12 +60,12 @@ class GFBuilder:
     # validation checks on the recipe.
 
     def call_recipe_provider(self):
-        provider = get_provider(self.config["recipeProvider"])
+        provider = get_provider(self.config["recipeProvider"].data)
         return provider(self.config, self).write_recipe()
 
     def validate_recipe(self, config):
-        recipe = self.config["recipe"]
-        for target, steps in recipe.items():
+        self.recipe = self.config["recipe"].data # De-YAMLify
+        for target, steps in self.recipe.items():
             if steps[0].get("source") is None:
                 raise ValueError("First step must have a 'source' key")
             seen_postprocess = False
@@ -75,8 +82,7 @@ class GFBuilder:
     # these can store a bit more information than our simple YAML-like
     # data.
     def config_to_objects(self):
-        recipe = self.config["recipe"]
-        for target, steps in recipe.items():
+        for target, steps in self.recipe.items():
             newsteps = []
             for step in steps:
                 if "source" in step:
@@ -132,14 +138,14 @@ class GFBuilder:
     # and vice versa.
     def build_graph(self):
         Copy().write_rules(self.writer)
-        for target, steps in self.config["recipe"].items():
+        for target, steps in self.recipe.items():
             if target not in self.named_files:
                 self._ensure_named_file(target, type="binary")
             for step in steps:
                 if isinstance(step, File):
                     self.graph.add_node(step)
 
-        for target, steps in self.config["recipe"].items():
+        for target, steps in self.recipe.items():
             self._build_graph(target, steps)
 
     def _ensure_named_file(self, file, type="binary"):
@@ -266,7 +272,7 @@ class GFBuilder:
 
         dot = subprocess.run(["ninja", "-t", "graph"], capture_output=True)
         graphs = pydot.graph_from_dot_data(dot.stdout.decode("utf-8"))
-        targets = self.config["recipe"].keys()
+        targets = self.recipe.keys()
         if graphs and graphs[0]:
             for g in graphs[0].get_nodes():
                 if g.get_label() and g.get_label().endswith('stamp"'):

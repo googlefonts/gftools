@@ -23,8 +23,14 @@ class RecipeProviderBase:
 
     @property
     def sources(self) -> List[File]:
-        return [get_file(p) for p in self.config["sources"]]
+        return [get_file(p) for p in self.config["sources"].data]
 
+
+def boolify(s):
+    # Could be YAML(true), YAML(false) or None
+    if s is None:
+        return False
+    return bool(s.data)
 
 def get_provider(provider):
     # First try gftools.builder.recipeproviders.X
