@@ -48,7 +48,7 @@ class NotoBuilder(GFBuilder):
         )
         self.recipe[target] = [
             {"source": source.path},
-            {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
+            {"operation": "buildVariable", "args": self.fontmake_args()},
             {"operation": "fix"},
         ]
 
@@ -68,7 +68,7 @@ class NotoBuilder(GFBuilder):
             )
             self.recipe[uivftarget] = [
                 {"source": source.path},
-                {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
+                {"operation": "buildVariable", "args": self.fontmake_args()},
                 {"operation": "fix"},
                 {
                     "operation": "exec",
@@ -98,7 +98,7 @@ class NotoBuilder(GFBuilder):
                     "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
                 },
-                {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
+                {"operation": "buildVariable", "args": self.fontmake_args()},
             ]
             self.slim(target, tags)
 
@@ -118,8 +118,8 @@ class NotoBuilder(GFBuilder):
                     "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
                 },
-                {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
-                {"operation": "fix", "fixargs": "--include-source-fixes"}
+                {"operation": "buildVariable", "args": self.fontmake_args()},
+                {"operation": "fix", "args": "--include-source-fixes"}
             ]
         else:
             # GF VF, no subsets
@@ -133,8 +133,8 @@ class NotoBuilder(GFBuilder):
             )
             self.recipe[target] = [
                 {"source": source.path},
-                {"operation": "buildVariable", "fontmake_args": self.fontmake_args()},
-                {"operation": "fix", "fixargs": "--include-source-fixes"}
+                {"operation": "buildVariable", "args": self.fontmake_args()},
+                {"operation": "fix", "args": "--include-source-fixes"}
             ]
 
     def build_STAT(self):
@@ -168,7 +168,7 @@ class NotoBuilder(GFBuilder):
             },
             {
                 "operation": "buildTTF" if output == "ttf" else "buildOTF",
-                "fontmake_args": self.fontmake_args(),
+                "args": self.fontmake_args(),
             },
         ]
 
@@ -196,7 +196,7 @@ class NotoBuilder(GFBuilder):
             steps = copy.deepcopy(steps) + [
                 {
                     "operation": "autohint",
-                    "autohint_args": "--fail-ok --auto-script --discount-latin",
+                    "args": "--fail-ok --auto-script --discount-latin",
                 },
             ]
             self.recipe[target] = steps
@@ -227,7 +227,7 @@ class NotoBuilder(GFBuilder):
                 },
                 {
                     "operation": "buildTTF" if output == "ttf" else "buildOTF",
-                    "fontmake_args": self.fontmake_args(),
+                    "args": self.fontmake_args(),
                 },
             ]
             if output == "ttf":
@@ -235,7 +235,7 @@ class NotoBuilder(GFBuilder):
                     [
                         {
                             "operation": "autohint",
-                            "autohint_args": "--fail-ok --auto-script --discount-latin",
+                            "args": "--fail-ok --auto-script --discount-latin",
                         },
                     ]
                 )
@@ -252,7 +252,7 @@ class NotoBuilder(GFBuilder):
                     f"{instancebase}.{output}",
                 )
                 steps = copy.deepcopy(steps) + [
-                    {"operation": "fix", "fixargs": "--include-source-fixes"},
+                    {"operation": "fix", "args": "--include-source-fixes"},
                 ]
                 self.recipe[target] = steps
         elif output == "ttf" and instance.styleName in STYLE_NAMES:
@@ -271,12 +271,12 @@ class NotoBuilder(GFBuilder):
                     "operation": "instantiateUfo",
                     "instance_name": instance.name,
                 },
-                {"operation": "buildTTF", "fontmake_args": self.fontmake_args()},
+                {"operation": "buildTTF", "args": self.fontmake_args()},
                 {
                     "operation": "autohint",
-                    "autohint_args": "--fail-ok --auto-script --discount-latin",
+                    "args": "--fail-ok --auto-script --discount-latin",
                 },
-                {"operation": "fix", "fixargs": "--include-source-fixes"}
+                {"operation": "fix", "args": "--include-source-fixes"}
             ]
 
     def slim(self, target, tags):

@@ -6,8 +6,8 @@ from gftools.builder.operations import OperationBase
 
 class BuildSTAT(OperationBase):
     description = "Build a STAT table from one or more source files"
-    operation_rule = "gftools-gen-stat --out $tempdir $other_args -- $in && mv $finalfile $out"
-    postprocess_rule = "gftools-gen-stat --inplace $other_args -- $in"
+    operation_rule = "gftools-gen-stat --out $tempdir $args -- $in && mv $finalfile $out"
+    postprocess_rule = "gftools-gen-stat --inplace $args -- $in"
 
     # OK, buildSTAT is a bit of a tricky one because of how gftools-gen-stat
     # works, and because of how we're likely to want to use it.

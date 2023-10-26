@@ -116,7 +116,7 @@ class GFBuilder(RecipeProviderBase):
         if len(all_variables) > 0:
             last_target = all_variables[-1]
             if self.statfile:
-                args = {"other_args": "--src " + self.statfile.name}
+                args = {"args": "--src " + self.statfile.name}
             else:
                 args = {}
             other_variables = list(set(all_variables) - set([last_target]))
@@ -153,7 +153,7 @@ class GFBuilder(RecipeProviderBase):
             {"source": source.path},
             {
                 "operation": "buildVariable",
-                "fontmake_args": vf_args + self.fontmake_args(),
+                "args": vf_args + self.fontmake_args(),
             },
         ]
         if os.path.basename(target) in self.config.get("vttSources", {}):
@@ -164,7 +164,7 @@ class GFBuilder(RecipeProviderBase):
                 }
             )
         steps.append(
-            {"operation": "fix", "fixargs": self.fix_args()},
+            {"operation": "fix", "args": self.fix_args()},
         )
         self.recipe[target] = steps
         if self.config["buildWebfont"]:
@@ -206,14 +206,14 @@ class GFBuilder(RecipeProviderBase):
         steps.append(
             {
                 "operation": "buildTTF" if output == "ttf" else "buildOTF",
-                "fontmake_args": self.fontmake_args() + static_args,
+                "args": self.fontmake_args() + static_args,
             }
         )
         if boolify(self.config.get("autohintTTF")) and output == "ttf":
             args = "--fail-ok "
             if self.config.get("ttfaUseScript"):
                 args += " --auto-script"
-            steps.append({"operation": "autohint", "autohint_args": args})
+            steps.append({"operation": "autohint", "args": args})
         if os.path.basename(target) in self.config.get("vttSources", {}):
             steps.append(
                 {
@@ -221,7 +221,7 @@ class GFBuilder(RecipeProviderBase):
                     "vttfile": self.config["vttSources"][os.path.basename(target)],
                 }
             )
-        steps.append({"operation": "fix", "fixargs": self.fix_args()})
+        steps.append({"operation": "fix", "args": self.fix_args()})
         self.recipe[target] = steps
 
         if self.config["buildWebfont"] and output == "ttf":

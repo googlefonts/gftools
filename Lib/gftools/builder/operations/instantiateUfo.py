@@ -13,7 +13,7 @@ from fontTools.designspaceLib import InstanceDescriptor
 
 class InstantiateUFO(FontmakeOperationBase):
     description = "Create instance UFOs from a Glyphs or designspace file"
-    rule = "fontmake -i \"$instance_name\" -o ufo $fontmake_type $in $fontmake_args"
+    rule = "fontmake -i \"$instance_name\" -o ufo $fontmake_type $in $args"
 
     def validate(self):
         # Ensure there is an instance name
@@ -52,11 +52,11 @@ class InstantiateUFO(FontmakeOperationBase):
     @property
     def variables(self):
         vars = super().variables
-        vars["fontmake_args"] += " --ufo-structure=json "
+        vars["args"] += " --ufo-structure=json "
         if self.first_source.is_glyphs:
-            vars["fontmake_args"] += f"--instance-dir {escape_path(str(self.instance_dir))}"
+            vars["args"] += f"--instance-dir {escape_path(str(self.instance_dir))}"
         else:
-            vars["fontmake_args"] += f"--output-dir {escape_path(str(self.instance_dir))}"
+            vars["args"] += f"--output-dir {escape_path(str(self.instance_dir))}"
         vars["instance_name"] = self.original["instance_name"]
         return vars
     

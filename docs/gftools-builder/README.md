@@ -230,7 +230,7 @@ recipe:
       - operation: instantiateUfo
         instance_name: Texturina Black
       - operation: buildOTF
-        fontmake_args: --filter ...  --filter FlattenComponentsFilter --filter DecomposeTransformedComponentsFilter
+        args: --filter ...  --filter FlattenComponentsFilter --filter DecomposeTransformedComponentsFilter
       - operation: fix
   ../fonts/otf/Texturina-BlackItalic.otf:
       - source: Texturina-Italic.glyphs
@@ -291,7 +291,7 @@ build process by leaving a `graph.png` file in the `sources` directory:
 `gftools.builder.operations`. Currently provided operations include
 (in rough order of frequency of use):
 
-- *buildVariable*: Runs `fontmake -o variable` on the input file. Any `fontmake_args` are added to the fontmake command line.
+- *buildVariable*: Runs `fontmake -o variable` on the input file. Any `args` are added to the fontmake command line.
 - *buildTTF* and *buildOTF*: Analogously runs `fontmake -o ttf` and `fontmake -o otf`
 - *instantiateUFO*: Creates an interpolated UFO for a given `instance_name`.
 - *autohint*: Runs `gftools-autohint` on a TTF.
@@ -302,7 +302,7 @@ build process by leaving a `graph.png` file in the `sources` directory:
 - *exec*: An escape hatch for arbitrary processing - executes the executable named in the `exe` argument with the arguments provided in `args`.
 - *copy*: Copies a file. Used internally when generating multiple variants from the same intermediate file.
 - *featureFreeze*: Runs `pyftfeaturefreeze` with the arguments provided in `args`.
-- *subspace*: Runs `fonttools varLib.instancer` to subspace a variable font according to the values in `axes`. `other_args` are added to the command line.
+- *subspace*: Runs `fonttools varLib.instancer` to subspace a variable font according to the values in `axes`. `args` are added to the command line.
 - *hbsubset*: Uses `hb-subset` to slim down a font binary.
 - *addSubset*: Adds a subset from another font using `gftools-add-ds-subsets`
 - *buildVTT*: Uses `gftools-build-vtt` with the configuration file provided in `vttfile` to add VTT hinting to a font binary.
