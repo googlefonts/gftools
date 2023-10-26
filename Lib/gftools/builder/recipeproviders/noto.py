@@ -2,17 +2,37 @@ import copy
 import os
 import sys
 from collections import defaultdict
+from strictyaml import Map, Seq, Str, Optional, HexInt, Bool
 
 import ufoLib2
 
-from gftools.builder.recipeproviders.googlefonts import DEFAULTS, GFBuilder
+from gftools.builder.recipeproviders.googlefonts import DEFAULTS, GFBuilder, schema
 from gftools.util.styles import STYLE_NAMES
 
 name = "Noto builder"
 
+subsets_schema = Seq(
+    Map(
+        {
+            "from": Str(),
+            Optional("name"): Str(),
+            Optional("ranges"): Seq(Map({"start": HexInt(), "end": HexInt()})),
+            Optional("layoutHandling"): Str(),
+            Optional("force"): Str(),
+        }
+    )
+)
+_newschema = schema._validator
+_newschema[Optional("includeSubsets")] = subsets_schema
+_newschema[Optional("buildUIVF")] = Bool()
+schema = Map(_newschema)
+
 
 class NotoBuilder(GFBuilder):
     def write_recipe(self):
+        # Revalidate using our schema
+        self.config.revalidate(schema)
+
         self.config = {**DEFAULTS, **self.config}
         # Convert any glyphs sources to DS
         newsources = []

@@ -11,7 +11,8 @@ from strictyaml import (
                         Optional,
                         Bool,
                         UniqueSeq,
-                        Enum
+                        Enum,
+                        Any
                         )
 from gftools.packager import CATEGORIES
 
@@ -42,27 +43,19 @@ stat_format4_schema = Seq(
     })
 )
 
-instance_schema = MapPattern(Str(), Seq(
-    Map({
-        Optional("familyName"): Str(),
-        Optional("styleName"): Str(),
-        "coordinates": MapPattern(Str(), Int() | Float()),
-    })
-))
-
 schema = Map(
     {
+        Optional("recipe"): MapPattern(Str(), Seq(Any())),
+        Optional("recipeProvider"): Str(),
         "sources": Seq(Str()),
         Optional("vttSources"): MapPattern(Str(), Str()),
         Optional("fvarInstanceAxisDflts"): MapPattern(Str(), Float()),
         Optional("logLevel"): Str(),
-        Optional("stylespaceFile"): Str(),
         Optional("stat"): stat_schema | MapPattern(Str(), stat_schema),
         Optional("statFormat4"): stat_format4_schema | MapPattern(Str(), stat_format4_schema),
         Optional("familyName"): Str(),
         Optional("includeSourceFixes"): Bool(),
         Optional("stylespaceFile"): Str(),
-        Optional("instances"): instance_schema,
         Optional("buildVariable"): Bool(),
         Optional("buildStatic"): Bool(),
         Optional("buildOTF"): Bool(),
@@ -84,7 +77,6 @@ schema = Map(
         Optional("category"): UniqueSeq(Enum(CATEGORIES)),
         Optional("reverseOutlineDirection"): Bool(),
         Optional("interpolate"): Bool(),
-        Optional("useMutatorMath"): Bool(),
         Optional("checkCompatibility"): Bool(),
         Optional("removeOutlineOverlaps"): Bool(),
         Optional("expandFeaturesToInstances"): Bool(),
