@@ -4,20 +4,22 @@ from os import chdir
 from pathlib import Path
 import subprocess
 from tempfile import NamedTemporaryFile, gettempdir
-from typing import Tuple
+from typing import Dict, List, Tuple, Any, Union
 from dataclasses import dataclass
 import os.path
 import networkx as nx
 from ninja.ninja_syntax import Writer, escape_path
 from ninja import _program
 from fontmake.font_project import FontProject
-from strictyaml import load, YAML, Any
+from strictyaml import load, YAML
 
 from gftools.builder.file import File
 from gftools.builder.schema import BASE_SCHEMA
 from gftools.builder.operations import OperationBase, known_operations
 from gftools.builder.operations.copy import Copy
 from gftools.builder.recipeproviders import get_provider
+
+Recipe = Dict[str, List[Dict[str, Any]]]
 
 def edge_with_operation(node, operation):
     for newnode, attributes in node.items():
@@ -28,9 +30,9 @@ def edge_with_operation(node, operation):
 
 class GFBuilder:
     config: YAML
-    recipe: Dict[]
+    recipe: Recipe
 
-    def __init__(self, config):
+    def __init__(self, config: Union[dict, str, YAML]):
         if isinstance(config, dict):
             self.config = YAML(config)
         elif isinstance(config, YAML):
@@ -39,11 +41,12 @@ class GFBuilder:
             with open(config, "r") as file:
                 self.config = load(file.read(), BASE_SCHEMA)
             chdir(Path(config).resolve().parent)
+        assert isinstance(self.config, YAML)
         self.writer = Writer(open("build.ninja", "w"))
         self.named_files = {}
         self.used_operations = set([])
         self.graph = nx.DiGraph()
-        self.recipe = None # This will be the de-YAMLified version
+        self.recipe = {} # This will be the de-YAMLified version
 
         if "recipeProvider" not in self.config and "recipe" not in self.config:
             self.config["recipeProvider"] = "googlefonts"
@@ -79,7 +82,7 @@ class GFBuilder:
     # a recipe provider to create one. Once we have one, we do some basic
     # validation checks on the recipe.
 
-    def call_recipe_provider(self):
+    def call_recipe_provider(self) -> Recipe:
         provider = get_provider(self.config["recipeProvider"].data)
         return provider(self.config, self).write_recipe()
 

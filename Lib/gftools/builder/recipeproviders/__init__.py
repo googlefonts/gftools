@@ -16,7 +16,7 @@ def get_file(path):
 
 @dataclass
 class RecipeProviderBase:
-    config: dict
+    config: YAML
     builder: "gftools.builder.GFBuilder"
 
     def write_recipe(self):
@@ -24,7 +24,7 @@ class RecipeProviderBase:
 
     @property
     def sources(self) -> List[File]:
-        return [get_file(p) for p in self.config["sources"].data]
+        return [get_file(str(p)) for p in self.config["sources"].data]
 
 
 def boolify(s):
@@ -33,7 +33,7 @@ def boolify(s):
         return bool(s.data)
     return s
 
-def get_provider(provider):
+def get_provider(provider: str):
     # First try gftools.builder.recipeproviders.X
     try:
         mod = importlib.import_module("gftools.builder.recipeproviders." + provider)
