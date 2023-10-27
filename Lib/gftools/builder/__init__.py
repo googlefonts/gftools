@@ -316,6 +316,7 @@ class GFBuilder:
 
 def main(args=None):
     import argparse
+    import yaml
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -331,7 +332,9 @@ def main(args=None):
     args = parser.parse_args(args)
     pd = GFBuilder(args.config)
     if args.generate:
-        print(yaml.dump(pd.config))
+        config = pd.config.data
+        config["recipe"] = pd.recipe
+        print(yaml.dump(config))
         return
     pd.config_to_objects()
     pd.build_graph()
