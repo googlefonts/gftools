@@ -2,7 +2,7 @@
 Similar to pip freeze, but only listing the installed dependencies for the selected package.
 
 E.g.:
-    $ python freeze_requirements.py fonttools[ufo]
+    $ python -m gftools.builder.dependencies fonttools[ufo]
     # Installed requirements for 'fonttools[ufo]' (5 in total):
 
     appdirs==1.4.4
@@ -14,9 +14,6 @@ E.g.:
 Credit to Cosimo Lupo (anthrotype) for starting this as a gist:
 https://gist.github.com/anthrotype/531a425c8a0ba5ee975bc2ec8add7b82
 """
-
-__requires__ = ["packaging", "importlib_metadata; python_version < '3.8'"]
-
 from collections import deque, defaultdict
 import re
 from typing import (
@@ -148,7 +145,7 @@ def main():
     try:
         req_spec = sys.argv[1]
     except IndexError:
-        sys.exit("usage: freeze_requirements.py PACKAGE_NAME")
+        sys.exit("usage: python -m gftools.builder.dependencies PACKAGE_NAME")
 
     req = Requirement(req_spec)
     extras = {_normalize(extra) for extra in req.extras}

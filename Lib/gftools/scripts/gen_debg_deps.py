@@ -15,8 +15,9 @@ from fontTools.ttLib import TTFont
 def main(args=None):
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("font", help="Path to font")
-    parser.add_argument("--inplace", help="Overwrite font", action="store_true")
-    parser.add_argument("-o", "--out", help="Output path for new font")
+    out_group = parser.add_mutually_exclusive_group()
+    out_group.add_argument("--inplace", help="Overwrite font", action="store_true")
+    out_group.add_argument("-o", "--out", help="Output path for new font")
     args = parser.parse_args(args)
 
     ttfont = TTFont(args.font)
