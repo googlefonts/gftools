@@ -133,8 +133,8 @@ class NinjaBuilder(GFBuilder):
 
         self.w.comment("Add dependencies to the Debg table")
         self.w.rule(
-            "debg-dependencies",
-            "gftools gen-debg-deps $in --inplace && touch $in.debgstamp"
+            "font-dependencies",
+            "gftools font-dependencies build $in --inplace && touch $in.dependenciesstamp"
         )
 
         self.w.comment("Run the ttfautohint in-place and touch a stamp file")
@@ -292,7 +292,7 @@ class NinjaBuilder(GFBuilder):
     def post_process(self, file, implicit=None):
         variables = {}
         self.w.build(
-            file + ".debgstamp", "debg-dependencies", file,
+            file + ".dependenciesstamp", "font-dependencies", file,
         )
         if self.config["includeSourceFixes"]:
             variables = {"fixargs": "--include-source-fixes"}

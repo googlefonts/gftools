@@ -121,7 +121,7 @@ from fontTools.ttLib.woff2 import main as woff2_main
 from fontv.libfv import FontVersion
 from gftools.builder.schema import schema
 from gftools.builder.autohint import autohint
-from gftools.builder.dependencies import requirements_to_debg_table
+from gftools.builder.dependencies import build_font_requirements
 from gftools.fix import fix_font, fix_hinted_font
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
 from gftools.utils import font_is_italic, font_familyname, font_stylename
@@ -542,7 +542,7 @@ class GFBuilder:
             include_source_fixes=self.config["includeSourceFixes"],
             fvar_instance_axis_dflts=self.config["fvarInstanceAxisDflts"]
         )
-        requirements_to_debg_table(font, "gftools")
+        build_font_requirements(font, "gftools")
         font.save(filename)
 
     def post_process_ttf(self, filename):

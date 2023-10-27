@@ -37,6 +37,8 @@ from packaging.requirements import Requirement
 # list of packages that are considered 'unsafe' in a requirements file
 DENYLIST = frozenset(["setuptools"])
 
+GFTOOLS_DEPENDENCIES_KEY = "com.github.googlefonts.gftools.deps"
+
 
 def _normalize(name: str) -> str:
     # https://www.python.org/dev/peps/pep-0503/#id4
@@ -128,7 +130,7 @@ def format_requirements(requirements: Iterable[Tuple[str, str]]) -> str:
     return "".join(f"{name}=={version}\n" for name, version in sorted(requirements))
 
 
-def requirements_to_debg_table(ttfont: TTFont, dist_name: str):
+def build_font_requirements(ttfont: TTFont, dist_name: str):
     if "Debg" in ttfont:
         debg = ttfont["Debg"]
     else:
@@ -137,6 +139,13 @@ def requirements_to_debg_table(ttfont: TTFont, dist_name: str):
     requirements = get_installed_requirements(dist_name)
     debg.data["com.github.googlefonts.gftools.deps"] = format_requirements(requirements).splitlines()
     ttfont["Debg"] = debg
+
+
+def dump_font_requirements(ttfont: TTFont):
+    assert "Debg" in ttfont, "No Debg table found!"
+    debg_table = ttfont["Debg"].data
+    assert GFTOOLS_DEPENDENCIES_KEY in debg_table, f"Missing '{GFTOOLS_DEPENDENCIES_KEY}' in Debg table"
+    return "\n".join(debg_table[GFTOOLS_DEPENDENCIES_KEY])
 
 
 def main():
