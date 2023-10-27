@@ -130,7 +130,7 @@ def format_requirements(requirements: Iterable[Tuple[str, str]]) -> str:
     return "".join(f"{name}=={version}\n" for name, version in sorted(requirements))
 
 
-def build_font_requirements(ttfont: TTFont, dist_name: str):
+def write_font_requirements(ttfont: TTFont, dist_name: str):
     if "Debg" in ttfont:
         debg = ttfont["Debg"]
     else:
@@ -143,7 +143,7 @@ def build_font_requirements(ttfont: TTFont, dist_name: str):
     ttfont["Debg"] = debg
 
 
-def dump_font_requirements(ttfont: TTFont):
+def read_font_requirements(ttfont: TTFont):
     debg_table = ttfont["Debg"].data
     return "\n".join(debg_table[GFTOOLS_DEPENDENCIES_KEY])
 
