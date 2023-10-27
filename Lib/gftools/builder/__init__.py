@@ -51,8 +51,28 @@ class GFBuilder:
         if "recipeProvider" in self.config:
             # Store the automatic recipe but allow user-defined steps to override
             automatic_recipe = self.call_recipe_provider()
-            self.config["recipe"] = { **automatic_recipe, **self.config.get("recipe",{}) }
-        self.validate_recipe(self.config)
+            assert isinstance(automatic_recipe, dict) # Not a YAML object
+            self.recipe = self.perform_overrides(automatic_recipe)
+        elif "recipe" in self.config:
+            self.recipe = self.config["recipe"].data
+        self.validate_recipe()
+
+    def perform_overrides(self, automatic_recipe: Recipe):
+        if "recipe" not in self.config:
+            return automatic_recipe
+        for file, steps in self.config["recipe"].items():
+            file = str(file)
+            if file in automatic_recipe:
+                if all("postprocess" in step for step in steps):
+                    # An override step full of postprocesses *adds* to the recipe
+                    automatic_recipe[file].extend(steps.data)
+                else:
+                    # Something that looks like a recipe overrides
+                    automatic_recipe[file] = steps.data
+            else:
+                # A new file just gets added
+                automatic_recipe[file] = steps.data
+        return automatic_recipe
 
     # The builder proceeds in four steps. The first step is to prepare
     # the recipe, in YAML-like objects. If there isn't a recipe, we use
@@ -63,8 +83,7 @@ class GFBuilder:
         provider = get_provider(self.config["recipeProvider"].data)
         return provider(self.config, self).write_recipe()
 
-    def validate_recipe(self, config):
-        self.recipe = self.config["recipe"].data # De-YAMLify
+    def validate_recipe(self):
         for target, steps in self.recipe.items():
             if steps[0].get("source") is None:
                 raise ValueError("First step must have a 'source' key")
