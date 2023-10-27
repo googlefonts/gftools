@@ -61,7 +61,8 @@ dependencies = [
   'font-v',
   'afdko',
   'beautifulsoup4',
-  'rich'
+  'rich',
+  'packaging'
 ]
 
 [project.optional-dependencies]
