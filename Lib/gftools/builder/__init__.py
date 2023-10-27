@@ -11,9 +11,10 @@ import networkx as nx
 from ninja.ninja_syntax import Writer, escape_path
 from ninja import _program
 from fontmake.font_project import FontProject
-from strictyaml import Map, MapCombined, MapPattern, Optional, Seq, Str, load, YAML, Any
+from strictyaml import load, YAML, Any
 
 from gftools.builder.file import File
+from gftools.builder.schema import BASE_SCHEMA
 from gftools.builder.operations import OperationBase, known_operations
 from gftools.builder.operations.copy import Copy
 from gftools.builder.recipeproviders import get_provider
@@ -24,14 +25,11 @@ def edge_with_operation(node, operation):
             return newnode
     return None
 
-BASE_SCHEMA = MapCombined({
-    Optional("recipe"): MapPattern(Str(), Seq(Any())),
-    Optional("recipeProvider"): Str(),
-    },
-    Str(), Any()
-)
 
 class GFBuilder:
+    config: YAML
+    recipe: Dict[]
+
     def __init__(self, config):
         if isinstance(config, dict):
             self.config = YAML(config)

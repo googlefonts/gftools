@@ -12,10 +12,19 @@ from strictyaml import (
                         Bool,
                         UniqueSeq,
                         Enum,
-                        Any
+                        Any,
+                        MapCombined
                         )
 from gftools.packager import CATEGORIES
 
+
+
+BASE_SCHEMA = MapCombined({
+    Optional("recipe"): MapPattern(Str(), Seq(Any())),
+    Optional("recipeProvider"): Str(),
+    },
+    Str(), Any()
+)
 
 stat_schema = Seq(
     Map({
@@ -43,7 +52,7 @@ stat_format4_schema = Seq(
     })
 )
 
-schema = Map(
+GOOGLEFONTS_SCHEMA = Map(
     {
         Optional("recipe"): MapPattern(Str(), Seq(Any())),
         Optional("recipeProvider"): Str(),

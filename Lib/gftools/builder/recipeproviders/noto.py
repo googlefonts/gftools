@@ -6,7 +6,7 @@ from strictyaml import Map, Seq, Str, Optional, HexInt, Bool, YAML
 
 import ufoLib2
 
-from gftools.builder.recipeproviders.googlefonts import DEFAULTS, GFBuilder, schema
+from gftools.builder.recipeproviders.googlefonts import DEFAULTS, GFBuilder, GOOGLEFONTS_SCHEMA
 from gftools.util.styles import STYLE_NAMES
 
 name = "Noto builder"
@@ -22,7 +22,7 @@ subsets_schema = Seq(
         }
     )
 )
-_newschema = schema._validator
+_newschema = GOOGLEFONTS_SCHEMA._validator
 _newschema[Optional("includeSubsets")] = subsets_schema
 _newschema[Optional("buildUIVF")] = Bool()
 schema = Map(_newschema)

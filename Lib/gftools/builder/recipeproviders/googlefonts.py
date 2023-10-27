@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile
 
 import yaml
 from gftools.builder.recipeproviders import RecipeProviderBase, boolify
-from gftools.builder.schema import schema
+from gftools.builder.schema import GOOGLEFONTS_SCHEMA
 
 logger = logging.getLogger("GFBuilder")
 
@@ -51,7 +51,7 @@ class GFBuilder(RecipeProviderBase):
                 "'instances' no longer supported; generate a config with --generate and select the instances you want"
             )
         # Revalidate using our schema
-        self.config.revalidate(schema)
+        self.config.revalidate(GOOGLEFONTS_SCHEMA)
 
         self.config = {**DEFAULTS, **self.config}
         self.config["buildWebfont"] = self.config.get(
