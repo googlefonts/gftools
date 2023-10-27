@@ -21,7 +21,7 @@ class File:
     @property
     def basename(self):
         return os.path.basename(self.path)
-    
+
     def __hash__(self):
         return hash(id(self))
 
@@ -45,12 +45,13 @@ class File:
 
     @property
     def is_font_source(self):
-        return (self.is_glyphs or self.is_ufo or self.is_designspace)
+        return self.is_glyphs or self.is_ufo or self.is_designspace
 
     @cached_property
     def gsfont(self):
         if self.is_glyphs:
             import glyphsLib
+
             return glyphsLib.load(self.path)
         return None
 
@@ -58,9 +59,10 @@ class File:
     def designspace(self):
         if self.is_designspace:
             from fontTools.designspaceLib import DesignSpaceDocument
+
             return DesignSpaceDocument.fromfile(self.path)
         return None
-    
+
     @cached_property
     def instances(self):
         if self.is_glyphs:
@@ -84,4 +86,3 @@ class File:
             self.designspace.loadSourceFonts(open_ufo)
             self.designspace.sources[0].font.info.familyName
         return name
-

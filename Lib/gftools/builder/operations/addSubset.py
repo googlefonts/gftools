@@ -20,23 +20,24 @@ class AddSubset(OperationBase):
             raise ValueError("No subsets defined")
 
     def convert_dependencies(self, builder):
-        self._target = TemporaryDirectory() # Stow object
+        self._target = TemporaryDirectory()  # Stow object
         self._orig = NamedTemporaryFile(delete=False, mode="w")
         yaml.dump(self.original["subsets"], self._orig)
         self._orig.close()
-    
+
     @property
     def targets(self):
         if "directory" in self.original:
             target = self.original["directory"]
         else:
             target = self._target.name
-        dspath = os.path.join(target, self.first_source.basename.rsplit(".", 1)[0] + ".designspace")
-        return [ File(dspath) ]
+        dspath = os.path.join(
+            target, self.first_source.basename.rsplit(".", 1)[0] + ".designspace"
+        )
+        return [File(dspath)]
 
     @property
     def variables(self):
         return {
             "yaml": self._orig.name,
         }
-

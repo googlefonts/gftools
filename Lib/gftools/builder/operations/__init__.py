@@ -11,12 +11,13 @@ from tempfile import NamedTemporaryFile
 
 from gftools.builder.file import File
 
+
 @dataclass
 class OperationBase:
     postprocess: bool = False
     original: dict = field(default_factory=dict)
-    _targets: set = field(default_factory=set) # [File]
-    _sources: set = field(default_factory=set) # [File]
+    _targets: set = field(default_factory=set)  # [File]
+    _sources: set = field(default_factory=set)  # [File]
     implicit: set = field(default_factory=set)
 
     in_place = False
@@ -35,18 +36,18 @@ class OperationBase:
                 for dependency in self.original["needs"]
             ]
 
-
     @classmethod
     def write_rules(cls, writer):
         name = cls.__module__.split(".")[-1]
         writer.comment(name + ": " + cls.description)
-        if os.name == 'nt':
+        if os.name == "nt":
             cmd = "cmd /c " + cls.rule + " $stamp"
         else:
             cmd = cls.rule + " $stamp"
-        writer.rule(name,
+        writer.rule(
+            name,
             sys.executable + " -m gftools.builder.jobrunner " + cmd,
-            description=name
+            description=name,
         )
         writer.newline()
 
@@ -66,8 +67,8 @@ class OperationBase:
 
     @property
     def variables(self):
-        return {k:v for k,v in self.original.items() if k != "needs"}
-    
+        return {k: v for k, v in self.original.items() if k != "needs"}
+
     def build(self, writer):
         if self.postprocess:
             # Check this *is* a post-process step
@@ -117,17 +118,16 @@ class OperationBase:
     @property
     def first_source(self):
         return list(self._sources)[0]
-    
+
     def validate(self):
         return True
 
 
 class FontmakeOperationBase(OperationBase):
-
     @property
     def variables(self):
         vars = defaultdict(str)
-        for k,v in self.original.items():
+        for k, v in self.original.items():
             if k != "needs":
                 vars[k] = v
 
@@ -141,6 +141,7 @@ class FontmakeOperationBase(OperationBase):
             vars["fontmake_args"] += " --verbose WARNING "
 
         return vars
+
 
 known_operations = {}
 

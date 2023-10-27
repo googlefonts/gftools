@@ -7,11 +7,11 @@ import sys
 # that when you look at the end of the log file to work out what went
 # wrong you
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cmd = " ".join(sys.argv[1:])
     result = subprocess.run(sys.argv[1:], capture_output=True)
     if result.returncode != 0:
-        print("\nCommand failed:\n"+cmd)
+        print("\nCommand failed:\n" + cmd)
         print(result.stdout.decode())
         print(result.stderr.decode())
     else:

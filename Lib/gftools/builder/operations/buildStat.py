@@ -6,7 +6,9 @@ from gftools.builder.operations import OperationBase
 
 class BuildSTAT(OperationBase):
     description = "Build a STAT table from one or more source files"
-    operation_rule = "gftools-gen-stat --out $tempdir $args -- $in && mv $finalfile $out"
+    operation_rule = (
+        "gftools-gen-stat --out $tempdir $args -- $in && mv $finalfile $out"
+    )
     postprocess_rule = "gftools-gen-stat --inplace $args -- $in"
 
     # OK, buildSTAT is a bit of a tricky one because of how gftools-gen-stat
@@ -27,14 +29,17 @@ class BuildSTAT(OperationBase):
                 "BuildSTAT can only have one target when used as an operation"
             )
 
-
     @classmethod
     def write_rules(cls, writer):
         name = cls.__module__.split(".")[-1]
         writer.comment(name + ": " + cls.description)
-        if os.name == 'nt':
-            writer.rule("buildSTAT-operation", "cmd /c " + cls.operation_rule + " $stamp")
-            writer.rule("buildSTAT-postprocess", "cmd /c " + cls.postprocess_rule + " $stamp")
+        if os.name == "nt":
+            writer.rule(
+                "buildSTAT-operation", "cmd /c " + cls.operation_rule + " $stamp"
+            )
+            writer.rule(
+                "buildSTAT-postprocess", "cmd /c " + cls.postprocess_rule + " $stamp"
+            )
         else:
             writer.rule("buildSTAT-operation", cls.operation_rule + " $stamp")
             writer.rule("buildSTAT-postprocess", cls.postprocess_rule + " $stamp")
@@ -66,7 +71,9 @@ class BuildSTAT(OperationBase):
                 list(set([t.path for t in self.targets])),
                 "buildSTAT-operation",
                 self.dependencies,
-                variables={**self.variables,
-                           "tempdir": tempdir,
-                           "finalfile": finalfile},
+                variables={
+                    **self.variables,
+                    "tempdir": tempdir,
+                    "finalfile": finalfile,
+                },
             )

@@ -21,6 +21,7 @@ from gftools.builder.recipeproviders import get_provider
 
 Recipe = Dict[str, List[Dict[str, Any]]]
 
+
 def edge_with_operation(node, operation):
     for newnode, attributes in node.items():
         if operation == attributes.get("operation"):
@@ -46,7 +47,7 @@ class GFBuilder:
         self.named_files = {}
         self.used_operations = set([])
         self.graph = nx.DiGraph()
-        self.recipe = {} # This will be the de-YAMLified version
+        self.recipe = {}  # This will be the de-YAMLified version
 
         if "recipeProvider" not in self.config and "recipe" not in self.config:
             self.config["recipeProvider"] = "googlefonts"
@@ -54,7 +55,7 @@ class GFBuilder:
         if "recipeProvider" in self.config:
             # Store the automatic recipe but allow user-defined steps to override
             automatic_recipe = self.call_recipe_provider()
-            assert isinstance(automatic_recipe, dict) # Not a YAML object
+            assert isinstance(automatic_recipe, dict)  # Not a YAML object
             self.recipe = self.perform_overrides(automatic_recipe)
         elif "recipe" in self.config:
             self.recipe = self.config["recipe"].data
@@ -133,11 +134,11 @@ class GFBuilder:
                 "master_dir": directory,
                 "designspace_path": output,
                 "ufo_structure": "json",
-                "glyph_data": self.config.get("glyphData")
+                "glyph_data": self.config.get("glyphData"),
             },
         )
         return source.with_suffix(".designspace").name
-    
+
     def operation_step_to_object(self, step):
         operation = step.get("operation") or step.get("postprocess")
         if operation not in known_operations:
@@ -256,7 +257,7 @@ class GFBuilder:
                             binary = target
                             binary.terminal = True
                             step.set_target(binary)
-                        elif step.targets: #  Step already knows its own target
+                        elif step.targets:  #  Step already knows its own target
                             binary = step.targets[0]
                         else:
                             binary = File(NamedTemporaryFile().name)
@@ -301,7 +302,7 @@ class GFBuilder:
                     g.set_style("filled")
                     g.set_fillcolor("#ffcccc")
                     g.set_label("Stamp")
-                elif g.get_label() and g.get_label().startswith('"'+gettempdir()):
+                elif g.get_label() and g.get_label().startswith('"' + gettempdir()):
                     g.set_style("filled")
                     g.set_fillcolor("#ffcccc")
                     g.set_label("Tempfile")
@@ -312,13 +313,20 @@ class GFBuilder:
         else:
             print("Could not parse ninja build file")
 
+
 def main(args=None):
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--graph", help="Draw a graph of the build process", action="store_true")
+    parser.add_argument(
+        "--graph", help="Draw a graph of the build process", action="store_true"
+    )
     parser.add_argument("--no-ninja", help="Do not run ninja", action="store_true")
-    parser.add_argument("--generate", help="Just generate and output recipe from recipe builder", action="store_true")
+    parser.add_argument(
+        "--generate",
+        help="Just generate and output recipe from recipe builder",
+        action="store_true",
+    )
     parser.add_argument("config", help="Path to config file")
     args = parser.parse_args(args)
     pd = GFBuilder(args.config)
@@ -331,4 +339,4 @@ def main(args=None):
     if args.graph:
         pd.draw_graph()
     if not args.no_ninja:
-        raise SystemExit(_program('ninja', []))
+        raise SystemExit(_program("ninja", []))

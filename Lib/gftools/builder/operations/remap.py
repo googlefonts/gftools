@@ -15,5 +15,7 @@ class Remap(OperationBase):
     @property
     def variables(self):
         vars = super().variables
-        vars["mappings"] = " ".join(["{}={}".format(k, v) for k, v in self.original["mappings"].items()])
+        vars["mappings"] = " ".join(
+            ["{}={}".format(k, v) for k, v in self.original["mappings"].items()]
+        )
         return vars

@@ -6,7 +6,11 @@ from strictyaml import Map, Seq, Str, Optional, HexInt, Bool, YAML
 
 import ufoLib2
 
-from gftools.builder.recipeproviders.googlefonts import DEFAULTS, GFBuilder, GOOGLEFONTS_SCHEMA
+from gftools.builder.recipeproviders.googlefonts import (
+    DEFAULTS,
+    GFBuilder,
+    GOOGLEFONTS_SCHEMA,
+)
 from gftools.util.styles import STYLE_NAMES
 
 name = "Noto builder"
@@ -139,7 +143,7 @@ class NotoBuilder(GFBuilder):
                     "directory": "full-designspace",
                 },
                 {"operation": "buildVariable", "args": self.fontmake_args()},
-                {"operation": "fix", "args": "--include-source-fixes"}
+                {"operation": "fix", "args": "--include-source-fixes"},
             ]
         else:
             # GF VF, no subsets
@@ -154,7 +158,7 @@ class NotoBuilder(GFBuilder):
             self.recipe[target] = [
                 {"source": source.path},
                 {"operation": "buildVariable", "args": self.fontmake_args()},
-                {"operation": "fix", "args": "--include-source-fixes"}
+                {"operation": "fix", "args": "--include-source-fixes"},
             ]
 
     def build_STAT(self):
@@ -294,7 +298,7 @@ class NotoBuilder(GFBuilder):
                     "operation": "autohint",
                     "args": "--fail-ok --auto-script --discount-latin",
                 },
-                {"operation": "fix", "args": "--include-source-fixes"}
+                {"operation": "fix", "args": "--include-source-fixes"},
             ]
 
     def slim(self, target, tags):
