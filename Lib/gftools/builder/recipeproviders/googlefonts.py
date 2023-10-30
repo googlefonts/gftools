@@ -59,7 +59,7 @@ class GFBuilder(RecipeProviderBase):
         )
         if "stat" in self.config:
             self.statfile = NamedTemporaryFile(delete=False, mode="w+")
-            yaml.dump(self.config["stat"], self.statfile)
+            yaml.dump(self.config["stat"].data, self.statfile)
             self.statfile.close()
         else:
             self.statfile = None
