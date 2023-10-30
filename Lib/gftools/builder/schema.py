@@ -32,7 +32,7 @@ stat_schema = Seq(
         {
             "name": Str(),
             "tag": Str(),
-            "values": Seq(
+            Optional("values")  : Seq(
                 Map(
                     {
                         "name": Str(),
