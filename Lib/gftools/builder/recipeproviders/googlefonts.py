@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile
 
 import yaml
 from gftools.builder.recipeproviders import RecipeProviderBase, boolify
-from gftools.builder.schema import GOOGLEFONTS_SCHEMA
+from gftools.builder.schema import GOOGLEFONTS_SCHEMA, stat_schema
 
 logger = logging.getLogger("GFBuilder")
 
@@ -59,6 +59,7 @@ class GFBuilder(RecipeProviderBase):
         )
         if "stat" in self.config:
             self.statfile = NamedTemporaryFile(delete=False, mode="w+")
+            self.config["stat"].revalidate(stat_schema)
             yaml.dump(self.config["stat"].data, self.statfile)
             self.statfile.close()
         else:
