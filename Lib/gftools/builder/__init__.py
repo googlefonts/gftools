@@ -126,6 +126,9 @@ class GFBuilder:
         source = Path(source)
         directory = source.resolve().parent
         output = str(Path(directory) / source.with_suffix(".designspace").name)
+        glyph_data = self.config.get("glyphData")
+        if glyph_data is not None:
+            glyph_data = glyph_data.data
         FontProject().run_from_glyphs(
             str(source.resolve()),
             **{
@@ -134,7 +137,7 @@ class GFBuilder:
                 "master_dir": directory,
                 "designspace_path": output,
                 "ufo_structure": "json",
-                "glyph_data": self.config.get("glyphData").data,
+                "glyph_data": glyph_data,
             },
         )
         return source.with_suffix(".designspace").name
