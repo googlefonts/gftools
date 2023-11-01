@@ -143,21 +143,14 @@ def fix_unhinted_font(ttFont):
     """Improve the appearance of an unhinted font on Win platforms by:
         - Add a new GASP table with a newtable that has a single
           range which is set to smooth.
-        - Add a new prep table which is optimized for unhinted fonts.
 
     Args:
         ttFont: a TTFont instance
     """
     gasp = newTable("gasp")
     # Set GASP so all sizes are smooth
-    gasp.gaspRange = {0xFFFF: 15}
+    gasp.gaspRange = {65535: 0x000a}
 
-    program = ttProgram.Program()
-    assembly = ["PUSHW[]", "511", "SCANCTRL[]", "PUSHB[]", "4", "SCANTYPE[]"]
-    program.fromAssembly(assembly)
-
-    prep = newTable("prep")
-    prep.program = program
 
     ttFont["gasp"] = gasp
     ttFont["prep"] = prep
