@@ -98,7 +98,7 @@ class FontQA:
         mkdir(out)
         cmd = (
             ["fontbakery", "check-" + profile, "-l", "INFO", "--succinct"]
-            + [f.path for f in self.fonts]
+            + self.fonts
             + ["-C"]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
         )

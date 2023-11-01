@@ -32,7 +32,7 @@ from gftools.utils import (
 )
 import re
 from gftools.qa import FontQA
-from diffenator2.font import DFont
+from fontTools.ttLib import TTFont
 
 
 __version__ = "3.1.0"
@@ -41,7 +41,7 @@ logger.setLevel(logging.INFO)
 
 
 def family_name_from_fonts(fonts):
-    results = set(f.family_name for f in fonts)
+    results = set(TTFont(f)["name"].getBestFamilyName() for f in fonts)
     if len(results) > 1:
         raise Exception("Multiple family names found: [{}]".format(", ".join(results)))
     return list(results)[0]
@@ -193,10 +193,10 @@ def main(args=None):
         re_filter = re.compile(args.filter_fonts)
         fonts = [f for f in fonts if re_filter.search(f)]
 
-    dfonts = [
-        DFont(f) for f in fonts if f.endswith((".ttf", ".otf")) and "static" not in f
+    fonts = [
+        f for f in fonts if f.endswith((".ttf", ".otf")) and "static" not in f
     ]
-    family_name = family_name_from_fonts(dfonts)
+    family_name = family_name_from_fonts(fonts)
     family_on_gf = Google_Fonts_has_family(family_name)
 
     # Retrieve fonts_before and store in out dir
@@ -238,14 +238,13 @@ def main(args=None):
         url = args.github_dir
 
     if fonts_before:
-        dfonts_before = [
-            DFont(f)
-            for f in fonts_before
+        fonts_before = [
+            f for f in fonts_before
             if f.endswith((".ttf", ".otf")) and "static" not in f
         ]
-        qa = FontQA(dfonts, dfonts_before, args.out, url=url)
+        qa = FontQA(fonts, fonts_before, args.out, url=url)
     else:
-        qa = FontQA(dfonts, out=args.out, url=url)
+        qa = FontQA(fonts, out=args.out, url=url)
 
     if args.auto_qa and family_on_gf:
         qa.googlefonts_upgrade(args.imgs)
