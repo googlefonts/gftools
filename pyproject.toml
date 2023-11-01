@@ -68,7 +68,7 @@ dependencies = [
 [project.optional-dependencies]
 qa = [
   "fontbakery[googlefonts]",
-  "diffenator2>=0.2.0"
+  "diffenator2 @ git+https://github.com/googlefonts/diffenator2.git@refactor-ninja"
 ]
 ninja = [ "ninja" ]
 
