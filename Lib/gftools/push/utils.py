@@ -44,10 +44,8 @@ def repo_path_to_google_path(fp: Path):
 
 def google_path_to_repo_path(fp: Path) -> Path:
     """lang/languages/.*.textproto --> lang/Lib/gflanguages/data/languages/.*.textproto"""
-    if "fonts" not in fp.parts:
-        return fp
-    if "lang" in fp.parts:
+    if "lang" in fp.parts and "site-packages" not in fp.parts:
         return Path("lang/Lib/gflanguages/data/") / fp.relative_to("lang")
-    elif "axisregistry" in fp.parts:
+    elif "axisregistry" in fp.parts and "site-packages" not in fp.parts:
         return fp.parent / "Lib" / "axisregistry" / "data" / fp.name
     return fp
