@@ -189,7 +189,15 @@ def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("fonts_repo", type=Path)
     parser.add_argument(
-        "-f", "--filter", choices=(None, "lists", "in_dev", "in_sandbox"), default=None
+        "-f", "--filter", choices=(
+            None,
+            "lists",
+            "in_dev",
+            "in_sandbox",
+            "upgrade",
+            "new",
+            "no_fonts",
+        ), default=None, nargs="+",
     )
     parser.add_argument("-p", "--show-open-prs", action="store_true", default=False)
     parser.add_argument(
@@ -222,7 +230,7 @@ def main(args=None):
     push_items = PushItems.from_traffic_jam()
     if not args.show_open_prs:
         push_items = PushItems(i for i in push_items if i.merged == True)
-    if args.filter == "lists":
+    if "lists" in args.filter:
         prod_path = args.fonts_repo / "to_production.txt"
         production_file = PushItems.from_server_file(prod_path, PushStatus.IN_SANDBOX)
 
@@ -231,10 +239,16 @@ def main(args=None):
 
         urls = [i.url for i in production_file + sandbox_file]
         push_items = PushItems(i for i in push_items if i.url in urls)
-    elif args.filter == "in_dev":
+    if "in_dev" in args.filter:
         push_items = push_items.in_dev()
-    elif args.filter == "in_sandbox":
+    if "in_sandbox" in args.filter:
         push_items = push_items.in_sandbox()
+    if "upgrade" in args.filter:
+        push_items = PushItems(i for i in push_items if i.category == PushCategory.UPGRADE)
+    if "new" in args.filter:
+        push_items = PushItems(i for i in push_items if i.category == PushCategory.NEW)
+    if "no_fonts" in args.filter:
+        push_items = PushItems(i for i in push_items if i.category not in [PushCategory.NEW, PushCategory.UPGRADE])
 
     with ItemChecker(push_items[::-1], args.fonts_repo, servers) as checker:
         checker.run()
