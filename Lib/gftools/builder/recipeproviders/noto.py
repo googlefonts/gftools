@@ -80,7 +80,7 @@ class NotoBuilder(GFBuilder):
         if self.config.get("buildUIVF"):
             # Find my glyphs source
             glyphs_source = self.config["original_sources"][
-                self.config["sources"].index(source.path)
+                self.config["sources"].data.index(source.path)
             ]
             uivftarget = os.path.join(
                 "../",
