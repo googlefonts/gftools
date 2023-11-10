@@ -11,7 +11,7 @@ the Google Fonts website to help users find font families.
 import csv
 import requests
 from io import StringIO
-from functools import cache
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -95,7 +95,7 @@ class GFTags(object):
     def __init__(self):
         self.data = self._get_sheet_data()
 
-    @cache
+    @lru_cache
     def _get_sheet_data(self):
         req = requests.get(self.SHEET_URL)
         return list(csv.reader(StringIO(req.text)))
