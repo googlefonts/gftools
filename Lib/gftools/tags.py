@@ -3,7 +3,7 @@ tags.py
 
 This module contains objects to work with the "Google Fonts 2023
 Typographic Categories" Google Sheet,
-https://docs.google.com/spreadsheets/d/e/2PACX-1vQw0na0qa3svrF4bTENrorrfHx2ime8xXzMyMIS7tDrhDZdzd7A6Y2w_lvWOc9HS47hdjmEaSSBXiwR/pub?gid=1193923458&single=true&output=csv
+https://docs.google.com/spreadsheets/d/1Nc5DUsgVLbJ3P58Ttyhr5r-KYVnJgrj47VvUm1Rs8Fw/edit#gid=0
 
 This sheet contains all the font tagging information which is used in
 the Google Fonts website to help users find font families.
@@ -12,16 +12,13 @@ import csv
 import requests
 from io import StringIO
 from functools import lru_cache
-from pathlib import Path
+
+
+class SheetStructureChange(Exception): pass
 
 
 class GFTags(object):
-    # My Fork
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQw0na0qa3svrF4bTENrorrfHx2ime8xXzMyMIS7tDrhDZdzd7A6Y2w_lvWOc9HS47hdjmEaSSBXiwR/pub?gid=1193923458&single=true&output=csv"
-
-    # Official, need Dave C to make it public
-    # SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTD49I7GFT4iEP3t55jL2_xEtCcANgtRHKYKipEJr-eoPeymCu2Atz7egDDWVj3iStlnD-PzIxATnrp/pub?gid=1193923458&single=true&output=csv"
-
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQVM--FKzKTWL-8w0l5AE1e087uU_OaQNHR3_kkxxymoZV5XUnHzv9TJIdy7vcd0Saf4m8CMTMFqGcg/pub?gid=1193923458&single=true&output=csv"
     CATEGORIES = {
         "Serif": [
             "Humanist Venetian",
@@ -347,12 +344,12 @@ class GFTags(object):
             "Reverse-contrast",
         ]
         if self.data[0] != columns_0:
-            raise ValueError(
+            raise SheetStructureChange(
                 "Sheet's first row of columns has changed. If intentional, "
                 "please update columns_0 variable."
             )
         if self.data[1] != columns_1:
-            raise ValueError(
+            raise SheetStructureChange(
                 "Sheet's second row of columns have changed. If intentional, "
                 "please update columns_1 variable."
             )
