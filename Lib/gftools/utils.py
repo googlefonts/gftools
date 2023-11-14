@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import annotations
 import requests
 from io import BytesIO
 from zipfile import ZipFile
@@ -564,7 +565,10 @@ def font_version(font: TTFont):
     return version
 
 
-def is_google_fonts_repo(fp: Path):
-    if "fonts" not in fp.parts:
-        raise ValueError(f"'{fp}' is not a path to a valid google/fonts repo")
+def is_google_fonts_repo(fp: "Path | str"):
+    if isinstance(fp, str):
+        fp = Path(fp)
+    absolute_parts = fp.absolute().parts
+    if "fonts" not in absolute_parts:
+        raise ValueError(f"'{fp.absolute()}' is not a path to a valid google/fonts repo")
     return True
