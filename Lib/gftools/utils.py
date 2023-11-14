@@ -34,6 +34,7 @@ from fontTools.ttLib import TTFont
 from ufo2ft.util import classifyGlyphs
 from collections import Counter
 from collections import defaultdict
+from pathlib import Path
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -561,3 +562,9 @@ def font_version(font: TTFont):
     else:
         version = version_id.toUnicode()
     return version
+
+
+def is_google_fonts_repo(fp: Path):
+    if "fonts" not in fp.parts:
+        raise ValueError(f"'{fp}' is not a path to a valid google/fonts repo")
+    return True
