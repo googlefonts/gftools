@@ -197,7 +197,7 @@ def main(args=None):
             "upgrade",
             "new",
             "no_fonts",
-        ), default=None, nargs="+",
+        ), default=[], nargs="+",
     )
     parser.add_argument("-p", "--show-open-prs", action="store_true", default=False)
     parser.add_argument(
