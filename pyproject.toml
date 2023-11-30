@@ -68,7 +68,8 @@ dependencies = [
 [project.optional-dependencies]
 qa = [
   "fontbakery[googlefonts]",
-  "diffenator2>=0.2.0"
+  "diffenator2>=0.2.0",
+  "pycairo", # needed for fontTools varLib.interpolatable --pdf
 ]
 ninja = [ "ninja" ]
 

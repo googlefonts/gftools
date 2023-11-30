@@ -92,6 +92,19 @@ class FontQA:
         )
 
     @report_exceptions
+    def interpolations(self):
+        dst = os.path.join(self.out, "Interpolations")
+        if not any(f.is_variable() for f in self.fonts):
+            return
+        mkdir(dst)
+        for font in self.fonts:
+            font_dst = os.path.join(dst, f"{os.path.basename(font.path[:-4])}.pdf")
+            if not font.is_variable():
+                continue
+            cmd = ["fontTools", "varLib.interpolatable", font.path, "--pdf", font_dst]
+            subprocess.call(cmd)
+
+    @report_exceptions
     def fontbakery(self, profile="googlefonts", html=False, extra_args=None):
         logger.info("Running Fontbakery")
         out = os.path.join(self.out, "Fontbakery")
@@ -122,10 +135,12 @@ class FontQA:
         self.fontbakery()
         self.diffenator()
         self.diffbrowsers(imgs)
+        self.interpolations()
 
     def googlefonts_new(self, imgs=False):
         self.fontbakery()
         self.proof(imgs)
+        self.interpolations()
 
     def render(self, imgs=False):
         if self.fonts_before:

@@ -113,6 +113,7 @@ def main(args=None):
     check_group.add_argument(
         "--diffbrowsers", action="store_true", help="Run Diffbrowsers"
     )
+    check_group.add_argument("--interpolations", action="store_true", help="Run interpolation checker")
     parser.add_argument("-re", "--filter-fonts", help="Filter fonts by regex")
     parser.add_argument(
         "-o", "--out", default="out", help="Output path for check results"
@@ -156,6 +157,7 @@ def main(args=None):
             args.diffbrowsers,
             args.diffenator,
             args.render,
+            args.interpolations,
         ]
     ):
         raise Exception(
@@ -261,6 +263,8 @@ def main(args=None):
         qa.diffbrowsers(args.imgs)
     if args.proof:
         qa.proof()
+    if args.interpolations:
+        qa.interpolations()
 
 
 if __name__ == "__main__":
