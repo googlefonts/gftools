@@ -112,7 +112,10 @@ class ItemChecker:
                 json.dump(item.to_json(), tmp, indent=4)
                 tmp.flush()
                 files.append(tmp)
-        subprocess.call(["vimdiff"] + [f.name for f in files])
+        subprocess.call(
+            ["vimdiff", "-c", "windo set wrap"] \
+            + [f.name for f in files]
+        )
         for f in files:
             f.close()
 
