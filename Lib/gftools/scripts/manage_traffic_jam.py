@@ -187,6 +187,22 @@ class ItemChecker:
             self.display_item(push_item)
             self.user_input(push_item)
 
+    def update_servers(self):
+        for push_item in self.push_items:
+            if any(
+                [
+                    push_item.status == PushStatus.LIVE,
+                    not push_item.exists(),
+                    push_item.url == self.skip_pr,
+                ]
+            ):
+                continue
+
+            if push_item.category == PushCategory.OTHER:
+                print("no push category defined. Skipping")
+                continue
+            self.update_server(push_item, self.servers)
+
 
 def main(args=None):
     parser = argparse.ArgumentParser()
@@ -211,6 +227,12 @@ def main(args=None):
         "--log-level",
         choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
         default="INFO",
+    )
+    parser.add_argument(
+        "--update-servers-only",
+        "-uso",
+        action="store_true",
+        help="Only update each traffic jam item's server status"
     )
     args = parser.parse_args(args)
 
@@ -254,7 +276,11 @@ def main(args=None):
         push_items = PushItems(i for i in push_items if i.category not in [PushCategory.NEW, PushCategory.UPGRADE])
 
     with ItemChecker(push_items[::-1], args.fonts_repo, servers) as checker:
-        checker.run()
+        if args.update_servers_only:
+            print("Updating servers")
+            checker.update_servers()
+        else:
+            checker.run()
 
 
 if __name__ == "__main__":
