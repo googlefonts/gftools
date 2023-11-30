@@ -101,7 +101,7 @@ class FontQA:
             font_dst = os.path.join(dst, f"{os.path.basename(font.path[:-4])}.pdf")
             if not font.is_variable():
                 continue
-            cmd = ["fontTools", "varLib.interpolatable", font.path, "--pdf", font_dst]
+            cmd = ["fonttools", "varLib.interpolatable", font.path, "--pdf", font_dst]
             subprocess.call(cmd)
 
     @report_exceptions
