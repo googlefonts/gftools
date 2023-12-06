@@ -267,6 +267,8 @@ class GFBuilder:
                             self.graph.add_node(binary)
                             step.set_target(binary)
                         self.graph.add_edge(current, binary, operation=step)
+                        if str(current.path) == str(binary):
+                            raise ValueError(f"Adding a circular edge: {current.path}->{step.opname}->{binary}")
                     # print(
                     #     f"Creating an edge from {current.path} to {binary} via {step.opname}"
                     # )
