@@ -27,6 +27,12 @@ class OperationBase:
     def __eq__(self, other):
         return self.original == other.original
 
+    # Having a convenience function for "looks equal" is nice but
+    # sometimes you actually need to know if it's literally the same
+    # step
+    def object_equals(self, other):
+        return id(self) == id(other)
+
     def convert_dependencies(self, graph):
         if "needs" in self.original:
             if not isinstance(self.original["needs"], list):

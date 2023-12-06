@@ -232,7 +232,7 @@ class GFBuilder:
                     current = existing_edge
                     # If we are expecting a different target name, copy the
                     # file to rename it.
-                    if current.path != target.path and step == last_operation:
+                    if current.path != target.path and step.object_equals(last_operation):
                         # print(f"Expected it to be {target.path}, copying")
                         copy_operation = Copy()
                         copy_operation.set_source(current)
@@ -256,7 +256,7 @@ class GFBuilder:
                         self.graph.add_edge(current, binary, operation=step)
                     else:
                         step.set_source(previous)
-                        if step == last_operation:
+                        if step.object_equals(last_operation):
                             binary = target
                             binary.terminal = True
                             step.set_target(binary)
