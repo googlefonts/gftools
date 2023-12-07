@@ -150,6 +150,7 @@ class FamilyMeta(Itemer):
     description: str
     primary_script: Optional[str] = None
     article: str = None
+    minisite_url: str = None
 
     @classmethod
     def from_fp(cls, fp: Path):
@@ -177,6 +178,7 @@ class FamilyMeta(Itemer):
             description=parse_html(description),
             primary_script=None if data.primary_script == "" else data.primary_script,
             article=article,
+            minisite_url=None if data.minisite_url == "" else data.minisite_url,
         )
 
     @classmethod
@@ -201,6 +203,7 @@ class FamilyMeta(Itemer):
             else meta["article"][
                 0
             ],  # may not work if we end up having multiple articles
+            minisite_url=None if meta["minisiteUrl"] == "" else meta["minisiteUrl"],
         )
 
 
