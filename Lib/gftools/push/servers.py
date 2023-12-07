@@ -118,7 +118,7 @@ class GFServer(Itemer):
         meta = gf_server_family_metadata(self.url, name)
         self.metadata[meta["family"]] = FamilyMeta.from_gf_json(meta)
 
-    def update(self, last_checked: str):
+    def update_all(self, last_checked: str):
         meta = requests.get(self.url).json()
         self.update_axis_registry(meta["axisRegistry"])
 
@@ -127,10 +127,13 @@ class GFServer(Itemer):
             family_name = family_data["family"]
             last_modified = family_data["lastModified"]
             if last_modified >= last_checked:
-                log.info(f"Updating {family_name}")
-                if self.update_family(family_name):
-                    self.update_family_designers(family_name)
-                    self.update_metadata(family_name)
+                self.update(family_name)
+
+    def update(self, family_name):
+        log.info(f"Updating {family_name}")
+        if self.update_family(family_name):
+            self.update_family_designers(family_name)
+            self.update_metadata(family_name)
 
 
 class GFServers(Itemer):
@@ -148,15 +151,20 @@ class GFServers(Itemer):
         self.production = GFServer(
             GFServers.PRODUCTION, PRODUCTION_META_URL, PROD_FAMILY_DOWNLOAD
         )
+        self.fp = None
 
     def __iter__(self):
         for server in GFServers.SERVERS:
             yield getattr(self, server)
 
-    def update(self):
+    def update_all(self):
         for server in self:
-            server.update(self.last_checked)
+            server.update_all(self.last_checked)
         self.last_checked = datetime.now().isoformat().split("T")[0]
+
+    def update(self, family_name):
+        for server in self:
+            server.update(family_name)
 
     def compare_item(self, item: Items):
         res = item.to_json()
@@ -167,6 +175,7 @@ class GFServers(Itemer):
     def save(self, fp: "str | Path"):
         data = self.to_json()
         json.dump(data, open(fp, "w", encoding="utf8"), indent=4)
+        self.fp = fp
 
     @classmethod
     def open(cls, fp: "str | Path"):

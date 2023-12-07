@@ -149,6 +149,7 @@ class FamilyMeta(Itemer):
     classifications: list[str]
     description: str
     primary_script: Optional[str] = None
+    article: str = None
 
     @classmethod
     def from_fp(cls, fp: Path):
@@ -160,6 +161,11 @@ class FamilyMeta(Itemer):
             if not data.stroke
             else data.stroke.replace(" ", "_").upper()
         )
+        article_fp = fp / "article" / "ARTICLE.en_us.html"
+        if article_fp.exists():
+            article = open(article_fp, encoding="utf-8").read()
+        else:
+            article = None
         return cls(
             name=data.name,
             designer=data.designer.split(", "),
@@ -170,6 +176,7 @@ class FamilyMeta(Itemer):
             classifications=[c.lower() for c in data.classifications],
             description=parse_html(description),
             primary_script=None if data.primary_script == "" else data.primary_script,
+            article=article,
         )
 
     @classmethod
@@ -189,6 +196,11 @@ class FamilyMeta(Itemer):
             primary_script=None
             if meta["primaryScript"] == ""
             else meta["primaryScript"],
+            article=None
+            if meta["article"] == None
+            else meta["article"][
+                0
+            ],  # may not work if we end up having multiple articles
         )
 
 

@@ -470,7 +470,7 @@ class PushItems(list):
             changed_files = item["content"]["files"]["totalCount"]
             if changed_files <= 100:
                 continue
-            pr_number = item['content']['number']
+            pr_number = item["content"]["number"]
             pr_url = item["content"]["url"]
             log.warn(
                 f"{pr_url} has {changed_files} changed files. Attempting to fetch them."

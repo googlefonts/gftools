@@ -66,7 +66,7 @@ class ItemChecker:
 
     def user_input(self, item: PushItem):
         user_input = input(
-            "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], quit: [q]?: "
+            "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], repull server data [f], quit: [q]?: "
         )
 
         if "*" in user_input:
@@ -85,6 +85,8 @@ class ItemChecker:
         if "i" in user_input:
             self.vim_diff(item.item)
             self.user_input(item)
+        if "f" in user_input:
+            self.servers.update(item.item.name)
         if "q" in user_input:
             self.__exit__(None, None, None)
             sys.exit()
@@ -218,6 +220,7 @@ def main(args=None):
             "no_fonts",
         ), default=[], nargs="+",
     )
+    parser.add_argument("-r", "--pr-range", help="Specify a range of prs to check e.g 1000-1012")
     parser.add_argument("-p", "--show-open-prs", action="store_true", default=False)
     parser.add_argument(
         "-s", "--server-data", default=(Path("~") / ".gf_server_data.json").expanduser()
@@ -247,7 +250,8 @@ def main(args=None):
         servers = GFServers()
     else:
         servers = GFServers.open(args.server_data)
-    servers.update()
+
+    servers.update_all()
     servers.save(args.server_data)
 
     os.chdir(args.fonts_repo)
@@ -274,6 +278,10 @@ def main(args=None):
         push_items = PushItems(i for i in push_items if i.category == PushCategory.NEW)
     if "no_fonts" in args.filter:
         push_items = PushItems(i for i in push_items if i.category not in [PushCategory.NEW, PushCategory.UPGRADE])
+    if args.pr_range:
+        pr_start, pr_end = args.pr_range.split("-")
+        pr_range = range(int(pr_start), int(pr_end)+1)
+        push_items = PushItems(i for i in push_items if int(i.url.split("/")[-1]) in pr_range)
 
     with ItemChecker(push_items[::-1], args.fonts_repo, servers) as checker:
         if args.update_servers_only:
