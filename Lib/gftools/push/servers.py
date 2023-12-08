@@ -31,17 +31,24 @@ config_fp = os.path.join(os.path.expanduser("~"), ".gf_push_config.ini")
 if os.path.exists(config_fp):
     config = ConfigParser()
     config.read(config_fp)
-    SANDBOX_META_URL = config["urls"]["sandbox_meta"]
-    PRODUCTION_META_URL = config["urls"]["production_meta"]
-    DEV_META_URL = config["urls"]["dev_meta"]
-    SANDBOX_FAMILY_DOWNLOAD = config["urls"]["sandbox_family_download"]
     DEV_FAMILY_DOWNLOAD = config["urls"]["dev_family_download"]
+    DEV_META_URL = config["urls"]["dev_meta"]
+    DEV_VERSIONS_URL = config["urls"]["dev_versions"]
+    SANDBOX_FAMILY_DOWNLOAD = config["urls"]["sandbox_family_download"]
+    SANDBOX_META_URL = config["urls"]["sandbox_meta"]
+    SANDBOX_VERSIONS_URL = config["urls"]["sandbox_versions"]
+    PRODUCTION_META_URL = config["urls"]["production_meta"]
+    PRODUCTION_VERSIONS_URL = config["urls"]["production_versions"]
+
 else:
-    SANDBOX_META_URL = os.environ.get("SANDBOX_META_URL")
-    PRODUCTION_META_URL = os.environ.get("PRODUCTION_META_URL")
-    DEV_META_URL = os.environ.get("DEV_META_URL")
-    SANDBOX_FAMILY_DOWNLOAD = os.environ.get("SANDBOX_FAMILY_DOWNLOAD")
     DEV_FAMILY_DOWNLOAD = os.environ.get("DEV_FAMILY_DOWNLOAD")
+    DEV_META_URL = os.environ.get("DEV_META_URL")
+    DEV_VERSIONS_URL = os.environ.get("DEV_VERSIONS_URL")
+    SANDBOX_FAMILY_DOWNLOAD = os.environ.get("SANDBOX_FAMILY_DOWNLOAD")
+    SANDBOX_META_URL = os.environ.get("SANDBOX_META_URL")
+    SANDBOX_VERSIONS_URL = os.environ.get("SANDBOX_VERSIONS_URL")
+    PRODUCTION_META_URL = os.environ.get("PRODUCTION_META_URL")
+    PRODUCTION_VERSIONS_URL = os.environ.get("PRODUCTION_VERSIONS_URL")
 
 
 @lru_cache
@@ -72,14 +79,21 @@ class GFServer(Itemer):
         name: str,
         url: str = PRODUCTION_META_URL,
         dl_url: str = PROD_FAMILY_DOWNLOAD,
+        version_url: str = PRODUCTION_VERSIONS_URL,
     ):
         self.name = name
         self.url = url
         self.dl_url = dl_url
+        self.version_url = version_url
         self.families: dict[str, Family] = {}
         self.designers: dict[str, Designer] = {}
         self.metadata: dict[str, FamilyMeta] = {}
         self.axisregistry: dict[str, Axis] = {}
+        self.family_versions = json.loads(requests.get(self.version_url).text[5:])
+        self.family_versions = {
+            i["name"]: i["fontVersions"][0]["version"]
+            for i in self.family_versions["familyVersions"]
+        }
 
     def compare_push_item(self, item: Items):
         server_item = self.find_item(item)
@@ -103,10 +117,15 @@ class GFServer(Itemer):
             self.axisregistry[axis["tag"]] = Axis.from_gf_json(axis)
 
     def update_family(self, name: str):
-        family = Family.from_gf(name, dl_url=self.dl_url)
-        if family:
-            self.families[name] = family
+        family_version = self.family_versions.get(name)
+        if family_version:
+            self.families[name] = Family(name, family_version)
             return True
+        else:
+            family = Family.from_gf(name, dl_url=self.dl_url)
+            if family:
+                self.families[name] = family
+                return True
         return False
 
     def update_family_designers(self, name: str):
@@ -144,12 +163,12 @@ class GFServers(Itemer):
 
     def __init__(self):
         self.last_checked = datetime.fromordinal(1).isoformat().split("T")[0]
-        self.dev = GFServer(GFServers.DEV, DEV_META_URL, DEV_FAMILY_DOWNLOAD)
+        self.dev = GFServer(GFServers.DEV, DEV_META_URL, DEV_FAMILY_DOWNLOAD, DEV_VERSIONS_URL)
         self.sandbox = GFServer(
-            GFServers.SANDBOX, SANDBOX_META_URL, SANDBOX_FAMILY_DOWNLOAD
+            GFServers.SANDBOX, SANDBOX_META_URL, SANDBOX_FAMILY_DOWNLOAD, SANDBOX_VERSIONS_URL
         )
         self.production = GFServer(
-            GFServers.PRODUCTION, PRODUCTION_META_URL, PROD_FAMILY_DOWNLOAD
+            GFServers.PRODUCTION, PRODUCTION_META_URL, PROD_FAMILY_DOWNLOAD, PRODUCTION_VERSIONS_URL
         )
         self.fp = None
 

@@ -35,11 +35,14 @@ jobs:
           DEV_FAMILY_DOWNLOAD: ${{ secrets.DEV_FAMILY_DOWNLOAD }}
           DEV_META_URL: ${{ secrets.DEV_META_URL }}
           DEV_URL: ${{ secrets.DEV_URL }}
+          DEV_VERSIONS_URL: ${{ secrets.DEV_VERSIONS_URL }}
           PRODUCTION_META_URL: ${{ secrets.PRODUCTION_META_URL }}
           PRODUCTION_URL: ${{ secrets.PRODUCTION_URL}}
+          PRODUCTION_VERSIONS_URL: ${{ secrets.PRODUCTION_VERSIONS_URL }}
           SANDBOX_FAMILY_DOWNLOAD: ${{ secrets.SANDBOX_FAMILY_DOWNLOAD }}
           SANDBOX_META_URL: ${{ secrets.SANDBOX_META_URL }}
           SANDBOX_URL: ${{ secrets.SANDBOX_URL }}
+          SANDBOX_VERSIONS_URL: ${{ secrets.SANDBOX_VERSIONS_URL }}
           TRAFFIC_JAM_ID: ${{ secrets.TRAFFIC_JAM_ID }}
           STATUS_FIELD_ID: ${{ secrets.STATUS_FIELD_ID }}
           LIST_FIELD_ID: ${{ secrets.LIST_FIELD_ID }}
