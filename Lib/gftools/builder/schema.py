@@ -49,6 +49,8 @@ stat_schema = Seq(
     ),
 )
 
+stat_schema_by_font_name = MapPattern(Str(), stat_schema)
+
 stat_format4_schema = Seq(
     Map(
         {
@@ -67,7 +69,7 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("vttSources"): MapPattern(Str(), Str()),
         Optional("fvarInstanceAxisDflts"): MapPattern(Str(), Float()),
         Optional("logLevel"): Str(),
-        Optional("stat"): stat_schema | MapPattern(Str(), stat_schema),
+        Optional("stat"): stat_schema | stat_schema_by_font_name,
         Optional("statFormat4"): stat_format4_schema
         | MapPattern(Str(), stat_format4_schema),
         Optional("familyName"): Str(),
