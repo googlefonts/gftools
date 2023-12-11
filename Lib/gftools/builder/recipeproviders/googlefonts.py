@@ -97,7 +97,7 @@ class GFBuilder(RecipeProviderBase):
     def fix_args(self):
         args = ""
         if self.config.get("includeSourceFixes"):
-            args += " --include-sources-fixes"
+            args += " --include-source-fixes"
         if self.config.get("fvarInstanceAxisDflts"):
             args += (
                 " --fvar-instance-axis-dflts '"
