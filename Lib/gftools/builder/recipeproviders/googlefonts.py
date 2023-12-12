@@ -145,10 +145,11 @@ class GFBuilder(RecipeProviderBase):
         sourcebase = os.path.splitext(source.basename)[0]
         vf_args = ""
 
+        if self.config.get("checkCompatibility") == False:
+            vf_args += "--no-check-compatibility "
+
         if source.is_glyphs:
             tags = [ax.axisTag for ax in source.gsfont.axes]
-            if self.config.get("checkCompatibility") == False:
-                vf_args += "--no-check-compatibility "
         elif source.is_designspace:
             tags = [ax.tag for ax in source.designspace.axes]
         else:
