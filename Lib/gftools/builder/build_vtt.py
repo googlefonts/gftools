@@ -1,7 +1,7 @@
 import argparse
 from vttLib.transfer import merge_from_file as merge_vtt_hinting
 from vttLib import compile_instructions as compile_vtt_hinting
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTFont, newTable
 
 
 def compile_vtt(font, vtt_source):
