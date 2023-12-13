@@ -63,7 +63,7 @@ dependencies = [
   'afdko',
   'beautifulsoup4',
   'rich',
-  'packaging'
+  'packaging',
   'ninja',
   'networkx'
 ]
