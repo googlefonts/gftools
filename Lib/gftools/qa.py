@@ -5,6 +5,7 @@ import traceback
 
 from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
+import sys
 
 try:
     from diffenator2 import ninja_diff, ninja_proof
@@ -114,12 +115,16 @@ class FontQA:
             + [f.path for f in self.fonts]
             + ["-C"]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
+            + ["-e", "FATAL"]
         )
         if html:
             cmd.extend(["--html", os.path.join(out, "report.html")])
         if extra_args:
             cmd.extend(extra_args)
-        subprocess.call(cmd)
+        process = subprocess.run(cmd)
+        if process.returncode != 0:
+            logger.fatal("Fontbakery has raised a fatal error. Please fix!")
+            sys.exit(1)
 
         fontbakery_report = os.path.join(self.out, "Fontbakery", "report.md")
         if not os.path.isfile(fontbakery_report):
