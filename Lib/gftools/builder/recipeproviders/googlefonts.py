@@ -77,7 +77,7 @@ class GFBuilder(RecipeProviderBase):
         self.build_all_statics()
         return self.recipe
 
-    def fontmake_args(self):
+    def fontmake_args(self, variable=False):
         args = "--filter ... "
         if self.config.get("flattenComponents", True):
             args += " --filter FlattenComponentsFilter"
@@ -92,6 +92,14 @@ class GFBuilder(RecipeProviderBase):
             args += " --keep-overlaps"
         if self.config.get("expandFeaturesToInstances"):
             args += " --expand-features-to-instances"
+        if self.config.get("extraFontmakeArgs"):
+            args += " " + self.config["extraFontmakeArgs"]
+        if variable:
+            if self.config.get("extraVariableFontmakeArgs"):
+                args += " " + self.config["extraVariableFontmakeArgs"]
+        else:
+            if self.config.get("extraStaticFontmakeArgs"):
+                args += " " + self.config["extraStaticFontmakeArgs"]
         return args
 
     def fix_args(self):
@@ -166,7 +174,7 @@ class GFBuilder(RecipeProviderBase):
             {"source": source.path},
             {
                 "operation": "buildVariable",
-                "args": vf_args + self.fontmake_args(),
+                "args": vf_args + self.fontmake_args(variable=True),
             },
         ]
         if os.path.basename(target) in self.config.get("vttSources", {}):
@@ -219,7 +227,7 @@ class GFBuilder(RecipeProviderBase):
         steps.append(
             {
                 "operation": "buildTTF" if output == "ttf" else "buildOTF",
-                "args": self.fontmake_args() + static_args,
+                "args": self.fontmake_args(variable=False) + static_args,
             }
         )
         if boolify(self.config.get("autohintTTF")) and output == "ttf":

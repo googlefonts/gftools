@@ -102,5 +102,8 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("version"): Str(),
         Optional("addGftoolsVersion"): Bool(),
         Optional("glyphData"): Seq(Str()),
+        Optional("extraFontmakeArgs"): Str(),
+        Optional("extraVariableFontmakeArgs"): Str(),
+        Optional("extraStaticFontmakeArgs"): Str(),
     }
 )
