@@ -122,9 +122,6 @@ class FontQA:
         if extra_args:
             cmd.extend(extra_args)
         process = subprocess.run(cmd)
-        if process.returncode != 0:
-            logger.fatal("Fontbakery has raised a fatal error. Please fix!")
-            sys.exit(1)
 
         fontbakery_report = os.path.join(self.out, "Fontbakery", "report.md")
         if not os.path.isfile(fontbakery_report):
@@ -135,6 +132,10 @@ class FontQA:
         with open(fontbakery_report) as doc:
             msg = doc.read()
             self.post_to_github(msg)
+
+        if process.returncode != 0:
+            logger.fatal("Fontbakery has raised a fatal error. Please fix!")
+            sys.exit(1)
 
     def googlefonts_upgrade(self, imgs=False):
         self.fontbakery()
