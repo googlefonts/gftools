@@ -52,10 +52,11 @@ except:
 
 
 class ItemChecker:
-    def __init__(self, push_items: PushItems, gf_fp: "str | Path", servers: GFServers):
+    def __init__(self, push_items: PushItems, gf_fp: "str | Path", servers: GFServers, servers_fp: "str | Path"):
         self.push_items = push_items
         self.gf_fp = gf_fp
         self.servers = servers
+        self.servers_fp = servers_fp
         self.skip_pr: Optional[str] = None
 
     def __enter__(self):
@@ -66,7 +67,7 @@ class ItemChecker:
 
     def user_input(self, item: PushItem):
         user_input = input(
-            "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], repull server data [f], quit: [q]?: "
+            "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], repull family server data [f], quit: [q]?: "
         )
 
         if "*" in user_input:
@@ -87,6 +88,9 @@ class ItemChecker:
             self.user_input(item)
         if "f" in user_input:
             self.servers.update(item.item.name)
+            self.servers.save(self.servers_fp)
+            self.display_item(item)
+            self.user_input(item)
         if "q" in user_input:
             self.__exit__(None, None, None)
             sys.exit()
@@ -283,7 +287,7 @@ def main(args=None):
         pr_range = range(int(pr_start), int(pr_end)+1)
         push_items = PushItems(i for i in push_items if int(i.url.split("/")[-1]) in pr_range)
 
-    with ItemChecker(push_items[::-1], args.fonts_repo, servers) as checker:
+    with ItemChecker(push_items[::-1], args.fonts_repo, servers, args.server_data) as checker:
         if args.update_servers_only:
             print("Updating servers")
             checker.update_servers()

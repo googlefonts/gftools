@@ -173,9 +173,9 @@ class GFServers(Itemer):
         return res
 
     def save(self, fp: "str | Path"):
-        data = self.to_json()
+        from copy import deepcopy
+        data = deepcopy(self).to_json()
         json.dump(data, open(fp, "w", encoding="utf8"), indent=4)
-        self.fp = fp
 
     @classmethod
     def open(cls, fp: "str | Path"):
@@ -200,8 +200,8 @@ class GFServers(Itemer):
                     }
                 elif item_type == "axisregistry":
                     server.axisregistry = {k: Axis(**v) for k, v in item_value.items()}
-                    for _, v in server.axisregistry.items():
-                        v.fallback = [AxisFallback(**a) for a in v.fallback]
+                    for k, v in server.axisregistry.items():
+                        server.axisregistry[k].fallback = [AxisFallback(**a) for a in v.fallback]
                 else:
                     setattr(server, item_type, item_value)
         return inst
