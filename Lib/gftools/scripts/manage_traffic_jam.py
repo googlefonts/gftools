@@ -52,7 +52,13 @@ except:
 
 
 class ItemChecker:
-    def __init__(self, push_items: PushItems, gf_fp: "str | Path", servers: GFServers, servers_fp: "str | Path"):
+    def __init__(
+        self,
+        push_items: PushItems,
+        gf_fp: "str | Path",
+        servers: GFServers,
+        servers_fp: "str | Path",
+    ):
         self.push_items = push_items
         self.gf_fp = gf_fp
         self.servers = servers
@@ -118,10 +124,7 @@ class ItemChecker:
                 json.dump(item.to_json(), tmp, indent=4)
                 tmp.flush()
                 files.append(tmp)
-        subprocess.call(
-            ["vimdiff", "-c", "windo set wrap"] \
-            + [f.name for f in files]
-        )
+        subprocess.call(["vimdiff", "-c", "windo set wrap"] + [f.name for f in files])
         for f in files:
             f.close()
 
@@ -214,7 +217,9 @@ def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("fonts_repo", type=Path)
     parser.add_argument(
-        "-f", "--filter", choices=(
+        "-f",
+        "--filter",
+        choices=(
             None,
             "lists",
             "in_dev",
@@ -222,9 +227,13 @@ def main(args=None):
             "upgrade",
             "new",
             "no_fonts",
-        ), default=[], nargs="+",
+        ),
+        default=[],
+        nargs="+",
     )
-    parser.add_argument("-r", "--pr-range", help="Specify a range of prs to check e.g 1000-1012")
+    parser.add_argument(
+        "-r", "--pr-range", help="Specify a range of prs to check e.g 1000-1012"
+    )
     parser.add_argument("-p", "--show-open-prs", action="store_true", default=False)
     parser.add_argument(
         "-s", "--server-data", default=(Path("~") / ".gf_server_data.json").expanduser()
@@ -239,7 +248,7 @@ def main(args=None):
         "--update-servers-only",
         "-uso",
         action="store_true",
-        help="Only update each traffic jam item's server status"
+        help="Only update each traffic jam item's server status",
     )
     args = parser.parse_args(args)
 
@@ -277,17 +286,27 @@ def main(args=None):
     if "in_sandbox" in args.filter:
         push_items = push_items.in_sandbox()
     if "upgrade" in args.filter:
-        push_items = PushItems(i for i in push_items if i.category == PushCategory.UPGRADE)
+        push_items = PushItems(
+            i for i in push_items if i.category == PushCategory.UPGRADE
+        )
     if "new" in args.filter:
         push_items = PushItems(i for i in push_items if i.category == PushCategory.NEW)
     if "no_fonts" in args.filter:
-        push_items = PushItems(i for i in push_items if i.category not in [PushCategory.NEW, PushCategory.UPGRADE])
+        push_items = PushItems(
+            i
+            for i in push_items
+            if i.category not in [PushCategory.NEW, PushCategory.UPGRADE]
+        )
     if args.pr_range:
         pr_start, pr_end = args.pr_range.split("-")
-        pr_range = range(int(pr_start), int(pr_end)+1)
-        push_items = PushItems(i for i in push_items if int(i.url.split("/")[-1]) in pr_range)
+        pr_range = range(int(pr_start), int(pr_end) + 1)
+        push_items = PushItems(
+            i for i in push_items if int(i.url.split("/")[-1]) in pr_range
+        )
 
-    with ItemChecker(push_items[::-1], args.fonts_repo, servers, args.server_data) as checker:
+    with ItemChecker(
+        push_items[::-1], args.fonts_repo, servers, args.server_data
+    ) as checker:
         if args.update_servers_only:
             print("Updating servers")
             checker.update_servers()
