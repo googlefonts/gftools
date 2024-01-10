@@ -12,6 +12,7 @@ import subprocess
 from rich.pretty import pprint
 from gftools.push.utils import branch_matches_google_fonts_main
 from gftools.push.servers import GFServers, Items
+from gftools.push.items import Family, FamilyMeta
 from gftools.push.trafficjam import (
     PushItem,
     PushItems,
@@ -72,9 +73,12 @@ class ItemChecker:
         self.git_checkout_main()
 
     def user_input(self, item: PushItem):
-        user_input = input(
-            "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], repull family server data [f], quit: [q]?: "
-        )
+        is_family_related = isinstance(item.item, (Family, FamilyMeta))
+        if is_family_related:
+            input_text = "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], repull family server data [f], quit: [q]?: "
+        else:
+            input_text = "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], quit: [q]?: "
+        user_input = input(input_text)
 
         if "*" in user_input:
             item.bump_pushlist()
@@ -92,7 +96,7 @@ class ItemChecker:
         if "i" in user_input:
             self.vim_diff(item.item)
             self.user_input(item)
-        if "f" in user_input:
+        if is_family_related and "f" in user_input:
             self.servers.update(item.item.name)
             self.servers.save(self.servers_fp)
             self.display_item(item)
