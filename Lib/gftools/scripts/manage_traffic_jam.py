@@ -12,6 +12,7 @@ import subprocess
 from rich.pretty import pprint
 from gftools.push.utils import branch_matches_google_fonts_main
 from gftools.push.servers import GFServers, Items
+from gftools.push.items import Family, FamilyMeta
 from gftools.push.trafficjam import (
     PushItem,
     PushItems,
@@ -52,10 +53,17 @@ except:
 
 
 class ItemChecker:
-    def __init__(self, push_items: PushItems, gf_fp: "str | Path", servers: GFServers):
+    def __init__(
+        self,
+        push_items: PushItems,
+        gf_fp: "str | Path",
+        servers: GFServers,
+        servers_fp: "str | Path",
+    ):
         self.push_items = push_items
         self.gf_fp = gf_fp
         self.servers = servers
+        self.servers_fp = servers_fp
         self.skip_pr: Optional[str] = None
 
     def __enter__(self):
@@ -65,9 +73,12 @@ class ItemChecker:
         self.git_checkout_main()
 
     def user_input(self, item: PushItem):
-        user_input = input(
-            "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], repull server data [f], quit: [q]?: "
-        )
+        is_family_related = isinstance(item.item, (Family, FamilyMeta))
+        if is_family_related:
+            input_text = "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], repull family server data [f], quit: [q]?: "
+        else:
+            input_text = "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], quit: [q]?: "
+        user_input = input(input_text)
 
         if "*" in user_input:
             item.bump_pushlist()
@@ -85,8 +96,11 @@ class ItemChecker:
         if "i" in user_input:
             self.vim_diff(item.item)
             self.user_input(item)
-        if "f" in user_input:
+        if is_family_related and "f" in user_input:
             self.servers.update(item.item.name)
+            self.servers.save(self.servers_fp)
+            self.display_item(item)
+            self.user_input(item)
         if "q" in user_input:
             self.__exit__(None, None, None)
             sys.exit()
@@ -114,10 +128,7 @@ class ItemChecker:
                 json.dump(item.to_json(), tmp, indent=4)
                 tmp.flush()
                 files.append(tmp)
-        subprocess.call(
-            ["vimdiff", "-c", "windo set wrap"] \
-            + [f.name for f in files]
-        )
+        subprocess.call(["vimdiff", "-c", "windo set wrap"] + [f.name for f in files])
         for f in files:
             f.close()
 
@@ -210,7 +221,9 @@ def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("fonts_repo", type=Path)
     parser.add_argument(
-        "-f", "--filter", choices=(
+        "-f",
+        "--filter",
+        choices=(
             None,
             "lists",
             "in_dev",
@@ -218,9 +231,13 @@ def main(args=None):
             "upgrade",
             "new",
             "no_fonts",
-        ), default=[], nargs="+",
+        ),
+        default=[],
+        nargs="+",
     )
-    parser.add_argument("-r", "--pr-range", help="Specify a range of prs to check e.g 1000-1012")
+    parser.add_argument(
+        "-r", "--pr-range", help="Specify a range of prs to check e.g 1000-1012"
+    )
     parser.add_argument("-p", "--show-open-prs", action="store_true", default=False)
     parser.add_argument(
         "-s", "--server-data", default=(Path("~") / ".gf_server_data.json").expanduser()
@@ -235,7 +252,7 @@ def main(args=None):
         "--update-servers-only",
         "-uso",
         action="store_true",
-        help="Only update each traffic jam item's server status"
+        help="Only update each traffic jam item's server status",
     )
     args = parser.parse_args(args)
 
@@ -273,17 +290,27 @@ def main(args=None):
     if "in_sandbox" in args.filter:
         push_items = push_items.in_sandbox()
     if "upgrade" in args.filter:
-        push_items = PushItems(i for i in push_items if i.category == PushCategory.UPGRADE)
+        push_items = PushItems(
+            i for i in push_items if i.category == PushCategory.UPGRADE
+        )
     if "new" in args.filter:
         push_items = PushItems(i for i in push_items if i.category == PushCategory.NEW)
     if "no_fonts" in args.filter:
-        push_items = PushItems(i for i in push_items if i.category not in [PushCategory.NEW, PushCategory.UPGRADE])
+        push_items = PushItems(
+            i
+            for i in push_items
+            if i.category not in [PushCategory.NEW, PushCategory.UPGRADE]
+        )
     if args.pr_range:
         pr_start, pr_end = args.pr_range.split("-")
-        pr_range = range(int(pr_start), int(pr_end)+1)
-        push_items = PushItems(i for i in push_items if int(i.url.split("/")[-1]) in pr_range)
+        pr_range = range(int(pr_start), int(pr_end) + 1)
+        push_items = PushItems(
+            i for i in push_items if int(i.url.split("/")[-1]) in pr_range
+        )
 
-    with ItemChecker(push_items[::-1], args.fonts_repo, servers) as checker:
+    with ItemChecker(
+        push_items[::-1], args.fonts_repo, servers, args.server_data
+    ) as checker:
         if args.update_servers_only:
             print("Updating servers")
             checker.update_servers()
