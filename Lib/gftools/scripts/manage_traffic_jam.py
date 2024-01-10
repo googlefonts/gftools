@@ -231,6 +231,7 @@ def main(args=None):
             "upgrade",
             "new",
             "no_fonts",
+            "fonts",
         ),
         default=[],
         nargs="+",
@@ -300,6 +301,10 @@ def main(args=None):
             i
             for i in push_items
             if i.category not in [PushCategory.NEW, PushCategory.UPGRADE]
+        )
+    if "fonts" in args.filter:
+        push_items = PushItems(
+            i for i in push_items if i.category in [PushCategory.NEW, PushCategory.UPGRADE]
         )
     if args.pr_range:
         pr_start, pr_end = args.pr_range.split("-")
