@@ -1255,6 +1255,9 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
     # No open PRs, creating …
     result = client.create_pr(pr_title, pr_message_body, pr_head, pr_base_branch, draft=True)
     print(f'Created a PR #{result["number"]} {result["html_url"]}')
+    print(
+      "PR is currently set to \"draft\". Set it to \"Ready for Review\" once you feel it's ready."
+    )
   else:
     # found open PR
     pr_issue_number = open_prs[0]['number']
