@@ -1253,7 +1253,7 @@ def _make_pr(repo: pygit2.Repository, local_branch_name: str,
 
   if not len(open_prs):
     # No open PRs, creating …
-    result = client.create_pr(pr_title, pr_message_body, pr_head, pr_base_branch)
+    result = client.create_pr(pr_title, pr_message_body, pr_head, pr_base_branch, draft=True)
     print(f'Created a PR #{result["number"]} {result["html_url"]}')
   else:
     # found open PR
