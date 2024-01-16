@@ -71,7 +71,7 @@ class GitHubClient:
             self.rest_url("pulls", state="open", head=pr_head, base=pr_base_branch)
         )
 
-    def create_pr(self, title: str, body: str, head: str, base: str):
+    def create_pr(self, title: str, body: str, head: str, base: str, draft: bool = False):
         return self._post(
             self.rest_url("pulls"),
             {
@@ -80,6 +80,7 @@ class GitHubClient:
                 "head": head,
                 "base": base,
                 "maintainer_can_modify": True,
+                "draft": draft
             },
         )
 
