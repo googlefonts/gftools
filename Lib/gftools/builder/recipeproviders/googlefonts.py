@@ -92,14 +92,14 @@ class GFBuilder(RecipeProviderBase):
             args += " --keep-overlaps"
         if self.config.get("expandFeaturesToInstances"):
             args += " --expand-features-to-instances"
-        if self.config.get("extraFontmakeArgs"):
-            args += " " + self.config["extraFontmakeArgs"]
+        if self.config.get("extraFontmakeArgs") is not None:
+            args += " " + str(self.config["extraFontmakeArgs"])
         if variable:
-            if self.config.get("extraVariableFontmakeArgs"):
-                args += " " + self.config["extraVariableFontmakeArgs"]
+            if self.config.get("extraVariableFontmakeArgs") is not None:
+                args += " " + str(self.config["extraVariableFontmakeArgs"])
         else:
-            if self.config.get("extraStaticFontmakeArgs"):
-                args += " " + self.config["extraStaticFontmakeArgs"]
+            if self.config.get("extraStaticFontmakeArgs") is not None:
+                args += " " + str(self.config["extraStaticFontmakeArgs"])
         return args
 
     def fix_args(self):
