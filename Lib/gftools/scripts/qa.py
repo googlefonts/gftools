@@ -138,7 +138,7 @@ def main(args=None):
     check_group.add_argument(
         "--extra-fontbakery-args",
         help="Additional arguments to FontBakery",
-        nargs="*",
+        action="append",
     )
 
     parser.add_argument("--imgs", action="store_true", help="Gen images using Selenium")
