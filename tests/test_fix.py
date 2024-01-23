@@ -274,3 +274,14 @@ def test_fix_colr_v1_font(colr_v1_font):
     colr_v1_font["COLR"].version = 1
     fixed = fix_colr_font(colr_v1_font)
     assert "SVG " in fixed
+
+
+def test_ofl_license_strings(static_font):
+    from gftools.fix import fix_license_strings
+    from gftools.constants import OFL_LICENSE_INFO, OFL_LICENSE_URL
+
+    for id in (13, 14):
+        assert "sil.org" in static_font["name"].getName(id, 3, 1, 0x409).toUnicode()
+    fix_license_strings(static_font)
+    for id, expected in ((13, OFL_LICENSE_INFO), (14, OFL_LICENSE_URL)):
+        assert expected == static_font["name"].getName(id, 3, 1, 0x409).toUnicode()
