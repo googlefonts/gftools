@@ -281,7 +281,7 @@ def test_ofl_license_strings(static_font):
     from gftools.constants import OFL_LICENSE_INFO, OFL_LICENSE_URL
 
     for id in (13, 14):
-        assert "sil.org" in static_font["name"].getName(id, 3, 1, 0x409).toUnicode()
+        assert "http://scripts.sil.org/OFL" in static_font["name"].getName(id, 3, 1, 0x409).toUnicode()
     fix_license_strings(static_font)
     for id, expected in ((13, OFL_LICENSE_INFO), (14, OFL_LICENSE_URL)):
         assert expected == static_font["name"].getName(id, 3, 1, 0x409).toUnicode()
