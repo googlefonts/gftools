@@ -712,6 +712,18 @@ def fix_nbspace_glyph(ttfont: TTFont):
     cmap = ttfont.getBestCmap()
     if 0x00A0 in cmap:
         return
+
+
+def fix_license_strings(ttfont: TTFont):
+    """Update font's nametable license and license url strings"""
+    from gftools.constants import OFL_LICENSE_URL, OFL_LICENSE_INFO
+    name_table = ttfont["name"]
+    for r in name_table.names:
+        if r.nameID == 13:
+            current_string = r.toUnicode()
+            if "SIL Open Font License" in current_string:
+                name_table.setName(OFL_LICENSE_INFO, r.nameID, r.platformID, r.platEncID, r.langID)
+                name_table.setName(OFL_LICENSE_URL, 14, r.platformID, r.platEncID, r.langID)
     
 
 def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
@@ -720,6 +732,8 @@ def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instan
         rename_font(fixed_font, new_family_name)
     if fixed_font["OS/2"].version > 1:
         fixed_font["OS/2"].version = 4
+
+    fix_license_strings(fixed_font)
 
     if "fpgm" in fixed_font:
         fix_hinted_font(fixed_font)
