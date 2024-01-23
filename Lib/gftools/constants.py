@@ -85,3 +85,11 @@ PLATID_STR = {
   PLATFORM_ID__WINDOWS: "WINDOWS",
   PLATFORM_ID__CUSTOM: "CUSTOM"
 }
+
+OFL_LICENSE_INFO = (
+  "This Font Software is licensed under the SIL Open Font License, "
+  "Version 1.1. This license is available with a FAQ at: "
+  "https://openfontlicense.org"
+)
+
+OFL_LICENSE_URL = "https://openfontlicense.org"
