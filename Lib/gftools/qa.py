@@ -6,7 +6,6 @@ import traceback
 from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
 import sys
-from requests.exceptions import HTTPError
 try:
     from diffenator2 import ninja_diff, ninja_proof
 except ModuleNotFoundError:
