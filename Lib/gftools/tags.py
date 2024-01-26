@@ -136,60 +136,24 @@ class GFTags(object):
             {"Family": str, "Group/Tag": str, "Weight": int},
             ...
         ]"""
-        columns = []
         res = []
-        seen_group_result = set()
-        for row_idx, row in enumerate(self.data):
-            if row_idx == 1:
-                columns = row
-            # Some rows have been used as padding so skip them.
-            if row_idx < 4:
-                continue
-            for col_idx, cell in enumerate(row):
-                # Doc also contains columns used for padding... meh!
-                if cell == "" or columns[col_idx] == "":
+        # rows < 4 are column headers and padding
+        for i in range(4, len(self.data)):
+            # columns < 9 are personal quality scores, filepaths, imgs and padding
+            for j in range(9, len(self.data[i])):
+                if not self.data[i][j].isnumeric():
                     continue
-                # Group names are on row 0 and tags are on row 1. To find a
-                # tag's group name, we iterate backwards on row 0 until we
-                # hit a value e.g:
-                # Sans,        ,       ,Serif,
-                #     ,Humanist,Grotesk,     ,Garalde,Didone
-                #
-                # ["Sans/Humanist", "Sans/Grotesk", "Serif/Garalde", "Serif/Didone"]
-                group_idx, group = next(
-                    (i, self.data[0][i])
-                    for i in range(col_idx, 0, -1)
-                    if self.data[0][i] != ""
-                )
-                # Some groups such as Sans and Serif also have values for each family e.g
-                #      Sans <--- Both families have values for Sans
-                #           Modern    Traditional
-                # Abel  20   30
-                # Wave  90            90
-                if group not in seen_group_result and self.data[1][group_idx] == "":
-                    if self.data[row_idx][group_idx] == "":
-                        continue
-                    res.append(
-                        {
-                            "Family": row[0],
-                            "Group/Tag": f"/{group}/{group}",
-                            "Weight": int(self.data[row_idx][group_idx]),
-                        }
-                    )
-                    seen_group_result.add(group)
-                if group not in self.CATEGORIES:
-                    raise ValueError(
-                        f"{group} isn't a know category, {self.CATEGORIES.keys()}"
-                    )
-
-                tag = columns[col_idx]
-                if tag not in self.CATEGORIES[group]:
-                    raise ValueError(f"{tag} isn't in {self.CATEGORIES[group]}")
+                family = self.data[i][0]
+                value = int(self.data[i][j])
+                group = self.data[0][j]
+                # If no tag exists for a value, it means a value has been assigned
+                # to the whole group such as Sans, Sans Serif etc
+                tag = self.data[1][j] or group
                 res.append(
                     {
-                        "Family": row[0],
+                        "Family": family,
                         "Group/Tag": f"/{group}/{tag}",
-                        "Weight": int(cell),
+                        "Weight": value,
                     }
                 )
         res.sort(key=lambda k: (k["Family"], k["Group/Tag"]))
@@ -210,7 +174,8 @@ class GFTags(object):
         # isn't tabular. However, using a Google Sheet does mean we can all
         # edit the data collaboratively and it does mean users don't need to
         # know git or install other tools.
-        # Please don't cry about all the empty columns below ;-).
+        # Please don't cry about all the empty columns below ;-). They're
+        # mainly used as whitespace in the spreadsheet
         columns_0 = [
             "Family",
             "Family Dir",
@@ -222,112 +187,112 @@ class GFTags(object):
             "UT's Quality Score",
             " Type \n Categories",
             "Serif",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Serif",
+            "Serif",
+            "Serif",
+            "Serif",
+            "Serif",
+            "Serif",
+            "Serif",
             "",
             "Sans",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Sans",
+            "Sans",
+            "Sans",
+            "Sans",
+            "Sans",
+            "Sans",
+            "Sans",
             "",
             "Slab",
-            "",
-            "",
-            "",
+            "Slab",
+            "Slab",
+            "Slab",
             "",
             "Script",
-            "",
-            "",
-            "",
-            "",
+            "Script",
+            "Script",
+            "Script",
+            "Script",
             "",
             "Display",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
+            "Display",
             "",
             "Arabic",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Arabic",
+            "Arabic",
+            "Arabic",
+            "Arabic",
+            "Arabic",
+            "Arabic",
+            "Arabic",
+            "Arabic",
+            "Arabic",
+            "Arabic",
             "",
             "Hebrew",
-            "",
-            "",
-            "",
-            "",
+            "Hebrew",
+            "Hebrew",
+            "Hebrew",
+            "Hebrew",
             "",
             "South East Asian (Thai, Khmer, Lao)",
-            "",
-            "",
-            "",
-            "",
+            "South East Asian (Thai, Khmer, Lao)",
+            "South East Asian (Thai, Khmer, Lao)",
+            "South East Asian (Thai, Khmer, Lao)",
+            "South East Asian (Thai, Khmer, Lao)",
             "",
             "Sinhala",
-            "",
-            "",
-            "",
+            "Sinhala",
+            "Sinhala",
+            "Sinhala",
             "",
             "Indic",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Indic",
+            "Indic",
+            "Indic",
+            "Indic",
+            "Indic",
             " Expressive\n Categories",
             "Simplicity",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Simplicity",
+            "Simplicity",
+            "Simplicity",
+            "Simplicity",
+            "Simplicity",
+            "Simplicity",
+            "Simplicity",
             "Youthful",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Youthful",
+            "Youthful",
+            "Youthful",
+            "Youthful",
+            "Youthful",
+            "Youthful",
+            "Youthful",
+            "Youthful",
             "Flow",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Flow",
+            "Flow",
+            "Flow",
+            "Flow",
+            "Flow",
+            "Flow",
+            "Flow",
+            "Flow",
         ]
         columns_1 = [
             "",
@@ -463,6 +428,8 @@ class GFTags(object):
         test_tags = [
             # row 0
             {"Family": "ABeeZee", "Group/Tag": "/Sans/Geometric", "Weight": 10},
+            # row 131
+            {"Family": "Akaya Kanadaka", "Group/Tag": "/Serif/Serif", "Weight": 10},
             # row 330
             {"Family": "Bonbon", "Group/Tag": "/Script/Handwritten", "Weight": 100},
             # row 577
