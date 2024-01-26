@@ -6,7 +6,6 @@ import traceback
 from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
 import sys
-
 try:
     from diffenator2 import ninja_diff, ninja_proof
 except ModuleNotFoundError:
@@ -167,7 +166,17 @@ class FontQA:
 
         client = GitHubClient(repo_owner, repo_name)
 
-        if issue_number:
-            client.create_issue_comment(issue_number, text)
-        else:
-            client.create_issue("Google Font QA report", text)
+        try:
+            if issue_number:
+                client.create_issue_comment(issue_number, text)
+            else:
+                client.create_issue("Google Font QA report", text)
+        except Exception as e:
+            logger.warn(
+                "Cannot post Fontbakery report!\n"
+                "Most likely, the repository may lack a GH_TOKEN secret, or "
+                "the pull request has come from a forked repo which "
+                "is not allowed to access the repo's secrets for "
+                f"security reasons. Full traceback:\n{e}"
+            )
+
