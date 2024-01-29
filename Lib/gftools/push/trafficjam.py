@@ -462,6 +462,13 @@ class PushItems(list):
                 "cursor"
             ]
             log.info(f"Getting items up to {last_item}")
+        for item in board_items:
+            if item["type"] != "PULL_REQUEST":
+                raise ValueError(
+                    "Traffic Jam contains issues! All items must be pull requests. "
+                    "Please remove the issues and rerun the tool, "
+                    "https://github.com/orgs/google/projects/74/views/1"
+                )
         # sort items by pr number
         board_items.sort(key=lambda k: k["content"]["url"])
 
