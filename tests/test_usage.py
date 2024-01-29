@@ -53,7 +53,9 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def test_build_ofl(self):
         from gftools.scripts.build_ofl import main
-        main([self.example_dir])
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as tmp_dir:
+            main([self.example_font, tmp_dir])
 
     def test_check_bbox(self):
         from gftools.scripts.check_bbox import main
