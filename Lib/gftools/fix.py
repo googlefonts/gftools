@@ -36,6 +36,9 @@ import logging
 import subprocess
 import os
 import tempfile
+from datetime import datetime
+import re
+from gftools.constants import OFL_BODY_TEXT
 
 
 log = logging.getLogger(__name__)
@@ -724,7 +727,28 @@ def fix_license_strings(ttfont: TTFont):
             if "SIL Open Font License" in current_string:
                 name_table.setName(OFL_LICENSE_INFO, r.nameID, r.platformID, r.platEncID, r.langID)
                 name_table.setName(OFL_LICENSE_URL, 14, r.platformID, r.platEncID, r.langID)
-    
+
+
+def fix_ofl_license(ttfont):
+    """Generate the OFL.txt text from a font"""
+    font_copyright = ttfont["name"].getName(0, 3, 1, 0x409)
+    font_name = ttfont["name"].getName(1, 3, 1, 0x409)
+    if not font_copyright or not font_name:
+        raise ValueError("Font doesn't contain copyright or name strings")
+    font_copyright = font_copyright.toUnicode()
+    if "reserved font name" in font_copyright.lower():
+        raise ValueError(
+            "Font copyright has Reserved Font Name. Please ask if it can be removed."
+        )
+    font_name = font_name.toUnicode()
+    font_year = re.search(r"[0-9]{4}", font_copyright)
+    font_year = datetime.now().year if not font_year else font_year.group(0)
+    git_url = re.search(r"(\()(.*)(\))", font_copyright)
+    if not git_url:
+        raise ValueError("Font copyright doesn't contain a git url")
+    first_line = f"Copyright {font_year} The {font_name} Project Authors ({git_url.group(2)})"
+    return f"{first_line}\n{OFL_BODY_TEXT}"
+
 
 def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
     fixed_font = deepcopy(font)
