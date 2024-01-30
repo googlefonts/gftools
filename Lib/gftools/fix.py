@@ -408,7 +408,8 @@ def copy_vertical_metrics(src_font, dst_font):
         ("hhea", "descent"),
         ("hhea", "lineGap"),
     ]:
-        val = getattr(src_font[table], key)
+        ratio = dst_font["head"].unitsPerEm / src_font["head"].unitsPerEm
+        val = int(getattr(src_font[table], key) * ratio)
         setattr(dst_font[table], key, val)
 
 
