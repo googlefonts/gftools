@@ -32,6 +32,7 @@ dependencies = [
   'absl-py',
   'glyphsLib',
   'gflanguages>=0.4.0',
+  'gfsubsets>=2024.02.05',
   'glyphsets>=0.2.1',
   'PyGithub',
   'pillow',
