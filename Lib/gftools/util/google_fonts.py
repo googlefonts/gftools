@@ -40,7 +40,6 @@ if __name__ == '__main__':
 import gftools.fonts_public_pb2 as fonts_pb2
 from fontTools import ttLib
 from gflanguages import LoadLanguages
-from glyphsets.subsets import SUBSETS
 from google.protobuf import text_format
 from hyperglot import parse
 
@@ -161,11 +160,6 @@ def RegularWeight(metadata):
   if metadata.HasField('name'):
     name = metadata.name
   raise OSError(errno.ENOENT, 'unable to find regular weight in %s' % name)
-
-
-def ListSubsets():
-  """Returns a list of all subset names, in lowercase."""
-  return SUBSETS
 
 
 def Metadata(file_or_dir):
