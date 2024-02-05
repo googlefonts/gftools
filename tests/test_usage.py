@@ -184,10 +184,6 @@ class TestGFToolsScripts(unittest.TestCase):
         from gftools.scripts.nametable_from_filename import main
         main([self.example_font])
 
-    def test_namelist(self):
-        from gftools.scripts.namelist import main
-        main([self.example_font])
-
     def test_ots(self):
         from gftools.scripts.ots import main
         main([self.example_dir])
@@ -195,10 +191,6 @@ class TestGFToolsScripts(unittest.TestCase):
     def test_rangify(self):
         from gftools.scripts.rangify import main
         main([self.nam_file])
-
-    def test_test_gf_coverage(self):
-        from gftools.scripts.test_gf_coverage import main
-        main([self.example_font])
 
     def test_ttf2cp(self):
         from gftools.scripts.ttf2cp import main

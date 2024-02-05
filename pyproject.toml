@@ -32,6 +32,7 @@ dependencies = [
   'absl-py',
   'glyphsLib',
   'gflanguages>=0.4.0',
+  'gfsubsets>=2024.02.05',
   'glyphsets>=0.2.1',
   'PyGithub',
   'pillow',
@@ -128,7 +129,6 @@ gftools-list-weightclass = "gftools.scripts.list_weightclass:main"
 gftools-list-widthclass = "gftools.scripts.list_widthclass:main"
 gftools-manage-traffic-jam = "gftools.scripts.manage_traffic_jam:main"
 gftools-metadata-vs-api = "gftools.scripts.metadata_vs_api:main"
-gftools-namelist = "gftools.scripts.namelist:main"
 gftools-nametable-from-filename = "gftools.scripts.nametable_from_filename:main"
 gftools-ots = "gftools.scripts.ots:main"
 gftools-packager = "gftools.scripts.packager:main"
@@ -143,7 +143,6 @@ gftools-sanity-check = "gftools.scripts.sanity_check:main"
 gftools-set-primary-script = "gftools.scripts.set_primary_script:main"
 gftools-space-check = "gftools.scripts.space_check:main"
 gftools-tag-noto = "gftools.scripts.tag_noto:main"
-gftools-test-gf-coverage = "gftools.scripts.test_gf_coverage:main"
 gftools-ttf2cp = "gftools.scripts.ttf2cp:main"
 gftools-ufo-fix-instances = "gftools.scripts.ufo_fix_instances:main"
 gftools-ufo-merge = "gftools.scripts.ufo_merge:main"
