@@ -27,31 +27,35 @@ import argparse
 from gfsubsets import CodepointsInFont, SubsetsForCodepoint
 
 
-parser = argparse.ArgumentParser(description='Dump codepoints in a font')
-parser.add_argument('--show_char', action='store_true',help='Print the actual character')
-parser.add_argument('--show_subsets', action='store_true',help='Print what subsets, if any, char is in')
-parser.add_argument('font', metavar='TTF', nargs="+",help='font files')
+parser = argparse.ArgumentParser(description="Dump codepoints in a font")
+parser.add_argument(
+    "--show_char", action="store_true", help="Print the actual character"
+)
+parser.add_argument(
+    "--show_subsets", action="store_true", help="Print what subsets, if any, char is in"
+)
+parser.add_argument("font", metavar="TTF", nargs="+", help="font files")
 
 
 def main(args=None):
-  args = parser.parse_args(args)
+    args = parser.parse_args(args)
 
-  cps = set()
-  for filename in args.font:
-    if not os.path.isfile(filename):
-      sys.exit('%s is not a file' % filename)
-    cps |= CodepointsInFont(filename)
+    cps = set()
+    for filename in args.font:
+        if not os.path.isfile(filename):
+            sys.exit("%s is not a file" % filename)
+        cps |= CodepointsInFont(filename)
 
-  for cp in sorted(cps):
-    show_char = ''
-    if args.show_char:
-      show_char = (' ' + chr(cp).strip() + ' ' +
-                   unicodedata.name(chr(cp), ''))
-    show_subset = ''
-    if args.show_subsets:
-      show_subset = ' subset:%s' % ','.join(SubsetsForCodepoint(cp))
+    for cp in sorted(cps):
+        show_char = ""
+        if args.show_char:
+            show_char = " " + chr(cp).strip() + " " + unicodedata.name(chr(cp), "")
+        show_subset = ""
+        if args.show_subsets:
+            show_subset = " subset:%s" % ",".join(SubsetsForCodepoint(cp))
 
-    print(u'0x%04X%s%s' % (cp, show_char, show_subset))
+        print("0x%04X%s%s" % (cp, show_char, show_subset))
 
-if __name__ == '__main__':
-  main()
+
+if __name__ == "__main__":
+    main()
