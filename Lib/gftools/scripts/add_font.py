@@ -56,7 +56,7 @@ import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
 from axisregistry import AxisRegistry
-from glyphsets.codepoints import SubsetsInFont
+from gfsubsets import SubsetsInFont
 from google.protobuf import text_format
 from pkg_resources import resource_filename
 from gftools.utils import remove_url_prefix, primary_script

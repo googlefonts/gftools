@@ -69,8 +69,7 @@ import sys
 from fontTools.ttLib import sfnt
 import argparse
 from gftools.util import google_fonts as fonts
-from glyphsets.codepoints import (CodepointsInFont,
-                                  CodepointsInSubset)
+from gfsubsets import CodepointsInFont, CodepointsInSubset
 
 
 parser = argparse.ArgumentParser(description='Compare size and coverage of two fonts')

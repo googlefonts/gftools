@@ -21,7 +21,7 @@ from __future__ import print_function
 import argparse
 import os
 
-from glyphsets.codepoints import SubsetsInFont
+from gfsubsets import SubsetsInFont
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--min_pct', type=int, default=0, help='What percentage of subset codepoints have to be supported'

@@ -24,8 +24,7 @@ import sys
 import unicodedata
 import argparse
 
-from glyphsets.codepoints import (CodepointsInFont,
-                                  SubsetsForCodepoint)
+from gfsubsets import CodepointsInFont, SubsetsForCodepoint
 
 
 parser = argparse.ArgumentParser(description='Dump codepoints in a font')

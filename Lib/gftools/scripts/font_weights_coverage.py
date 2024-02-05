@@ -31,7 +31,7 @@ import os
 from os import listdir
 import argparse
 import sys
-from glyphsets.codepoints import CodepointsInFont
+from gfsubsets import CodepointsInFont
 
 
 parser = argparse.ArgumentParser(description='Compare size and coverage of two fonts')
