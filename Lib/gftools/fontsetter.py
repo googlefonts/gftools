@@ -32,12 +32,27 @@ def hasmethod(obj, name):
     return hasattr(obj, name) and type(getattr(obj, name)) == types.MethodType
 
 
-def update_all(obj, config):
+def set_all(obj, config):
     for path, value in config.items():
-        update(obj, path, value)
+        setter(obj, path, value)
 
 
-def update(obj, path, val):
+def getter(obj, path):
+    if len(path) == 0:
+        return obj
+    key = path[0]
+    if hasmethod(obj, key):
+        import pdb
+        pdb.set_trace()
+        return getattr(obj, key)(*path[1])
+    if isinstance(key, str) and hasattr(obj, key):
+        return getter(getattr(obj, key), path[1:])
+    if isinstance(obj, (list, dict, tuple, TTFont)):
+        return getter(obj[key], path[1:])
+    return obj
+
+
+def setter(obj, path, val):
     if len(path) == 0:
         return
     key = path[0]
@@ -52,7 +67,7 @@ def update(obj, path, val):
         return
 
     if isinstance(key, str) and hasattr(obj, key):
-        update(getattr(obj, key), path[1:])
+        setter(getattr(obj, key), path[1:], val)
     elif isinstance(obj, (list, dict, tuple, TTFont)):
         is_tuple = False
         # convert numeric keys if needed
@@ -65,7 +80,7 @@ def update(obj, path, val):
         if isinstance(obj[key], tuple):
             is_tuple = True
             obj[key] = list(obj[key])
-        update(obj[key], path[1:], val)
+        setter(obj[key], path[1:], val)
         if is_tuple:
             obj[key] = tuple(obj[key])
 
@@ -78,7 +93,7 @@ def main(args=None):
     args = parser.parse_args(args)
 
     config = load_config(args.config)
-    update_all(args.font, config)
+    set_all(args.font, config)
 
     if not args.out:
         args.out = makeOutputFileName(args.font.reader.file.name)
