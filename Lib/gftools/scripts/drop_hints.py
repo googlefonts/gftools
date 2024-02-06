@@ -17,7 +17,7 @@
 #
 """Drop hints from a font."""
 import argparse
-import sys
+import array
 from fontTools.ttLib import TTFont
 
 parser = argparse.ArgumentParser(description=__doc__)
