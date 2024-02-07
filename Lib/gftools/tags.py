@@ -147,8 +147,11 @@ class GFTags(object):
                 value = int(self.data[i][j])
                 group = self.data[0][j]
                 # If no tag exists for a value, it means a value has been assigned
-                # to the whole group such as Sans, Sans Serif etc
-                tag = self.data[1][j] or group
+                # to the whole group such as Sans, Sans Serif etc. We don't want to
+                # include these since we can deduce it ourselves according to Evan.
+                tag = self.data[1][j]
+                if tag == "":
+                    continue
                 res.append(
                     {
                         "Family": family,
