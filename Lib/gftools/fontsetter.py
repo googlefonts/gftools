@@ -42,8 +42,6 @@ def getter(obj, path):
         return obj
     key = path[0]
     if hasmethod(obj, key):
-        import pdb
-        pdb.set_trace()
         return getattr(obj, key)(*path[1])
     if isinstance(key, str) and hasattr(obj, key):
         return getter(getattr(obj, key), path[1:])
