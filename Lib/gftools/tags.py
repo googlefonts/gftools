@@ -12,6 +12,7 @@ import csv
 import requests
 from io import StringIO
 from functools import lru_cache
+from difflib import Differ
 
 
 class SheetStructureChange(Exception):
@@ -416,14 +417,16 @@ class GFTags(object):
             "Artistic",
         ]
         if self.data[0] != columns_0:
+            differences = "\n".join(Differ().compare(columns_0, self.data[0]))
             raise SheetStructureChange(
                 "Sheet's first row of columns has changed. If intentional, "
-                "please update columns_0 variable."
+                f"please update columns_0 variable.\n**Changes**:\n{differences}"
             )
         if self.data[1] != columns_1:
+            differences = "\n".join(Differ().compare(columns_1, self.data[1]))
             raise SheetStructureChange(
                 "Sheet's second row of columns have changed. If intentional, "
-                "please update columns_1 variable."
+                "please update columns_1 variable.\n**Changes**:\n{differences}"
             )
 
         # Check a few families
