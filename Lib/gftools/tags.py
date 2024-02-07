@@ -12,6 +12,7 @@ import csv
 import requests
 from io import StringIO
 from functools import lru_cache
+from difflib import Differ
 
 
 class SheetStructureChange(Exception):
@@ -41,7 +42,7 @@ class GFTags(object):
         ],
         "Slab": ["Geometric", "Humanist", "Clarendon"],
         "Script": ["Formal", "Informal", "Handwritten", "Upright Script"],
-        "Display": [
+        "Theme": [
             "Blackletter",
             "Wacky",
             "Blobby",
@@ -145,14 +146,25 @@ class GFTags(object):
                     continue
                 family = self.data[i][0]
                 value = int(self.data[i][j])
-                group = self.data[0][j]
+                category = self.data[0][j]
                 # If no tag exists for a value, it means a value has been assigned
-                # to the whole group such as Sans, Sans Serif etc
-                tag = self.data[1][j] or group
+                # to the whole group such as Sans, Sans Serif etc. We don't want to
+                # include these since we can deduce it ourselves according to Evan.
+                sub_category = self.data[1][j]
+                if sub_category == "":
+                    continue
+                if category not in self.CATEGORIES:
+                    raise ValueError(
+                        f"'{category}' not in known categories, '{self.CATEGORIES.keys()}'"
+                    )
+                if sub_category not in self.CATEGORIES[category]:
+                    raise ValueError(
+                        f"'{sub_category}' not in known sub categories, '{self.CATEGORIES[category]}'"
+                    )
                 res.append(
                     {
                         "Family": family,
-                        "Group/Tag": f"/{group}/{tag}",
+                        "Group/Tag": f"/{category}/{sub_category}",
                         "Weight": value,
                     }
                 )
@@ -215,21 +227,21 @@ class GFTags(object):
             "Script",
             "Script",
             "",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
-            "Display",
+            "Size/Large",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
+            "Theme",
             "",
             "Arabic",
             "Arabic",
@@ -413,14 +425,16 @@ class GFTags(object):
             "Artistic",
         ]
         if self.data[0] != columns_0:
+            differences = "\n".join(Differ().compare(columns_0, self.data[0]))
             raise SheetStructureChange(
                 "Sheet's first row of columns has changed. If intentional, "
-                "please update columns_0 variable."
+                f"please update columns_0 variable.\n**Changes**:\n{differences}"
             )
         if self.data[1] != columns_1:
+            differences = "\n".join(Differ().compare(columns_1, self.data[1]))
             raise SheetStructureChange(
                 "Sheet's second row of columns have changed. If intentional, "
-                "please update columns_1 variable."
+                "please update columns_1 variable.\n**Changes**:\n{differences}"
             )
 
         # Check a few families
@@ -428,8 +442,6 @@ class GFTags(object):
         test_tags = [
             # row 0
             {"Family": "ABeeZee", "Group/Tag": "/Sans/Geometric", "Weight": 10},
-            # row 131
-            {"Family": "Akaya Kanadaka", "Group/Tag": "/Serif/Serif", "Weight": 10},
             # row 330
             {"Family": "Bonbon", "Group/Tag": "/Script/Handwritten", "Weight": 100},
             # row 577
