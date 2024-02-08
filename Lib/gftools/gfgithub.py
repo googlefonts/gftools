@@ -56,6 +56,19 @@ class GitHubClient:
             )
         return base_url
 
+    def get_content(self, path, branch=None):
+        if branch:
+            url = self.rest_url(f"contents/{path}", ref=branch)
+        else:
+            url = self.rest_url(f"contents/{path}")
+        headers = {
+            "Accept": "application/vnd.github.v3.raw",
+            "Authorization": f"bearer {self.gh_token}",
+        }
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return response
+
     def get_blob(self, file_sha):
         url = self.rest_url(f"git/blobs/{file_sha}")
         headers = {
