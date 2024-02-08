@@ -90,7 +90,7 @@ def main(args=None):
         mod = import_module(f".{module}", package)
         mod.main(args[2:])
     elif "--list-subcommands" in sys.argv:
-        print(' '.join(list(subcommands.keys())))
+        print(' '.join(list(sorted(subcommands.keys()))))
     else:
         # shows menu and help if no args
         print_menu()
