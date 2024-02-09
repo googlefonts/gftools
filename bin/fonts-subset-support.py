@@ -19,7 +19,7 @@ import os
 import sys
 from absl import flags, app
 from gftools.util import google_fonts as fonts
-from glyphsets.codepoints import (CodepointsInFont,
+from gfsubsets import (CodepointsInFont,
                                   CodepointsInSubset)
 
 FLAGS = flags.FLAGS
