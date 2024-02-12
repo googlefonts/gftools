@@ -10,7 +10,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-parser = ArgumentParser(description=__doc__)
+parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
 parser.add_argument("font", help="Font file")
 parser.add_argument("-o", help="Output font file")
 parser.add_argument(
@@ -35,11 +35,7 @@ Commands may be:
 * `<feature> => |<feature2>` to move the lookups to the start of feature2.
 """,
 )
-args = parser.parse_args()
-ttfont = TTFont(args.font)
 LAYOUT_TABLES = ["GSUB", "GPOS"]
-tables = [ttfont[table].table for table in LAYOUT_TABLES if table in ttfont]
-
 KEY_RE = r"(?:(\w+)/)?(?:(\w+)/)?(\w+)"
 
 
@@ -135,38 +131,46 @@ def remap_lookups(table, src, dst, operation="copy", start=False):
             return
     logging.error(f"[{tag}] destination feature {dst_script}/{dst_lang}/{dst_feature} not found")
     
+def main(args=None):
+    args = parser.parse_args()
+    ttfont = TTFont(args.font)
+    tables = [ttfont[table].table for table in LAYOUT_TABLES if table in ttfont]
+    for cmd in args.commands:
+        if cmd.startswith("!"):
+            script, lang, feature = parse_key(cmd[1:])
+            for table in tables:
+                delete_feature(table, script, lang, feature)
+            continue
+        src = re.match(KEY_RE, cmd)
+        if src is None:
+            raise ValueError(f"Could not parse source: {cmd}")
+        cmd = cmd[len(src.group(0)):]
 
-for cmd in args.commands:
-    if cmd.startswith("!"):
-        script, lang, feature = parse_key(cmd[1:])
+        remap = None
+        if re.match(r"^\s*->\s*", cmd):
+            remap = "copy"
+        elif re.match(r"^\s*=>\s*", cmd):
+            remap = "move"
+        else:
+            raise ValueError(f"Could not parse operation: {cmd}")
+        dst = re.sub(r"^\s*->\s*|\s*=>\s*", "", cmd).strip()
+
+        start = False
+        if dst.startswith("|"):
+            dst = dst[1:]
+            start = True
+        dst = re.match(KEY_RE, dst)
+        if dst is None:
+            raise ValueError(f"Could not parse destination: {cmd}")
         for table in tables:
-            delete_feature(table, script, lang, feature)
-        continue
-    src = re.match(KEY_RE, cmd)
-    if src is None:
-        raise ValueError(f"Could not parse source: {cmd}")
-    cmd = cmd[len(src.group(0)):]
+            remap_lookups(
+                table, parse_key(src[0]), parse_key(dst[0]), operation=remap, start=start
+            )
 
-    remap = None
-    if re.match(r"^\s*->\s*", cmd):
-        remap = "copy"
-    elif re.match(r"^\s*=>\s*", cmd):
-        remap = "move"
+    if args.o:
+        ttfont.save(args.o)
     else:
-        raise ValueError(f"Could not parse operation: {cmd}")
-    dst = re.sub(r"^\s*->\s*|\s*=>\s*", "", cmd).strip()
+        ttfont.save(args.font)
 
-    start = False
-    if dst.startswith("|"):
-        dst = dst[1:]
-        start = True
-    dst = re.match(KEY_RE, dst)
-    if dst is None:
-        raise ValueError(f"Could not parse destination: {cmd}")
-    for table in tables:
-        remap_lookups(
-            table, parse_key(src[0]), parse_key(dst[0]), operation=remap, start=start
-        )
-
-if args.o:
-    ttfont.save(args.o)
+if __name__ == "__main__":
+    main()
