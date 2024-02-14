@@ -12,7 +12,7 @@ import ufoLib2
 import yaml
 from fontmake.font_project import FontProject
 from fontTools.designspaceLib import DesignSpaceDocument
-from glyphsets import GFGlyphData
+from glyphsets import unicodes_per_glyphset
 from strictyaml import HexInt, Map, Optional, Seq, Str, Enum
 from ufomerge import merge_ufos
 
@@ -59,11 +59,7 @@ def prepare_minimal_subsets(subsets):
     for subset in subsets:
         # Resolved named subsets to a set of Unicode using glyphsets data
         if "name" in subset:
-            unicodes = [
-                x["unicode"]
-                for x in GFGlyphData.glyphs_in_glyphsets([subset["name"]])
-                if x["unicode"]
-            ]
+            unicodes = unicodes_per_glyphset(subset["name"])
             if not unicodes:
                 raise ValueError("No glyphs found for subset " + subset["name"])
         else:
