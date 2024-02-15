@@ -271,6 +271,8 @@ def _html_custom_formatter(string):
     string = " ".join(string.split())
     # Break sentences into new lines
     string = string.replace(". ", ".\n ")
+    string = string.replace("! ", "!\n ")
+    string = string.replace("? ", "?\n ")
     return string
 
 def format_html(html):
