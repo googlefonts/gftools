@@ -33,7 +33,7 @@ dependencies = [
   'glyphsLib',
   'gflanguages>=0.4.0',
   'gfsubsets>=2024.02.05',
-  'glyphsets>=0.2.1',
+  'glyphsets>=0.6.13',
   'PyGithub',
   'pillow',
   # 3.7.0 fixed a bug on parsing some METADATA.pb files.
