@@ -42,7 +42,7 @@ from fontTools.ttLib import TTFont # type: ignore
 from gflanguages import LoadLanguages
 from gftools.util import google_fonts as fonts
 from gftools.gfgithub import GitHubClient
-from gftools.utils import download_file
+from gftools.utils import download_file, format_html
 
 # ignore type because mypy error: Module 'google.protobuf' has no
 # attribute 'text_format'
@@ -311,7 +311,10 @@ def _write_file_to_package(basedir:str, filename:str, data:bytes) -> None:
 
   os.makedirs(os.path.dirname(full_name), exist_ok=True)
   with open(full_name, 'wb') as f:
-    f.write(data)
+    if full_name.lower().endswith(".htm") or full_name.lower().endswith(".html"):
+      f.write(format_html(data).encode('utf-8'))
+    else:
+      f.write(data)
 
 def _file_in_package(basedir, filename):
   full_name = os.path.join(basedir, filename)

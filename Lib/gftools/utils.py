@@ -40,6 +40,7 @@ if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
     from ConfigParser import ConfigParser
+from bs4 import BeautifulSoup
 
 # =====================================
 # HELPER FUNCTIONS
@@ -261,6 +262,19 @@ def mkdir(path, overwrite=True):
     if not os.path.isdir(path):
         os.makedirs(path)
     return path
+
+
+def _html_custom_formatter(string):
+    # Remove new lines
+    string = string.replace("\n", " ")
+    # Remove extra spaces
+    string = " ".join(string.split())
+    # Break sentences into new lines
+    string = string.replace(". ", ".\n ")
+    return string
+
+def format_html(html):
+  return BeautifulSoup(html, "html.parser").prettify(formatter=_html_custom_formatter)
 
 
 ## Font-related utility functions
