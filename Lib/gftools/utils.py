@@ -265,11 +265,7 @@ def mkdir(path, overwrite=True):
 
 
 def _html_custom_formatter(string):
-    # Find whitespace at the beginning of the string
-    whitespace = ""
-    match = re.match(r"^\s*", string)
-    if match:
-        whitespace = match.group(0)
+    whitespace = " "
     # Remove new lines
     string = string.replace("\n", " ")
     # Remove extra spaces
@@ -278,8 +274,6 @@ def _html_custom_formatter(string):
     string = string.replace(". ", f".\n{whitespace}")
     string = string.replace("! ", f"!\n{whitespace}")
     string = string.replace("? ", f"?\n{whitespace}")
-    # Remove extra new lines introduced by {whitespace} above
-    string = string.replace("\n\n", "\n")
     return string
 
 
