@@ -12,6 +12,7 @@ from functools import cached_property
 
 from gftools.push.items import Axis, Designer, Family, FamilyMeta
 from gftools.push.utils import google_path_to_repo_path, repo_path_to_google_path
+import json
 
 log = logging.getLogger("gftools.push")
 
@@ -107,6 +108,7 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
     projectV2(number: 74) {
       id
       title
+      updatedAt
       items(first: 100, after: "%s") {
         totalCount
         edges {
@@ -434,56 +436,75 @@ class PushItems(list):
         return results
 
     @classmethod
-    def from_traffic_jam(cls):
+    def from_traffic_jam(cls, fp=None):
         log.info("Getting push items from traffic jam board")
         from gftools.gfgithub import GitHubClient
 
         g = GitHubClient("google", "fonts")
         last_item = ""
         data = g._run_graphql(GOOGLE_FONTS_TRAFFIC_JAM_QUERY % last_item, {})
-        board_items = data["data"]["organization"]["projectV2"]["items"]["nodes"]
+        board_items = None
+        # use cached items if board hasn't been updated
+        if fp and fp.exists():
+            existing = json.load(open(fp, encoding="utf8"))
+            last_update = existing["updatedAt"]
+            current_update = data["data"]["organization"]["projectV2"]["updatedAt"]
+            if last_update == current_update:
+                board_items = existing["board_items"]
 
-        # paginate through items in board
-        last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1][
-            "cursor"
-        ]
-        item_count = data["data"]["organization"]["projectV2"]["items"]["totalCount"]
-        while len(board_items) < item_count:
-            data = None
-            while not data:
-                try:
-                    data = g._run_graphql(
-                        GOOGLE_FONTS_TRAFFIC_JAM_QUERY % last_item, {}
-                    )
-                except:
-                    data = None
-            board_items += data["data"]["organization"]["projectV2"]["items"]["nodes"]
+        if not board_items:
+            board_items = data["data"]["organization"]["projectV2"]["items"]["nodes"]
+
+            # paginate through items in board
             last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1][
                 "cursor"
             ]
-            log.info(f"Getting items up to {last_item}")
-        for item in board_items:
-            if item["type"] != "PULL_REQUEST":
-                raise ValueError(
-                    "Traffic Jam contains issues! All items must be pull requests. "
-                    "Please remove the issues and rerun the tool, "
-                    "https://github.com/orgs/google/projects/74/views/1"
-                )
-        # sort items by pr number
-        board_items.sort(key=lambda k: k["content"]["url"])
+            item_count = data["data"]["organization"]["projectV2"]["items"]["totalCount"]
+            while len(board_items) < item_count:
+                data = None
+                while not data:
+                    try:
+                        data = g._run_graphql(
+                            GOOGLE_FONTS_TRAFFIC_JAM_QUERY % last_item, {}
+                        )
+                    except:
+                        data = None
+                board_items += data["data"]["organization"]["projectV2"]["items"]["nodes"]
+                last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1][
+                    "cursor"
+                ]
+                log.info(f"Getting items up to {last_item}")
+            for item in board_items:
+                if item["type"] != "PULL_REQUEST":
+                    raise ValueError(
+                        "Traffic Jam contains issues! All items must be pull requests. "
+                        "Please remove the issues and rerun the tool, "
+                        "https://github.com/orgs/google/projects/74/views/1"
+                    )
+            # sort items by pr number
+            board_items.sort(key=lambda k: k["content"]["url"])
 
-        # get files for prs which have more than 100 changed files
-        for item in board_items:
-            changed_files = item["content"]["files"]["totalCount"]
-            if changed_files <= 100:
-                continue
-            pr_number = item["content"]["number"]
-            pr_url = item["content"]["url"]
-            log.warn(
-                f"{pr_url} has {changed_files} changed files. Attempting to fetch them."
-            )
-            files = g.pr_files(pr_number)
-            item["content"]["files"]["nodes"] = [{"path": f["filename"]} for f in files]
+            # get files for prs which have more than 100 changed files
+            for item in board_items:
+                changed_files = item["content"]["files"]["totalCount"]
+                if changed_files <= 100:
+                    continue
+                pr_number = item["content"]["number"]
+                pr_url = item["content"]["url"]
+                log.warn(
+                    f"{pr_url} has {changed_files} changed files. Attempting to fetch them."
+                )
+                files = g.pr_files(pr_number)
+                item["content"]["files"]["nodes"] = [{"path": f["filename"]} for f in files]
+
+            # save
+            if fp:
+                dat = {
+                    "updatedAt": data["data"]["organization"]["projectV2"]["updatedAt"],
+                    "board_items": board_items
+                }
+                with open(fp, "w", encoding="utf-8") as doc:
+                    json.dump(dat, doc, indent=4)
 
         results = cls()
         for item in board_items:

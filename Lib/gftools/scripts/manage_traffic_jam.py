@@ -274,7 +274,8 @@ def main(args=None):
 
     os.chdir(args.fonts_repo)
 
-    push_items = PushItems.from_traffic_jam()
+    traffic_jam_data = (Path("~") / ".gf_traffic_jam_data.json").expanduser()
+    push_items = PushItems.from_traffic_jam(traffic_jam_data)
     if not args.show_open_prs:
         push_items = PushItems(i for i in push_items if i.merged == True)
     if "lists" in args.filter:
