@@ -145,7 +145,15 @@ class GFServer(Itemer):
         for family_data in families_data:
             family_name = family_data["family"]
             last_modified = family_data["lastModified"]
-            if last_modified >= last_checked:
+
+            cached_family_version = self.family_versions.get(family_name)
+            existing_family_version = self.families.get(family_name)
+            # always ensure we repull family data if the family_version api
+            # is different
+            if cached_family_version and existing_family_version:
+                if cached_family_version != existing_family_version.version:
+                    self.update(family_name)
+            elif last_modified >= last_checked:
                 self.update(family_name)
 
     def update(self, family_name):
@@ -194,7 +202,11 @@ class GFServers(Itemer):
     def save(self, fp: "str | Path"):
         from copy import deepcopy
 
-        data = deepcopy(self).to_json()
+        cp = deepcopy(self)
+        # do not save family_versions data. We want to request this each time
+        if hasattr(cp, "family_versions"):
+            delattr(cp, "family_versions")
+        data = cp.to_json()
         json.dump(data, open(fp, "w", encoding="utf8"), indent=4)
 
     @classmethod
@@ -210,6 +222,10 @@ class GFServers(Itemer):
             server = getattr(inst, server_name)
 
             for item_type, item_value in data[server_name].items():
+                # if family_versions data is saved, skip it so we get requested
+                # data instead
+                if item_type in ["family_versions", "traffic_jam"]:
+                    continue
                 if item_type == "families":
                     server.families = {k: Family(**v) for k, v in item_value.items()}
                 elif item_type == "designers":
