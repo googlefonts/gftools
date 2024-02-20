@@ -318,7 +318,6 @@ def fix_nametable(ttFont):
 
 
 def rename_font(font, new_name, aggressive=True):
-    nametable = font["name"]
     current_name = font_familyname(font)
     if not current_name:
         raise Exception(
