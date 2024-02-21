@@ -70,9 +70,9 @@ axis_registry = AxisRegistry()
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--min_pct", type=int, default=50, help='What percentage of subset codepoints have to be supported'
                      ' for a non-ext subset.')
-parser.add_argument("--min_pct_ext", type=float, default=0.01, help='What percentage of subset codepoints have to be supported'
+parser.add_argument("--min_pct_ext", type=float, default=1, help='What percentage of subset codepoints have to be supported'
                    ' for a -ext subset.')
-parser.add_argument("--min_relaxed_pct", type=int, default=0.5, help='What percentage of subset codepoints have to be supported'
+parser.add_argument("--min_relaxed_pct", type=int, default=50, help='What percentage of subset codepoints have to be supported'
                      f' for a relaxed subset ({", ".join(RELAXED_SUBSETS)}).')
 parser.add_argument("--lang", type=str, help='Path to lang metadata package', default=None)
 parser.add_argument("directory", type=str, help='A directory containing a font family')
