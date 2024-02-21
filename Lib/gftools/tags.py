@@ -57,6 +57,7 @@ class GFTags(object):
             "Art Deco",
             "Medieval",
             "Brush/Marker",
+            "Pixel",
         ],
         "Arabic": [
             "Kufi",
