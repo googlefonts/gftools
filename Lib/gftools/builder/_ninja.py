@@ -229,10 +229,9 @@ class NinjaBuilder(GFBuilder):
         for (designspace_path, designspace) in self.designspaces:
             axis_tags = sorted([ax.tag for ax in designspace.axes])
             axis_tags = ",".join(axis_tags)
-            target = os.path.join(
-                self.config["vfDir"],
-                Path(designspace_path).stem + "[%s].ttf" % axis_tags,
-            )
+            vf_family_name = designspace.findDefault().familyName
+            vf_filename = f"{vf_family_name.replace(' ', '')}[{axis_tags}].ttf"
+            target = os.path.join(self.config["vfDir"], vf_filename)
             self.w.build(
                 target,
                 "variable",
