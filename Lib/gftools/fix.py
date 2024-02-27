@@ -317,8 +317,7 @@ def fix_nametable(ttFont):
         log.info("")
 
 
-def rename_font(font, new_name):
-    nametable = font["name"]
+def rename_font(font, new_name, aggressive=True):
     current_name = font_familyname(font)
     if not current_name:
         raise Exception(
@@ -326,7 +325,7 @@ def rename_font(font, new_name):
             "This tool does not work on webfonts."
         )
     log.info("Updating font name records")
-    build_name_table(font, family_name=new_name)
+    build_name_table(font, family_name=new_name, aggressive=aggressive)
 
 
 def fix_filename(ttFont):
