@@ -297,7 +297,7 @@ class GFBuilder:
         if "autohintTTF" not in self.config:
             self.config["autohintTTF"] = True
         if "autohintOTF" not in self.config:
-            self.config["autohintOTF"] = True
+            self.config["autohintOTF"] = False
         if "ttfaUseScript" not in self.config:
             self.config["ttfaUseScript"] = False
         if "logLevel" not in self.config:
