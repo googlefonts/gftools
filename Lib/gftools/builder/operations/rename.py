@@ -3,7 +3,7 @@ from gftools.builder.operations import OperationBase
 
 class Rename(OperationBase):
     description = "Rename a font"
-    rule = 'gftools-rename-font -o $out $in "$name"'
+    rule = 'gftools-rename-font -o $out $args $in "$name"'
 
     def validate(self):
         # Ensure there is a new name
