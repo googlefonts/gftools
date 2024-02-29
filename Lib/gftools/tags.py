@@ -8,10 +8,10 @@ https://docs.google.com/spreadsheets/d/1Nc5DUsgVLbJ3P58Ttyhr5r-KYVnJgrj47VvUm1Rs
 This sheet contains all the font tagging information which is used in
 the Google Fonts website to help users find font families.
 """
+
 import csv
 import requests
 from io import StringIO
-from functools import lru_cache
 from difflib import Differ
 
 
@@ -20,7 +20,10 @@ class SheetStructureChange(Exception):
 
 
 class GFTags(object):
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQVM--FKzKTWL-8w0l5AE1e087uU_OaQNHR3_kkxxymoZV5XUnHzv9TJIdy7vcd0Saf4m8CMTMFqGcg/pub?gid=1193923458&single=true&output=csv"
+    # Original sheet tagging data created by Universal Thirst for the whole GF collection
+    SHEET1_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQVM--FKzKTWL-8w0l5AE1e087uU_OaQNHR3_kkxxymoZV5XUnHzv9TJIdy7vcd0Saf4m8CMTMFqGcg/pub?gid=1193923458&single=true&output=csv"
+    # Submissions from designers via form https://forms.gle/jcp3nDv63LaV1rxH6
+    SHEET2_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQVM--FKzKTWL-8w0l5AE1e087uU_OaQNHR3_kkxxymoZV5XUnHzv9TJIdy7vcd0Saf4m8CMTMFqGcg/pub?gid=378442772&single=true&output=csv"
     CATEGORIES = {
         "Serif": [
             "Humanist Venetian",
@@ -122,36 +125,45 @@ class GFTags(object):
             "Fancy",
             "Artistic",
         ],
+        "Not text": [
+            "Experimental",
+            "Emojis",
+            "Symbols",
+        ],
     }
 
     def __init__(self):
-        self.data = self._get_sheet_data()
+        self.sheet1_data = self._get_sheet_data(self.SHEET1_URL)
+        self.sheet2_data = self._get_sheet_data(self.SHEET2_URL)
 
-    @lru_cache
-    def _get_sheet_data(self):
-        req = requests.get(self.SHEET_URL)
+    def _get_sheet_data(self, sheet_url):
+        req = requests.get(sheet_url)
         return list(csv.reader(StringIO(req.text)))
 
-    def _parse_csv(self):
+    def _parse_csv(self, data, skip_rows=[], skip_columns=[], family_name_col=0):
         """Convert the tabular sheet data into
         [
             {"Family": str, "Group/Tag": str, "Weight": int},
             ...
         ]"""
         res = []
-        # rows < 4 are column headers and padding
-        for i in range(4, len(self.data)):
-            # columns < 9 are personal quality scores, filepaths, imgs and padding
-            for j in range(9, len(self.data[i])):
-                if not self.data[i][j].isnumeric():
+        for i in range(len(data)):
+            if i in skip_rows:
+                continue
+            for j in range(len(data[i])):
+                if j in skip_columns:
                     continue
-                family = self.data[i][0]
-                value = int(self.data[i][j])
-                category = self.data[0][j]
+                if not data[i][j].isnumeric():
+                    continue
+                family = data[i][family_name_col]
+                value = int(data[i][j])
+                if value == 0:
+                    continue
+                category = data[0][j]
                 # If no tag exists for a value, it means a value has been assigned
                 # to the whole group such as Sans, Sans Serif etc. We don't want to
                 # include these since we can deduce it ourselves according to Evan.
-                sub_category = self.data[1][j]
+                sub_category = data[1][j]
                 if sub_category == "":
                     continue
                 if category not in self.CATEGORIES:
@@ -172,293 +184,64 @@ class GFTags(object):
         res.sort(key=lambda k: (k["Family"], k["Group/Tag"]))
         return res
 
+    def _parse_sheets_csv(self):
+        sheet1 = self._parse_csv(
+            self.sheet1_data,
+            skip_rows=[0, 1, 2, 3],
+            skip_columns=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        )
+        sheet2 = self._parse_csv(
+            self.sheet2_data,
+            skip_rows=[0, 1],
+            skip_columns=[0, 1, 2, 3, 4, 5, 6],
+            family_name_col=2,
+        )
+        return sheet1 + sheet2
+
     def to_csv(self, fp):
         """Export the Google Sheet into a csv format suitable for the
         google/fonts git repo."""
-        munged_data = self._parse_csv()
+        data = self._parse_sheets_csv()
         with open(fp, "w", encoding="utf-8") as out_doc:
             out_csv = csv.DictWriter(out_doc, ["Family", "Group/Tag", "Weight"])
             out_csv.writeheader()
-            out_csv.writerows(munged_data)
+            out_csv.writerows(data)
 
     def check_structure(self):
-        # Check Google Sheet columns haven't changed.
-        # Personally, I wouldn't have used a Google Sheet since the data
-        # isn't tabular. However, using a Google Sheet does mean we can all
-        # edit the data collaboratively and it does mean users don't need to
-        # know git or install other tools.
-        # Please don't cry about all the empty columns below ;-). They're
-        # mainly used as whitespace in the spreadsheet
-        columns_0 = [
-            "Family",
-            "Family Dir",
-            "Existing Category",
-            "Sample Image",
-            "",
-            "Eli's Quality Score",
-            "Eben's Quality Score",
-            "UT's Quality Score",
-            " Type \n Categories",
-            "Serif",
-            "Serif",
-            "Serif",
-            "Serif",
-            "Serif",
-            "Serif",
-            "Serif",
-            "Serif",
-            "",
-            "Sans",
-            "Sans",
-            "Sans",
-            "Sans",
-            "Sans",
-            "Sans",
-            "Sans",
-            "Sans",
-            "",
-            "Slab",
-            "Slab",
-            "Slab",
-            "Slab",
-            "",
-            "Script",
-            "Script",
-            "Script",
-            "Script",
-            "Script",
-            "",
-            "Size/Large",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "Theme",
-            "",
-            "Arabic",
-            "Arabic",
-            "Arabic",
-            "Arabic",
-            "Arabic",
-            "Arabic",
-            "Arabic",
-            "Arabic",
-            "Arabic",
-            "Arabic",
-            "Arabic",
-            "",
-            "Hebrew",
-            "Hebrew",
-            "Hebrew",
-            "Hebrew",
-            "Hebrew",
-            "",
-            "South East Asian (Thai, Khmer, Lao)",
-            "South East Asian (Thai, Khmer, Lao)",
-            "South East Asian (Thai, Khmer, Lao)",
-            "South East Asian (Thai, Khmer, Lao)",
-            "South East Asian (Thai, Khmer, Lao)",
-            "",
-            "Sinhala",
-            "Sinhala",
-            "Sinhala",
-            "Sinhala",
-            "",
-            "Indic",
-            "Indic",
-            "Indic",
-            "Indic",
-            "Indic",
-            "Indic",
-            " Expressive\n Categories",
-            "Simplicity",
-            "Simplicity",
-            "Simplicity",
-            "Simplicity",
-            "Simplicity",
-            "Simplicity",
-            "Simplicity",
-            "Simplicity",
-            "Youthful",
-            "Youthful",
-            "Youthful",
-            "Youthful",
-            "Youthful",
-            "Youthful",
-            "Youthful",
-            "Youthful",
-            "Youthful",
-            "Flow",
-            "Flow",
-            "Flow",
-            "Flow",
-            "Flow",
-            "Flow",
-            "Flow",
-            "Flow",
-            "Flow",
-        ]
-        columns_1 = [
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "Humanist Venetian",
-            "Old Style Garalde",
-            "Transitional",
-            "Modern",
-            "Scotch",
-            "Didone",
-            "Fat Face",
-            "",
-            "",
-            "Humanist",
-            "Grotesque",
-            "Neo Grotesque",
-            "Geometric",
-            "Rounded",
-            "Superelipse",
-            "Glyphic",
-            "",
-            "",
-            "Geometric",
-            "Humanist",
-            "Clarendon",
-            "",
-            "",
-            "Formal",
-            "Informal",
-            "Handwritten",
-            "Upright Script",
-            "",
-            "",
-            "Blackletter",
-            "Wacky",
-            "Blobby",
-            "Woodtype",
-            "Stencil",
-            "Inline",
-            "Distressed",
-            "Shaded",
-            "Techno",
-            "Art Nouveau",
-            "Tuscan",
-            "Art Deco",
-            "Medieval",
-            "Brush/Marker",
-            "",
-            "",
-            "Kufi",
-            "Naskh",
-            "Nastaliq",
-            "Maghribi",
-            "Ruqah",
-            "Diwani",
-            "Bihari",
-            "Warsh",
-            "Sudani",
-            "West African",
-            "",
-            "",
-            "Normal",
-            "Ashurit",
-            "Cursive",
-            "Rashi",
-            "",
-            "",
-            "Looped",
-            "Loopless",
-            "Moul (Khmer)",
-            "Chrieng (Khmer)",
-            "",
-            "",
-            "Traditional/High contrast",
-            "Contemporary/High contrast",
-            "Low contrast",
-            "",
-            "",
-            "Traditional/High contrast",
-            "Contemporary/High contrast",
-            "Low contrast",
-            "Sign Painting/vernacular",
-            "Reverse-contrast",
-            "",
-            "Calm/simple",
-            "Competent",
-            "Business",
-            "Sincere",
-            "Loud",
-            "Awkward",
-            "Innovative",
-            "Artistic",
-            "Playful",
-            "Excited",
-            "Cute",
-            "Happy",
-            "Childlike",
-            "Loud",
-            "Rugged",
-            "Vintage",
-            "Stiff",
-            "Rugged",
-            "Futuristic",
-            "Calm",
-            "Childlike",
-            "Active",
-            "Cute",
-            "Sophisticated",
-            "Fancy",
-            "Artistic",
-        ]
-        if self.data[0] != columns_0:
-            differences = "\n".join(Differ().compare(columns_0, self.data[0]))
-            raise SheetStructureChange(
-                "Sheet's first row of columns has changed. If intentional, "
-                f"please update columns_0 variable.\n**Changes**:\n{differences}"
-            )
-        if self.data[1] != columns_1:
-            differences = "\n".join(Differ().compare(columns_1, self.data[1]))
-            raise SheetStructureChange(
-                "Sheet's second row of columns have changed. If intentional, "
-                "please update columns_1 variable.\n**Changes**:\n{differences}"
-            )
-
-        # Check a few families
-        munged_data = self._parse_csv()
+        # Check a few families to determine whether the spreadsheet is broken
+        munged_data = self._parse_sheets_csv()
         test_tags = [
-            # row 0
+            # sheet1 row 0
             {"Family": "ABeeZee", "Group/Tag": "/Sans/Geometric", "Weight": 10},
-            # row 330
+            # sheet1 row 330
             {"Family": "Bonbon", "Group/Tag": "/Script/Handwritten", "Weight": 100},
-            # row 577
+            # sheet1 row 577
             {
                 "Family": "Cormorant SC",
                 "Group/Tag": "/Serif/Old Style Garalde",
                 "Weight": 100,
             },
-            # row 900
+            # sheet1 row 900
             {"Family": "Gochi Hand", "Group/Tag": "/Script/Informal", "Weight": 100},
-            # row 1354
+            # sheet1 row 1354
             {
                 "Family": "Zilla Slab Highlight",
                 "Group/Tag": "/Slab/Geometric",
                 "Weight": 20,
             },
+            # sheet2 row 1
+            {
+                "Family": "Noto Serif Hentaigana",
+                "Group/Tag": "/Script/Formal",
+                "Weight": 20,
+            },
+            # sheet2 row 2
+            {
+                "Family": "Platypi",
+                "Group/Tag": "/Serif/Humanist Venetian",
+                "Weight": 20,
+            },
+            {"Family": "Platypi", "Group/Tag": "/Theme/Art Nouveau", "Weight": 5},
         ]
         for tag in test_tags:
             if tag not in munged_data:
