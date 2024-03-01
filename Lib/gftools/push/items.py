@@ -200,9 +200,9 @@ class FamilyMeta(Itemer):
             stroke=stroke,
             classifications=[c.lower() for c in meta["classifications"]],
             description=None if article else parse_html(meta["description"]),
-            primary_script=None
-            if meta["primaryScript"] == ""
-            else meta["primaryScript"],
+            primary_script=(
+                None if meta["primaryScript"] == "" else meta["primaryScript"]
+            ),
             article=article,
             minisite_url=None if meta["minisiteUrl"] == "" else meta["minisiteUrl"],
         )
