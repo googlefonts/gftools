@@ -57,7 +57,7 @@ def server():
         # probably use mocks at some point
         ("update_family", "Allan", Family("Allan", "Version 1.002")),
         ("update_family_designers", "Allan", Designer(name='Anton Koovit', bio=None)),
-        ("update_metadata", "Allan", FamilyMeta(name='Allan', designer=['Anton Koovit'], license='ofl', category='DISPLAY', subsets=['latin', 'latin-ext'], stroke='SERIF', classifications=['display'], description='<html>\n <body>\n  <p>\n   Once Allan was a sign painter in Berlin. Grey paneling work in the subway, bad materials, a city split in two. Now things have changed. His (character) palette of activities have expanded tremendously: he happily spends time traveling, experimenting in the gastronomic field, all kinds of festivities are no longer foreign to him. He comes with alternate features, and hints. A typeface suited for bigger sizes and display use. Truly a type that you like to see!\n  </p>\n </body>\n</html>'))
+        ("update_metadata", "Allan", FamilyMeta(name='Allan', designer=['Anton Koovit'], license='ofl', category='DISPLAY', subsets=['latin', 'latin-ext'], stroke='SERIF', classifications=['display'], description='Once Allan was a sign painter in Berlin. Grey paneling work in the subway, bad materials, a city split in two. Now things have changed. His (character) palette of activities have expanded tremendously: he happily spends time traveling, experimenting in the gastronomic field, all kinds of festivities are no longer foreign to him. He comes with alternate features, and hints. A typeface suited for bigger sizes and display use. Truly a type that you like to see!'))
     ]
 )
 def test_update_server(server, method, family_name, res):

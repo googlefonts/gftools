@@ -35,30 +35,26 @@ FONTS_JSON = json.load(open(os.path.join(SERVER_DIR, "fonts.json"), encoding="ut
             TEST_FAMILY_DIR,
             FAMILY_JSON,
             FamilyMeta(
-                name="Maven Pro",
-                designer=["Joe Prince"],
-                license="ofl",
-                category="SANS_SERIF",
+                name='Maven Pro',
+                designer=['Joe Prince'],
+                license='ofl',
+                category='SANS_SERIF',
                 subsets=['latin', 'latin-ext', 'vietnamese'],
-                stroke="SANS_SERIF",
+                stroke='SANS_SERIF',
                 classifications=[],
-                description= \
-"""<html>
- <body>
-  <p>
-   Maven Pro is a sans-serif typeface with unique curvature and flowing rhythm. Its forms make it very distinguishable and legible when in context. It blends styles of many great typefaces and is suitable for any design medium. Maven Pro’s modern design is great for the web and fits in any environment.
-  </p>
-  <p>
-   Updated in January 2019 with a Variable Font "Weight" axis.
-  </p>
-  <p>
-   The Maven Pro project was initiated by Joe Price, a type designer based in the USA. To contribute, see
-   <a href="https://github.com/googlefonts/mavenproFont">
-    github.com/googlefonts/mavenproFont
-   </a>
-  </p>
- </body>
-</html>"""
+                description='Maven Pro is a sans-serif typeface with unique '
+                            'curvature and flowing rhythm. Its forms make it very '
+                            'distinguishable and legible when in context. It blends '
+                            'styles of many great typefaces and is suitable for any '
+                            'design medium. Maven Pro’s modern design is great for '
+                            'the web and fits in any environment. Updated in '
+                            'January 2019 with a Variable Font "Weight" axis. The '
+                            'Maven Pro project was initiated by Joe Price, a type '
+                            'designer based in the USA. To contribute, see '
+                            'github.com/googlefonts/mavenproFont',
+                primary_script=None,
+                article=None,
+                minisite_url=None
             )
         ),
         (
