@@ -171,12 +171,20 @@ class GFServers(Itemer):
 
     def __init__(self):
         self.last_checked = datetime.fromordinal(1).isoformat().split("T")[0]
-        self.dev = GFServer(GFServers.DEV, DEV_META_URL, DEV_FAMILY_DOWNLOAD, DEV_VERSIONS_URL)
+        self.dev = GFServer(
+            GFServers.DEV, DEV_META_URL, DEV_FAMILY_DOWNLOAD, DEV_VERSIONS_URL
+        )
         self.sandbox = GFServer(
-            GFServers.SANDBOX, SANDBOX_META_URL, SANDBOX_FAMILY_DOWNLOAD, SANDBOX_VERSIONS_URL
+            GFServers.SANDBOX,
+            SANDBOX_META_URL,
+            SANDBOX_FAMILY_DOWNLOAD,
+            SANDBOX_VERSIONS_URL,
         )
         self.production = GFServer(
-            GFServers.PRODUCTION, PRODUCTION_META_URL, PROD_FAMILY_DOWNLOAD, PRODUCTION_VERSIONS_URL
+            GFServers.PRODUCTION,
+            PRODUCTION_META_URL,
+            PROD_FAMILY_DOWNLOAD,
+            PRODUCTION_VERSIONS_URL,
         )
         self.fp = None
 

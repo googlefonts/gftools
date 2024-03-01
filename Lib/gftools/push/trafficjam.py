@@ -459,7 +459,9 @@ class PushItems(list):
             last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1][
                 "cursor"
             ]
-            item_count = data["data"]["organization"]["projectV2"]["items"]["totalCount"]
+            item_count = data["data"]["organization"]["projectV2"]["items"][
+                "totalCount"
+            ]
             while len(board_items) < item_count:
                 data = None
                 while not data:
@@ -469,10 +471,12 @@ class PushItems(list):
                         )
                     except:
                         data = None
-                board_items += data["data"]["organization"]["projectV2"]["items"]["nodes"]
-                last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][-1][
-                    "cursor"
+                board_items += data["data"]["organization"]["projectV2"]["items"][
+                    "nodes"
                 ]
+                last_item = data["data"]["organization"]["projectV2"]["items"]["edges"][
+                    -1
+                ]["cursor"]
                 log.info(f"Getting items up to {last_item}")
             for item in board_items:
                 if item["type"] != "PULL_REQUEST":
@@ -495,13 +499,15 @@ class PushItems(list):
                     f"{pr_url} has {changed_files} changed files. Attempting to fetch them."
                 )
                 files = g.pr_files(pr_number)
-                item["content"]["files"]["nodes"] = [{"path": f["filename"]} for f in files]
+                item["content"]["files"]["nodes"] = [
+                    {"path": f["filename"]} for f in files
+                ]
 
             # save
             if fp:
                 dat = {
                     "updatedAt": data["data"]["organization"]["projectV2"]["updatedAt"],
-                    "board_items": board_items
+                    "board_items": board_items,
                 }
                 with open(fp, "w", encoding="utf-8") as doc:
                     json.dump(dat, doc, indent=4)
