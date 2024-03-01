@@ -19,6 +19,7 @@ from pathlib import Path
 from axisregistry.axes_pb2 import AxisProto
 from google.protobuf.json_format import MessageToDict  # type: ignore
 from typing import Optional
+import re
 
 
 log = logging.getLogger("gftools.push")
@@ -164,7 +165,7 @@ class FamilyMeta(Itemer):
         )
         article_fp = fp / "article" / "ARTICLE.en_us.html"
         if article_fp.exists():
-            article = open(article_fp, encoding="utf-8").read()
+            article = parse_html(open(article_fp, encoding="utf-8").read())
         else:
             article = None
         return cls(
@@ -175,7 +176,7 @@ class FamilyMeta(Itemer):
             subsets=sorted([s for s in data.subsets if s != "menu"]),
             stroke=stroke,
             classifications=[c.lower() for c in data.classifications],
-            description=parse_html(description),
+            description=None if article else parse_html(description),
             primary_script=None if data.primary_script == "" else data.primary_script,
             article=article,
             minisite_url=None if data.minisite_url == "" else data.minisite_url,
@@ -186,33 +187,32 @@ class FamilyMeta(Itemer):
         stroke = (
             None if meta["stroke"] == None else meta["stroke"].replace(" ", "_").upper()
         )
+        if meta["article"]:
+            article = parse_html(meta["article"][0])
+        else:
+            article = None
         return cls(
             name=meta["family"],
-            designer=sorted([i["name"].strip() for i in meta["designers"]]),
+            designer=[i["name"].strip() for i in meta["designers"]],
             license=meta["license"].lower(),
             category=meta["category"].replace(" ", "_").upper(),
             subsets=sorted(list(meta["coverage"].keys())),
             stroke=stroke,
             classifications=[c.lower() for c in meta["classifications"]],
-            description=parse_html(meta["description"]),
+            description=None if article else parse_html(meta["description"]),
             primary_script=None
             if meta["primaryScript"] == ""
             else meta["primaryScript"],
-            article=None
-            if meta["article"] == None
-            else meta["article"][
-                0
-            ],  # may not work if we end up having multiple articles
+            article=article,
             minisite_url=None if meta["minisiteUrl"] == "" else meta["minisiteUrl"],
         )
 
 
 def parse_html(string: str):
-    return (
-        BeautifulSoup(string.replace("\n", " ").replace("  ", " "), features="lxml")
-        .prettify()
-        .strip()
-    )
+    if not string:
+        return None
+    text = BeautifulSoup(string, features="lxml").text
+    return re.sub("\s+", " ", text).strip()
 
 
 @dataclass
@@ -222,7 +222,7 @@ class Designer(Itemer):
 
     @classmethod
     def from_gf_json(cls, data):
-        return cls(data["name"], data["bio"])
+        return cls(data["name"], parse_html(data["bio"]))
 
     @classmethod
     def from_fp(cls, fp):
@@ -233,7 +233,7 @@ class Designer(Itemer):
             return cls(name, None)
         with open(bio_fp, encoding="utf8") as doc:
             bio = doc.read()
-            return cls(name, bio)
+            return cls(name, parse_html(bio))
 
 
 Items = "Axis | Designer | Family | FamilyMeta"
