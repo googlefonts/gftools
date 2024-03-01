@@ -180,6 +180,7 @@ def remap_lookups(table, src, dst, operation="copy", start=False):
     src_langsyses = find_langsyses(lookuplists, src_script, src_lang)
     dst_langsyses = find_langsyses(lookuplists, dst_script, dst_lang)
     logging.debug("[%s] Before: %s", tag, de_default(lookuplists))
+    to_remove = set()
     if not src_langsyses:
         logging.error(f"[%s] Languagesystem {src_script}/{src_lang} not found", tag)
         return
@@ -192,11 +193,7 @@ def remap_lookups(table, src, dst, operation="copy", start=False):
             continue
         lookups = lookuplists[(src_script, src_lang)][src_feature_name]
         if operation == "move":
-            logging.info(
-                "[%s/%s/%s] Removing lookups %s", tag, key, src_feature_name, lookups
-            )
-
-            lookuplists[(src_script, src_lang)][src_feature_name] = []
+            to_remove.add((src_script, src_lang, src_feature_name, tuple(lookups)))
         logging.info(
             "[%s/%s/%s] Adding lookups %s",
             tag,
@@ -210,6 +207,13 @@ def remap_lookups(table, src, dst, operation="copy", start=False):
             )
         else:
             lookuplists[(dst_script, dst_lang)][dst_feature_name].extend(lookups)
+    for script, lang, feature, lookups in to_remove:
+        logging.info(
+            "[%s/%s/%s/%s] Removing lookups %s", tag, script, lang, feature, list(lookups)
+        )
+        lookuplists[(script, lang)][feature] = [
+            l for l in lookuplists[(script, lang)][feature] if l not in lookups
+        ]
     logging.debug("[%s] After: %s", tag, de_default(lookuplists))
     thaw_lookuplist(table, lookuplists, {})
 
