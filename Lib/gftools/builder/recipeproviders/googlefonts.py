@@ -32,7 +32,7 @@ DEFAULTS = {
     "buildOTF": True,
     "buildTTF": True,
     "autohintTTF": True,
-    "autohintOTF": True,
+    "autohintOTF": False,
     "ttfaUseScript": False,
     "logLevel": "WARN",
     "cleanUp": True,
