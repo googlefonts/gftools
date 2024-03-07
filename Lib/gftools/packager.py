@@ -289,7 +289,7 @@ def commit_family(
     version = TTFont(fonts[0])["name"].getName(5, 3, 1, 0x409).toUnicode()
 
     title = f"{family_name}: {version} added\n\n"
-    commit = f"{metadata.repository_url}/commit/{metadata.commit}"
+    commit = f"{metadata.source.repository_url}/commit/{metadata.source.commit}"
     body = (
         f"Taken from the upstream repo {metadata.source.repository_url} at "
         f"commit {commit}."
@@ -386,7 +386,7 @@ def make_package(
         family_path = Path(family_name).parent
         if not family_path.exists():
             log.fatal(f"'{family_name}' does not exist!")
-            sys.exit(1)
+            return
     else:
         family_path = find_family_in_repo(family_name, repo_path)  # type: ignore
 
@@ -399,7 +399,7 @@ def make_package(
             f"'{metadata_path}'.\nPlease populate the file and rerun tool "
             "with the same commands."
         )
-        sys.exit(0)
+        return
 
     # Ensure the family's METADATA.pb file has the required source fields
     metadata_fp = family_path / "METADATA.pb"
@@ -410,14 +410,14 @@ def make_package(
             "updated METADATA.pb file and rerun tool with the "
             "same commands."
         )
-        sys.exit(1)
+        return
 
     if incomplete_source_metadata(metadata):
         log.warning(
             f"'{metadata_fp}' Please fill in the source placeholder fields "
             "in the METADATA.pb file and rerun tool with the same commands."
         )
-        sys.exit(1)
+        return
 
     if not right_branch(repo, metadata):
         log.warning(
@@ -426,7 +426,7 @@ def make_package(
             f"If you want to run the tool, checkout the 'main' branch in "
             "'{repo.workdir}' and rerun."
         )
-        sys.exit(1)
+        return
 
     # All font families must have tagging data. This data helps users on Google
     # Fonts find font families. It's enabled by default since it's a hard
@@ -439,12 +439,12 @@ def make_package(
             "https://forms.gle/jcp3nDv63LaV1rxH6. This is a hard requirement "
             "set by Google Fonts management."
         )
-        sys.exit(1)
+        return
 
     with current_git_state(repo):
         packaged = package_family(family_path, metadata)
         if not packaged:
-            sys.exit(0)
+            return
         title, msg, branch = commit_family(family_path, metadata, repo)
 
         if pr:

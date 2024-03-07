@@ -37,18 +37,26 @@ def main(args=None):
         type=str,
         help="Name of font family or path to a METADATA.pb file",
     )
-    parser.add_argument("repo_path")
+    parser.add_argument(
+        "repo_path", type=str, help="Path to the google/fonts repository"
+    )
     parser.add_argument(
         "-p",
         "--pr",
-        help="Open a pull request on google/fonts",
+        help="Open a pull request on google/fonts or a forked repo",
         action="store_true",
     )
     parser.add_argument(
-        "-br", "--base-repo", default="m4rc1e", help="Repo to send pull request"
+        "-br",
+        "--base-repo",
+        default="m4rc1e",
+        help="Repo owner to send pull request. Default is 'google'",
     )
     parser.add_argument(
-        "-hr", "--head-repo", default="m4rc1e", help="Repo to push branch"
+        "-hr",
+        "--head-repo",
+        default="m4rc1e",
+        help="Repo owner to push branch. Default is 'google'",
     )
     parser.add_argument(
         "-l",
