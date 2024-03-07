@@ -1,4 +1,4 @@
-from gftools.fontsetter import setter, getter
+from gftools.scripts.fontsetter import setter, getter
 import pytest
 from fontTools.ttLib import TTFont
 import os
