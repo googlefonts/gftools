@@ -115,10 +115,12 @@ def incomplete_source_metadata(metadata: fonts_pb2.FamilyProto):
     return False
 
 
-def load_metadata(fp: Path):
+def load_metadata(fp: "Path | str"):
     """Load METADATA.pb file and merge in upstream.yaml data if they exist."""
     # upstream.yaml files are legacy since FamilyProto now contains all
     # the necceary source fields.
+    if isinstance(fp, str):
+        fp = Path(fp)
     metadata = fonts.ReadProto(fonts_pb2.FamilyProto(), fp)
 
     upstream_yaml_fp = fp.parent / "upstream.yaml"
@@ -195,7 +197,10 @@ def download_assets(metadata: fonts_pb2.FamilyProto, out: Path) -> List[str]:
             if not out_fp.parent.exists():
                 os.makedirs(out_fp.parent, exist_ok=True)
             with open(out_fp, "wb") as f:
-                f.write(zf.read(item.source_file))
+                try:
+                    f.write(zf.read(item.source_file))
+                except KeyError:  # some noto projects have saved files to ../
+                    f.write(zf.read(f"../{item.source_file}"))
             res.append(out_fp)
         return res
 

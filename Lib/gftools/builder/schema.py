@@ -15,7 +15,8 @@ from strictyaml import (
     Any,
     MapCombined,
 )
-from gftools.packager import CATEGORIES
+
+CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'HANDWRITING', 'MONOSPACE']
 
 
 BASE_SCHEMA = MapCombined(
