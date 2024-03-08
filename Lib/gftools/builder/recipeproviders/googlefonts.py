@@ -24,10 +24,10 @@ logger = logging.getLogger("GFBuilder")
 # Taken from gftools-builder
 DEFAULTS = {
     "outputDir": "../fonts",
-    "vfDir": "../fonts/variable",
-    "ttDir": "../fonts/ttf",
-    "otDir": "../fonts/otf",
-    "woffDir": "../fonts/webfonts",
+    "vfDir": "$outputDir/variable",
+    "ttDir": "$outputDir/ttf",
+    "otDir": "$outputDir/otf",
+    "woffDir": "$outputDir/webfonts",
     "buildStatic": True,
     "buildOTF": True,
     "buildTTF": True,
@@ -58,6 +58,8 @@ class GFBuilder(RecipeProviderBase):
         self.config.revalidate(GOOGLEFONTS_SCHEMA)
 
         self.config = {**DEFAULTS, **self.config}
+        for field in ["vfDir", "ttDir", "otDir", "woffDir"]:
+            self.config[field] = self.config[field].replace("$outputDir", self.config["outputDir"])
         self.config["buildWebfont"] = self.config.get(
             "buildWebfont", self.config.get("buildStatic", True)
         )
