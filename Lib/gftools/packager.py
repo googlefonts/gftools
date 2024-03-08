@@ -119,10 +119,9 @@ def load_metadata(fp: Path):
     """Load METADATA.pb file and merge in upstream.yaml data if they exist."""
     # upstream.yaml files are legacy since FamilyProto now contains all
     # the necceary source fields.
-    metadata_fp = fp / "METADATA.pb"
-    metadata = fonts.ReadProto(fonts_pb2.FamilyProto(), metadata_fp)
+    metadata = fonts.ReadProto(fonts_pb2.FamilyProto(), fp)
 
-    upstream_yaml_fp = fp / "upstream.yaml"
+    upstream_yaml_fp = fp.parent / "upstream.yaml"
     if upstream_yaml_fp.exists():
         log.info("Merging upstream.yaml into METADATA.pb")
         with open(upstream_yaml_fp, "r", encoding="utf-8") as doc:
@@ -248,7 +247,7 @@ def package_family(family_path: Path, metadata: fonts_pb2.FamilyProto):
         for fp in family_path.iterdir():
             if fp.suffix == ".ttf":
                 os.remove(fp)
-        shutil.copytree(src, dst, dirs_exist_ok=True)
+        shutil.copytree(tmp_dir, family_path, dirs_exist_ok=True)
         save_metadata(family_path / "METADATA.pb", metadata)
     return True
 
@@ -394,26 +393,26 @@ def make_package(
         raise ValueError(f"{repo_path} is not a path to a valid google/fonts repo")
 
     if family_name.endswith(".pb"):
-        family_path = Path(family_name).parent
-        if not family_path.exists():
-            log.fatal(f"'{family_name}' does not exist!")
-            return
+        metadata_fp = Path(family_name)
+        metadata = load_metadata(metadata_fp)
+        family_path = find_family_in_repo(metadata.name, repo_path)
+        if not family_path:
+            family_path = Path(repo_path / license / get_family_dir(metadata.name))
+            os.makedirs(family_path, exist_ok=True)
     else:
         family_path = find_family_in_repo(family_name, repo_path)  # type: ignore
-
-    if family_path:
-        metadata = load_metadata(family_path)
-    else:
-        metadata_path = create_metadata(repo_path, family_name, license)
-        log.warning(
-            f"No family was found in repository!\n\nI've created "
-            f"'{metadata_path}'.\nPlease populate the file and rerun tool "
-            "with the same commands."
-        )
-        return
+        if not family_path:
+            metadata_path = create_metadata(repo_path, family_name, license)
+            log.warning(
+                f"No family was found in repository!\n\nI've created "
+                f"'{metadata_path}'.\nPlease populate the file and rerun tool "
+                "with the same commands."
+            )
+            return
+        metadata_fp = family_path / "METADATA.pb"
+        metadata = load_metadata(metadata_fp)
 
     # Ensure the family's METADATA.pb file has the required source fields
-    metadata_fp = family_path / "METADATA.pb"
     if no_source_metadata(metadata):
         append_source_template(metadata_fp, metadata)
         log.warning(
