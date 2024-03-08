@@ -183,24 +183,37 @@ def download_assets(metadata: fonts_pb2.FamilyProto, out: Path) -> List[str]:
     _, _, _, owner, repo = metadata.source.repository_url.split("/")
     upstream = GitHubClient(owner, repo)
     res = []
+    # Getting files from a github archive always takes precedence over a
+    # repo dir
+    if metadata.source.archive_url:
+        log.debug(f"Downloading zip archive {metadata.source.archive_url}")
+        from gftools.utils import download_file
+
+        z = download_file(metadata.source.archive_url)
+        from zipfile import ZipFile
+
+        zf = ZipFile(z)
+        for item in metadata.source.files:
+            out_fp = Path(out / item.dest_file)
+            if not out_fp.parent.exists():
+                os.makedirs(out_fp.parent, exist_ok=True)
+            with open(out_fp, "wb") as f:
+                f.write(zf.read(item.source_file))
+            res.append(out_fp)
+        return res
+
     for item in metadata.source.files:
         log.debug(f"Downloading {item.source_file}")
         file_content = upstream.get_content(
             f"{item.source_file}", metadata.source.branch
         )
-
-        out_fp = os.path.join(out, os.path.basename(item.dest_file))
+        out_fp = Path(out / item.dest_file)
+        if not out_fp.parent.exists():
+            os.makedirs(out_fp.parent, exist_ok=True)
         with open(out_fp, "wb") as item:
             item.write(file_content.content)
         res.append(out_fp)
     return res
-
-
-def copy_assets(src: Path, dst: Path):
-    # TODO there's probably already a function for this in shutil
-    for filename in os.listdir(src):
-        fp = os.path.join(src, filename)
-        shutil.copy(fp, dst)
 
 
 def assets_are_same(src: Path, dst: Path) -> bool:
@@ -256,7 +269,7 @@ def package_family(family_path: Path, metadata: fonts_pb2.FamilyProto):
         for fp in family_path.iterdir():
             if fp.suffix == ".ttf":
                 os.remove(fp)
-        copy_assets(tmp_dir, family_path)
+        shutil.copytree(src, dst, dirs_exist_ok=True)
         save_metadata(family_path / "METADATA.pb", metadata)
     return True
 
