@@ -4,7 +4,7 @@ from gftools.gfgithub import GitHubClient
 from gftools.scripts.add_font import main as add_font
 from gftools.tags import GFTags
 from gftools.util import google_fonts as fonts
-from gftools.utils import is_google_fonts_repo
+from gftools.utils import is_google_fonts_repo, download_file
 
 from contextlib import contextmanager
 from fontTools.ttLib import TTFont
@@ -16,11 +16,11 @@ from pathlib import Path
 from pygit2 import GIT_RESET_HARD, Repository, Branch
 import shutil
 import subprocess
-import sys
 import tempfile
 import time
 from typing import Optional, Any, Tuple, List
 import yaml
+from zipfile import ZipFile
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"
@@ -183,14 +183,12 @@ def download_assets(metadata: fonts_pb2.FamilyProto, out: Path) -> List[str]:
     _, _, _, owner, repo = metadata.source.repository_url.split("/")
     upstream = GitHubClient(owner, repo)
     res = []
-    # Getting files from a github archive always takes precedence over a
+    # Getting files from an archive always takes precedence over a
     # repo dir
     if metadata.source.archive_url:
         log.debug(f"Downloading zip archive {metadata.source.archive_url}")
-        from gftools.utils import download_file
 
         z = download_file(metadata.source.archive_url)
-        from zipfile import ZipFile
 
         zf = ZipFile(z)
         for item in metadata.source.files:
@@ -234,25 +232,6 @@ def assets_are_same(src: Path, dst: Path) -> bool:
     if len(same) == len(os.listdir(src)):
         return True
     return False
-
-
-@contextmanager
-def current_git_state(repo: Repository):
-    """Stash current git state and restore it after the context is done."""
-    stashed = False
-    try:
-        try:
-            log.debug("Stashing current git state")
-            repo.stash(repo.default_signature, "WIP: stashing")
-            stashed = True
-        except:
-            pass
-        yield True
-    finally:
-        log.debug("Restoring previous git state")
-        repo.reset(repo.head.target, GIT_RESET_HARD)
-        if stashed:
-            repo.stash_pop()
 
 
 def package_family(family_path: Path, metadata: fonts_pb2.FamilyProto):
@@ -378,6 +357,25 @@ def right_branch(repo: Repository, metadata: fonts_pb2.FamilyProto):
     if repo.head.shorthand == _create_git_branch_name(metadata):
         return False
     return True
+
+
+@contextmanager
+def current_git_state(repo: Repository):
+    """Stash current git state and restore it after the context is done."""
+    stashed = False
+    try:
+        try:
+            log.debug("Stashing current git state")
+            repo.stash(repo.default_signature, "WIP: stashing")
+            stashed = True
+        except:
+            pass
+        yield True
+    finally:
+        log.debug("Restoring previous git state")
+        repo.reset(repo.head.target, GIT_RESET_HARD)
+        if stashed:
+            repo.stash_pop()
 
 
 def make_package(
