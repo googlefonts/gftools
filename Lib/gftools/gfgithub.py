@@ -79,6 +79,9 @@ class GitHubClient:
         response.raise_for_status()
         return response
 
+    def get_latest_release(self):
+        return self._get(self.rest_url("releases/latest"))
+
     def open_prs(self, pr_head: str, pr_base_branch: str) -> typing.List:
         return self._get(
             self.rest_url("pulls", state="open", head=pr_head, base=pr_base_branch)

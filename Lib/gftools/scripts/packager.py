@@ -66,6 +66,11 @@ def main(args=None):
         choices=("ofl", "apache", "ufl"),
     )
     parser.add_argument(
+        "--latest-release",
+        help="Get assets from latest upstream release",
+        action="store_true",
+    )
+    parser.add_argument(
         "--log-level",
         choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
         default="INFO",

@@ -179,17 +179,23 @@ def find_family_in_repo(family_name: str, repo_path: Path) -> Optional[Path]:
     return None
 
 
-def download_assets(metadata: fonts_pb2.FamilyProto, out: Path) -> List[str]:
+def download_assets(
+    metadata: fonts_pb2.FamilyProto, out: Path, latest_release: bool = False
+) -> List[str]:
     """Download assets listed in the metadata's source field"""
     _, _, _, owner, repo = metadata.source.repository_url.split("/")
     upstream = GitHubClient(owner, repo)
     res = []
     # Getting files from an archive always takes precedence over a
     # repo dir
-    if metadata.source.archive_url:
-        log.debug(f"Downloading zip archive {metadata.source.archive_url}")
-
-        z = download_file(metadata.source.archive_url)
+    if latest_release or metadata.source.archive_url:
+        if latest_release:
+            release = upstream.get_latest_release()
+            archive_url = release["assets"][0]["browser_download_url"]
+            metadata.source.archive_url = archive_url
+            z = download_file(archive_url)
+        else:
+            z = download_file(metadata.source.archive_url)
 
         zf = ZipFile(z)
         for item in metadata.source.files:
@@ -240,12 +246,14 @@ def assets_are_same(src: Path, dst: Path) -> bool:
     return True
 
 
-def package_family(family_path: Path, metadata: fonts_pb2.FamilyProto):
+def package_family(
+    family_path: Path, metadata: fonts_pb2.FamilyProto, latest_release=False
+):
     """Create a family into a google/fonts repo."""
     log.info(f"Downloading family to '{family_path}'")
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
-        download_assets(metadata, tmp_dir)
+        download_assets(metadata, tmp_dir, latest_release)
         if assets_are_same(tmp_dir, family_path):
             log.info(f"'{family_path}' already has latest files, Aborting.")
             return False
@@ -396,6 +404,7 @@ def make_package(
     pr: bool = True,
     base_repo: str = "google",
     head_repo: str = "google",
+    latest_release: bool = False,
     **kwargs,
 ):
     repo = Repository(repo_path)
@@ -463,7 +472,7 @@ def make_package(
         return
 
     with current_git_state(repo):
-        packaged = package_family(family_path, metadata)
+        packaged = package_family(family_path, metadata, latest_release)
         if not packaged:
             return
         title, msg, branch = commit_family(family_path, metadata, repo)
