@@ -7,6 +7,7 @@ from gftools.util import google_fonts as fonts
 from gftools.utils import is_google_fonts_repo, download_file
 
 from contextlib import contextmanager
+import filecmp
 from fontTools.ttLib import TTFont
 from gflanguages import LoadLanguages
 from hashlib import md5
@@ -220,22 +221,24 @@ def download_assets(metadata: fonts_pb2.FamilyProto, out: Path) -> List[str]:
 
 def assets_are_same(src: Path, dst: Path) -> bool:
     """Check if the assets in src and dst dirs are the same."""
-    # false if font counts differ
-    if len(list(src.glob("*.ttf"))) != len(list(dst.glob("*.ttf"))):
+    files_to_compare = []
+    for dirpath, _, filenames in os.walk(src):
+        for filename in filenames:
+            if ".DS_Store" in filename:
+                continue
+            path = os.path.join(dirpath, filename)
+            files_to_compare.append(os.path.relpath(path, src))
+
+    match, mismatch, errors = filecmp.cmpfiles(src, dst, files_to_compare)
+    log.debug(
+        "repo vs upstream files:\n"
+        f"matched: f{match}\n"
+        f"mismatched: f{mismatch}\n"
+        f"errors (don't exist): f{errors}"
+    )
+    if mismatch or errors:
         return False
-
-    same = set()
-    for src_fp in src.iterdir():
-        if src_fp.name not in os.listdir(dst):
-            continue
-        dst_fp = dst / src_fp.name
-        with open(src_fp, "rb") as src_data, open(dst_fp, "rb") as dst_data:
-            if md5(src_data.read()).hexdigest() == md5(dst_data.read()).hexdigest():
-                same.add(src_fp.name)
-
-    if len(same) == len(os.listdir(src)):
-        return True
-    return False
+    return True
 
 
 def package_family(family_path: Path, metadata: fonts_pb2.FamilyProto):
