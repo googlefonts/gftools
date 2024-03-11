@@ -296,9 +296,13 @@ def commit_family(
     parents = [repo.head.target]
 
     index = repo.index
-    rel_path = os.path.relpath(family_path, repo.workdir)
-    for f in os.listdir(family_path):
-        index.add(os.path.join(rel_path, f))
+    for dirpath, _, filenames in os.walk(family_path):
+        for f in filenames:
+            if f in [".DS_Store"]:
+                continue
+            path = Path(dirpath) / f
+            rel_path = path.relative_to(repo.workdir)
+            index.add(rel_path)
     tree = index.write_tree()
     author = repo.default_signature
     repo.create_commit(ref, author, author, msg, tree, parents)

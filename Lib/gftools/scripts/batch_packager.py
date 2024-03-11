@@ -17,7 +17,8 @@ def main(args=None):
             if filename != "METADATA.pb":
                 continue
             family_path = Path(dirpath)
-            metadata = load_metadata(family_path)
+            meta_path = family_path / "METADATA.pb"
+            metadata = load_metadata(meta_path)
             if no_source_metadata(metadata):
                 continue
             try:
