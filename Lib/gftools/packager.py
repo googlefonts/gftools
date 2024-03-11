@@ -91,9 +91,38 @@ def create_metadata(fp: Path, family_name: str, license: str = "ofl"):
     return metadata_fp
 
 
+def expected_source(file: str) -> str:
+    """Provide a good guess at where at file is located in a repo."""
+    if file.endswith(".ttf"):
+        if "[" in file and "]" in file:
+            return f"fonts/variable/{file}"
+        else:
+            return f"fonts/ttf/{file}"
+    if file.endswith(".html"):
+        return f"documentation/{file}"
+    # License etc.
+    return file
+
+
 def append_source_template(metadata_fp: Path, metadata: fonts_pb2.FamilyProto):
     """Add source template to METADATA.pb file if it's missing. It needs
     to be populated by hand."""
+    if len(metadata.fonts) > 0:
+        files = [font.filename for font in metadata.fonts]
+        if metadata.license == "OFL":
+            files.append("OFL.txt")
+        else:
+            files.append("LICENSE.txt")
+        files.append("DESCRIPTION.en_us.html")
+        for file in files:
+            item = fonts_pb2.SourceFileProto()
+            item.source_file = expected_source(file)
+            item.dest_file = file
+            metadata.source.files.append(item)
+        metadata.source.repository_url = "https://www.github.com/user/repo"
+        metadata.source.branch = "main"
+        fonts.WriteProto(metadata, metadata_fp)
+        return
     with open(metadata_fp, "r") as doc:
         text = doc.read()
     text += "\n" + SOURCE_TEMPLATE
@@ -214,9 +243,7 @@ def download_assets(
                     with open(out_fp, "wb") as f:
                         f.write(zf.read(file))
             if not found:
-                log.error(
-                    f"Could not find '{item.source_file}' in archive '{z.name}'"
-                )
+                log.error(f"Could not find '{item.source_file}' in archive '{z.name}'")
             res.append(out_fp)
         return res
 
