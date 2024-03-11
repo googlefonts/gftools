@@ -10,7 +10,6 @@ from contextlib import contextmanager
 import filecmp
 from fontTools.ttLib import TTFont
 from gflanguages import LoadLanguages
-from hashlib import md5
 import os
 import logging
 from pathlib import Path
