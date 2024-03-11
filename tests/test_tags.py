@@ -10,11 +10,11 @@ import csv
 def items():
     with tempfile.TemporaryDirectory() as tmp_dir:
         gf_path = Path(tmp_dir) / "google" / "fonts"
-        os.makedirs(gf_path)
+        os.makedirs(gf_path / "ofl" / "abel")
         subprocess.run(["gftools", "font-tags", "write", gf_path])
 
         csv_path = gf_path / "tags" / "all" / "families.csv"
-        with open(csv_path) as doc:
+        with open(csv_path, encoding="utf-8") as doc:
             return list(
                 csv.DictReader(doc, ["Family", "Group/Tag", "Weight"], strict=True)
             )
