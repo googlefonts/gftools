@@ -202,11 +202,21 @@ def download_assets(
             out_fp = Path(out / item.dest_file)
             if not out_fp.parent.exists():
                 os.makedirs(out_fp.parent, exist_ok=True)
-            with open(out_fp, "wb") as f:
-                try:
-                    f.write(zf.read(item.source_file))
-                except KeyError:  # some noto projects have saved files to ../
-                    f.write(zf.read(f"../{item.source_file}"))
+            found = False
+            for file in zf.namelist():
+                if file.endswith(item.source_file):
+                    if found:
+                        log.error(
+                            f"Found '{item.source_file}' more than once in archive '{z.name}'"
+                        )
+                        continue
+                    found = True
+                    with open(out_fp, "wb") as f:
+                        f.write(zf.read(file))
+            if not found:
+                log.error(
+                    f"Could not find '{item.source_file}' in archive '{z.name}'"
+                )
             res.append(out_fp)
         return res
 
@@ -285,7 +295,7 @@ def commit_family(
     """Commit family to a new branch in the google/fonts repo."""
     branch = _create_git_branch(metadata, repo)
     log.info(
-        f"Committing family to branch '{_branch_name(branch.name)}.' "
+        f"Committing family to branch '{_branch_name(branch.name)}'. "
         "Please make hand modifications to the family on this branch. "
         "Rerunning the packager will overwrite hand edits."
     )
