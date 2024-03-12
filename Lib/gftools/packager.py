@@ -1,27 +1,29 @@
 from __future__ import annotations
+
+import filecmp
+import logging
+import os
+import re
+import shutil
+import subprocess
+import tempfile
+import time
+from contextlib import contextmanager
+from pathlib import Path
+from typing import List, Optional, Tuple
+from zipfile import ZipFile
+
+import yaml
+from fontTools.ttLib import TTFont
+from gflanguages import LoadLanguages
+from pygit2 import GIT_RESET_HARD, Branch, Repository
+
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.gfgithub import GitHubClient
 from gftools.scripts.add_font import main as add_font
 from gftools.tags import GFTags
 from gftools.util import google_fonts as fonts
-from gftools.utils import is_google_fonts_repo, download_file
-
-from contextlib import contextmanager
-import filecmp
-import re
-from fontTools.ttLib import TTFont
-from gflanguages import LoadLanguages
-import os
-import logging
-from pathlib import Path
-from pygit2 import GIT_RESET_HARD, Repository, Branch
-import shutil
-import subprocess
-import tempfile
-import time
-from typing import Optional, Any, Tuple, List
-import yaml
-from zipfile import ZipFile
+from gftools.utils import download_file, is_google_fonts_repo
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"
