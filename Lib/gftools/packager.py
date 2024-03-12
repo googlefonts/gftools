@@ -8,6 +8,7 @@ from gftools.utils import is_google_fonts_repo, download_file
 
 from contextlib import contextmanager
 import filecmp
+import re
 from fontTools.ttLib import TTFont
 from gflanguages import LoadLanguages
 import os
@@ -169,7 +170,8 @@ def load_metadata(fp: "Path | str"):
                     item.source_file = src
                     item.dest_file = dst
                     metadata.source.files.append(item)
-    metadata.source.repository_url = metadata.source.repository_url.replace(".git", "")
+
+    metadata.source.repository_url = re.sub(r"\.git$", "", metadata.source.repository_url)
     return metadata
 
 
