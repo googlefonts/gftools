@@ -492,7 +492,7 @@ def make_package(
             "Cannot run gftools packager since it will overwrite the "
             f"currently active branch, '{repo.head.shorthand}'.\n"
             f"If you want to run the tool, checkout the 'main' branch in "
-            "'{repo.workdir}' and rerun."
+            f"'{repo.workdir}' and rerun."
         )
         return
 
