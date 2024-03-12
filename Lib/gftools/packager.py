@@ -220,11 +220,8 @@ def download_assets(
     if latest_release or metadata.source.archive_url:
         if latest_release:
             release = upstream.get_latest_release()
-            archive_url = release["assets"][0]["browser_download_url"]
-            metadata.source.archive_url = archive_url
-            z = download_file(archive_url)
-        else:
-            z = download_file(metadata.source.archive_url)
+            metadata.source.archive_url = release["assets"][0]["browser_download_url"]
+        z = download_file(metadata.source.archive_url)
 
         zf = ZipFile(z)
         for item in metadata.source.files:
@@ -236,14 +233,14 @@ def download_assets(
                 if file.endswith(item.source_file):
                     if found:
                         log.error(
-                            f"Found '{item.source_file}' more than once in archive '{z.name}'"
+                            f"Found '{item.source_file}' more than once in archive '{metadata.source.archive_url}'"
                         )
                         continue
                     found = True
                     with open(out_fp, "wb") as f:
                         f.write(zf.read(file))
             if not found:
-                log.error(f"Could not find '{item.source_file}' in archive '{z.name}'")
+                log.error(f"Could not find '{item.source_file}' in archive '{metadata.source.archive_url}'")
             res.append(out_fp)
         return res
 
