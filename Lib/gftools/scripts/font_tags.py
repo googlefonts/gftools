@@ -39,7 +39,8 @@ def main(args=None):
     )
     args = parser.parse_args(args)
 
-    is_google_fonts_repo(args.gf_path)
+    if not is_google_fonts_repo(args.gf_path):
+        raise ValueError(f"'{args.gf_path.absolute()}' is not a path to a valid google/fonts repo")
 
     gf_tags = GFTags()
 

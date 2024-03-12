@@ -587,10 +587,11 @@ def font_version(font: TTFont):
 def is_google_fonts_repo(fp: "Path | str"):
     if isinstance(fp, str):
         fp = Path(fp)
-    absolute_parts = fp.absolute().parts
-    if "fonts" not in absolute_parts:
-        raise ValueError(f"'{fp.absolute()}' is not a path to a valid google/fonts repo")
+    sub_dirs = fp.glob("*/")
+    if "ofl" not in [d.name for d in sub_dirs]:
+        return False
     return True
+
 
 def open_ufo(path):
     if os.path.isdir(path):
@@ -599,3 +600,4 @@ def open_ufo(path):
         return ufoLib2.Font.json_load(open(path, "rb"))
     else:  # Maybe a .ufoz
         return ufoLib2.Font.open(path)
+    return False

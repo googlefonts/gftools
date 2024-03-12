@@ -135,6 +135,7 @@ class GFTags(object):
     def __init__(self):
         self.sheet1_data = self._get_sheet_data(self.SHEET1_URL)
         self.sheet2_data = self._get_sheet_data(self.SHEET2_URL)
+        self.data = self._parse_sheets_csv()
 
     def _get_sheet_data(self, sheet_url):
         req = requests.get(sheet_url)
@@ -201,15 +202,16 @@ class GFTags(object):
     def to_csv(self, fp):
         """Export the Google Sheet into a csv format suitable for the
         google/fonts git repo."""
-        data = self._parse_sheets_csv()
         with open(fp, "w", encoding="utf-8") as out_doc:
             out_csv = csv.DictWriter(out_doc, ["Family", "Group/Tag", "Weight"])
             out_csv.writeheader()
-            out_csv.writerows(data)
+            out_csv.writerows(self.data)
+
+    def has_family(self, name):
+        return any([i["Family"] == name for i in self.data])
 
     def check_structure(self):
         # Check a few families to determine whether the spreadsheet is broken
-        munged_data = self._parse_sheets_csv()
         test_tags = [
             # sheet1 row 0
             {"Family": "ABeeZee", "Group/Tag": "/Sans/Geometric", "Weight": 10},
@@ -244,6 +246,6 @@ class GFTags(object):
             {"Family": "Platypi", "Group/Tag": "/Theme/Art Nouveau", "Weight": 5},
         ]
         for tag in test_tags:
-            if tag not in munged_data:
+            if tag not in self.data:
                 raise ValueError(f"{tag} should exist spreadsheet")
         print("Google Sheet's structure is intact")
