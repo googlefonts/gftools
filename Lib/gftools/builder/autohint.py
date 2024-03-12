@@ -76,7 +76,7 @@ def autohint(infile, outfile, args=None, add_script=False, discount_latin=False)
     if not args:
         args = []
         if isinstance(add_script, str) and add_script != "auto":
-            args.append("-D"+ add_script)
+            args.append("-D" + add_script)
         elif add_script:  # True or "auto"
             script = autohint_script_tag(font, discount_latin=discount_latin)
             if script:

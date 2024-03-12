@@ -20,6 +20,7 @@ from zipfile import ZipFile
 import sys
 import os
 import shutil
+import ufoLib2
 import unicodedata
 from unidecode import unidecode
 from collections import namedtuple
@@ -590,3 +591,11 @@ def is_google_fonts_repo(fp: "Path | str"):
     if "fonts" not in absolute_parts:
         raise ValueError(f"'{fp.absolute()}' is not a path to a valid google/fonts repo")
     return True
+
+def open_ufo(path):
+    if os.path.isdir(path):
+        return ufoLib2.Font.open(path)
+    elif path.endswith(".json"):
+        return ufoLib2.Font.json_load(open(path, "rb"))
+    else:  # Maybe a .ufoz
+        return ufoLib2.Font.open(path)

@@ -13,11 +13,11 @@ import yaml
 from fontmake.font_project import FontProject
 from fontTools.designspaceLib import DesignSpaceDocument
 from glyphsets import unicodes_per_glyphset
-from strictyaml import HexInt, Map, Optional, Seq, Str, Enum
+from strictyaml import HexInt, Int, Map, Optional, Seq, Str, Enum
 from ufomerge import merge_ufos
 
 from gftools.util.styles import STYLE_NAMES
-from gftools.utils import download_file
+from gftools.utils import download_file, open_ufo
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -42,7 +42,7 @@ subsets_schema = Seq(
         {
             "from": Enum(SUBSET_SOURCES.keys()) | Map({"repo": Str(), "path": Str()}),
             Optional("name"): Str(),
-            Optional("ranges"): Seq(Map({"start": HexInt(), "end": HexInt()})),
+            Optional("ranges"): Seq(Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})),
             Optional("layoutHandling"): Str(),
             Optional("force"): Str(),
         }
@@ -88,12 +88,13 @@ def prepare_minimal_subsets(subsets):
 
 class SubsetMerger:
     def __init__(
-        self, input_ds, output_ds, subsets, googlefonts=False, cache="../subset-files"
+        self, input_ds, output_ds, subsets, googlefonts=False, cache="../subset-files", json=False
     ):
         self.input = input_ds
         self.output = output_ds
         self.subsets = prepare_minimal_subsets(subsets)
         self.googlefonts = googlefonts
+        self.json = json
         self.cache_dir = cache
         self.subset_instances = {}
 
@@ -103,15 +104,23 @@ class SubsetMerger:
         outpath = Path(self.output).parent
         added_subsets = False
         for master in ds.sources:
-            # Clone the UFO before doing anything clever with it.
             newpath = os.path.join(outpath, os.path.basename(master.path))
-            original_ufo = ufoLib2.Font.open(master.path)
-            original_ufo.save(newpath, overwrite=True)
+            target_ufo = open_ufo(master.path)
 
             master.path = newpath
 
             for subset in self.subsets:
-                added_subsets |= self.add_subset(ds, master, subset)
+                added_subsets |= self.add_subset(target_ufo, ds, master, subset)
+
+            if self.json or master.path.endswith(".json"):
+                if not master.path.endswith(".json"):
+                    master.path += ".json"
+                    if master.filename:
+                        master.filename += ".json"
+                target_ufo.json_dump(open(master.path, "wb"))
+            else:
+                target_ufo.save(master.path, overwrite=True)
+
         if not added_subsets:
             raise ValueError("Could not match *any* subsets for this font")
 
@@ -122,7 +131,7 @@ class SubsetMerger:
 
         ds.write(self.output)
 
-    def add_subset(self, ds, ds_source, subset):
+    def add_subset(self, target_ufo, ds, ds_source, subset):
         # First, we find a donor UFO that matches the location of the
         # UFO to merge.
         location = dict(ds_source.location)
@@ -131,9 +140,6 @@ class SubsetMerger:
         source_ufo = self.obtain_upstream(subset["from"], location)
         if not source_ufo:
             return False
-
-        # Open it up and send it to ufomerge, using the options supplied.
-        target_ufo = ufoLib2.Font.open(ds_source.path)
         existing_handling = "skip"
         if subset.get("force"):
             existing_handling = "replace"
@@ -148,7 +154,6 @@ class SubsetMerger:
             existing_handling=existing_handling,
             layout_handling=layout_handling,
         )
-        target_ufo.save(ds_source.path, overwrite=True)
         return True
 
     def obtain_upstream(self, upstream, location):
@@ -183,7 +188,7 @@ class SubsetMerger:
         source_ds = DesignSpaceDocument.fromfile(path)
         source_ufo = self.find_source_for_location(source_ds, location, font_name)
         if source_ufo:
-            return ufoLib2.Font.open(source_ufo.path)
+            return open_ufo(source_ufo.path)
         return None
 
     def glyphs_to_ufo(self, source, directory=None):

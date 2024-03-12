@@ -46,7 +46,7 @@ dependencies = [
   'vttlib',
   'pygit2',
   'strictyaml',
-  'fontmake>=3.3.0',
+  'fontmake[json]>=3.3.0',
   'skia-pathops',
   'statmake',
   'PyYAML',
@@ -63,7 +63,9 @@ dependencies = [
   'afdko',
   'beautifulsoup4',
   'rich',
-  'packaging'
+  'packaging',
+  'ninja',
+  'networkx'
 ]
 
 [project.optional-dependencies]
@@ -72,7 +74,6 @@ qa = [
   "diffenator2>=0.2.0",
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
 ]
-ninja = [ "ninja" ]
 
 [project.scripts]
 gftools = "gftools.scripts:main"
@@ -82,6 +83,7 @@ gftools-add-ds-subsets = "gftools.scripts.add_ds_subsets:main"
 gftools-add-font = "gftools.scripts.add_font:main"
 gftools-autohint = "gftools.scripts.autohint:main"
 gftools-build-ofl = "gftools.scripts.build_ofl:main"
+gftools-build-vtt = "gftools.scripts.build_vtt:main"
 gftools-builder = "gftools.builder:main"
 gftools-check-bbox = "gftools.scripts.check_bbox:main"
 gftools-check-category = "gftools.scripts.check_category:main"
