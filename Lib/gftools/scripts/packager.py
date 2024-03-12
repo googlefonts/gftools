@@ -49,13 +49,13 @@ def main(args=None):
     parser.add_argument(
         "-br",
         "--base-repo",
-        default="m4rc1e",
+        default="google",
         help="Repo owner to send pull request. Default is 'google'",
     )
     parser.add_argument(
         "-hr",
         "--head-repo",
-        default="m4rc1e",
+        default="google",
         help="Repo owner to push branch. Default is 'google'",
     )
     parser.add_argument(
