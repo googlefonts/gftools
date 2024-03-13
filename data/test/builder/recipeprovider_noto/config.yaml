@@ -5,3 +5,4 @@ autohintTTF: false
 autohintOTF: false
 recipeProvider: noto
 googleFonts: true
+buildVariable: false
