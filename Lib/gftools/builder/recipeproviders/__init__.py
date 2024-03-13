@@ -3,7 +3,6 @@ import importlib
 import inspect
 from typing import List
 from gftools.builder.file import File
-from strictyaml import YAML, Bool
 
 filecache = {}
 
@@ -16,7 +15,7 @@ def get_file(path):
 
 @dataclass
 class RecipeProviderBase:
-    config: YAML
+    config: dict
     builder: "gftools.builder.GFBuilder"
 
     def write_recipe(self):
@@ -24,24 +23,8 @@ class RecipeProviderBase:
 
     @property
     def sources(self) -> List[File]:
-        return [get_file(str(p)) for p in self.config["sources"].data]
+        return [get_file(str(p)) for p in self.config["sources"]]
 
-
-def boolify(s):
-    # Could be YAML(true), YAML(false) or bool, or None
-
-    # strictYAML is hilarious:
-    # >>> bool(YAML("false"))
-    # TypeError: Cannot cast 'YAML(false)' to bool.
-    # Use bool(yamlobj.data) or bool(yamlobj.text) instead.
-    # >>> bool(YAML("false").data)
-    # True
-    # >>> bool(YAML("false").text)
-    # True
-    if isinstance(s, YAML):
-        s.revalidate(Bool())
-        return bool(s)
-    return s
 
 
 def get_provider(provider: str):

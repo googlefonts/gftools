@@ -1,15 +1,14 @@
 import copy
-import os
 import logging
+import os
 from tempfile import NamedTemporaryFile
 
 import yaml
-from gftools.builder.recipeproviders import RecipeProviderBase, boolify
-from gftools.builder.schema import (
-    GOOGLEFONTS_SCHEMA,
-    stat_schema,
-    stat_schema_by_font_name
-)
+from strictyaml import load, YAMLValidationError
+
+from gftools.builder.recipeproviders import RecipeProviderBase
+from gftools.builder.schema import (GOOGLEFONTS_SCHEMA, stat_schema,
+                                    stat_schema_by_font_name)
 
 logger = logging.getLogger("GFBuilder")
 
@@ -49,14 +48,21 @@ DEFAULTS = {
 
 
 class GFBuilder(RecipeProviderBase):
+    schema = GOOGLEFONTS_SCHEMA
+
+    def revalidate(self):
+        # Revalidate using our schema
+        try:
+            load(self.builder._orig_config, self.schema)
+        except YAMLValidationError as e:
+            raise ValueError("Invalid configuration file") from e
+
     def write_recipe(self):
         if "instances" in self.config:
             logger.warning(
                 "'instances' no longer supported; generate a config with --generate and select the instances you want"
             )
-        # Revalidate using our schema
-        self.config.revalidate(GOOGLEFONTS_SCHEMA)
-
+        self.revalidate()
         self.config = {**DEFAULTS, **self.config}
         for field in ["vfDir", "ttDir", "otDir", "woffDir"]:
             self.config[field] = self.config[field].replace("$outputDir", self.config["outputDir"])
@@ -66,10 +72,10 @@ class GFBuilder(RecipeProviderBase):
         if "stat" in self.config:
             self.statfile = NamedTemporaryFile(delete=False, mode="w+")
             try:
-                self.config["stat"].revalidate(stat_schema)
+                load(yaml.dump(self.config["stat"]), stat_schema)
             except:
-                self.config["stat"].revalidate(stat_schema_by_font_name)
-            yaml.dump(self.config["stat"].data, self.statfile)
+                load(yaml.dump(self.config["stat"]), stat_schema_by_font_name)
+            yaml.dump(self.config["stat"], self.statfile)
             self.statfile.close()
         else:
             self.statfile = None
@@ -232,12 +238,12 @@ class GFBuilder(RecipeProviderBase):
                 "args": self.fontmake_args(variable=False) + static_args,
             }
         )
-        if boolify(self.config.get("autohintTTF")) and output == "ttf":
+        if bool(self.config.get("autohintTTF")) and output == "ttf":
             args = "--fail-ok "
             if self.config.get("ttfaUseScript"):
                 args += " --auto-script"
             steps.append({"operation": "autohint", "args": args})
-        if boolify(self.config.get("autohintOTF")) and output == "otf":
+        if bool(self.config.get("autohintOTF")) and output == "otf":
             steps.append({"operation": "autohintOTF"})
         if os.path.basename(target) in self.config.get("vttSources", {}):
             steps.append(
