@@ -59,7 +59,7 @@ class GFBuilder(RecipeProviderBase):
 
         self.config = {**DEFAULTS, **self.config}
         for field in ["vfDir", "ttDir", "otDir", "woffDir"]:
-            self.config[field] = self.config[field].replace("$outputDir", self.config["outputDir"])
+            self.config[field] = self.config[field].replace("$outputDir", self.config["outputDir"].data)
         self.config["buildWebfont"] = self.config.get(
             "buildWebfont", self.config.get("buildStatic", True)
         )
