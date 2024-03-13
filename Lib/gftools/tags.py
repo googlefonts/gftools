@@ -59,7 +59,7 @@ class GFTags(object):
             "Tuscan",
             "Art Deco",
             "Medieval",
-            "Brush/Marker",
+            "Brush",
             "Pixel",
         ],
         "Arabic": [
@@ -82,40 +82,31 @@ class GFTags(object):
             "Chrieng (Khmer)",
         ],
         "Sinhala": [
-            "Traditional/High contrast",
-            "Contemporary/High contrast",
+            "Traditional",
+            "Contemporary",
             "Low contrast",
         ],
         "Indic": [
-            "Traditional/High contrast",
-            "Contemporary/High contrast",
+            "Traditional",
+            "Contemporary",
             "Low contrast",
-            "Sign Painting/vernacular",
+            "Sign Painting",
             "Reverse-contrast",
         ],
-        "Simplicity": [
-            "Calm/simple",
+        "Expressive": [
             "Competent",
             "Business",
             "Sincere",
             "Loud",
             "Awkward",
             "Innovative",
-            "Artistic",
-        ],
-        "Youthful": [
             "Playful",
             "Excited",
-            "Cute",
             "Happy",
-            "Childlike",
             "Loud",
             "Rugged",
             "Vintage",
             "Stiff",
-        ],
-        "Flow": [
-            "Rugged",
             "Futuristic",
             "Calm",
             "Childlike",
@@ -244,6 +235,8 @@ class GFTags(object):
                 "Weight": 20,
             },
             {"Family": "Platypi", "Group/Tag": "/Theme/Art Nouveau", "Weight": 5},
+            {"Family": "Sedan", "Group/Tag": "/Serif/Old Style Garalde", "Weight": 90},
+
         ]
         for tag in test_tags:
             if tag not in self.data:
