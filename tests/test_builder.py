@@ -4,6 +4,8 @@ import shutil
 import os
 import subprocess
 
+from gftools.builder import GFBuilder
+
 
 CWD = os.path.dirname(__file__)
 TEST_DIR = os.path.join(CWD, "..", "data", "test", "builder")
@@ -43,6 +45,14 @@ TEST_DIR = os.path.join(CWD, "..", "data", "test", "builder")
                 os.path.join("webfonts", "TestFamily-Thin.woff2"),
             ],
         ),
+        # Testing a custom recipe provider
+        (
+            os.path.join(TEST_DIR, "recipeprovider_noto"),
+            [
+                os.path.join("TestFamily", "unhinted", "slim-variable-ttf", "TestFamily[wght].ttf"),
+                os.path.join("TestFamily", "googlefonts", "variable", "TestFamily[wght].ttf")
+            ],
+        )
     ],
 )
 def test_builder(fp, font_paths):
@@ -55,3 +65,10 @@ def test_builder(fp, font_paths):
         for font_path in font_paths:
             font_path = os.path.join(font_dir, font_path)
             assert os.path.exists(font_path), f"{font_path} is missing"
+
+def test_bad_configs():
+    config = {
+        "Sources": ["foo.glyphs"]
+    }
+    with pytest.raises(ValueError):
+        GFBuilder(config)
