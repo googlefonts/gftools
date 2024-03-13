@@ -61,6 +61,7 @@ class GFTags(object):
             "Medieval",
             "Brush/Marker",
             "Pixel",
+            "Brush",
         ],
         "Arabic": [
             "Kufi",
@@ -82,15 +83,15 @@ class GFTags(object):
             "Chrieng (Khmer)",
         ],
         "Sinhala": [
-            "Traditional/High contrast",
-            "Contemporary/High contrast",
+            "Traditional",
+            "Contemporary",
             "Low contrast",
         ],
         "Indic": [
-            "Traditional/High contrast",
-            "Contemporary/High contrast",
+            "Traditional",
+            "Contemporary",
             "Low contrast",
-            "Sign Painting/vernacular",
+            "Sign Painting",
             "Reverse-contrast",
         ],
         "Simplicity": [
@@ -130,6 +131,29 @@ class GFTags(object):
             "Emojis",
             "Symbols",
         ],
+        "Expressive": [
+            "Business",
+            "Sincere",
+            "Loud",
+            "Vintage",
+            "Calm",
+            "Calm/simple",
+            "Stiff",
+            "Competent",
+            "Happy",
+            "Childlike",
+            "Excited",
+            "Playful",
+            "Awkward",
+            "Innovative",
+            "Rugged",
+            "Futuristic",
+            "Artistic",
+            "Cute",
+            "Fancy",
+            "Sophisticated",
+            "Active",
+        ]
     }
 
     def __init__(self):
@@ -164,7 +188,7 @@ class GFTags(object):
                 # If no tag exists for a value, it means a value has been assigned
                 # to the whole group such as Sans, Sans Serif etc. We don't want to
                 # include these since we can deduce it ourselves according to Evan.
-                sub_category = data[1][j]
+                sub_category = data[1][j].split("\n")[0]
                 if sub_category == "":
                     continue
                 if category not in self.CATEGORIES:

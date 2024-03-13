@@ -49,8 +49,8 @@ TEST_DIR = os.path.join(CWD, "..", "data", "test", "builder")
         (
             os.path.join(TEST_DIR, "recipeprovider_noto"),
             [
-                os.path.join("TestFamily", "unhinted", "slim-variable-ttf", "TestFamily[wght].ttf"),
-                os.path.join("TestFamily", "googlefonts", "variable", "TestFamily[wght].ttf")
+                os.path.join("TestFamily", "unhinted", "ttf", "TestFamily-Regular.ttf"),
+                os.path.join("TestFamily", "googlefonts", "ttf", "TestFamily-Black.ttf"),
             ],
         )
     ],
