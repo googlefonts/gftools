@@ -2,9 +2,7 @@ import copy
 import os
 import sys
 from collections import defaultdict
-from strictyaml import Map, Seq, Str, Optional, HexInt, Bool, YAML
-
-import ufoLib2
+from strictyaml import Map, Seq, Str, Optional, HexInt, Bool, YAML, YAMLValidationError
 
 from gftools.builder.recipeproviders.googlefonts import (
     DEFAULTS,
@@ -35,17 +33,21 @@ schema = Map(_newschema)
 class NotoBuilder(GFBuilder):
     def write_recipe(self):
         # Revalidate using our schema
-        self.config.revalidate(schema)
+        try:
+            YAML(self.config, schema)
+        except YAMLValidationError as e:
+            raise ValueError(f"Invalid config: {e}")
+
 
         self.config = {**DEFAULTS, **self.config}
         # Convert any glyphs sources to DS
         newsources = []
         self.config["original_sources"] = self.config["sources"]
         for source in self.config["sources"]:
-            if source.data.endswith((".glyphs", ".glyphspackage")):
-                source = self.builder.glyphs_to_ufo(source.data)
+            if source.endswith((".glyphs", ".glyphspackage")):
+                source = self.builder.glyphs_to_ufo(source)
             newsources.append(source)
-        self.config["sources"] = YAML(newsources)
+        self.config["sources"] = newsources
         # Find variable fonts
         self.recipe = {}
         self.build_all_variables()
@@ -80,7 +82,7 @@ class NotoBuilder(GFBuilder):
         if self.config.get("buildUIVF"):
             # Find my glyphs source
             glyphs_source = self.config["original_sources"][
-                self.config["sources"].data.index(source.path)
+                self.config["sources"].index(source.path)
             ]
             uivftarget = os.path.join(
                 "../",
@@ -122,7 +124,7 @@ class NotoBuilder(GFBuilder):
                 {"source": source.path},
                 {
                     "operation": "addSubset",
-                    "subsets": self.config["includeSubsets"].data,
+                    "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
                 },
                 {
@@ -145,7 +147,7 @@ class NotoBuilder(GFBuilder):
                 {"source": source.path},
                 {
                     "operation": "addSubset",
-                    "subsets": self.config["includeSubsets"].data,
+                    "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
                 },
                 {
@@ -249,7 +251,7 @@ class NotoBuilder(GFBuilder):
                 {"source": source.path},
                 {
                     "operation": "addSubset",
-                    "subsets": self.config["includeSubsets"].data,
+                    "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
                 },
                 {

@@ -1,23 +1,22 @@
+import subprocess
 from collections import defaultdict
-import importlib
 from os import chdir
 from pathlib import Path
-import subprocess
 from tempfile import NamedTemporaryFile, gettempdir
-from typing import Dict, List, Tuple, Any, Union
-from dataclasses import dataclass
-import os.path
+from typing import Any, Dict, List, Union
+import yaml
+
 import networkx as nx
-from ninja.ninja_syntax import Writer, escape_path
-from ninja import _program
 from fontmake.font_project import FontProject
-from strictyaml import load, YAML
+from ninja import _program
+from ninja.ninja_syntax import Writer, escape_path
+import strictyaml
 
 from gftools.builder.file import File
-from gftools.builder.schema import BASE_SCHEMA
 from gftools.builder.operations import OperationBase, known_operations
 from gftools.builder.operations.copy import Copy
 from gftools.builder.recipeproviders import get_provider
+from gftools.builder.schema import BASE_SCHEMA
 
 Recipe = Dict[str, List[Dict[str, Any]]]
 
@@ -30,24 +29,35 @@ def edge_with_operation(node, operation):
 
 
 class GFBuilder:
-    config: YAML
+    config: dict
     recipe: Recipe
 
-    def __init__(self, config: Union[dict, str, YAML]):
-        if isinstance(config, dict):
-            self.config = YAML(config)
-        elif isinstance(config, YAML):
-            self.config = config
-        else:
+    def __init__(self, config: Union[dict, str]):
+        if isinstance(config, str):
+            parentpath = Path(config).resolve().parent
             with open(config, "r") as file:
-                self.config = load(file.read(), BASE_SCHEMA)
-            chdir(Path(config).resolve().parent)
-        assert isinstance(self.config, YAML)
+                config = file.read()
+            chdir(parentpath)
+            # StrictYAML is great for validating the input, but its strongly
+            # typed nature makes it hard to work with. So we use it to
+            # validate the input, but just treat it as a regular Python dict.
+            try:
+                strictyaml.load(config, BASE_SCHEMA)
+            except Exception as e:
+                raise ValueError("Could not validate configuration") from e
+            self.config = yaml.safe_load(config)
+        else:
+            try:
+                strictyaml.YAML(config, BASE_SCHEMA)
+            except Exception as e:
+                raise ValueError("Could not validate configuration") from e
+            self.config = config
+
         self.writer = Writer(open("build.ninja", "w"))
         self.named_files = {}
         self.used_operations = set([])
         self.graph = nx.DiGraph()
-        self.recipe = {}  # This will be the de-YAMLified version
+        self.recipe = {}  # This will be the filled-in version
 
         if "recipeProvider" not in self.config and "recipe" not in self.config:
             self.config["recipeProvider"] = "googlefonts"
@@ -55,10 +65,10 @@ class GFBuilder:
         if "recipeProvider" in self.config:
             # Store the automatic recipe but allow user-defined steps to override
             automatic_recipe = self.call_recipe_provider()
-            assert isinstance(automatic_recipe, dict)  # Not a YAML object
+            assert isinstance(automatic_recipe, dict)
             self.recipe = self.perform_overrides(automatic_recipe)
         elif "recipe" in self.config:
-            self.recipe = self.config["recipe"].data
+            self.recipe = self.config["recipe"]
         self.validate_recipe()
 
     def perform_overrides(self, automatic_recipe: Recipe):
@@ -69,13 +79,13 @@ class GFBuilder:
             if file in automatic_recipe:
                 if all("postprocess" in step for step in steps):
                     # An override step full of postprocesses *adds* to the recipe
-                    automatic_recipe[file].extend(steps.data)
+                    automatic_recipe[file].extend(steps)
                 else:
                     # Something that looks like a recipe overrides
-                    automatic_recipe[file] = steps.data
+                    automatic_recipe[file] = steps
             else:
                 # A new file just gets added
-                automatic_recipe[file] = steps.data
+                automatic_recipe[file] = steps
         return automatic_recipe
 
     # The builder proceeds in four steps. The first step is to prepare
@@ -84,7 +94,7 @@ class GFBuilder:
     # validation checks on the recipe.
 
     def call_recipe_provider(self) -> Recipe:
-        provider = get_provider(self.config["recipeProvider"].data)
+        provider = get_provider(self.config["recipeProvider"])
         return provider(self.config, self).write_recipe()
 
     def validate_recipe(self):
@@ -128,7 +138,7 @@ class GFBuilder:
         output = str(Path(directory) / source.with_suffix(".designspace").name)
         glyph_data = self.config.get("glyphData")
         if glyph_data is not None:
-            glyph_data = glyph_data.data
+            glyph_data = glyph_data
         FontProject().run_from_glyphs(
             str(source.resolve()),
             **{
@@ -321,6 +331,7 @@ class GFBuilder:
 
 def main(args=None):
     import argparse
+
     import yaml
 
     parser = argparse.ArgumentParser()
@@ -337,7 +348,7 @@ def main(args=None):
     args = parser.parse_args(args)
     pd = GFBuilder(args.config)
     if args.generate:
-        config = pd.config.data
+        config = pd.config
         config["recipe"] = pd.recipe
         print(yaml.dump(config))
         return
