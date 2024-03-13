@@ -2,13 +2,14 @@ import copy
 import os
 import sys
 from collections import defaultdict
-from strictyaml import Map, Seq, Str, Optional, HexInt, Bool, YAML, YAMLValidationError
 
-from gftools.builder.recipeproviders.googlefonts import (
-    DEFAULTS,
-    GFBuilder,
-    GOOGLEFONTS_SCHEMA,
-)
+import yaml
+from strictyaml import (Bool, HexInt, Map, Optional, Seq, Str,
+                        YAMLValidationError, load)
+
+from gftools.builder.recipeproviders.googlefonts import (DEFAULTS,
+                                                         GOOGLEFONTS_SCHEMA,
+                                                         GFBuilder)
 from gftools.util.styles import STYLE_NAMES
 
 name = "Noto builder"
@@ -31,13 +32,10 @@ schema = Map(_newschema)
 
 
 class NotoBuilder(GFBuilder):
-    def write_recipe(self):
-        # Revalidate using our schema
-        try:
-            YAML(self.config, schema)
-        except YAMLValidationError as e:
-            raise ValueError(f"Invalid config: {e}")
+    schema = schema
 
+    def write_recipe(self):
+        self.revalidate()
 
         self.config = {**DEFAULTS, **self.config}
         # Convert any glyphs sources to DS

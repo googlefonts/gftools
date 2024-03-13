@@ -38,6 +38,7 @@ class GFBuilder:
             with open(config, "r") as file:
                 config = file.read()
             chdir(parentpath)
+            self._orig_config = config
             # StrictYAML is great for validating the input, but its strongly
             # typed nature makes it hard to work with. So we use it to
             # validate the input, but just treat it as a regular Python dict.
@@ -47,8 +48,9 @@ class GFBuilder:
                 raise ValueError("Could not validate configuration") from e
             self.config = yaml.safe_load(config)
         else:
+            self._orig_config = yaml.dump(config)
             try:
-                strictyaml.YAML(config, BASE_SCHEMA)
+                strictyaml.YAML(config).revalidate(BASE_SCHEMA)
             except Exception as e:
                 raise ValueError("Could not validate configuration") from e
             self.config = config

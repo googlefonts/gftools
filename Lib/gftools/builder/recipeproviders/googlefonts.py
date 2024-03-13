@@ -4,7 +4,7 @@ import os
 from tempfile import NamedTemporaryFile
 
 import yaml
-from strictyaml import YAML, YAMLValidationError
+from strictyaml import load, YAMLValidationError
 
 from gftools.builder.recipeproviders import RecipeProviderBase
 from gftools.builder.schema import (GOOGLEFONTS_SCHEMA, stat_schema,
@@ -48,18 +48,21 @@ DEFAULTS = {
 
 
 class GFBuilder(RecipeProviderBase):
+    schema = GOOGLEFONTS_SCHEMA
+
+    def revalidate(self):
+        # Revalidate using our schema
+        try:
+            load(self.builder._orig_config, self.schema)
+        except YAMLValidationError as e:
+            raise ValueError("Invalid configuration file") from e
+
     def write_recipe(self):
         if "instances" in self.config:
             logger.warning(
                 "'instances' no longer supported; generate a config with --generate and select the instances you want"
             )
-        # Revalidate using our schema
-        try:
-            YAML(self.config, GOOGLEFONTS_SCHEMA)
-        except YAMLValidationError as e:
-            raise ValueError(f"Invalid config: {e}")
-
-
+        self.revalidate()
         self.config = {**DEFAULTS, **self.config}
         for field in ["vfDir", "ttDir", "otDir", "woffDir"]:
             self.config[field] = self.config[field].replace("$outputDir", self.config["outputDir"])
@@ -69,9 +72,9 @@ class GFBuilder(RecipeProviderBase):
         if "stat" in self.config:
             self.statfile = NamedTemporaryFile(delete=False, mode="w+")
             try:
-                YAML(self.config["stat"]).revalidate(stat_schema)
+                load(yaml.dump(self.config["stat"]), stat_schema)
             except:
-                YAML(self.config["stat"]).revalidate(stat_schema_by_font_name)
+                load(yaml.dump(self.config["stat"]), stat_schema_by_font_name)
             yaml.dump(self.config["stat"], self.statfile)
             self.statfile.close()
         else:
