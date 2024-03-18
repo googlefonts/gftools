@@ -113,7 +113,9 @@ def main(args=None):
     check_group.add_argument(
         "--diffbrowsers", action="store_true", help="Run Diffbrowsers"
     )
-    check_group.add_argument("--interpolations", action="store_true", help="Run interpolation checker")
+    check_group.add_argument(
+        "--interpolations", action="store_true", help="Run interpolation checker"
+    )
     parser.add_argument("-re", "--filter-fonts", help="Filter fonts by regex")
     parser.add_argument(
         "-o", "--out", default="out", help="Output path for check results"

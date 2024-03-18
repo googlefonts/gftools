@@ -20,33 +20,35 @@ import ots
 import sys
 import os
 
+
 def main(args=None):
     parser = argparse.ArgumentParser(
-        description='Run ots-sanitizer on all fonts in the directory')
-    parser.add_argument('path')
+        description="Run ots-sanitizer on all fonts in the directory"
+    )
+    parser.add_argument("path")
     args = parser.parse_args(args)
 
     results = []
     for p, i, files in os.walk(args.path):
         for f in files:
-            if f.endswith('.ttf'):
+            if f.endswith(".ttf"):
                 try:
                     font = os.path.join(p, f)
                     process = ots.sanitize(font, check=True, capture_output=True)
-                    result = '%s\t%s' % (font, process.stdout)
+                    result = "%s\t%s" % (font, process.stdout)
                 except ots.CalledProcessError as e:
-                    result = '%s\t%s' % (font, e.output)
+                    result = "%s\t%s" % (font, e.output)
 
                 results.append(result)
-                print('%s\t%s' % (f, result))
+                print("%s\t%s" % (f, result))
 
-    with open('ots_gf_results.txt', 'w') as doc:
-        doc.write(''.join(results))
-    print('done!')
+    with open("ots_gf_results.txt", "w") as doc:
+        doc.write("".join(results))
+    print("done!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print('ERROR: Include path to OFL dir')
+        print("ERROR: Include path to OFL dir")
     else:
         main(sys.argv[-1])

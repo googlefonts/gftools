@@ -4,12 +4,13 @@ import sys
 from collections import defaultdict
 
 import yaml
-from strictyaml import (Bool, HexInt, Map, Optional, Seq, Str,
-                        YAMLValidationError, load)
+from strictyaml import Bool, HexInt, Map, Optional, Seq, Str, YAMLValidationError, load
 
-from gftools.builder.recipeproviders.googlefonts import (DEFAULTS,
-                                                         GOOGLEFONTS_SCHEMA,
-                                                         GFBuilder)
+from gftools.builder.recipeproviders.googlefonts import (
+    DEFAULTS,
+    GOOGLEFONTS_SCHEMA,
+    GFBuilder,
+)
 from gftools.util.styles import STYLE_NAMES
 
 name = "Noto builder"

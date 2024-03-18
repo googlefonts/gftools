@@ -64,7 +64,9 @@ def version_has_ever_changed(file, version):
 
 
 if __name__ == "__main__":
-    config = yaml.load(open(os.path.join("sources", "config.yaml")), Loader=yaml.FullLoader)
+    config = yaml.load(
+        open(os.path.join("sources", "config.yaml")), Loader=yaml.FullLoader
+    )
     sources = config["sources"]
 
     current_version = None

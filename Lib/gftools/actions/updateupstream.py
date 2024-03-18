@@ -19,7 +19,9 @@ from copy import deepcopy
 parser = argparse.ArgumentParser(description="Create an upstream.yaml for a family")
 parser.add_argument("url", help="URL of GitHub release")
 parser.add_argument("--family", help="Family name", required=False)
-parser.add_argument("--config", help="Config file", default="sources/config.yaml", required=False)
+parser.add_argument(
+    "--config", help="Config file", default="sources/config.yaml", required=False
+)
 
 
 def get_family_name(config):
@@ -75,7 +77,7 @@ def update_file_list(metadata):
                     metadata.source.files.append(item)
                 elif file == "ARTICLE.en_us.html":
                     item.source_file = relpath
-                    item.dest_file = "article/"+file
+                    item.dest_file = "article/" + file
                     metadata.source.files.append(item)
                 elif file.endswith("ttf"):
                     if config.get("buildVariable", True):
@@ -111,7 +113,9 @@ def update_file_list(metadata):
             )
         if not a_font:
             if config.get("buildVariable", True):
-                raise ValueError("No variable font files were found. Is the build broken?")
+                raise ValueError(
+                    "No variable font files were found. Is the build broken?"
+                )
             raise ValueError("No font files were found. Is the release broken?")
 
         designer = TTFont(a_font)["name"].getDebugName(9)
@@ -126,9 +130,7 @@ if __name__ == "__main__":
     if args.family:
         config = {"familyName": args.family}
     else:
-        config = yaml.load(
-            open(args.config), Loader=yaml.FullLoader
-        )
+        config = yaml.load(open(args.config), Loader=yaml.FullLoader)
 
     if os.path.isfile("METADATA.pb"):
         metadata = load_metadata("METADATA.pb")

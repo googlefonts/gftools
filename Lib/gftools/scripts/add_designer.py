@@ -89,7 +89,7 @@ def gen_hrefs(urls):
         else:
             # https://www.mysite.com --> mysite.com
             res[url] = remove_url_prefix(url)
-    return " | ".join(f'<a href="{k}">{v}</a>' for k,v in res.items())
+    return " | ".join(f'<a href="{k}">{v}</a>' for k, v in res.items())
 
 
 def make_designer(
@@ -121,7 +121,9 @@ def make_designer(
         image.save(img_dst)
 
     print(f"Generating info.pb file")
-    info_pb = gen_info(name, os.path.basename(img_dst) if os.path.isfile(img_dst) else None)
+    info_pb = gen_info(
+        name, os.path.basename(img_dst) if os.path.isfile(img_dst) else None
+    )
     filename = os.path.join(designer_dir, "info.pb")
     with open(filename, "w") as f:
         f.write(info_pb)
@@ -150,7 +152,9 @@ def main(args=None):
     parser = argparse.ArgumentParser(usage=__doc__)
     parser.add_argument("designers_directory", help="path to google/fonts designer dir")
     parser.add_argument("name", help="Designer name e.g 'Steve Matteson'")
-    parser.add_argument("--img_path", help="Optional path to profile image", default=None)
+    parser.add_argument(
+        "--img_path", help="Optional path to profile image", default=None
+    )
     parser.add_argument(
         "--spreadsheet", help="Optional path to the Google Drive spreadsheet"
     )
@@ -160,7 +164,9 @@ def main(args=None):
         try:
             import pandas as pd
         except ImportError as e:
-            raise ValueError("The pandas library is required to read Excel spreadsheets")
+            raise ValueError(
+                "The pandas library is required to read Excel spreadsheets"
+            )
 
         df = pd.read_excel(args.spreadsheet)
         entry = df.loc[df["Designer Name"] == args.name]

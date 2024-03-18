@@ -209,7 +209,12 @@ def remap_lookups(table, src, dst, operation="copy", start=False):
             lookuplists[(dst_script, dst_lang)][dst_feature_name].extend(lookups)
     for script, lang, feature, lookups in to_remove:
         logging.info(
-            "[%s/%s/%s/%s] Removing lookups %s", tag, script, lang, feature, list(lookups)
+            "[%s/%s/%s/%s] Removing lookups %s",
+            tag,
+            script,
+            lang,
+            feature,
+            list(lookups),
         )
         lookuplists[(script, lang)][feature] = [
             l for l in lookuplists[(script, lang)][feature] if l not in lookups

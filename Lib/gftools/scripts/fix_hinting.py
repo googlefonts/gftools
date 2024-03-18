@@ -30,6 +30,7 @@ from __future__ import print_function, unicode_literals
 import argparse
 from gftools.fix import fix_hinted_font, FontFixer
 
+
 def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("font")
@@ -38,6 +39,5 @@ def main(args=None):
     FontFixer(args.font, fixes=[fix_hinted_font], verbose=True).fix()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-

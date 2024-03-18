@@ -14,14 +14,22 @@ import subprocess
 from gftools.gfgithub import GitHubClient
 
 if __name__ == "__main__":
-    url_split = subprocess.check_output(["git", "remote", "get-url", "origin"]).decode("utf8").strip().split("/")
+    url_split = (
+        subprocess.check_output(["git", "remote", "get-url", "origin"])
+        .decode("utf8")
+        .strip()
+        .split("/")
+    )
     client = GitHubClient(url_split[3], url_split[4])
 
-    parser = argparse.ArgumentParser(description='Create or update github issue')
-    parser.add_argument('--template', help='the issue name',
-        default="Fontbakery QA Report for Version {}")
-    parser.add_argument('version', help='the proposed version')
-    parser.add_argument('file', help='file containing MarkDown content')
+    parser = argparse.ArgumentParser(description="Create or update github issue")
+    parser.add_argument(
+        "--template",
+        help="the issue name",
+        default="Fontbakery QA Report for Version {}",
+    )
+    parser.add_argument("version", help="the proposed version")
+    parser.add_argument("file", help="file containing MarkDown content")
     args = parser.parse_args()
 
     label = f"qa-{args.version}"
@@ -45,4 +53,6 @@ if __name__ == "__main__":
         client._post(client.rest_url(f"issues/{number}/labels"), {"labels": [label]})
     see_url = response["html_url"]
 
-    print(f"::error file=sources/config.yaml,title=Fontbakery check failed::See {see_url}")
+    print(
+        f"::error file=sources/config.yaml,title=Fontbakery check failed::See {see_url}"
+    )

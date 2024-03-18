@@ -153,7 +153,7 @@ class GFTags(object):
             "Fancy",
             "Sophisticated",
             "Active",
-        ]
+        ],
     }
 
     def __init__(self):

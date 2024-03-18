@@ -42,7 +42,9 @@ subsets_schema = Seq(
         {
             "from": Enum(SUBSET_SOURCES.keys()) | Map({"repo": Str(), "path": Str()}),
             Optional("name"): Str(),
-            Optional("ranges"): Seq(Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})),
+            Optional("ranges"): Seq(
+                Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})
+            ),
             Optional("layoutHandling"): Str(),
             Optional("force"): Str(),
         }
@@ -88,7 +90,13 @@ def prepare_minimal_subsets(subsets):
 
 class SubsetMerger:
     def __init__(
-        self, input_ds, output_ds, subsets, googlefonts=False, cache="../subset-files", json=False
+        self,
+        input_ds,
+        output_ds,
+        subsets,
+        googlefonts=False,
+        cache="../subset-files",
+        json=False,
     ):
         self.input = input_ds
         self.output = output_ds

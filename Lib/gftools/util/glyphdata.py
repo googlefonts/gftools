@@ -18,10 +18,7 @@
 # https://github.com/googlefonts/glyphsLib/blob/9c86d6cfe2817d043dadb8912181492869657e8b/MetaTools/generate_glyphdata.py
 
 
-from __future__ import (print_function,
-                        division,
-                        absolute_import,
-                        unicode_literals)
+from __future__ import print_function, division, absolute_import, unicode_literals
 import os
 import xml.etree.ElementTree as etree
 from collections import namedtuple
@@ -29,25 +26,17 @@ from pkg_resources import resource_filename
 
 # Data tables which we put into the generated Python file.
 # See comments in generate_python_source() below for documentation.
-GlyphData = namedtuple('GlyphData', [
-    'by_name'
-  , 'by_unicode'
-  , 'by_prodname'
-    ])
+GlyphData = namedtuple("GlyphData", ["by_name", "by_unicode", "by_prodname"])
 
-GlyphInfo = namedtuple('GlyphInfo', [
-    'name'
-  , 'production_name'
-  , 'unicode'
-])
+GlyphInfo = namedtuple("GlyphInfo", ["name", "production_name", "unicode"])
 
 
 def _fetch_all_glyphs():
     glyphs = {}
     for filename in ("GlyphData.xml", "GlyphData_Ideographs.xml"):
-        full_filename = resource_filename("gftools.util",
-                                          os.path.join('GlyphsInfo',
-                                                       filename))
+        full_filename = resource_filename(
+            "gftools.util", os.path.join("GlyphsInfo", filename)
+        )
         for glyph in etree.parse(full_filename).findall("glyph"):
             glyphName = glyph.attrib["name"]
             assert glyphName not in glyphs, "multiple entries for " + glyphName
@@ -69,5 +58,6 @@ def _build_data(glyphs):
             by_unicode[charcode] = glyphInfo
         by_prodname[prodname] = glyphInfo
     return GlyphData(by_name, by_unicode, by_prodname)
+
 
 DATA = _build_data(_fetch_all_glyphs())

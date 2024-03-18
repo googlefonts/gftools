@@ -24,27 +24,39 @@ A Python script for printing bounding boxes to stdout.
 Users can either check a collection of fonts bounding boxes (--family) or
 the bounding box for each glyph in the collection of fonts (--glyphs).
 """
-from argparse import (ArgumentParser,
-                      RawTextHelpFormatter)
+from argparse import ArgumentParser, RawTextHelpFormatter
 import csv
 import sys
 from fontTools.ttLib import TTFont
 import tabulate
-parser = ArgumentParser(description=__doc__,
-                        formatter_class=RawTextHelpFormatter)
-parser.add_argument('fonts',
-                    nargs='+',
-                    help='Fonts in OpenType (TTF/OTF) format')
-parser.add_argument('--csv', default=False, action='store_true',
-                    help='Output data in comma-separated-values format')
-parser.add_argument('--extremes', default=False, action='store_true',
-                    help='Print extremes coordinates for each category')
+
+parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
+parser.add_argument("fonts", nargs="+", help="Fonts in OpenType (TTF/OTF) format")
+parser.add_argument(
+    "--csv",
+    default=False,
+    action="store_true",
+    help="Output data in comma-separated-values format",
+)
+parser.add_argument(
+    "--extremes",
+    default=False,
+    action="store_true",
+    help="Print extremes coordinates for each category",
+)
 group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument('--glyphs', default=False, action='store_true',
-                   help=('Return the bounds for glyphs'
-                         ' in a collection of fonts'))
-group.add_argument('--family', default=False, action="store_true",
-                   help='Return the bounds for a family of fonts')
+group.add_argument(
+    "--glyphs",
+    default=False,
+    action="store_true",
+    help=("Return the bounds for glyphs" " in a collection of fonts"),
+)
+group.add_argument(
+    "--family",
+    default=False,
+    action="store_true",
+    help="Return the bounds for a family of fonts",
+)
 
 
 def printInfo(rows, save=False):
@@ -85,39 +97,44 @@ def main(args=None):
         font_path = font
         font = TTFont(font_path)
         if args.glyphs:
-            for g_name in font['glyf'].glyphs:
-                glyph = font['glyf'][g_name]
+            for g_name in font["glyf"].glyphs:
+                glyph = font["glyf"][g_name]
                 try:
-                    rows.append([
-                        ("Font", font_path),
-                        ("Glyph", g_name),
-                        ("xMin", glyph.xMin),
-                        ("yMin", glyph.yMin),
-                        ("xMax", glyph.xMax),
-                        ("yMax", glyph.yMax)
-                    ])
+                    rows.append(
+                        [
+                            ("Font", font_path),
+                            ("Glyph", g_name),
+                            ("xMin", glyph.xMin),
+                            ("yMin", glyph.yMin),
+                            ("xMax", glyph.xMax),
+                            ("yMax", glyph.yMax),
+                        ]
+                    )
                 except AttributeError:
                     # glyphs without paths or components don't have
                     # yMin, yMax etc
-                    rows.append([
-                        ("Font", font_path),
-                        ("Glyph", g_name),
-                        ("xMin", 0),
-                        ("yMin", 0),
-                        ("xMax", 0),
-                        ("yMax", 0)
-                    ])
+                    rows.append(
+                        [
+                            ("Font", font_path),
+                            ("Glyph", g_name),
+                            ("xMin", 0),
+                            ("yMin", 0),
+                            ("xMax", 0),
+                            ("yMax", 0),
+                        ]
+                    )
                     pass
 
-
         elif args.family:
-            rows.append([
-                ("Font", font_path),
-                ("xMin", font['head'].xMin),
-                ("yMin", font['head'].yMin),
-                ("xMax", font['head'].xMax),
-                ("yMax", font['head'].yMax)
-            ])
+            rows.append(
+                [
+                    ("Font", font_path),
+                    ("xMin", font["head"].xMin),
+                    ("yMin", font["head"].yMin),
+                    ("xMax", font["head"].xMax),
+                    ("yMax", font["head"].yMax),
+                ]
+            )
 
     if args.extremes:
         rows = find_extremes(rows)
@@ -127,5 +144,6 @@ def main(args=None):
     else:
         printInfo(rows)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
