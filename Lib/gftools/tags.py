@@ -10,8 +10,9 @@ the Google Fonts website to help users find font families.
 """
 
 import csv
-import requests
 from io import StringIO
+
+import requests
 
 
 class SheetStructureChange(Exception):

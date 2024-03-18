@@ -39,25 +39,24 @@ Generating a METADATA.pb file for an existing family:
 1. run the following: gftools add-font /path/to/existing/family
 """
 from __future__ import print_function
-from functools import cmp_to_key
+
 import argparse
 import contextlib
 import errno
 import glob
-import re
 import os
+import re
 import time
+from functools import cmp_to_key
+
+from axisregistry import AxisRegistry
 from fontTools import ttLib
-
-
 from gflanguages import LoadLanguages
+from gfsubsets import SubsetsInFont
+
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.util import google_fonts as fonts
-from gftools.utils import cmp
-from axisregistry import AxisRegistry
-from gfsubsets import SubsetsInFont
-from gftools.utils import remove_url_prefix, primary_script
-
+from gftools.utils import cmp, primary_script, remove_url_prefix
 
 RELAXED_SUBSETS = ["math", "symbols"]
 

@@ -15,12 +15,9 @@
 # limitations under the License.
 #
 from argparse import ArgumentParser
-from gftools.fix import (
-    convert_cmap_subtables_to_v4,
-    drop_nonpid0_cmap,
-    drop_mac_cmap,
-    FontFixer,
-)
+
+from gftools.fix import (FontFixer, convert_cmap_subtables_to_v4,
+                         drop_mac_cmap, drop_nonpid0_cmap)
 
 description = "Manipulate a collection of fonts' cmap tables."
 

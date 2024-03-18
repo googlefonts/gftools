@@ -7,16 +7,16 @@ with the same families hosted on the sandbox server.
 Usage:
 gftools check-sandbox-family https://www.somesite.com
 """
+import argparse
 import os
 import sys
+import time
+from io import BytesIO
+from urllib.parse import urlsplit
+
+from PIL import Image, ImageDraw, ImageFont
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from PIL import Image, ImageDraw, ImageFont
-import argparse
-from urllib.parse import urlsplit
-from io import BytesIO
-import time
-
 
 SWAP_FONT_JS = """
 links = document.getElementsByTagName('link');

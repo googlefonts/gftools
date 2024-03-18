@@ -1,8 +1,8 @@
 """Test whether the font should be PRed to GF, inform GitHub if so.
 """
-import yaml
 import os
 
+import yaml
 
 if __name__ == "__main__":
     config = yaml.load(

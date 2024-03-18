@@ -19,13 +19,12 @@ Prints codepoints supported by the font, one per line, in hex (0xXXXX).
 
 """
 
+import argparse
 import os
 import sys
 import unicodedata
-import argparse
 
 from gfsubsets import CodepointsInFont, SubsetsForCodepoint
-
 
 parser = argparse.ArgumentParser(description="Dump codepoints in a font")
 parser.add_argument(

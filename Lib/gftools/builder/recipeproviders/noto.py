@@ -5,11 +5,9 @@ from collections import defaultdict
 
 from strictyaml import Bool, HexInt, Map, Optional, Seq, Str
 
-from gftools.builder.recipeproviders.googlefonts import (
-    DEFAULTS,
-    GOOGLEFONTS_SCHEMA,
-    GFBuilder,
-)
+from gftools.builder.recipeproviders.googlefonts import (DEFAULTS,
+                                                         GOOGLEFONTS_SCHEMA,
+                                                         GFBuilder)
 from gftools.util.styles import STYLE_NAMES
 
 name = "Noto builder"

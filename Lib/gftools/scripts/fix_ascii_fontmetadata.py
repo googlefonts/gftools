@@ -17,9 +17,10 @@
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
 #
 import argparse
-from fontTools import ttLib
-from gftools.fix import fix_ascii_fontmetadata
 
+from fontTools import ttLib
+
+from gftools.fix import fix_ascii_fontmetadata
 
 description = "Fixes TTF NAME table strings to be ascii only"
 parser = argparse.ArgumentParser(description=description)

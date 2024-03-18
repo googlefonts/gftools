@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Create or author Google Fonts axisregistry {AXIS_NAME}.textproto files."""
-import sys
 import argparse
-from gftools.axes_pb2 import AxisProto, FallbackProto
-from google.protobuf import text_format
-from fontTools.ttLib import TTFont
+import sys
 
+from fontTools.ttLib import TTFont
+from google.protobuf import text_format
+
+from gftools.axes_pb2 import AxisProto, FallbackProto
 
 parser = argparse.ArgumentParser(
     prog="gftools add-axis",

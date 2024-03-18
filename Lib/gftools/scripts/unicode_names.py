@@ -20,8 +20,9 @@ Input file should have one codepoint per line in hex (0xXXXX).
 
 """
 from __future__ import print_function
-import unicodedata
+
 import argparse
+import unicodedata
 
 parser = argparse.ArgumentParser(
     description="Add Unicode character names to a nam file"

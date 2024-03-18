@@ -4,13 +4,13 @@ from os import chdir
 from pathlib import Path
 from tempfile import NamedTemporaryFile, gettempdir
 from typing import Any, Dict, List, Union
-import yaml
 
 import networkx as nx
+import strictyaml
+import yaml
 from fontmake.font_project import FontProject
 from ninja import _program
 from ninja.ninja_syntax import Writer, escape_path
-import strictyaml
 
 from gftools.builder.file import File
 from gftools.builder.operations import OperationBase, known_operations

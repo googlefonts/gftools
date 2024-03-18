@@ -1,10 +1,10 @@
 import os
 import pprint
-import requests
+import time
 import typing
 import urllib
-import time
 
+import requests
 
 GITHUB_GRAPHQL_API = "https://api.github.com/graphql"
 GITHUB_V3_REST_API = "https://api.github.com"

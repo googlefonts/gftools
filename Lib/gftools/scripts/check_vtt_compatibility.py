@@ -20,9 +20,10 @@
 Check a hinted font will successfully transfer
   vtt instructions to an unhinted font.
 """
-from argparse import ArgumentParser, RawTextHelpFormatter
-from fontTools.ttLib import TTFont
 import logging
+from argparse import ArgumentParser, RawTextHelpFormatter
+
+from fontTools.ttLib import TTFont
 
 
 def font_glyphs(font):

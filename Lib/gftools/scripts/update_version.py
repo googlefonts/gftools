@@ -25,7 +25,9 @@ e.g:
 gftools update-version [fonts] 2.300 2.301
 """
 from __future__ import print_function
+
 from argparse import ArgumentParser, RawTextHelpFormatter
+
 from fontTools.ttLib import TTFont
 
 parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)

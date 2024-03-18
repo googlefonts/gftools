@@ -1,8 +1,9 @@
 import argparse
-import subprocess
 import os
-from github import Github
 import re
+import subprocess
+
+from github import Github
 
 
 def get_latest_release(family, user=None, repo=None):

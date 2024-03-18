@@ -3,41 +3,31 @@ Functions to fix fonts so they conform to the Google Fonts
 specification:
 https://github.com/googlefonts/gf-docs/tree/main/Spec
 """
+import logging
+import os
+import re
+import subprocess
+import tempfile
+from copy import deepcopy
+from datetime import datetime
+from os.path import basename
+
+from axisregistry import (build_filename, build_fvar_instances,
+                          build_name_table, build_variations_ps_name)
 from fontTools.misc.fixedTools import otRound
-from fontTools.ttLib import TTFont, newTable, getTableModule
+from fontTools.ttLib import TTFont, getTableModule, newTable
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
-from gftools.util.google_fonts import _KNOWN_WEIGHTS
-from gftools.utils import (
-    download_family_from_Google_Fonts,
-    Google_Fonts_has_family,
-    font_stylename,
-    font_familyname,
-    family_bounding_box,
-    get_unencoded_glyphs,
-    normalize_unicode_marks,
-    partition_cmap,
-    typo_metrics_enabled,
-    validate_family,
-)
-from axisregistry import (
-    build_filename,
-    build_name_table,
-    build_fvar_instances,
-    build_variations_ps_name,
-)
-from gftools.stat import gen_stat_tables
 
-from os.path import basename
-from copy import deepcopy
-import logging
-import subprocess
-import os
-import tempfile
-from datetime import datetime
-import re
 from gftools.constants import OFL_BODY_TEXT
-
+from gftools.stat import gen_stat_tables
+from gftools.util.google_fonts import _KNOWN_WEIGHTS
+from gftools.utils import (Google_Fonts_has_family,
+                           download_family_from_Google_Fonts,
+                           family_bounding_box, font_familyname,
+                           font_stylename, get_unencoded_glyphs,
+                           normalize_unicode_marks, partition_cmap,
+                           typo_metrics_enabled, validate_family)
 
 log = logging.getLogger(__name__)
 
@@ -662,9 +652,9 @@ def _swap_empty_glyph_to_gid1(ttfont):
 
 
 def _add_empty_glyph_to_gid1(ttfont):
-    from nanoemoji.util import load_fully
     from fontTools.ttLib.tables._g_l_y_f import Glyph
     from fontTools.ttLib.tables.otTables import NO_VARIATION_INDEX
+    from nanoemoji.util import load_fully
 
     ttfont = load_fully(ttfont)
     glyph_order = ttfont.getGlyphOrder()
@@ -738,7 +728,7 @@ def fix_nbspace_glyph(ttfont: TTFont):
 
 def fix_license_strings(ttfont: TTFont):
     """Update font's nametable license and license url strings"""
-    from gftools.constants import OFL_LICENSE_URL, OFL_LICENSE_INFO
+    from gftools.constants import OFL_LICENSE_INFO, OFL_LICENSE_URL
 
     name_table = ttfont["name"]
     for r in name_table.names:

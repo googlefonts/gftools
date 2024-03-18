@@ -19,8 +19,10 @@ the Google Fonts specification. The font's style name in the name record is
 used to determine the correct value.
 """
 from __future__ import print_function
-from gftools.fix import fix_weight_class, FontFixer
+
 import sys
+
+from gftools.fix import FontFixer, fix_weight_class
 
 
 def main(font_path):

@@ -11,7 +11,7 @@ import yaml
 from fontmake.font_project import FontProject
 from fontTools.designspaceLib import DesignSpaceDocument
 from glyphsets import unicodes_per_glyphset
-from strictyaml import HexInt, Int, Map, Optional, Seq, Str, Enum
+from strictyaml import Enum, HexInt, Int, Map, Optional, Seq, Str
 from ufomerge import merge_ufos
 
 from gftools.util.styles import STYLE_NAMES

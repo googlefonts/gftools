@@ -16,19 +16,17 @@
 #
 import argparse
 import os
+
 import tabulate
 from fontTools import ttLib
-from gftools.constants import (
-    PLATFORM_ID__WINDOWS,
-    NAMEID_STR,
-    NAMEID_FONT_FAMILY_NAME,
-    NAMEID_FONT_SUBFAMILY_NAME,
-    NAMEID_FULL_FONT_NAME,
-    NAMEID_POSTSCRIPT_NAME,
-    NAMEID_TYPOGRAPHIC_FAMILY_NAME,
-    NAMEID_TYPOGRAPHIC_SUBFAMILY_NAME,
-    NAMEID_COMPATIBLE_FULL_MACONLY,
-)
+
+from gftools.constants import (NAMEID_COMPATIBLE_FULL_MACONLY,
+                               NAMEID_FONT_FAMILY_NAME,
+                               NAMEID_FONT_SUBFAMILY_NAME,
+                               NAMEID_FULL_FONT_NAME, NAMEID_POSTSCRIPT_NAME,
+                               NAMEID_STR, NAMEID_TYPOGRAPHIC_FAMILY_NAME,
+                               NAMEID_TYPOGRAPHIC_SUBFAMILY_NAME,
+                               PLATFORM_ID__WINDOWS)
 
 parser = argparse.ArgumentParser(
     description=("Print out family" " metadata of the fonts")

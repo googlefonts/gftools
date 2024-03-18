@@ -1,18 +1,19 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 from configparser import ConfigParser
 from dataclasses import dataclass
 from enum import Enum
+from functools import cached_property
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Optional, Any
-from functools import cached_property
+from typing import Any, Optional
 
 from gftools.push.items import Axis, Designer, Family, FamilyMeta
-from gftools.push.utils import google_path_to_repo_path, repo_path_to_google_path
-import json
+from gftools.push.utils import (google_path_to_repo_path,
+                                repo_path_to_google_path)
 
 log = logging.getLogger("gftools.push")
 

@@ -46,12 +46,14 @@ Fixes TTF GASP table so that its program
 contains the minimal recommended instructions.
 """
 from __future__ import print_function
-from argparse import ArgumentParser, RawTextHelpFormatter
+
 import os
+from argparse import ArgumentParser, RawTextHelpFormatter
+
 from fontTools import ttLib
 from fontTools.ttLib.tables import ttProgram
-from gftools.fix import fix_unhinted_font
 
+from gftools.fix import fix_unhinted_font
 
 parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
 parser.add_argument("fontfile_in", nargs=1, help="Font in OpenType (TTF/OTF) format")

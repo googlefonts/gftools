@@ -18,8 +18,9 @@ gftools ufo-setter --ufos ufo1.ufo ufo2.ufo ufo3.ufo --attribs \
 """
 # TODO this could be generalised for all font formats
 import argparse
-from defcon import Font
 import json
+
+from defcon import Font
 
 
 def parse_attributes(items):

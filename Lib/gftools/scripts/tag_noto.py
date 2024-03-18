@@ -13,10 +13,11 @@ gftools tag-noto ofl/**/METADATA.pb
 """
 
 import argparse
-from gftools import fonts_public_pb2
-from google.protobuf import text_format
 import re
 
+from google.protobuf import text_format
+
+from gftools import fonts_public_pb2
 
 NOTO_FAMILY_NAME = re.compile(r"^Noto .*")
 

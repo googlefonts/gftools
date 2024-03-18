@@ -18,15 +18,15 @@
 Check the version number of a family hosted on fonts.google.com.
 """
 from __future__ import print_function
+
 from argparse import ArgumentParser
-from fontTools.ttLib import TTFont
 from ntpath import basename
 from zipfile import ZipFile
-from gftools.utils import (
-    download_family_from_Google_Fonts,
-    download_file,
-    fonts_from_zip,
-)
+
+from fontTools.ttLib import TTFont
+
+from gftools.utils import (download_family_from_Google_Fonts, download_file,
+                           fonts_from_zip)
 
 
 def parse_version_head(fonts):

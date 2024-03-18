@@ -26,8 +26,10 @@ if you need to change the name or style of a collection of font families,
 use gftools nametable-from-filename instead.
 """
 from __future__ import print_function
-from fontTools.ttLib import TTFont
+
 from argparse import ArgumentParser, RawTextHelpFormatter
+
+from fontTools.ttLib import TTFont
 
 NAME_IDS = {
     0: "copyright",

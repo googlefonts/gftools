@@ -17,9 +17,11 @@
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
 #
 from __future__ import print_function
+
 import argparse
 import collections
 import sys
+
 from fontTools import ttLib
 from fontTools.ttLib import TTLibError
 

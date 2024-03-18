@@ -28,12 +28,14 @@ $ gftools add-designer path/to/local/clone/fonts/catalog/designers "Theo Salvado
 $ gftools add-designer path/to/local/clone/fonts/catalog/designers "Theo Salvador" --img_path path/to/img.png --spreadsheet ./GFDesigners.xlsx
 """
 import argparse
-from glob import glob
 import os
-from unidecode import unidecode
-from PIL import Image
-from gftools.designers_pb2 import DesignerInfoProto
+from glob import glob
+
 from google.protobuf import text_format
+from PIL import Image
+from unidecode import unidecode
+
+from gftools.designers_pb2 import DesignerInfoProto
 from gftools.utils import remove_url_prefix
 
 

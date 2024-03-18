@@ -14,32 +14,33 @@
 # limitations under the License.
 #
 from __future__ import annotations
-import requests
-from io import BytesIO
-from zipfile import ZipFile
-import sys
+
 import os
-import shutil
-import ufoLib2
-import unicodedata
-from unidecode import unidecode
-from collections import namedtuple
-from gflanguages import LoadLanguages
-from github import Github
-from pkg_resources import resource_filename
-from google.protobuf import text_format
 import re
+import shutil
+import sys
+import unicodedata
+from collections import Counter, defaultdict, namedtuple
+from io import BytesIO
+from pathlib import Path
+from zipfile import ZipFile
+
+import requests
+import ufoLib2
 from fontTools import unicodedata as ftunicodedata
 from fontTools.ttLib import TTFont
+from gflanguages import LoadLanguages
+from github import Github
+from google.protobuf import text_format
+from pkg_resources import resource_filename
 from ufo2ft.util import classifyGlyphs
-from collections import Counter
-from collections import defaultdict
-from pathlib import Path
+from unidecode import unidecode
 
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
     from ConfigParser import ConfigParser
+
 from bs4 import BeautifulSoup
 
 # =====================================

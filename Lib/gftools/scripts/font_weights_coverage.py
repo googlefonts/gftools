@@ -27,11 +27,12 @@ FamilyName-Bold.ttf failed
 FamilyName-Light.ttf passed
 """
 from __future__ import print_function
+
+import argparse
 import os
 from os import listdir
-import argparse
-from gfsubsets import CodepointsInFont
 
+from gfsubsets import CodepointsInFont
 
 parser = argparse.ArgumentParser(description="Compare size and coverage of two fonts")
 parser.add_argument("dirpath", help="a directory containing font files.", metavar="DIR")

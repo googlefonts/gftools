@@ -10,11 +10,12 @@ gftools ufo-set-order font1.ufo font2.ufo font3.ufo
 # Set glyph orders based on font1.ufo glyph order
 gftools ufo-set-order font2.ufo font3.ufo --origin font1.ufo
 """
+import argparse
+import os
+
 # TODO: we can probably order components and anchors as well!
 # add these when needed
 from defcon import Font
-import argparse
-import os
 
 
 def set_glyph_order(origin, fonts):

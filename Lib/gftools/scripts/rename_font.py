@@ -9,9 +9,11 @@ Usage:
 gftools rename-font font.ttf "New Family Name"
 """
 import argparse
+
 from fontTools.ttLib import TTFont
-from gftools.utils import font_familyname
+
 from gftools.fix import rename_font
+from gftools.utils import font_familyname
 
 
 def main(args=None):

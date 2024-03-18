@@ -24,8 +24,10 @@ Microsoft OpenType specification:
 https://www.microsoft.com/typography/otspec/os2.htm#fst
 """
 from __future__ import print_function
+
 from argparse import ArgumentParser, RawTextHelpFormatter
-from gftools.fix import fix_fs_type, FontFixer
+
+from gftools.fix import FontFixer, fix_fs_type
 
 parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
 parser.add_argument("fonts", nargs="+", help="Fonts in OpenType (TTF/OTF) format")

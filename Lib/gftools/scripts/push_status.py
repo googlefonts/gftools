@@ -30,16 +30,13 @@ gftools push-status /path/to/google/fonts/repo
 gftools push-status /path/to/google/fonts/repo --lint
 """
 import argparse
-from pathlib import Path
-from gftools.push.trafficjam import PushItems, PushStatus
-from gftools.push.servers import (
-    gf_server_metadata,
-    PRODUCTION_META_URL,
-    SANDBOX_META_URL,
-)
-from gftools.push.items import Family
 import os
+from pathlib import Path
 
+from gftools.push.items import Family
+from gftools.push.servers import (PRODUCTION_META_URL, SANDBOX_META_URL,
+                                  gf_server_metadata)
+from gftools.push.trafficjam import PushItems, PushStatus
 
 PUSH_STATUS_TEMPLATE = """
 ***{} Status***

@@ -18,14 +18,16 @@ r"""Tool to identify problems with fonts.
 
 """
 from __future__ import print_function
+
 import collections
 import contextlib
 import os
 import re
 import sys
 
+from absl import app, flags
 from fontTools import ttLib
-from absl import flags, app
+
 from gftools.util import google_fonts as fonts
 
 FLAGS = flags.FLAGS

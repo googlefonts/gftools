@@ -18,10 +18,11 @@
 #
 import argparse
 import os
-from fontTools import ttLib
-from gftools.fix import fix_pua, FontFixer
-from gftools.utils import get_unencoded_glyphs
 
+from fontTools import ttLib
+
+from gftools.fix import FontFixer, fix_pua
+from gftools.utils import get_unencoded_glyphs
 
 description = "Fixes TTF unencoded glyphs to have Private Use Area encodings"
 

@@ -12,11 +12,12 @@ following properties:
 - All fonts contain the same amount of fvar axes
 - All fvar axes have the same ranges
 """
-from fontTools.otlLib.builder import buildStatTable
-from gftools.utils import font_is_italic
-import os
 import logging
+import os
 
+from fontTools.otlLib.builder import buildStatTable
+
+from gftools.utils import font_is_italic
 
 __all__ = ["gen_stat_tables", "gen_stat_tables_from_config"]
 

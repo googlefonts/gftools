@@ -24,11 +24,12 @@ A Python script for printing bounding boxes to stdout.
 Users can either check a collection of fonts bounding boxes (--family) or
 the bounding box for each glyph in the collection of fonts (--glyphs).
 """
-from argparse import ArgumentParser, RawTextHelpFormatter
 import csv
 import sys
-from fontTools.ttLib import TTFont
+from argparse import ArgumentParser, RawTextHelpFormatter
+
 import tabulate
+from fontTools.ttLib import TTFont
 
 parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
 parser.add_argument("fonts", nargs="+", help="Fonts in OpenType (TTF/OTF) format")

@@ -40,10 +40,12 @@ $ fontbakery family-html-snippet "Exo" "Hello World"
 </html>
 """
 from __future__ import print_function
+
 import json
-import requests
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
+
+import requests
 
 GF_API = "https://www.googleapis.com/webfonts/v1/webfonts?key={}"
 

@@ -14,10 +14,11 @@ gftools fix-font font.ttf --include-source-fixes
 """
 import argparse
 import logging
+
 from fontTools.ttLib import TTFont
+
 from gftools.fix import *
 from gftools.utils import parse_axis_dflts
-
 
 logging.basicConfig(level=logging.INFO)
 

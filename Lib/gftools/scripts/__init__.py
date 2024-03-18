@@ -15,11 +15,12 @@
 # limitations under the License.
 #
 from __future__ import print_function
+
+import argparse
+import sys
 from argparse import RawTextHelpFormatter
 from importlib import import_module
 from pathlib import Path
-import sys
-import argparse
 
 from gftools._version import version as __version__
 

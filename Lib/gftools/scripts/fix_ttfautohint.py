@@ -17,6 +17,7 @@
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
 #
 import argparse
+
 from fontTools import ttLib
 
 description = "Fixes TTF Autohint table"

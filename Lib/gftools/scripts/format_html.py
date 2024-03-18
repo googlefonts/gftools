@@ -17,6 +17,7 @@
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
 #
 import argparse
+
 from gftools.utils import format_html
 
 description = "Format HTML files according to Google Fonts specs"

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-from pprint import pprint
-from gftools.packager import load_metadata, make_package, no_source_metadata
 import argparse
+import logging
 import os
 from pathlib import Path
-import logging
+from pprint import pprint
+
 from rich.logging import RichHandler
+
+from gftools.packager import load_metadata, make_package, no_source_metadata
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"

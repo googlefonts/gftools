@@ -18,8 +18,10 @@
 
 """
 from __future__ import print_function
-from argparse import ArgumentParser
+
 import os
+from argparse import ArgumentParser
+
 from fontTools.ttLib import TTFont
 
 

@@ -11,18 +11,19 @@ gftools lang-sample-text -l ./languages/en.textproto ./udhr_translations/en.xml
 
 """
 
-from absl import app
-from absl import flags
-from gflanguages import LoadLanguages, LoadRegions
-from gftools import fonts_public_pb2
-from gftools.util.udhr import Udhr
-from google.protobuf import text_format
-from lxml import etree
 import csv
 import glob
 import os
 import re
+
 import yaml
+from absl import app, flags
+from gflanguages import LoadLanguages, LoadRegions
+from google.protobuf import text_format
+from lxml import etree
+
+from gftools import fonts_public_pb2
+from gftools.util.udhr import Udhr
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("lang", None, "Path to lang metadata package", short_name="l")

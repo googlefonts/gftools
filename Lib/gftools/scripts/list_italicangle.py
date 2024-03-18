@@ -16,6 +16,7 @@
 #
 import argparse
 import os
+
 import tabulate
 from fontTools import ttLib
 

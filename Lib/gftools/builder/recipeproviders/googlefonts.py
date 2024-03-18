@@ -4,14 +4,11 @@ import os
 from tempfile import NamedTemporaryFile
 
 import yaml
-from strictyaml import load, YAMLValidationError
+from strictyaml import YAMLValidationError, load
 
 from gftools.builder.recipeproviders import RecipeProviderBase
-from gftools.builder.schema import (
-    GOOGLEFONTS_SCHEMA,
-    stat_schema,
-    stat_schema_by_font_name,
-)
+from gftools.builder.schema import (GOOGLEFONTS_SCHEMA, stat_schema,
+                                    stat_schema_by_font_name)
 
 logger = logging.getLogger("GFBuilder")
 

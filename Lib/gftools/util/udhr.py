@@ -1,6 +1,7 @@
-from gftools import fonts_public_pb2
 import enum
 import re
+
+from gftools import fonts_public_pb2
 
 
 class Udhr:

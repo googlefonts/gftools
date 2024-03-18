@@ -15,10 +15,12 @@
 # limitations under the License.
 #
 from __future__ import print_function
+
 import argparse
 import csv
 import os
 import sys
+
 import tabulate
 from fontTools import ttLib
 

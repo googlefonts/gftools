@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Check if a font's VTT hinting can be compiled with vttLib"""
-from vttLib import *
-from fontTools.ttLib import TTFont
 import argparse
+
+from fontTools.ttLib import TTFont
+from vttLib import *
 
 
 def main(args=None):

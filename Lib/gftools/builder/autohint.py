@@ -1,6 +1,7 @@
-from ttfautohint import ttfautohint
 from fontTools.ttLib import TTFont
+from ttfautohint import ttfautohint
 from ttfautohint.options import parse_args as ttfautohint_parse_args
+
 from gftools.utils import primary_script
 
 AUTOHINT_SCRIPTS = [

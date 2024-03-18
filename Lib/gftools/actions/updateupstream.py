@@ -3,18 +3,18 @@
 """
 import argparse
 import os
-from tempfile import TemporaryDirectory
-import yaml
 import zipfile
-
-from gftools.packager import load_metadata
-import gftools.fonts_public_pb2 as fonts_pb2
-from gftools.builder import GFBuilder
-from gftools.utils import download_file
-from fontTools.ttLib import TTFont
-import gftools.util.google_fonts as fonts
 from copy import deepcopy
+from tempfile import TemporaryDirectory
 
+import yaml
+from fontTools.ttLib import TTFont
+
+import gftools.fonts_public_pb2 as fonts_pb2
+import gftools.util.google_fonts as fonts
+from gftools.builder import GFBuilder
+from gftools.packager import load_metadata
+from gftools.utils import download_file
 
 parser = argparse.ArgumentParser(description="Create an upstream.yaml for a family")
 parser.add_argument("url", help="URL of GitHub release")

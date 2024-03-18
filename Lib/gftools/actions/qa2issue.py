@@ -11,6 +11,7 @@ provided, and labels it accordingly; if there is, it adds the text as a new comm
 """
 import argparse
 import subprocess
+
 from gftools.gfgithub import GitHubClient
 
 if __name__ == "__main__":

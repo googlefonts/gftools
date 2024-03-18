@@ -20,9 +20,11 @@ from __future__ import print_function
 import argparse
 import os
 import sys
+
 import requests
-from gftools.fonts_public_pb2 import FamilyProto
 from google.protobuf import text_format
+
+from gftools.fonts_public_pb2 import FamilyProto
 
 description = (
     "Comparison of category fields of local METADATA.pb files"

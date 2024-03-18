@@ -14,12 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os
 import argparse
 import glob
 import logging
-from fontTools import ttLib
+import os
 
+from fontTools import ttLib
 
 # set up some command line argument processing
 parser = argparse.ArgumentParser(description="Print vendorID" " of TTF files")

@@ -17,14 +17,15 @@ This is expected to be run within a git repository:
     ::set-output name=newtag::v1.001
 
 """
-import yaml
 import os
 import re
-from sys import exit
-from bumpfontversion.ufohandler import UFOHandler
-from bumpfontversion.glyphshandler import GlyphsHandler
-import pygit2
 import tempfile
+from sys import exit
+
+import pygit2
+import yaml
+from bumpfontversion.glyphshandler import GlyphsHandler
+from bumpfontversion.ufohandler import UFOHandler
 
 
 def get_version(path):

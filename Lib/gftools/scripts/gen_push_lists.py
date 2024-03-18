@@ -13,13 +13,10 @@ pull requests must use labels.
 Usage:
 gftools gen-push-lists /path/to/google/fonts
 """
-import sys
 import os
-from gftools.push.trafficjam import (
-    PushItems,
-    PushStatus,
-    PushList,
-)
+import sys
+
+from gftools.push.trafficjam import PushItems, PushList, PushStatus
 from gftools.push.utils import branch_matches_google_fonts_main
 
 

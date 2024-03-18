@@ -1,14 +1,13 @@
+import importlib
+import inspect
+import os
+import pkgutil
+import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property
-import os
-import pkgutil
-import importlib
-import inspect
-import sys
 from os.path import dirname
 from tempfile import NamedTemporaryFile
-
 
 
 @dataclass

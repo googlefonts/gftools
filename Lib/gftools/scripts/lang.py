@@ -21,19 +21,6 @@ Note:      This module uses hyperglot, which is licensed GPLv3
 See also:  https://github.com/googlefonts/gftools/issues/498
 """
 
-from absl import app
-from absl import flags
-from collections import defaultdict
-from collections import deque
-from fontTools.ttLib import TTFont
-from gflanguages import LoadLanguages, LoadScripts
-from gftools import fonts_public_pb2
-from gftools.util.udhr import Udhr
-from google.protobuf import text_format
-from hyperglot import languages
-from hyperglot import VALIDITYLEVELS
-from lxml import etree
-from urllib import request
 import csv
 import glob
 import os
@@ -43,7 +30,18 @@ import ssl
 import tempfile
 import warnings
 import zipfile
+from collections import defaultdict, deque
+from urllib import request
 
+from absl import app, flags
+from fontTools.ttLib import TTFont
+from gflanguages import LoadLanguages, LoadScripts
+from google.protobuf import text_format
+from hyperglot import VALIDITYLEVELS, languages
+from lxml import etree
+
+from gftools import fonts_public_pb2
+from gftools.util.udhr import Udhr
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 NOTO_DIR = os.path.join(DIR, "noto-unhinted")

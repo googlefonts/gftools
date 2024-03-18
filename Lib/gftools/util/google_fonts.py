@@ -19,8 +19,7 @@
 Provides APIs to interact with font subsets, codepoints for font or subset.
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 import codecs
 import collections
@@ -34,12 +33,12 @@ if __name__ == "__main__":
     # some of the imports here wouldn't work otherwise
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import gftools.fonts_public_pb2 as fonts_pb2
 from fontTools import ttLib
 from gflanguages import LoadLanguages
 from google.protobuf import text_format
 from hyperglot import parse
 
+import gftools.fonts_public_pb2 as fonts_pb2
 
 # See https://www.microsoft.com/typography/otspec/name.htm.
 NAME_COPYRIGHT = 0

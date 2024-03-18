@@ -19,10 +19,11 @@ import csv
 import os
 import sys
 
-from fontTools.ttLib import TTFont
 import tabulate
-from gftools.utils import get_fsSelection_byte1, get_fsSelection_byte2
+from fontTools.ttLib import TTFont
+
 from gftools.fix import fix_fs_selection
+from gftools.utils import get_fsSelection_byte1, get_fsSelection_byte2
 
 parser = argparse.ArgumentParser(
     description="Print out fsSelection" " bitmask of the fonts"

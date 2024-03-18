@@ -27,12 +27,13 @@ gftools check-name [fonts]
 Output in csv format
 gftools check-name [fonts] --csv
 """
-from argparse import ArgumentParser, RawTextHelpFormatter
 import csv
-import sys
-from fontTools.ttLib import TTFont
-import tabulate
 import ntpath
+import sys
+from argparse import ArgumentParser, RawTextHelpFormatter
+
+import tabulate
+from fontTools.ttLib import TTFont
 
 parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
 parser.add_argument("fonts", nargs="+", help="Fonts in OpenType (TTF/OTF) format")

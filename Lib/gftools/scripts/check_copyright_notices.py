@@ -16,8 +16,10 @@
 #
 import argparse
 import os
+
 import tabulate
 from fontTools import ttLib
+
 from gftools.constants import NAMEID_COPYRIGHT_NOTICE, PLATID_STR
 
 parser = argparse.ArgumentParser(description="Print out copyright" " nameIDs strings")

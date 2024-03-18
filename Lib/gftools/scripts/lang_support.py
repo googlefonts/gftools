@@ -15,12 +15,14 @@ gftools lang-support -l ./lang/ -r ./ofl/noto*/METADATA.pb
 """
 
 import argparse
-from fontTools.ttLib import TTFont
-from gflanguages import LoadLanguages, LoadScripts
-from gftools import fonts_public_pb2
-from gftools.util import google_fonts as fonts
 import csv
 import os
+
+from fontTools.ttLib import TTFont
+from gflanguages import LoadLanguages, LoadScripts
+
+from gftools import fonts_public_pb2
+from gftools.util import google_fonts as fonts
 
 parser = argparse.ArgumentParser(
     description="Add language support metadata to METADATA.pb files"

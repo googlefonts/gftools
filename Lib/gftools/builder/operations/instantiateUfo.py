@@ -1,9 +1,11 @@
-from pathlib import Path
-from gftools.builder.file import File
-from gftools.builder.operations import FontmakeOperationBase
 import os
 from functools import cached_property
+from pathlib import Path
+
 from ninja.ninja_syntax import escape_path
+
+from gftools.builder.file import File
+from gftools.builder.operations import FontmakeOperationBase
 
 
 class InstantiateUFO(FontmakeOperationBase):

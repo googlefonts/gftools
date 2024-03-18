@@ -23,9 +23,11 @@ The fsSelection, fsType and macStyle also get updated
 to reflect the new names.
 """
 from __future__ import print_function
-import re
+
 import ntpath
+import re
 from argparse import ArgumentParser, RawTextHelpFormatter
+
 from fontTools.ttLib import TTFont, newTable
 
 WIN_SAFE_STYLES = [

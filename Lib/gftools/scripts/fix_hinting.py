@@ -27,8 +27,10 @@ Bit 3 = Force ppem to integer values for all internal scaler math;
         May use fractional ppem sizes if this bit is clear;
 """
 from __future__ import print_function, unicode_literals
+
 import argparse
-from gftools.fix import fix_hinted_font, FontFixer
+
+from gftools.fix import FontFixer, fix_hinted_font
 
 
 def main(args=None):

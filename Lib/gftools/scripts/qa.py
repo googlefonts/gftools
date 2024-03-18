@@ -18,21 +18,19 @@ Fonts:
 `gftools qa -gh www.github.com/user/repo/tree/fonts/ttf -gfb -a -o qa`
 """
 import argparse
-import os
-import shutil
 import logging
-from gftools.utils import (
-    download_family_from_Google_Fonts,
-    download_files_in_github_pr,
-    download_files_in_github_dir,
-    download_files_from_archive,
-    Google_Fonts_has_family,
-    mkdir,
-)
+import os
 import re
-from gftools.qa import FontQA
+import shutil
+
 from diffenator2.font import DFont
 
+from gftools.qa import FontQA
+from gftools.utils import (Google_Fonts_has_family,
+                           download_family_from_Google_Fonts,
+                           download_files_from_archive,
+                           download_files_in_github_dir,
+                           download_files_in_github_pr, mkdir)
 
 __version__ = "3.1.0"
 logger = logging.getLogger(__name__)

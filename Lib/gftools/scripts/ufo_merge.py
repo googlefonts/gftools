@@ -7,7 +7,6 @@ import ufoLib2
 
 from gftools.ufomerge import merge_ufos
 
-
 logger = logging.getLogger("ufomerge")
 logging.basicConfig(level=logging.INFO)
 # I don't care about ambiguous glyph names that look like ranges

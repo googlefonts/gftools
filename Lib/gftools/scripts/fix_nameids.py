@@ -16,11 +16,12 @@
 #
 import argparse
 import os
+
 import tabulate
 from fontTools import ttLib
-from gftools.utils import has_mac_names
-from gftools.fix import drop_mac_names, drop_superfluous_mac_names, FontFixer
 
+from gftools.fix import FontFixer, drop_mac_names, drop_superfluous_mac_names
+from gftools.utils import has_mac_names
 
 parser = argparse.ArgumentParser(description="Print out nameID" " strings of the fonts")
 parser.add_argument("font", nargs="+")

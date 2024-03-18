@@ -15,7 +15,9 @@ gftools fix-family fonts1.ttf --include-source-fixes
 import argparse
 import logging
 import os
+
 from fontTools.ttLib import TTFont
+
 from gftools.fix import *
 from gftools.utils import parse_axis_dflts
 

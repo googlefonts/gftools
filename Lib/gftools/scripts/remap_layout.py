@@ -3,10 +3,10 @@
 Rearrange the features in a font file: drop features
 or move lookups into another feature or language system.
 """
-from collections import defaultdict
 import logging
 import re
 from argparse import ArgumentParser, RawTextHelpFormatter
+from collections import defaultdict
 from typing import List, Tuple
 
 from fontTools.ttLib import TTFont

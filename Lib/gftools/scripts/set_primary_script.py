@@ -20,10 +20,10 @@
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
-
-from gftools.utils import primary_script
-from gftools.util.google_fonts import Metadata, WriteProto, LanguageComments
 from gflanguages import LoadLanguages
+
+from gftools.util.google_fonts import LanguageComments, Metadata, WriteProto
+from gftools.utils import primary_script
 
 
 def main(args=None):

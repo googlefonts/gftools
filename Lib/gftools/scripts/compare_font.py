@@ -62,15 +62,15 @@ Roboto-Regular.ttf (162876) vs Roboto2-Regular.ttf (145256) (-17620)
     TOTAL, -17611, 162569=>144958, -10.8%
 """
 
+import argparse
 import errno
 import os
 import sys
 
 from fontTools.ttLib import sfnt
-import argparse
-from gftools.util import google_fonts as fonts
 from gfsubsets import CodepointsInFont, CodepointsInSubset
 
+from gftools.util import google_fonts as fonts
 
 parser = argparse.ArgumentParser(description="Compare size and coverage of two fonts")
 parser.add_argument("first_font")

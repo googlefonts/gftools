@@ -8,27 +8,24 @@ Users will need to have Github Hub installed.
 https://hub.github.com/
 
 """
-import subprocess
-from rich.pretty import pprint
-from gftools.push.utils import branch_matches_google_fonts_main
-from gftools.push.servers import GFServers, Items
-from gftools.push.items import Family, FamilyMeta
-from gftools.push.trafficjam import (
-    PushItem,
-    PushItems,
-    PushStatus,
-    PushCategory,
-    STATUS_OPTION_IDS,
-)
-import os
 import argparse
-from pathlib import Path
-import tempfile
 import json
-import sys
 import logging
-from typing import Optional
+import os
+import subprocess
+import sys
+import tempfile
 from configparser import ConfigParser
+from pathlib import Path
+from typing import Optional
+
+from rich.pretty import pprint
+
+from gftools.push.items import Family, FamilyMeta
+from gftools.push.servers import GFServers, Items
+from gftools.push.trafficjam import (STATUS_OPTION_IDS, PushCategory, PushItem,
+                                     PushItems, PushStatus)
+from gftools.push.utils import branch_matches_google_fonts_main
 
 log = logging.getLogger("gftools.push")
 

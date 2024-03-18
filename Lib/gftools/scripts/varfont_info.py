@@ -21,8 +21,10 @@ table of a given TTF file.
 
 """
 from __future__ import print_function
+
 import argparse
 import contextlib
+
 from fontTools import ttLib
 
 
