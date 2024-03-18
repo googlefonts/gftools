@@ -1,10 +1,11 @@
-import pytest
-import tempfile
-import subprocess
 import os
-from fontTools.ttLib import TTFont
-from gftools.builder.dependencies import GFTOOLS_DEPENDENCIES_KEY
+import subprocess
+import tempfile
 
+import pytest
+from fontTools.ttLib import TTFont
+
+from gftools.builder.dependencies import GFTOOLS_DEPENDENCIES_KEY
 
 TEST_FONT = os.path.join("data", "test", "Lora-Regular.ttf")
 

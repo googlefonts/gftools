@@ -1,11 +1,11 @@
-import tempfile
-import pytest
-import shutil
 import os
+import shutil
 import subprocess
+import tempfile
+
+import pytest
 
 from gftools.builder import GFBuilder
-
 
 CWD = os.path.dirname(__file__)
 TEST_DIR = os.path.join(CWD, "..", "data", "test", "builder")
@@ -30,7 +30,7 @@ TEST_DIR = os.path.join(CWD, "..", "data", "test", "builder")
                 os.path.join("webfonts", "TestFamily-Black.woff2"),
                 os.path.join("webfonts", "TestFamily-Regular.woff2"),
                 os.path.join("webfonts", "TestFamily-Thin.woff2"),
-            ]
+            ],
         ),
         # Family consists of ufos which are not MM compatible. Tests
         # https://github.com/googlefonts/gftools/pull/669
@@ -50,9 +50,11 @@ TEST_DIR = os.path.join(CWD, "..", "data", "test", "builder")
             os.path.join(TEST_DIR, "recipeprovider_noto"),
             [
                 os.path.join("TestFamily", "unhinted", "ttf", "TestFamily-Regular.ttf"),
-                os.path.join("TestFamily", "googlefonts", "ttf", "TestFamily-Black.ttf"),
+                os.path.join(
+                    "TestFamily", "googlefonts", "ttf", "TestFamily-Black.ttf"
+                ),
             ],
-        )
+        ),
     ],
 )
 def test_builder(fp, font_paths):
@@ -66,9 +68,8 @@ def test_builder(fp, font_paths):
             font_path = os.path.join(font_dir, font_path)
             assert os.path.exists(font_path), f"{font_path} is missing"
 
+
 def test_bad_configs():
-    config = {
-        "Sources": ["foo.glyphs"]
-    }
+    config = {"Sources": ["foo.glyphs"]}
     with pytest.raises(ValueError):
         GFBuilder(config)

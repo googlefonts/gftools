@@ -1,5 +1,6 @@
-from gftools.gfgithub import GitHubClient
 import pytest
+
+from gftools.gfgithub import GitHubClient
 
 
 @pytest.mark.parametrize(
@@ -9,7 +10,7 @@ import pytest
         (6779, 3),
         (2987, 178),
         (6787, 568),
-    ]
+    ],
 )
 def test_pr_files(pr_number, file_count):
     client = GitHubClient("google", "fonts")
