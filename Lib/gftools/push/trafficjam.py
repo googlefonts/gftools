@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, Any
 from functools import cached_property
 
-from gftools.push.items import Axis, Designer, Family, FamilyMeta
+from gftools.push.items import Axis, Designer, Family, FamilyMeta, SampleText
 from gftools.push.utils import google_path_to_repo_path, repo_path_to_google_path
 import json
 
@@ -214,6 +214,8 @@ class PushItem:
             return FamilyMeta.from_fp(self.path)
         elif self.category == PushCategory.AXIS_REGISTRY:
             return Axis.from_fp(self.path)
+        elif self.category == PushCategory.SAMPLE_TEXTS:
+            return SampleText.from_fp(self.path)
         return None
 
     def set_server(self, server: STATUS_OPTION_IDS):

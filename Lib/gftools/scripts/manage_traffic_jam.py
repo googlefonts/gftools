@@ -194,7 +194,9 @@ class ItemChecker:
             if push_item.category == PushCategory.OTHER:
                 print("no push category defined. Skipping")
                 continue
-
+            if push_item.category == PushCategory.SAMPLE_TEXTS:
+                import pdb
+                pdb.set_trace()
             self.git_checkout_item(push_item)
             self.update_server(push_item, self.servers)
             self.display_item(push_item)

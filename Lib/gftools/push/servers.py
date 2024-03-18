@@ -14,6 +14,7 @@ from gftools.push.items import (
     Designer,
     Family,
     FamilyMeta,
+    SampleText,
     Itemer,
     Items,
 )
@@ -34,21 +35,33 @@ if os.path.exists(config_fp):
     DEV_FAMILY_DOWNLOAD = config["urls"]["dev_family_download"]
     DEV_META_URL = config["urls"]["dev_meta"]
     DEV_VERSIONS_URL = config["urls"]["dev_versions"]
+    DEV_LANG_URL = config["urls"]["dev_lang"]
+    DEV_SAMPLE_TEXT_URL = config["urls"]["dev_sample_text"]
     SANDBOX_FAMILY_DOWNLOAD = config["urls"]["sandbox_family_download"]
     SANDBOX_META_URL = config["urls"]["sandbox_meta"]
     SANDBOX_VERSIONS_URL = config["urls"]["sandbox_versions"]
+    SANDBOX_LANG_URL = config["urls"]["sandbox_lang"]
+    SANDBOX_SAMPLE_TEXT_URL = config["urls"]["sandbox_sample_text"]
     PRODUCTION_META_URL = config["urls"]["production_meta"]
     PRODUCTION_VERSIONS_URL = config["urls"]["production_versions"]
+    PRODUCTION_LANG_URL = config["urls"]["production_lang"]
+    PRODUCTION_SAMPLE_TEXT_URL = config["urls"]["production_sample_text"]
 
 else:
     DEV_FAMILY_DOWNLOAD = os.environ.get("DEV_FAMILY_DOWNLOAD")
     DEV_META_URL = os.environ.get("DEV_META_URL")
     DEV_VERSIONS_URL = os.environ.get("DEV_VERSIONS_URL")
+    DEV_LANG_URL = os.environ.get("DEV_LANG_URL")
+    DEV_SAMPLE_TEXT_URL = os.environ.get("DEV_SAMPLE_TEXT_URL")
     SANDBOX_FAMILY_DOWNLOAD = os.environ.get("SANDBOX_FAMILY_DOWNLOAD")
     SANDBOX_META_URL = os.environ.get("SANDBOX_META_URL")
     SANDBOX_VERSIONS_URL = os.environ.get("SANDBOX_VERSIONS_URL")
+    SANDBOX_LANG_URL = os.environ.get("SANDBOX_LANG_URL")
+    SANDBOX_SAMPLE_TEXT_URL = os.environ.get("SANDBOX_SAMPLE_TEXT_URL")
     PRODUCTION_META_URL = os.environ.get("PRODUCTION_META_URL")
     PRODUCTION_VERSIONS_URL = os.environ.get("PRODUCTION_VERSIONS_URL")
+    PRODUCTION_LANG_URL = os.environ.get("PRODUCTION_LANG_URL")
+    PRODUCTION_SAMPLE_TEXT_URL = os.environ.get("PRODUCTION_SAMPLE_TEXT_URL")
 
 
 @lru_cache
@@ -73,6 +86,33 @@ def gf_server_family_metadata(url: str, family: str):
     return info
 
 
+def sample_text(lang: str, url: str = PRODUCTION_SAMPLE_TEXT_URL):
+    def sample(family, lang):
+        resp = requests.get(url.format(family=family, lang=lang))
+        if resp.status_code != 200:
+            raise ValueError(
+                f"Language '{lang}' is either mispelled or not supported. "
+                "Also check if the endpoint still exists."
+            )
+        data = json.loads(resp.text[5:])
+        if lang in data["sampleText"]["languages"]:
+            return data["sampleText"]
+        return None
+
+    # This approach only seems to work for characters inside the Basic
+    # Multi-lingual Plane. We use this approach first since Noto doesn't
+    # fully cover the BMP yet and it lacks Latin African fonts.
+    res = sample("Adobe+Blank", lang)
+    if res:
+        return res
+    noto = requests.get(PRODUCTION_LANG_URL).json()
+    supported_families = noto["langToNotoFamilies"].get(lang)
+    if not supported_families:
+        return None
+    family = supported_families[0].replace(" ", "+")
+    return sample(family, lang)
+
+
 class GFServer(Itemer):
     def __init__(
         self,
@@ -80,15 +120,18 @@ class GFServer(Itemer):
         url: str = PRODUCTION_META_URL,
         dl_url: str = PROD_FAMILY_DOWNLOAD,
         version_url: str = PRODUCTION_VERSIONS_URL,
+        sample_text_url: str = PRODUCTION_SAMPLE_TEXT_URL,
     ):
         self.name = name
         self.url = url
         self.dl_url = dl_url
         self.version_url = version_url
+        self.sample_text_url = sample_text_url
         self.families: dict[str, Family] = {}
         self.designers: dict[str, Designer] = {}
         self.metadata: dict[str, FamilyMeta] = {}
         self.axisregistry: dict[str, Axis] = {}
+        self.sample_text: dict[str, SampleText] = {}
         self.family_versions = json.loads(requests.get(self.version_url).text[5:])
         self.family_versions = {
             i["name"]: i["fontVersions"][0]["version"]
@@ -115,6 +158,10 @@ class GFServer(Itemer):
     def update_axis_registry(self, axis_data):
         for axis in axis_data:
             self.axisregistry[axis["tag"]] = Axis.from_gf_json(axis)
+    
+    def update_sample_text(self, lang: str):
+        data = sample_text(lang, self.sample_text_url)
+        self.sample_text[lang] = SampleText.from_gf_json(lang, data)
 
     def update_family(self, name: str):
         family_version = self.family_versions.get(name)
@@ -172,19 +219,21 @@ class GFServers(Itemer):
     def __init__(self):
         self.last_checked = datetime.fromordinal(1).isoformat().split("T")[0]
         self.dev = GFServer(
-            GFServers.DEV, DEV_META_URL, DEV_FAMILY_DOWNLOAD, DEV_VERSIONS_URL
+            GFServers.DEV, DEV_META_URL, DEV_FAMILY_DOWNLOAD, DEV_VERSIONS_URL, DEV_SAMPLE_TEXT_URL
         )
         self.sandbox = GFServer(
             GFServers.SANDBOX,
             SANDBOX_META_URL,
             SANDBOX_FAMILY_DOWNLOAD,
             SANDBOX_VERSIONS_URL,
+            SANDBOX_SAMPLE_TEXT_URL,
         )
         self.production = GFServer(
             GFServers.PRODUCTION,
             PRODUCTION_META_URL,
             PROD_FAMILY_DOWNLOAD,
             PRODUCTION_VERSIONS_URL,
+            PRODUCTION_SAMPLE_TEXT_URL
         )
         self.fp = None
 
@@ -248,6 +297,8 @@ class GFServers(Itemer):
                         server.axisregistry[k].fallback = [
                             AxisFallback(**a) for a in v.fallback
                         ]
+                elif item_type == "sample_text":
+                    server.sample_text = {k: SampleText(**v) for k, v in item_value.items()}
                 else:
                     setattr(server, item_type, item_value)
         return inst
