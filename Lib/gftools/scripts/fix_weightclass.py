@@ -19,16 +19,18 @@ the Google Fonts specification. The font's style name in the name record is
 used to determine the correct value.
 """
 from __future__ import print_function
-from gftools.fix import fix_weight_class, FontFixer
+
 import sys
+
+from gftools.fix import FontFixer, fix_weight_class
 
 
 def main(font_path):
     FontFixer(font_path, verbose=True, fixes=[fix_weight_class]).fix()
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Please include a path to a font")
     else:
         main(sys.argv[1])
-

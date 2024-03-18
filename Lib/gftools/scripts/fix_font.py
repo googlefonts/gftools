@@ -14,10 +14,11 @@ gftools fix-font font.ttf --include-source-fixes
 """
 import argparse
 import logging
+
 from fontTools.ttLib import TTFont
+
 from gftools.fix import *
 from gftools.utils import parse_axis_dflts
-
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,16 +32,13 @@ def main(args=None):
         action="store_true",
         help="Fix font issues that should be fixed in the source files.",
     )
-    parser.add_argument(
-        "--rename-family",
-        help="Change the family's name"
-    )
+    parser.add_argument("--rename-family", help="Change the family's name")
     parser.add_argument(
         "--fvar-instance-axis-dflts",
         help=(
             "Set the fvar instance default values for non-wght axes. e.g "
             "wdth=100 opsz=36"
-        )
+        ),
     )
     args = parser.parse_args(args)
 

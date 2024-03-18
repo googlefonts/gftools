@@ -7,13 +7,16 @@ Usage:
 
 gftools ufo-fix-instances family.designspace
 """
-from fontTools.designspaceLib import DesignSpaceDocument, InstanceDescriptor
-from copy import deepcopy
-from gftools.fix import WEIGHT_VALUES
-from axisregistry import AxisRegistry
 import sys
+from copy import deepcopy
+
+from axisregistry import AxisRegistry
+from fontTools.designspaceLib import DesignSpaceDocument, InstanceDescriptor
+
+from gftools.fix import WEIGHT_VALUES
 
 axis_reg = AxisRegistry()
+
 
 def build_instances(ds):
     """Generate Designspace instances which are gf spec complaint"""

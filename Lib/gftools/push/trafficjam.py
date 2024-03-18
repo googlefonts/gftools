@@ -1,18 +1,19 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 from configparser import ConfigParser
 from dataclasses import dataclass
 from enum import Enum
+from functools import cached_property
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Optional, Any
-from functools import cached_property
+from typing import Any, Optional
 
 from gftools.push.items import Axis, Designer, Family, FamilyMeta
-from gftools.push.utils import google_path_to_repo_path, repo_path_to_google_path
-import json
+from gftools.push.utils import (google_path_to_repo_path,
+                                repo_path_to_google_path)
 
 log = logging.getLogger("gftools.push")
 
@@ -248,7 +249,7 @@ class PushItem:
 
     def block(self):
         self.set_pushlist(LIST_OPTION_IDS.BLOCKED)
-        print(f"Blocked")
+        print("Blocked")
 
     def bump_pushlist(self):
         if self.push_list == None:
@@ -256,7 +257,7 @@ class PushItem:
         elif self.push_list == PushList.TO_SANDBOX:
             self.set_pushlist(LIST_OPTION_IDS.TO_PRODUCTION)
         elif self.push_list == PushList.TO_PRODUCTION:
-            print(f"No push list beyond to_production. Keeping item in to_production")
+            print("No push list beyond to_production. Keeping item in to_production")
         else:
             raise ValueError(f"{self.push_list} is not supported")
 

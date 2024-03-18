@@ -1,7 +1,8 @@
-from dataclasses import dataclass
 import importlib
 import inspect
+from dataclasses import dataclass
 from typing import List
+
 from gftools.builder.file import File
 
 filecache = {}
@@ -24,7 +25,6 @@ class RecipeProviderBase:
     @property
     def sources(self) -> List[File]:
         return [get_file(str(p)) for p in self.config["sources"]]
-
 
 
 def get_provider(provider: str):

@@ -20,16 +20,18 @@
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
-
-from gftools.utils import primary_script
-from gftools.util.google_fonts import Metadata, WriteProto, LanguageComments
 from gflanguages import LoadLanguages
+
+from gftools.util.google_fonts import LanguageComments, Metadata, WriteProto
+from gftools.utils import primary_script
 
 
 def main(args=None):
     import argparse
 
-    parser = argparse.ArgumentParser(description='Walk a directory tree and set the primary script')
+    parser = argparse.ArgumentParser(
+        description="Walk a directory tree and set the primary script"
+    )
     parser.add_argument("directory")
     args = parser.parse_args(args)
     for path_obj in Path(args.directory).rglob("METADATA.pb"):
@@ -50,5 +52,6 @@ def main(args=None):
         language_comments = LanguageComments(LoadLanguages())
         WriteProto(metadata, path_obj, comments=language_comments)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

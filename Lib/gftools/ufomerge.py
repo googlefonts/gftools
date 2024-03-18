@@ -1,7 +1,8 @@
+import logging
+from pathlib import Path
+
 from fontFeatures import FontFeatures, Routine, Substitution
 from fontFeatures.feaLib import FeaParser
-from pathlib import Path
-import logging
 
 logger = logging.getLogger("ufomerge")
 logging.basicConfig(level=logging.INFO)

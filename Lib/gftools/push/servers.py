@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 import logging
 import os
@@ -8,18 +9,10 @@ from functools import lru_cache
 from pathlib import Path
 
 import requests  # type: ignore
-from gftools.push.items import (
-    Axis,
-    AxisFallback,
-    Designer,
-    Family,
-    FamilyMeta,
-    Itemer,
-    Items,
-)
-from gftools.utils import (
-    PROD_FAMILY_DOWNLOAD,
-)
+
+from gftools.push.items import (Axis, AxisFallback, Designer, Family,
+                                FamilyMeta, Itemer, Items)
+from gftools.utils import PROD_FAMILY_DOWNLOAD
 
 log = logging.getLogger("gftools.push")
 

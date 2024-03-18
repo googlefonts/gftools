@@ -1,5 +1,4 @@
 import os
-import sys
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import yaml

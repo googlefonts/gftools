@@ -1,9 +1,11 @@
-import pytest
 import operator
-from gftools.push.trafficjam import PushItem, PushItems, PushCategory, PushStatus, PushList
-from pathlib import Path
 import os
+from pathlib import Path
 
+import pytest
+
+from gftools.push.trafficjam import (PushCategory, PushItem, PushItems,
+                                     PushList, PushStatus)
 
 CWD = os.path.dirname(__file__)
 TEST_DIR = os.path.join(CWD, "..", "..", "data", "test", "gf_fonts")
@@ -619,13 +621,13 @@ def test_push_items_from_server_file(string, expected_size):
                 ]
             ),
             (True, True),
-            f"# Upgrade\nofl/mavenpro # 45\n",
+            "# Upgrade\nofl/mavenpro # 45\n",
         ),
     ],
 )
 def test_push_items_to_server_file(items, create_dirs, expected):
-    from io import StringIO
     import tempfile
+    from io import StringIO
 
     # We need to mock the item paths because if they don't exist, the server_file
     # should mention that they're deleted

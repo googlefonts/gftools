@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+import argparse
+
 from fontTools.ttLib import TTFont
+
 from gftools.fix import fix_fvar_instances
 from gftools.utils import parse_axis_dflts
-import argparse
 
 
 def main(args=None):

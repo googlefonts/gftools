@@ -4,13 +4,13 @@ from os import chdir
 from pathlib import Path
 from tempfile import NamedTemporaryFile, gettempdir
 from typing import Any, Dict, List, Union
-import yaml
 
 import networkx as nx
+import strictyaml
+import yaml
 from fontmake.font_project import FontProject
 from ninja import _program
 from ninja.ninja_syntax import Writer, escape_path
-import strictyaml
 
 from gftools.builder.file import File
 from gftools.builder.operations import OperationBase, known_operations
@@ -244,7 +244,9 @@ class GFBuilder:
                     current = existing_edge
                     # If we are expecting a different target name, copy the
                     # file to rename it.
-                    if current.path != target.path and step.object_equals(last_operation):
+                    if current.path != target.path and step.object_equals(
+                        last_operation
+                    ):
                         # print(f"Expected it to be {target.path}, copying")
                         copy_operation = Copy()
                         copy_operation.set_source(current)
@@ -280,7 +282,9 @@ class GFBuilder:
                             step.set_target(binary)
                         self.graph.add_edge(current, binary, operation=step)
                         if str(current.path) == str(binary):
-                            raise ValueError(f"Adding a circular edge: {current.path}->{step.opname}->{binary}")
+                            raise ValueError(
+                                f"Adding a circular edge: {current.path}->{step.opname}->{binary}"
+                            )
                     # print(
                     #     f"Creating an edge from {current.path} to {binary} via {step.opname}"
                     # )

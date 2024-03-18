@@ -19,12 +19,12 @@ The tool will return a path that contains a placeholder METADATA.pb file.
 Modify this file by hand using your favorite text editor and then rerun
 the tool using the same commands.
 """
-from gftools import packager
-
 import argparse
 import logging
+
 from rich.logging import RichHandler
 
+from gftools import packager
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"

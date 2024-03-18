@@ -41,9 +41,10 @@ import os
 import re
 import sys
 import xml.etree.ElementTree
-from vharfbuzz import Vharfbuzz
-from fontTools.ttLib import TTFont
+
 from fontTools.pens.boundsPen import BoundsPen
+from fontTools.ttLib import TTFont
+from vharfbuzz import Vharfbuzz
 
 
 def _regular_expression_from_set(character_set):

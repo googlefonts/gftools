@@ -15,16 +15,15 @@
 # limitations under the License.
 #
 from __future__ import print_function
+
+import argparse
+import sys
 from argparse import RawTextHelpFormatter
 from importlib import import_module
 from pathlib import Path
-from warnings import warn
-import sys
-import os
-import argparse
-import subprocess
 
 from gftools._version import version as __version__
+
 
 def _get_subcommands():
     subcommands = {}
@@ -58,27 +57,33 @@ def print_menu():
 
 subcommands = _get_subcommands()
 
-description = "Run gftools subcommands:{0}".format(''.join(
-              ['\n    {0}'.format(sc) for sc in sorted(subcommands.keys())]))
+description = "Run gftools subcommands:{0}".format(
+    "".join(["\n    {0}".format(sc) for sc in sorted(subcommands.keys())])
+)
 
-description += ("\n\nSubcommands have their own help messages.\n"
-                "These are usually accessible with the -h/--help\n"
-                "flag positioned after the subcommand.\n"
-                "I.e.: gftools subcommand -h")
+description += (
+    "\n\nSubcommands have their own help messages.\n"
+    "These are usually accessible with the -h/--help\n"
+    "flag positioned after the subcommand.\n"
+    "I.e.: gftools subcommand -h"
+)
 
-parser = argparse.ArgumentParser(description=description,
-                                 formatter_class=RawTextHelpFormatter)
-parser.add_argument('subcommand',
-                    nargs=1,
-                    help="the subcommand to execute")
+parser = argparse.ArgumentParser(
+    description=description, formatter_class=RawTextHelpFormatter
+)
+parser.add_argument("subcommand", nargs=1, help="the subcommand to execute")
 
-parser.add_argument('--list-subcommands', action='store_true',
-                    help='print the list of subcommnds '
-                    'to stdout, separated by a space character. This is '
-                    'usually only used to generate the shell completion code.')
+parser.add_argument(
+    "--list-subcommands",
+    action="store_true",
+    help="print the list of subcommnds "
+    "to stdout, separated by a space character. This is "
+    "usually only used to generate the shell completion code.",
+)
 
-parser.add_argument('--version', '-v', action='version',
-                    version='%(prog)s ' + __version__)
+parser.add_argument(
+    "--version", "-v", action="version", version="%(prog)s " + __version__
+)
 
 
 def main(args=None):
@@ -90,12 +95,13 @@ def main(args=None):
         mod = import_module(f".{module}", package)
         mod.main(args[2:])
     elif "--list-subcommands" in sys.argv:
-        print(' '.join(list(sorted(subcommands.keys()))))
+        print(" ".join(list(sorted(subcommands.keys()))))
     else:
         # shows menu and help if no args
         print_menu()
         args = parser.parse_args()
         parser.print_help()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -18,7 +18,9 @@
 #
 
 import argparse
+
 from fontTools.ttLib import TTFont
+
 from gftools.fix import remove_tables
 
 

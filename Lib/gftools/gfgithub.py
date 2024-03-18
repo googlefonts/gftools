@@ -1,10 +1,10 @@
 import os
 import pprint
-import requests
+import time
 import typing
 import urllib
-import time
 
+import requests
 
 GITHUB_GRAPHQL_API = "https://api.github.com/graphql"
 GITHUB_V3_REST_API = "https://api.github.com"
@@ -12,7 +12,7 @@ GITHUB_V3_REST_API = "https://api.github.com"
 
 class GitHubClient:
     def __init__(self, repo_owner, repo_name):
-        if not "GH_TOKEN" in os.environ:
+        if "GH_TOKEN" not in os.environ:
             raise Exception("GH_TOKEN environment variable not set")
         self.gh_token = os.environ["GH_TOKEN"]
         self.repo_owner = repo_owner
@@ -87,7 +87,9 @@ class GitHubClient:
             self.rest_url("pulls", state="open", head=pr_head, base=pr_base_branch)
         )
 
-    def create_pr(self, title: str, body: str, head: str, base: str, draft: bool = False):
+    def create_pr(
+        self, title: str, body: str, head: str, base: str, draft: bool = False
+    ):
         return self._post(
             self.rest_url("pulls"),
             {
@@ -96,7 +98,7 @@ class GitHubClient:
                 "head": head,
                 "base": base,
                 "maintainer_can_modify": True,
-                "draft": draft
+                "draft": draft,
             },
         )
 

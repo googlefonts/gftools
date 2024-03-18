@@ -22,8 +22,10 @@ Attempts to highlight the variable(s) that differ table by table.
 
 
 def main(args=None):
-  print("This code has been deprecated; use gftools-compare-font or diffenator2 instead")
+    print(
+        "This code has been deprecated; use gftools-compare-font or diffenator2 instead"
+    )
 
 
-if __name__ == '__main__':
-  main()
+if __name__ == "__main__":
+    main()

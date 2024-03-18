@@ -10,9 +10,9 @@ the Google Fonts website to help users find font families.
 """
 
 import csv
-import requests
 from io import StringIO
-from difflib import Differ
+
+import requests
 
 
 class SheetStructureChange(Exception):
@@ -144,7 +144,7 @@ class GFTags(object):
             "Fancy",
             "Sophisticated",
             "Active",
-        ]
+        ],
     }
 
     def __init__(self):

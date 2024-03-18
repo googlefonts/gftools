@@ -1,14 +1,11 @@
+import os
+from functools import cached_property
 from pathlib import Path
-from typing import List
+
+from ninja.ninja_syntax import escape_path
+
 from gftools.builder.file import File
 from gftools.builder.operations import FontmakeOperationBase
-import glyphsLib
-import os
-import gftools.builder
-from functools import cached_property
-from glyphsLib.builder import UFOBuilder
-from ninja.ninja_syntax import Writer, escape_path
-from fontTools.designspaceLib import InstanceDescriptor
 
 
 class InstantiateUFO(FontmakeOperationBase):

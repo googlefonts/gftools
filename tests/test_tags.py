@@ -1,9 +1,10 @@
-import pytest
-import tempfile
-import subprocess
-import os
-from pathlib import Path
 import csv
+import os
+import subprocess
+import tempfile
+from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture(scope="session")

@@ -12,10 +12,10 @@ gftools font-tags write path/to/google/fonts
 gftools font-tags lint path/to/google/fonts
 """
 import os
-from pathlib import Path
-import sys
-from gftools.tags import GFTags
 from argparse import ArgumentParser
+from pathlib import Path
+
+from gftools.tags import GFTags
 from gftools.utils import is_google_fonts_repo
 
 
@@ -40,7 +40,9 @@ def main(args=None):
     args = parser.parse_args(args)
 
     if not is_google_fonts_repo(args.gf_path):
-        raise ValueError(f"'{args.gf_path.absolute()}' is not a path to a valid google/fonts repo")
+        raise ValueError(
+            f"'{args.gf_path.absolute()}' is not a path to a valid google/fonts repo"
+        )
 
     gf_tags = GFTags()
 

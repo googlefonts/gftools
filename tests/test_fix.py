@@ -1,10 +1,10 @@
-from fontTools.ttLib import newTable, TTFont
-from gftools.fix import *
-from glob import glob
-import pytest
 import os
-from copy import deepcopy
+from glob import glob
 
+import pytest
+from fontTools.ttLib import TTFont, newTable
+
+from gftools.fix import *
 
 TEST_DATA = os.path.join("data", "test")
 
@@ -23,7 +23,7 @@ def var_font():
 def var_fonts():
     paths = [
         os.path.join(TEST_DATA, "Raleway[wght].ttf"),
-        os.path.join(TEST_DATA, "Raleway-Italic[wght].ttf")
+        os.path.join(TEST_DATA, "Raleway-Italic[wght].ttf"),
     ]
     return [TTFont(p) for p in paths]
 
@@ -59,7 +59,7 @@ def test_add_dummy_dsig(static_font):
 def test_fix_hinted_font(static_font):
     static_font["head"].flags &= ~(1 << 3)
     assert static_font["head"].flags & (1 << 3) != (1 << 3)
-    static_font['fpgm'] = newTable("fpgm")
+    static_font["fpgm"] = newTable("fpgm")
     fix_hinted_font(static_font)
     assert static_font["head"].flags & (1 << 3) == (1 << 3)
 
@@ -111,10 +111,8 @@ STYLE_TABLE = [
     ("12pt Italic", 400, (1 << 0), (1 << 1)),
 ]
 
-@pytest.mark.parametrize(
-    STYLE_HEADERS,
-    STYLE_TABLE
-)
+
+@pytest.mark.parametrize(STYLE_HEADERS, STYLE_TABLE)
 def test_fix_weight_class(static_font, style, weight_class, fs_selection, mac_style):
     name = static_font["name"]
     name.setName(style, 2, 3, 1, 0x409)
@@ -127,16 +125,12 @@ def test_unknown_weight_class(static_font):
     name = static_font["name"]
     name.setName("Foobar", 2, 3, 1, 0x409)
     name.setName("Foobar", 17, 3, 1, 0x409)
-    from gftools.fix import WEIGHT_NAMES
 
     with pytest.raises(ValueError, match="Cannot determine usWeightClass"):
         fix_weight_class(static_font)
 
 
-@pytest.mark.parametrize(
-    STYLE_HEADERS,
-    STYLE_TABLE
-)
+@pytest.mark.parametrize(STYLE_HEADERS, STYLE_TABLE)
 def test_fs_selection(static_font, style, weight_class, fs_selection, mac_style):
     # disable fsSelection bits above 6
     for i in range(7, 12):
@@ -148,10 +142,7 @@ def test_fs_selection(static_font, style, weight_class, fs_selection, mac_style)
     assert static_font["OS/2"].fsSelection == fs_selection
 
 
-@pytest.mark.parametrize(
-    STYLE_HEADERS,
-    STYLE_TABLE
-)
+@pytest.mark.parametrize(STYLE_HEADERS, STYLE_TABLE)
 def test_fix_mac_style(static_font, style, weight_class, fs_selection, mac_style):
     name = static_font["name"]
     name.setName(style, 2, 3, 1, 0x409)
@@ -244,12 +235,13 @@ def test_fix_vertical_metrics_typo_metrics_enabled(static_fonts):
     [
         (os.path.join(TEST_DATA, "CairoPlay[slnt,wght]-no-empty-glyphs.ttf")),
         (os.path.join(TEST_DATA, "CairoPlay[slnt,wght]-gid1-not-empty.ttf")),
-    ]
+    ],
 )
 def test_fix_colr_v0_font(font_path):
     # Fix a COLR v0 font.
     # maximum_color should not be run and GID 1 should have a blank glyph
     from gftools.fix import fix_colr_font
+
     font = TTFont(font_path)
 
     gid1 = font.getGlyphOrder()[1]
@@ -277,11 +269,14 @@ def test_fix_colr_v1_font(colr_v1_font):
 
 
 def test_ofl_license_strings(static_font):
-    from gftools.fix import fix_license_strings
     from gftools.constants import OFL_LICENSE_INFO, OFL_LICENSE_URL
+    from gftools.fix import fix_license_strings
 
     for id in (13, 14):
-        assert "http://scripts.sil.org/OFL" in static_font["name"].getName(id, 3, 1, 0x409).toUnicode()
+        assert (
+            "http://scripts.sil.org/OFL"
+            in static_font["name"].getName(id, 3, 1, 0x409).toUnicode()
+        )
     fix_license_strings(static_font)
     for id, expected in ((13, OFL_LICENSE_INFO), (14, OFL_LICENSE_URL)):
         assert expected == static_font["name"].getName(id, 3, 1, 0x409).toUnicode()

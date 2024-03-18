@@ -1,6 +1,4 @@
 from gftools.builder.operations import OperationBase
-import glyphsLib
-import gftools.builder
 
 
 class PaintCompiler(OperationBase):

@@ -34,8 +34,10 @@ gftools-fix-isfixedpitch --fonts [font1.ttf font2.ttf ...]
 
 """
 
-from gftools.fix import fix_isFixedPitch, FontFixer
 import argparse
+
+from gftools.fix import FontFixer, fix_isFixedPitch
+
 
 def main(args=None):
     parser = argparse.ArgumentParser(description=__doc__)
@@ -45,6 +47,6 @@ def main(args=None):
     for font in args.fonts:
         FontFixer(font, fixes=[fix_isFixedPitch], verbose=True).fix()
 
+
 if __name__ == "__main__":
     main()
-

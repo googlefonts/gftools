@@ -1,22 +1,10 @@
 """
 This schema represents all known key/value pairs for the builder config file.
 """
-from strictyaml import (
-    Map,
-    MapPattern,
-    Str,
-    Int,
-    Float,
-    Seq,
-    Optional,
-    Bool,
-    UniqueSeq,
-    Enum,
-    Any,
-    MapCombined,
-)
+from strictyaml import (Any, Bool, Enum, Float, Int, Map, MapCombined,
+                        MapPattern, Optional, Seq, Str, UniqueSeq)
 
-CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'HANDWRITING', 'MONOSPACE']
+CATEGORIES = ["DISPLAY", "SERIF", "SANS_SERIF", "HANDWRITING", "MONOSPACE"]
 
 
 BASE_SCHEMA = MapCombined(
@@ -33,7 +21,7 @@ stat_schema = Seq(
         {
             "name": Str(),
             "tag": Str(),
-            Optional("values")  : Seq(
+            Optional("values"): Seq(
                 Map(
                     {
                         "name": Str(),

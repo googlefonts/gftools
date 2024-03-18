@@ -41,12 +41,14 @@ gftools gen-stat font.ttf --elided-values wght=400 --axis-order wdth wght
 gftools gen-stat font.ttf --src my_stat.yaml
 
 """
+import argparse
+import os
+
+import yaml
 from axisregistry import AxisRegistry
 from fontTools.ttLib import TTFont
+
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
-import argparse
-import yaml
-import os
 
 axis_registry = AxisRegistry()
 

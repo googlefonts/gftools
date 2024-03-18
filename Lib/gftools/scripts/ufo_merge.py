@@ -7,7 +7,6 @@ import ufoLib2
 
 from gftools.ufomerge import merge_ufos
 
-
 logger = logging.getLogger("ufomerge")
 logging.basicConfig(level=logging.INFO)
 # I don't care about ambiguous glyph names that look like ranges
@@ -25,7 +24,9 @@ gs = parser.add_argument_group("glyph selection")
 gs.add_argument("-g", "--glyphs", help="Glyphs to add from UFO 2", default="")
 gs.add_argument("-G", "--glyphs-file", help="File containing glyphs to add from UFO 2")
 gs.add_argument(
-    "-u", "--codepoints", help="Unicode codepoints to add from UFO 2",
+    "-u",
+    "--codepoints",
+    help="Unicode codepoints to add from UFO 2",
 )
 gs.add_argument(
     "-U",
@@ -77,6 +78,7 @@ parser.add_argument("ufo1", help="UFO font file to merge into")
 parser.add_argument("ufo2", help="UFO font file to merge")
 parser.add_argument("--output", "-o", help="Output UFO font file")
 
+
 def main(args):
     args = parser.parse_args(args)
     if args.replace_existing:
@@ -105,7 +107,6 @@ def main(args):
         ):
             return int(cp[2:], 16)
         return int(cp)
-
 
     glyphs = set()
     if args.glyphs == "*":
@@ -142,5 +143,5 @@ def main(args):
     ufo1.save(args.output, overwrite=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

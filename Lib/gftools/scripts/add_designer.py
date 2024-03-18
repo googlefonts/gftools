@@ -28,12 +28,14 @@ $ gftools add-designer path/to/local/clone/fonts/catalog/designers "Theo Salvado
 $ gftools add-designer path/to/local/clone/fonts/catalog/designers "Theo Salvador" --img_path path/to/img.png --spreadsheet ./GFDesigners.xlsx
 """
 import argparse
-from glob import glob
 import os
-from unidecode import unidecode
-from PIL import Image
-from gftools.designers_pb2 import DesignerInfoProto
+from glob import glob
+
 from google.protobuf import text_format
+from PIL import Image
+from unidecode import unidecode
+
+from gftools.designers_pb2 import DesignerInfoProto
 from gftools.utils import remove_url_prefix
 
 
@@ -89,7 +91,7 @@ def gen_hrefs(urls):
         else:
             # https://www.mysite.com --> mysite.com
             res[url] = remove_url_prefix(url)
-    return " | ".join(f'<a href="{k}">{v}</a>' for k,v in res.items())
+    return " | ".join(f'<a href="{k}">{v}</a>' for k, v in res.items())
 
 
 def make_designer(
@@ -120,8 +122,10 @@ def make_designer(
         image = process_image(img_path)
         image.save(img_dst)
 
-    print(f"Generating info.pb file")
-    info_pb = gen_info(name, os.path.basename(img_dst) if os.path.isfile(img_dst) else None)
+    print("Generating info.pb file")
+    info_pb = gen_info(
+        name, os.path.basename(img_dst) if os.path.isfile(img_dst) else None
+    )
     filename = os.path.join(designer_dir, "info.pb")
     with open(filename, "w") as f:
         f.write(info_pb)
@@ -138,7 +142,7 @@ def make_designer(
     elif os.path.isfile(bio_file):
         print("Skipping. No bio text supplied but bio.html already exists")
     else:
-        print(f"Please manually update the bio.html file")
+        print("Please manually update the bio.html file")
         html_text = "N/A"
     if html_text:
         with open(bio_file, "w") as f:
@@ -150,7 +154,9 @@ def main(args=None):
     parser = argparse.ArgumentParser(usage=__doc__)
     parser.add_argument("designers_directory", help="path to google/fonts designer dir")
     parser.add_argument("name", help="Designer name e.g 'Steve Matteson'")
-    parser.add_argument("--img_path", help="Optional path to profile image", default=None)
+    parser.add_argument(
+        "--img_path", help="Optional path to profile image", default=None
+    )
     parser.add_argument(
         "--spreadsheet", help="Optional path to the Google Drive spreadsheet"
     )
@@ -159,8 +165,10 @@ def main(args=None):
     if args.spreadsheet:
         try:
             import pandas as pd
-        except ImportError as e:
-            raise ValueError("The pandas library is required to read Excel spreadsheets")
+        except ImportError:
+            raise ValueError(
+                "The pandas library is required to read Excel spreadsheets"
+            )
 
         df = pd.read_excel(args.spreadsheet)
         entry = df.loc[df["Designer Name"] == args.name]

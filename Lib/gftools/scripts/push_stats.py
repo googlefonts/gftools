@@ -9,15 +9,17 @@ The report contains information regarding:
 Usage:
 gftools push-stats path/to/google/fonts/repo out.html
 """
-from gftools.push.trafficjam import PushItems
-from jinja2 import Environment, FileSystemLoader, select_autoescape
-from pkg_resources import resource_filename
+import argparse
+import json
+import os
 from datetime import datetime
+
 import pygit2
 from github import Github
-import os
-import json
-import argparse
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pkg_resources import resource_filename
+
+from gftools.push.trafficjam import PushItems
 
 
 def get_commits(repo):
@@ -85,7 +87,6 @@ def get_issues(repo, since=datetime(2014, 1, 1)):
     return res
 
 
-
 def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("repo_path")
@@ -134,17 +135,13 @@ def main(args=None):
         "pushes": {
             "sandbox": [i.to_json() for i in sb_families],
             "production": [i.to_json() for i in prod_families],
-        }
+        },
     }
     json.dump(commit_data, open(data_out, "w", encoding="utf8"), indent=4)
 
     print("Writing report")
     with open(args.out, "w") as doc:
-        doc.write(
-            template.render(
-                commit_data=json.dumps(commit_data)
-            )
-        )
+        doc.write(template.render(commit_data=json.dumps(commit_data)))
 
 
 if __name__ == "__main__":

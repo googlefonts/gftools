@@ -1,26 +1,24 @@
 from __future__ import annotations
+
 import logging
+import re
+import zipfile
 from abc import ABC
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
 
+from axisregistry.axes_pb2 import AxisProto
+from bs4 import BeautifulSoup  # type: ignore
 from fontTools.ttLib import TTFont  # type: ignore
+from google.protobuf.json_format import MessageToDict  # type: ignore
+
 from gftools.designers_pb2 import DesignerInfoProto
 from gftools.fonts_public_pb2 import FamilyProto
 from gftools.push.utils import google_path_to_repo_path
 from gftools.util.google_fonts import ReadProto
-from gftools.utils import (
-    font_version,
-    download_family_from_Google_Fonts,
-    PROD_FAMILY_DOWNLOAD,
-)
-import zipfile
-from bs4 import BeautifulSoup  # type: ignore
-from pathlib import Path
-from axisregistry.axes_pb2 import AxisProto
-from google.protobuf.json_format import MessageToDict  # type: ignore
-from typing import Optional
-import re
-
+from gftools.utils import (PROD_FAMILY_DOWNLOAD,
+                           download_family_from_Google_Fonts, font_version)
 
 log = logging.getLogger("gftools.push")
 

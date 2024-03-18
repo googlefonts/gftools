@@ -14,16 +14,10 @@ E.g.:
 Credit to Cosimo Lupo (anthrotype) for starting this as a gist:
 https://gist.github.com/anthrotype/531a425c8a0ba5ee975bc2ec8add7b82
 """
-from collections import deque, defaultdict
 import re
-from typing import (
-    Generator,
-    Iterable,
-    DefaultDict,
-    Dict,
-    Set,
-    Tuple,
-)
+from collections import defaultdict, deque
+from typing import DefaultDict, Dict, Generator, Iterable, Set, Tuple
+
 from fontTools.ttLib import TTFont, newTable
 
 try:
@@ -32,7 +26,6 @@ except ImportError:
     import importlib_metadata  # type: ignore
 
 from packaging.requirements import Requirement
-
 
 # list of packages that are considered 'unsafe' in a requirements file
 DENYLIST = frozenset(["setuptools"])

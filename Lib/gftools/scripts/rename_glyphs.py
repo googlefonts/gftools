@@ -4,9 +4,10 @@ Rename glyph names in font_1 with font_2.
 Usage:
 gftools rename-glyphs font_1.ttf font_2.ttf -o font_1-renamed.ttf
 """
+from argparse import ArgumentParser
+
 from fontTools.ttLib import TTFont
 from ufo2ft.postProcessor import PostProcessor
-from argparse import ArgumentParser
 
 
 def main(args=None):

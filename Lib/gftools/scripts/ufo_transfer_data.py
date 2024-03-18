@@ -11,10 +11,11 @@ gftools ufo-transfer-data --src font1.ufo font2.ufo --dst font3.ufo font4.ufo --
 # Transfer kerning and anchors
 gftools ufo-transfer-data --src font1.ufo --dst font2.ufo --anchors --kerning
 """
-from defcon import Font
+import argparse
 import os
 from copy import deepcopy
-import argparse
+
+from defcon import Font
 
 
 def glyph_point_hash(font, glyph_name):

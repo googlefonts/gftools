@@ -9,9 +9,11 @@ Usage:
 gftools rename-font font.ttf "New Family Name"
 """
 import argparse
+
 from fontTools.ttLib import TTFont
-from gftools.utils import font_familyname
+
 from gftools.fix import rename_font
+from gftools.utils import font_familyname
 
 
 def main(args=None):
@@ -19,11 +21,14 @@ def main(args=None):
     parser.add_argument("font")
     parser.add_argument("new_name", help="New family name")
     parser.add_argument("-o", "--out", help="Output path")
-    parser.add_argument("--just-family", action="store_true",
-                        help="Only change family name and names based off it, such as the "
-                             "PostScript name. (By default, the old family name is replaced "
-                             "by the new name in all name table entries, including copyright, "
-                             "description, etc.)")
+    parser.add_argument(
+        "--just-family",
+        action="store_true",
+        help="Only change family name and names based off it, such as the "
+        "PostScript name. (By default, the old family name is replaced "
+        "by the new name in all name table entries, including copyright, "
+        "description, etc.)",
+    )
     args = parser.parse_args(args)
 
     font = TTFont(args.font)

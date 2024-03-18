@@ -1,8 +1,8 @@
-from fontTools.varLib.instancer import instantiateVariableFont, OverlapMode
 from axisregistry import build_name_table
-from gftools.fix import fix_fs_selection, fix_mac_style
-from gftools.utils import font_stylename, font_familyname
+from fontTools.varLib.instancer import OverlapMode, instantiateVariableFont
 
+from gftools.fix import fix_fs_selection, fix_mac_style
+from gftools.utils import font_familyname, font_stylename
 
 __all__ = ["gen_static_font"]
 

@@ -173,7 +173,9 @@ def load_metadata(fp: "Path | str"):
                     item.dest_file = dst
                     metadata.source.files.append(item)
 
-    metadata.source.repository_url = re.sub(r"\.git$", "", metadata.source.repository_url)
+    metadata.source.repository_url = re.sub(
+        r"\.git$", "", metadata.source.repository_url
+    )
     return metadata
 
 
@@ -244,7 +246,9 @@ def download_assets(
                     with open(out_fp, "wb") as f:
                         f.write(zf.read(file))
             if not found:
-                log.error(f"Could not find '{item.source_file}' in archive '{metadata.source.archive_url}'")
+                log.error(
+                    f"Could not find '{item.source_file}' in archive '{metadata.source.archive_url}'"
+                )
             res.append(out_fp)
         return res
 
@@ -525,6 +529,6 @@ def make_package(
                 head_repo,
             )
             log.info(
-                f"\nPR submitted to google/fonts repo!\n\n"
+                "\nPR submitted to google/fonts repo!\n\n"
                 "Please ensure the checklist supplied in the PR is completed"
             )

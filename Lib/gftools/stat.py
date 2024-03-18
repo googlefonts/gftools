@@ -12,12 +12,12 @@ following properties:
 - All fonts contain the same amount of fvar axes
 - All fvar axes have the same ranges
 """
-from axisregistry import AxisRegistry
-from fontTools.otlLib.builder import buildStatTable
-from gftools.utils import font_is_italic
-import os
 import logging
+import os
 
+from fontTools.otlLib.builder import buildStatTable
+
+from gftools.utils import font_is_italic
 
 __all__ = ["gen_stat_tables", "gen_stat_tables_from_config"]
 
@@ -26,10 +26,11 @@ log = logging.getLogger(__name__)
 
 
 def gen_stat_tables(ttFonts):
-  from axisregistry import build_stat
-  for ttFont in ttFonts:
-    siblings = [f for f in ttFonts if f != ttFont]
-    build_stat(ttFont, siblings)
+    from axisregistry import build_stat
+
+    for ttFont in ttFonts:
+        siblings = [f for f in ttFonts if f != ttFont]
+        build_stat(ttFont, siblings)
 
 
 def gen_stat_tables_from_config(stat, varfonts, has_italic=None, locations=None):
@@ -89,12 +90,14 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None, locations=None)
                 if ax["name"] == "ital":
                     raise ValueError("ital axis should not appear in stat config")
             ital_stat_for_roman = {
-                "name": "Italic", "tag": "ital",
-                "values": [dict(value=0, name="Roman", flags=0x2, linkedValue=1)]
+                "name": "Italic",
+                "tag": "ital",
+                "values": [dict(value=0, name="Roman", flags=0x2, linkedValue=1)],
             }
             ital_stat_for_italic = {
-                "name": "Italic", "tag": "ital",
-                "values": [dict(value=1, name="Italic")]
+                "name": "Italic",
+                "tag": "ital",
+                "values": [dict(value=1, name="Italic")],
             }
 
             stat.append({})  # We will switch this entry between Roman and Italic

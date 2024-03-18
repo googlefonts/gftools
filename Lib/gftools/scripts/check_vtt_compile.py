@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Check if a font's VTT hinting can be compiled with vttLib"""
-from vttLib import *
-from fontTools.ttLib import TTFont
 import argparse
+
+from fontTools.ttLib import TTFont
+from vttLib import *
+
 
 def main(args=None):
     parser = argparse.ArgumentParser()
@@ -39,12 +41,11 @@ def main(args=None):
         return
     if args.remove_incompatible_hinting:
         for _, glyph_name in incompatible_glyphs:
-            font['TSI1'].glyphPrograms[glyph_name] = ""
-            font['TSI3'].glyphPrograms[glyph_name] = ""
+            font["TSI1"].glyphPrograms[glyph_name] = ""
+            font["TSI3"].glyphPrograms[glyph_name] = ""
     font.save(args.font_path + ".fix")
     print("Incompatible glyph hints have been removed")
 
-    
+
 if __name__ == "__main__":
     main()
-

@@ -1,8 +1,9 @@
+import argparse
+import types
+
+import yaml
 from fontTools.misc.cliTools import makeOutputFileName
 from fontTools.ttLib import TTFont
-import types
-import yaml
-import argparse
 
 
 def loads(string):

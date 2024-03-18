@@ -2,18 +2,16 @@ import logging
 import os
 import re
 import shutil
-import sys
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
-import ufoLib2
 import yaml
 from fontmake.font_project import FontProject
 from fontTools.designspaceLib import DesignSpaceDocument
 from glyphsets import unicodes_per_glyphset
-from strictyaml import HexInt, Int, Map, Optional, Seq, Str, Enum
+from strictyaml import Enum, HexInt, Int, Map, Optional, Seq, Str
 from ufomerge import merge_ufos
 
 from gftools.util.styles import STYLE_NAMES
@@ -42,7 +40,9 @@ subsets_schema = Seq(
         {
             "from": Enum(SUBSET_SOURCES.keys()) | Map({"repo": Str(), "path": Str()}),
             Optional("name"): Str(),
-            Optional("ranges"): Seq(Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})),
+            Optional("ranges"): Seq(
+                Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})
+            ),
             Optional("layoutHandling"): Str(),
             Optional("force"): Str(),
         }
@@ -88,7 +88,13 @@ def prepare_minimal_subsets(subsets):
 
 class SubsetMerger:
     def __init__(
-        self, input_ds, output_ds, subsets, googlefonts=False, cache="../subset-files", json=False
+        self,
+        input_ds,
+        output_ds,
+        subsets,
+        googlefonts=False,
+        cache="../subset-files",
+        json=False,
     ):
         self.input = input_ds
         self.output = output_ds

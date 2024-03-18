@@ -37,6 +37,7 @@ import sys
 
 from gftools.builder.autohint import autohint
 
+
 def main(args=None):
     parser = argparse.ArgumentParser(
         description=("Automatically hint a TrueType font"),
@@ -58,14 +59,15 @@ def main(args=None):
         action="store_true",
         help="When determining the script, ignore Latin glyphs",
     )
-    parser.add_argument("--args", help="Any additional arguments to pass to ttfautohint")
+    parser.add_argument(
+        "--args", help="Any additional arguments to pass to ttfautohint"
+    )
     parser.add_argument(
         "--output",
         "-o",
         help="File to save the autohinted font (may be same as input). Defaults to same as input.",
     )
     parser.add_argument("input", metavar="FONT", help="Font to hint")
-
 
     args = parser.parse_args(args)
 
