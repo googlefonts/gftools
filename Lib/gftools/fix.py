@@ -7,7 +7,6 @@ from fontTools.misc.fixedTools import otRound
 from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
-from fontTools.ttLib.tables._f_v_a_r import NamedInstance
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
 from gftools.utils import (
     download_family_from_Google_Fonts,
@@ -20,7 +19,6 @@ from gftools.utils import (
     partition_cmap,
     typo_metrics_enabled,
     validate_family,
-    unique_name,
 )
 from axisregistry import (
     build_filename,
@@ -30,7 +28,7 @@ from axisregistry import (
 )
 from gftools.stat import gen_stat_tables
 
-from os.path import basename, splitext
+from os.path import basename
 from copy import deepcopy
 import logging
 import subprocess
@@ -173,7 +171,7 @@ def fix_hinted_font(ttFont):
     Args:
         ttFont: a TTFont instance
     """
-    if not "fpgm" in ttFont:
+    if "fpgm" not in ttFont:
         return False, ["Skipping. Font is not hinted."]
     old = ttFont["head"].flags
     ttFont["head"].flags |= 1 << 3
@@ -877,7 +875,7 @@ def fix_family(
                 )
         except FileNotFoundError:
             log.warning(
-                f"Google Fonts api key not found so we can't regression "
+                "Google Fonts api key not found so we can't regression "
                 "fix fonts. See Repo readme to add keys."
             )
         fix_vertical_metrics(fixed_fonts)

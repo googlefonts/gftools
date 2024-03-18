@@ -12,7 +12,6 @@ the Google Fonts website to help users find font families.
 import csv
 import requests
 from io import StringIO
-from difflib import Differ
 
 
 class SheetStructureChange(Exception):

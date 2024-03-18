@@ -17,7 +17,6 @@ Compare a github folder of fonts against the same family hosted on Google
 Fonts:
 `gftools qa -gh www.github.com/user/repo/tree/fonts/ttf -gfb -a -o qa`
 """
-from fontTools.ttLib import TTFont
 import argparse
 import os
 import shutil

@@ -29,7 +29,7 @@ def main(args=None):
         sys.exit()
 
     gf_path = sys.argv[2]
-    if not "ofl" in os.listdir(gf_path):
+    if "ofl" not in os.listdir(gf_path):
         raise ValueError(
             f"'{gf_path}' does not contain an 'ofl' dir so it isn't a google/fonts repo."
         )

@@ -100,7 +100,7 @@ def update_file_list(metadata):
             existing_files = deepcopy(metadata.source.files)
             metadata.source.files.clear()
             for item in existing_files:
-                if "googlefonts/" in item.source_file or not ".ttf" in item.source_file:
+                if "googlefonts/" in item.source_file or ".ttf" not in item.source_file:
                     metadata.source.files.append(item)
 
         if not license_found:

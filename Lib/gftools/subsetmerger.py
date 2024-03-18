@@ -2,13 +2,11 @@ import logging
 import os
 import re
 import shutil
-import sys
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
-import ufoLib2
 import yaml
 from fontmake.font_project import FontProject
 from fontTools.designspaceLib import DesignSpaceDocument

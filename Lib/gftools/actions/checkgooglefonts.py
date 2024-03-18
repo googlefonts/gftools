@@ -2,7 +2,6 @@
 """
 import yaml
 import os
-from sys import exit
 
 
 if __name__ == "__main__":
@@ -11,7 +10,7 @@ if __name__ == "__main__":
     )
     if "googleFonts" in config and config["googleFonts"]:
         print("This font should be submitted to Google Fonts")
-        print(f"::set-output name=is_gf::true")
+        print("::set-output name=is_gf::true")
     else:
         print("This font should not be submitted to Google Fonts")
-        print(f"::set-output name=is_gf::false")
+        print("::set-output name=is_gf::false")

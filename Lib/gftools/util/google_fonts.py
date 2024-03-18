@@ -29,8 +29,6 @@ import errno
 import os
 import re
 import sys
-import glob
-from pkg_resources import resource_filename
 
 if __name__ == "__main__":
     # some of the imports here wouldn't work otherwise

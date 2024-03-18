@@ -9,7 +9,6 @@ import sys
 from os.path import dirname
 from tempfile import NamedTemporaryFile
 
-from gftools.builder.file import File
 
 
 @dataclass

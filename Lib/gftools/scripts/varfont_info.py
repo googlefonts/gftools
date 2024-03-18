@@ -23,7 +23,6 @@ table of a given TTF file.
 from __future__ import print_function
 import argparse
 import contextlib
-import sys
 from fontTools import ttLib
 
 

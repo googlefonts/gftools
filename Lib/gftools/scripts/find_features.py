@@ -20,7 +20,6 @@
 from __future__ import print_function
 from argparse import ArgumentParser
 import os
-import sys
 from fontTools.ttLib import TTFont
 
 

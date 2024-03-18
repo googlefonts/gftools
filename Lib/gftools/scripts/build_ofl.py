@@ -19,8 +19,6 @@
 Generate an OFL.txt license document from font copyright strings
 """
 import argparse
-import os
-import logging
 from fontTools.ttLib import TTFont
 from pathlib import Path
 from gftools.fix import fix_ofl_license

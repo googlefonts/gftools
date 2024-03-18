@@ -120,7 +120,7 @@ def make_designer(
         image = process_image(img_path)
         image.save(img_dst)
 
-    print(f"Generating info.pb file")
+    print("Generating info.pb file")
     info_pb = gen_info(
         name, os.path.basename(img_dst) if os.path.isfile(img_dst) else None
     )
@@ -140,7 +140,7 @@ def make_designer(
     elif os.path.isfile(bio_file):
         print("Skipping. No bio text supplied but bio.html already exists")
     else:
-        print(f"Please manually update the bio.html file")
+        print("Please manually update the bio.html file")
         html_text = "N/A"
     if html_text:
         with open(bio_file, "w") as f:
@@ -163,7 +163,7 @@ def main(args=None):
     if args.spreadsheet:
         try:
             import pandas as pd
-        except ImportError as e:
+        except ImportError:
             raise ValueError(
                 "The pandas library is required to read Excel spreadsheets"
             )

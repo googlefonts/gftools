@@ -248,7 +248,7 @@ class PushItem:
 
     def block(self):
         self.set_pushlist(LIST_OPTION_IDS.BLOCKED)
-        print(f"Blocked")
+        print("Blocked")
 
     def bump_pushlist(self):
         if self.push_list == None:
@@ -256,7 +256,7 @@ class PushItem:
         elif self.push_list == PushList.TO_SANDBOX:
             self.set_pushlist(LIST_OPTION_IDS.TO_PRODUCTION)
         elif self.push_list == PushList.TO_PRODUCTION:
-            print(f"No push list beyond to_production. Keeping item in to_production")
+            print("No push list beyond to_production. Keeping item in to_production")
         else:
             raise ValueError(f"{self.push_list} is not supported")
 

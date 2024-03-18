@@ -22,8 +22,7 @@ import sys
 from fontTools.ttLib import TTFont
 import tabulate
 from gftools.utils import get_fsSelection_byte1, get_fsSelection_byte2
-from gftools.util.styles import STYLE_NAMES, is_filename_canonical
-from gftools.fix import fix_fs_selection, FontFixer
+from gftools.fix import fix_fs_selection
 
 parser = argparse.ArgumentParser(
     description="Print out fsSelection" " bitmask of the fonts"

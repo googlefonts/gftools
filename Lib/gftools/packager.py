@@ -529,6 +529,6 @@ def make_package(
                 head_repo,
             )
             log.info(
-                f"\nPR submitted to google/fonts repo!\n\n"
+                "\nPR submitted to google/fonts repo!\n\n"
                 "Please ensure the checklist supplied in the PR is completed"
             )

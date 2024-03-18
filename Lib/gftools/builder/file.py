@@ -2,7 +2,6 @@ import os
 from dataclasses import dataclass
 from functools import cached_property
 
-import ufoLib2
 from fontTools.designspaceLib import InstanceDescriptor
 from glyphsLib.builder import UFOBuilder
 

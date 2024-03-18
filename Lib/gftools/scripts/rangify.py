@@ -17,7 +17,6 @@
 # Contributors: Rod Sheeter (rsheeter google com)
 #
 # Converts a .nam file to a list of ranges.
-import sys
 import argparse
 import tokenize
 

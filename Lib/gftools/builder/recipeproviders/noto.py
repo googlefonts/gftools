@@ -3,8 +3,7 @@ import os
 import sys
 from collections import defaultdict
 
-import yaml
-from strictyaml import Bool, HexInt, Map, Optional, Seq, Str, YAMLValidationError, load
+from strictyaml import Bool, HexInt, Map, Optional, Seq, Str
 
 from gftools.builder.recipeproviders.googlefonts import (
     DEFAULTS,

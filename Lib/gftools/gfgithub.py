@@ -12,7 +12,7 @@ GITHUB_V3_REST_API = "https://api.github.com"
 
 class GitHubClient:
     def __init__(self, repo_owner, repo_name):
-        if not "GH_TOKEN" in os.environ:
+        if "GH_TOKEN" not in os.environ:
             raise Exception("GH_TOKEN environment variable not set")
         self.gh_token = os.environ["GH_TOKEN"]
         self.repo_owner = repo_owner

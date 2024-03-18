@@ -46,7 +46,6 @@ import errno
 import glob
 import re
 import os
-import sys
 import time
 from fontTools import ttLib
 
@@ -57,8 +56,6 @@ from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
 from axisregistry import AxisRegistry
 from gfsubsets import SubsetsInFont
-from google.protobuf import text_format
-from pkg_resources import resource_filename
 from gftools.utils import remove_url_prefix, primary_script
 
 

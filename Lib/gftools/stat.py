@@ -12,7 +12,6 @@ following properties:
 - All fonts contain the same amount of fvar axes
 - All fvar axes have the same ranges
 """
-from axisregistry import AxisRegistry
 from fontTools.otlLib.builder import buildStatTable
 from gftools.utils import font_is_italic
 import os

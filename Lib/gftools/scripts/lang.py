@@ -31,7 +31,6 @@ from gftools import fonts_public_pb2
 from gftools.util.udhr import Udhr
 from google.protobuf import text_format
 from hyperglot import languages
-from hyperglot import parse
 from hyperglot import VALIDITYLEVELS
 from lxml import etree
 from urllib import request

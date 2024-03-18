@@ -18,11 +18,8 @@ from __future__ import print_function
 from argparse import RawTextHelpFormatter
 from importlib import import_module
 from pathlib import Path
-from warnings import warn
 import sys
-import os
 import argparse
-import subprocess
 
 from gftools._version import version as __version__
 

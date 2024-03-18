@@ -28,8 +28,6 @@ from gflanguages import LoadLanguages
 from github import Github
 from pkg_resources import resource_filename
 from google.protobuf import text_format
-import json
-from PIL import Image
 import re
 from fontTools import unicodedata as ftunicodedata
 from fontTools.ttLib import TTFont
@@ -81,7 +79,7 @@ def load_Google_Fonts_api_key():
 
 
 def parse_github_pr_url(url):
-    if not "github.com" in url and "pull" not in url:
+    if "github.com" not in url and "pull" not in url:
         raise ValueError("{} is not a github.com pr url".format(url))
     if not url[-1].isdigit():
         raise ValueError("{} should end with a pull request number".format(url))
@@ -91,7 +89,7 @@ def parse_github_pr_url(url):
 
 
 def parse_github_dir_url(url):
-    if not "github.com" in url:
+    if "github.com" not in url:
         raise ValueError("{} is not a github.com dir url".format(url))
     segments = url.split("/")
     GithubDir = namedtuple("GithubDir", "user repo branch dir")

@@ -13,7 +13,6 @@ gftools font-tags lint path/to/google/fonts
 """
 import os
 from pathlib import Path
-import sys
 from gftools.tags import GFTags
 from argparse import ArgumentParser
 from gftools.utils import is_google_fonts_repo
