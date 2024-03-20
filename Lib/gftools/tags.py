@@ -144,7 +144,7 @@ class GFTags(object):
             "Fancy",
             "Sophisticated",
             "Active",
-        ]
+        ],
     }
 
     def __init__(self):
@@ -163,15 +163,21 @@ class GFTags(object):
             ...
         ]"""
         res = []
+        seen_families = set()
+        duplicate_families = set()
         for i in range(len(data)):
             if i in skip_rows:
                 continue
+            family = data[i][family_name_col]
+            if family in seen_families:
+                duplicate_families.add(family)
+                continue
+            seen_families.add(family)
             for j in range(len(data[i])):
                 if j in skip_columns:
                     continue
                 if not data[i][j].isnumeric():
                     continue
-                family = data[i][family_name_col]
                 value = int(data[i][j])
                 if value == 0:
                     continue
@@ -197,6 +203,10 @@ class GFTags(object):
                         "Weight": value,
                     }
                 )
+        if duplicate_families:
+            raise ValueError(
+                f"Duplicate families found in sheet: {duplicate_families}. Please remove them."
+            )
         res.sort(key=lambda k: (k["Family"], k["Group/Tag"]))
         return res
 
@@ -260,7 +270,6 @@ class GFTags(object):
             },
             {"Family": "Platypi", "Group/Tag": "/Theme/Art Nouveau", "Weight": 5},
             {"Family": "Sedan", "Group/Tag": "/Serif/Old Style Garalde", "Weight": 90},
-
         ]
         for tag in test_tags:
             if tag not in self.data:
