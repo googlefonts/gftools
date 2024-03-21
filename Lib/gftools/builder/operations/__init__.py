@@ -10,6 +10,7 @@ from os.path import dirname
 from tempfile import NamedTemporaryFile
 
 from gftools.builder.file import File
+from gftools.utils import shell_quote
 
 
 @dataclass
@@ -52,7 +53,7 @@ class OperationBase:
             cmd = cls.rule + " $stamp"
         writer.rule(
             name,
-            sys.executable + " -m gftools.builder.jobrunner " + cmd,
+            f"{shell_quote(sys.executable)} -m gftools.builder.jobrunner {cmd}",
             description=name,
         )
         writer.newline()
