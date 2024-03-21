@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 from __future__ import annotations
+from typing import Union
 import requests
 from io import BytesIO
 from zipfile import ZipFile
@@ -31,6 +32,8 @@ from google.protobuf import text_format
 import json
 from PIL import Image
 import re
+import shlex
+import subprocess
 from fontTools import unicodedata as ftunicodedata
 from fontTools.ttLib import TTFont
 from ufo2ft.util import classifyGlyphs
@@ -601,3 +604,15 @@ def open_ufo(path):
     else:  # Maybe a .ufoz
         return ufoLib2.Font.open(path)
     return False
+
+# https://github.com/googlefonts/nanoemoji/blob/fb4b0b3e10f7197e7fe33c4ae6949841e4440397/src/nanoemoji/util.py#L167-L176
+def shell_quote(s: Union[str, Path]) -> str:
+    """Quote a string or pathlib.Path for use in a shell command."""
+    s = str(s)
+    # shlex.quote() is POSIX-only, for Windows we use subprocess.list2cmdline()
+    # which converts a list of args to a command line string following the
+    # the MS C runtime rules.
+    if sys.platform.startswith("win"):
+        return subprocess.list2cmdline([s])
+    else:
+        return shlex.quote(s)
