@@ -311,17 +311,37 @@ def _create_git_branch_name(metadata: fonts_pb2.FamilyProto) -> str:
     return f"gftools_packager_{license}_{family_dir_name}"
 
 
-def _create_git_branch(metadata: fonts_pb2.FamilyProto, repo: Repository) -> Branch:
+def _create_git_branch(metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo) -> Branch:
     branch_name = _create_git_branch_name(metadata)
-    branch = repo.branches.create(branch_name, repo.head.peel(), force=True)
-    return branch
+    # create a branch by fetching the head main branch and saving it
+    is_ssh = "git@" in subprocess.check_output(
+        ["git", "-C", str(repo.workdir), "remote", "-v"]
+    ).decode("-utf-8")
+    if is_ssh:
+        repo_url = f"git@github.com:{head_repo}/fonts.git"
+    else:
+        repo_url = f"https://github.com/{head_repo}/fonts.git"
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            repo.workdir,
+            "pull",
+            repo_url,
+            f"main:{branch_name}",
+            "--force",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return repo.branches.get(branch_name)
 
 
 def commit_family(
-    family_path: Path, metadata: fonts_pb2.FamilyProto, repo: Repository
+    family_path: Path, metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo="google"
 ) -> Tuple[str, str, Branch]:
     """Commit family to a new branch in the google/fonts repo."""
-    branch = _create_git_branch(metadata, repo)
+    branch = _create_git_branch(metadata, repo, head_repo)
     log.info(
         f"Committing family to branch '{_branch_name(branch.name)}'. "
         "Please make hand modifications to the family on this branch. "
@@ -341,7 +361,7 @@ def commit_family(
     msg = f"{title}\n\n{body}"
 
     ref = branch.name
-    parents = [repo.head.target]
+    parents = [branch.target]
 
     index = repo.index
     for dirpath, _, filenames in os.walk(family_path):
@@ -513,7 +533,7 @@ def make_package(
         packaged = package_family(family_path, metadata, latest_release)
         if not packaged:
             return
-        title, msg, branch = commit_family(family_path, metadata, repo)
+        title, msg, branch = commit_family(family_path, metadata, repo, head_repo)
 
         if pr:
             pr_family(
