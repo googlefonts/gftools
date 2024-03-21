@@ -54,7 +54,7 @@ dependencies = [
   'ttfautohint-py',
   'brotli',
   'jinja2',
-  'hyperglot<=0.4.5',
+  'hyperglot<=0.6.1',
   'fontFeatures',
   'vharfbuzz',
   'bumpfontversion',
