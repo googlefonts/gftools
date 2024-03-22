@@ -302,6 +302,12 @@ def package_family(
                 os.remove(fp)
         shutil.copytree(tmp_dir, family_path, dirs_exist_ok=True)
         save_metadata(family_path / "METADATA.pb", metadata)
+        # Format HTML
+        if os.path.exists(os.path.join(family_path, "DESCRIPTION.en_us.html")):
+            with open(os.path.join(family_path, "DESCRIPTION.en_us.html"), "r") as fin:
+                description = format_html(fin.read())
+            with open(os.path.join(family_path, "DESCRIPTION.en_us.html"), "w") as fout:
+                fout.write(description)
     return True
 
 
