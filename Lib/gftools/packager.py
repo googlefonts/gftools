@@ -173,7 +173,9 @@ def load_metadata(fp: "Path | str"):
                     item.dest_file = dst
                     metadata.source.files.append(item)
 
-    metadata.source.repository_url = re.sub(r"\.git$", "", metadata.source.repository_url)
+    metadata.source.repository_url = re.sub(
+        r"\.git$", "", metadata.source.repository_url
+    )
     return metadata
 
 
@@ -244,7 +246,9 @@ def download_assets(
                     with open(out_fp, "wb") as f:
                         f.write(zf.read(file))
             if not found:
-                log.error(f"Could not find '{item.source_file}' in archive '{metadata.source.archive_url}'")
+                log.error(
+                    f"Could not find '{item.source_file}' in archive '{metadata.source.archive_url}'"
+                )
             res.append(out_fp)
         return res
 
@@ -311,7 +315,9 @@ def _git_branch_name(metadata: fonts_pb2.FamilyProto) -> str:
     return f"gftools_packager_{license}_{family_dir_name}"
 
 
-def _create_git_branch(metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo) -> Branch:
+def _create_git_branch(
+    metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo
+) -> Branch:
     branch_name = _git_branch_name(metadata)
     # create a branch by from the head main branch
     is_ssh = "git@" in subprocess.check_output(
@@ -338,7 +344,10 @@ def _create_git_branch(metadata: fonts_pb2.FamilyProto, repo: Repository, head_r
 
 
 def commit_family(
-    family_path: Path, metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo="google"
+    family_path: Path,
+    metadata: fonts_pb2.FamilyProto,
+    repo: Repository,
+    head_repo="google",
 ) -> Tuple[str, str, Branch]:
     """Commit family to a new branch in the google/fonts repo."""
     branch = _create_git_branch(metadata, repo, head_repo)
