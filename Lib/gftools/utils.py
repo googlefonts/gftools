@@ -303,6 +303,7 @@ def _html_custom_formatter(string):
     # Join back together
     string = "\n".join(strings)
     # Remove double lines
+    string = string.replace("\n\n", "\n")
     return string
 
 
