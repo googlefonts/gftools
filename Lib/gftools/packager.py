@@ -23,7 +23,7 @@ from gftools.gfgithub import GitHubClient
 from gftools.scripts.add_font import main as add_font
 from gftools.tags import GFTags
 from gftools.util import google_fonts as fonts
-from gftools.utils import download_file, is_google_fonts_repo
+from gftools.utils import download_file, is_google_fonts_repo, format_html
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"
