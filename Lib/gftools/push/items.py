@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from fontTools.ttLib import TTFont  # type: ignore
 from gftools.designers_pb2 import DesignerInfoProto
 from gftools.fonts_public_pb2 import FamilyProto
+from gftools.languages_public_pb2 import LanguageProto
 from gftools.push.utils import google_path_to_repo_path
 from gftools.util.google_fonts import ReadProto
 from gftools.utils import (
@@ -20,6 +21,7 @@ from axisregistry.axes_pb2 import AxisProto
 from google.protobuf.json_format import MessageToDict  # type: ignore
 from typing import Optional
 import re
+import os
 
 
 log = logging.getLogger("gftools.push")
@@ -236,4 +238,61 @@ class Designer(Itemer):
             return cls(name, parse_html(bio))
 
 
-Items = "Axis | Designer | Family | FamilyMeta"
+@dataclass
+class SampleText(Itemer):
+    language: str
+    masthead_full: str = ""
+    masthead_partial: str = ""
+    styles: str = ""
+    tester: str = ""
+    poster_sm: str = ""
+    poster_md: str = ""
+    poster_lg: str = ""
+    specimen_48: str = ""
+    specimen_36: str = ""
+    specimen_32: str = ""
+    specimen_21: str = ""
+    specimen_16: str = ""
+
+    @classmethod
+    def from_gf_json(cls, lang, data):
+        if not data:
+            return cls(language=lang)
+        return cls(
+            language=lang,
+            masthead_full=data["mastheadFull"],
+            masthead_partial=data["mastheadPartial"],
+            styles=data["styles"],
+            tester=data["tester"],
+            poster_sm=data["posterSm"],
+            poster_md=data["posterMd"],
+            poster_lg=data["posterLg"],
+            specimen_48=data["specimen48"],
+            specimen_36=data["specimen36"],
+            specimen_32=data["specimen32"],
+            specimen_21=data["specimen21"],
+            specimen_16=data["specimen16"],
+        )
+    
+    @classmethod
+    def from_fp(cls, fp):
+        meta = ReadProto(LanguageProto(), fp)
+        meta = meta.sample_text
+        return cls(
+            language=os.path.basename(fp).replace(".textproto", ""),
+            masthead_full=meta.masthead_full,
+            masthead_partial=meta.masthead_partial,
+            styles=meta.styles,
+            tester=meta.tester,
+            poster_sm=meta.poster_sm,
+            poster_md=meta.poster_md,
+            poster_lg=meta.poster_lg,
+            specimen_48=meta.specimen_48,
+            specimen_36=meta.specimen_36,
+            specimen_32=meta.specimen_32,
+            specimen_21=meta.specimen_21,
+            specimen_16=meta.specimen_16,
+        )
+
+
+Items = "Axis | Designer | Family | FamilyMeta | SampleText"
