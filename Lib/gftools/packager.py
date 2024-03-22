@@ -57,6 +57,7 @@ category: "SANS_SERIF"
 date_added: "{date}"
 {source_template}
 {display_template}
+subsets: "menu"
 """
 
 PR_CHECKLIST = """
