@@ -278,6 +278,33 @@ def _html_custom_formatter(string):
     string = string.replace(". ", f".\n{whitespace}")
     string = string.replace("! ", f"!\n{whitespace}")
     string = string.replace("? ", f"?\n{whitespace}")
+    # Read into list
+    strings = string.split("\n")
+    # Cycle through list to find abbreviations
+    for i in range(1, len(strings)):
+        this_line = strings[i-1]
+        next_line = strings[i]
+        if this_line == "":
+            continue
+        if (
+            re.search(r"i\.?e\.$", this_line)  # ie.
+            or re.search(r"e\.?g\.$", this_line)  # eg.
+            or (
+                re.search(r"etc[\.|\?|!]$", this_line)
+                and next_line[1] == next_line[1].lower()
+            )  # etc.
+            or (
+                re.search(r"\W\w{1,2}[\.|\?|!]$", this_line)
+                and this_line[-2] == this_line[-2].upper()
+                and next_line[1] == next_line[1].lower()
+            )  # H.R. Giger
+        ):
+            strings[i-1] = strings[i-1] + strings[i]
+            strings[i] = ""
+    # Join back together
+    string = "\n".join(strings)
+    # Remove double lines
+    string = string.replace("\n\n", "\n")
     return string
 
 

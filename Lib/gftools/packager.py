@@ -23,7 +23,7 @@ from gftools.gfgithub import GitHubClient
 from gftools.scripts.add_font import main as add_font
 from gftools.tags import GFTags
 from gftools.util import google_fonts as fonts
-from gftools.utils import download_file, is_google_fonts_repo
+from gftools.utils import download_file, is_google_fonts_repo, format_html
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"
@@ -307,6 +307,12 @@ def package_family(
                 os.remove(fp)
         shutil.copytree(tmp_dir, family_path, dirs_exist_ok=True)
         save_metadata(family_path / "METADATA.pb", metadata)
+        # Format HTML
+        desc_file = family_path / "DESCRIPTION.en_us.html"
+        with open(desc_file, encoding="utf-8") as fin:
+            description = format_html(fin.read())
+        with open(desc_file, "w", encoding="utf-8") as fout:
+            fout.write(description)
     return True
 
 
