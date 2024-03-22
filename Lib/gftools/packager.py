@@ -354,7 +354,8 @@ def commit_family(
     log.info(
         f"Committing family to branch '{_branch_name(branch.name)}'. "
         "Please make hand modifications to the family on this branch. "
-        "Rerunning the packager will overwrite hand edits."
+        "Be aware that hand modifying files that are included in the METADATA.pb "
+        "will get overwritten if you rerun the tool."
     )
 
     family_name = metadata.name
