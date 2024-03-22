@@ -29,7 +29,11 @@ jobs:
       - name: Install packages
         run: |
           pip install '.[qa]'
-          pip install mypy pytest
+          pip install mypy pytest black pylint
+      - name: Lint checks
+        run: |
+          black . --check --diff --color Lib tests
+          pylint Lib
       - name: Run Tests
         env:
           DEV_FAMILY_DOWNLOAD: ${{ secrets.DEV_FAMILY_DOWNLOAD }}
