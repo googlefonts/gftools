@@ -174,7 +174,9 @@ def load_metadata(fp: "Path | str"):
                     item.dest_file = dst
                     metadata.source.files.append(item)
 
-    metadata.source.repository_url = re.sub(r"\.git$", "", metadata.source.repository_url)
+    metadata.source.repository_url = re.sub(
+        r"\.git$", "", metadata.source.repository_url
+    )
     return metadata
 
 
@@ -245,7 +247,9 @@ def download_assets(
                     with open(out_fp, "wb") as f:
                         f.write(zf.read(file))
             if not found:
-                log.error(f"Could not find '{item.source_file}' in archive '{metadata.source.archive_url}'")
+                log.error(
+                    f"Could not find '{item.source_file}' in archive '{metadata.source.archive_url}'"
+                )
             res.append(out_fp)
         return res
 
@@ -306,27 +310,53 @@ def package_family(
     return True
 
 
-def _create_git_branch_name(metadata: fonts_pb2.FamilyProto) -> str:
+def _git_branch_name(metadata: fonts_pb2.FamilyProto) -> str:
     license = metadata.license.lower()
     family_dir_name = get_family_dir(metadata.name)
     return f"gftools_packager_{license}_{family_dir_name}"
 
 
-def _create_git_branch(metadata: fonts_pb2.FamilyProto, repo: Repository) -> Branch:
-    branch_name = _create_git_branch_name(metadata)
-    branch = repo.branches.create(branch_name, repo.head.peel(), force=True)
-    return branch
+def _create_git_branch(
+    metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo
+) -> Branch:
+    branch_name = _git_branch_name(metadata)
+    # create a branch by from the head main branch
+    is_ssh = "git@" in subprocess.check_output(
+        ["git", "-C", str(repo.workdir), "remote", "-v"]
+    ).decode("-utf-8")
+    if is_ssh:
+        repo_url = f"git@github.com:{head_repo}/fonts.git"
+    else:
+        repo_url = f"https://github.com/{head_repo}/fonts.git"
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            repo.workdir,
+            "pull",
+            repo_url,
+            f"main:{branch_name}",
+            "--force",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return repo.branches.get(branch_name)
 
 
 def commit_family(
-    family_path: Path, metadata: fonts_pb2.FamilyProto, repo: Repository
+    family_path: Path,
+    metadata: fonts_pb2.FamilyProto,
+    repo: Repository,
+    head_repo="google",
 ) -> Tuple[str, str, Branch]:
     """Commit family to a new branch in the google/fonts repo."""
-    branch = _create_git_branch(metadata, repo)
+    branch = _create_git_branch(metadata, repo, head_repo)
     log.info(
         f"Committing family to branch '{_branch_name(branch.name)}'. "
         "Please make hand modifications to the family on this branch. "
-        "Rerunning the packager will overwrite hand edits."
+        "Be aware that hand modifying files that are included in the METADATA.pb "
+        "will get overwritten if you rerun the tool."
     )
 
     family_name = metadata.name
@@ -342,7 +372,7 @@ def commit_family(
     msg = f"{title}\n\n{body}"
 
     ref = branch.name
-    parents = [repo.head.target]
+    parents = [branch.target]
 
     index = repo.index
     for dirpath, _, filenames in os.walk(family_path):
@@ -407,12 +437,6 @@ def pr_family(
     else:
         resp = google_fonts.create_issue_comment(open_prs[0]["number"], "Updated")
         log.info(f"Updated PR '{resp['html_url']}'")
-    return True
-
-
-def right_branch(repo: Repository, metadata: fonts_pb2.FamilyProto):
-    if repo.head.shorthand == _create_git_branch_name(metadata):
-        return False
     return True
 
 
@@ -488,15 +512,6 @@ def make_package(
         )
         return
 
-    if not right_branch(repo, metadata):
-        log.warning(
-            "Cannot run gftools packager since it will overwrite the "
-            f"currently active branch, '{repo.head.shorthand}'.\n"
-            f"If you want to run the tool, checkout the 'main' branch in "
-            f"'{repo.workdir}' and rerun."
-        )
-        return
-
     # All font families must have tagging data. This data helps users on Google
     # Fonts find font families. It's enabled by default since it's a hard
     # requirements set by management.
@@ -514,7 +529,7 @@ def make_package(
         packaged = package_family(family_path, metadata, latest_release)
         if not packaged:
             return
-        title, msg, branch = commit_family(family_path, metadata, repo)
+        title, msg, branch = commit_family(family_path, metadata, repo, head_repo)
 
         if pr:
             pr_family(

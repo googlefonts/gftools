@@ -59,7 +59,7 @@ Once you've run the tool, you'll get the following message:
 ![alt text](step3.png "Step 3")
 
 
-5. Please inspect the newly created PR and complete the items on the checklist. If you need to make any modifications to description files or METADATA.pb files, `git checkout` the branch and do them by hand. If you rerun the packager it will overwrite any changes you've made.
+5. Please inspect the newly created PR and complete the items on the checklist. If you need to make any modifications to description files or METADATA.pb files, `git checkout` the branch and do them by hand. If you rerun the packager it will overwrite any hand edited files that are listed in the METADATA.pb file.
 
 
 ## Pushing an updated family
