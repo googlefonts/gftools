@@ -305,15 +305,15 @@ def package_family(
     return True
 
 
-def _create_git_branch_name(metadata: fonts_pb2.FamilyProto) -> str:
+def _git_branch_name(metadata: fonts_pb2.FamilyProto) -> str:
     license = metadata.license.lower()
     family_dir_name = get_family_dir(metadata.name)
     return f"gftools_packager_{license}_{family_dir_name}"
 
 
 def _create_git_branch(metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo) -> Branch:
-    branch_name = _create_git_branch_name(metadata)
-    # create a branch by fetching the head main branch and saving it
+    branch_name = _git_branch_name(metadata)
+    # create a branch by from the head main branch
     is_ssh = "git@" in subprocess.check_output(
         ["git", "-C", str(repo.workdir), "remote", "-v"]
     ).decode("-utf-8")
@@ -429,12 +429,6 @@ def pr_family(
     return True
 
 
-def right_branch(repo: Repository, metadata: fonts_pb2.FamilyProto):
-    if repo.head.shorthand == _create_git_branch_name(metadata):
-        return False
-    return True
-
-
 @contextmanager
 def current_git_state(repo: Repository):
     """Stash current git state and restore it after the context is done."""
@@ -504,15 +498,6 @@ def make_package(
         log.warning(
             f"'{metadata_fp}' Please fill in the source placeholder fields "
             "in the METADATA.pb file and rerun tool with the same commands."
-        )
-        return
-
-    if not right_branch(repo, metadata):
-        log.warning(
-            "Cannot run gftools packager since it will overwrite the "
-            f"currently active branch, '{repo.head.shorthand}'.\n"
-            f"If you want to run the tool, checkout the 'main' branch in "
-            f"'{repo.workdir}' and rerun."
         )
         return
 
