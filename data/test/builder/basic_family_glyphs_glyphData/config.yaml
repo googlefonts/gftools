@@ -1,0 +1,7 @@
+sources:
+  - TestFamily.glyphs
+familyName: Test Family
+autohintTTF: false
+autohintOTF: false
+glyphData:
+  - GlyphData.xml
