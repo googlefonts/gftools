@@ -6,3 +6,5 @@ autohintOTF: false
 recipeProvider: noto
 googleFonts: true
 buildVariable: false
+glyphData:
+  - GlyphData.xml

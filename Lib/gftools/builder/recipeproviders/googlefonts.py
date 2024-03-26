@@ -182,7 +182,7 @@ class GFBuilder(RecipeProviderBase):
             {"source": source.path},
             {
                 "operation": "buildVariable",
-                "args": vf_args + self.fontmake_args(variable=True),
+                "args": vf_args + " " + self.fontmake_args(variable=True),
             },
         ]
         if os.path.basename(target) in self.config.get("vttSources", {}):
@@ -221,10 +221,6 @@ class GFBuilder(RecipeProviderBase):
         target = os.path.join(outdir, f"{instancebase}.{output}")
 
         static_args = ""
-        if source.is_glyphs:
-            for gd in self.config.get("glyphData", []):
-                static_args += " --glyph-data " + gd
-
         steps = [
             {"source": source.path},
         ]
