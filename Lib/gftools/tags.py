@@ -150,6 +150,8 @@ class GFTags(object):
     def __init__(self):
         self.sheet1_data = self._get_sheet_data(self.SHEET1_URL)
         self.sheet2_data = self._get_sheet_data(self.SHEET2_URL)
+        self.seen_families = set()
+        self.duplicate_families = set()
         self.data = self._parse_sheets_csv()
 
     def _get_sheet_data(self, sheet_url):
@@ -163,16 +165,14 @@ class GFTags(object):
             ...
         ]"""
         res = []
-        seen_families = set()
-        duplicate_families = set()
         for i in range(len(data)):
             if i in skip_rows:
                 continue
             family = data[i][family_name_col]
-            if family in seen_families:
-                duplicate_families.add(family)
+            if family in self.seen_families:
+                self.duplicate_families.add(family)
                 continue
-            seen_families.add(family)
+            self.seen_families.add(family)
             for j in range(len(data[i])):
                 if j in skip_columns:
                     continue
@@ -203,9 +203,9 @@ class GFTags(object):
                         "Weight": value,
                     }
                 )
-        if duplicate_families:
+        if self.duplicate_families:
             raise ValueError(
-                f"Duplicate families found in sheet: {duplicate_families}. Please remove them."
+                f"Duplicate families found in sheet: {self.duplicate_families}. Please remove them."
             )
         res.sort(key=lambda k: (k["Family"], k["Group/Tag"]))
         return res
