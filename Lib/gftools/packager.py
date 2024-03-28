@@ -316,16 +316,16 @@ def package_family(
     return True
 
 
-def _git_branch_name(metadata: fonts_pb2.FamilyProto) -> str:
-    license = metadata.license.lower()
-    family_dir_name = get_family_dir(metadata.name)
+def _git_branch_name(family_name: str, license: str) -> str:
+    license = license.lower()
+    family_dir_name = get_family_dir(family_name)
     return f"gftools_packager_{license}_{family_dir_name}"
 
 
 def _create_git_branch(
     metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo
 ) -> Branch:
-    branch_name = _git_branch_name(metadata)
+    branch_name = _git_branch_name(metadata.name, metadata.license)
     # create a branch by from the head main branch
     is_ssh = "git@" in subprocess.check_output(
         ["git", "-C", str(repo.workdir), "remote", "-v"]
@@ -491,12 +491,27 @@ def make_package(
     else:
         family_path = find_family_in_repo(family_name, repo_path)  # type: ignore
         if not family_path:
-            metadata_path = create_metadata(repo_path, family_name, license)
-            log.warning(
-                f"No family was found in repository!\n\nI've created "
-                f"'{metadata_path}'.\nPlease populate the file and rerun tool "
-                "with the same commands."
-            )
+            # get files from branch if they exist
+            branch_name = _git_branch_name(family_name, license)
+            family_branch = repo.lookup_branch(branch_name)
+            if family_branch:
+                metadata_path = Path(
+                    repo_path / license / get_family_dir(family_name) / "METADATA.pb"
+                )
+                repo.checkout(
+                    family_branch, paths=[metadata_path.relative_to(repo.workdir)]
+                )
+                log.warning(
+                    f"Found '{metadata_path}' in branch '{branch_name}'.\n"
+                    "Make your modifications to this file and rerun tool with same commands."
+                )
+            else:
+                metadata_path = create_metadata(repo_path, family_name, license)
+                log.warning(
+                    f"No family was found in repository!\n\nI've created "
+                    f"'{metadata_path}'.\nPlease populate the file and rerun tool "
+                    "with the same commands."
+                )
             return
         metadata_fp = family_path / "METADATA.pb"
         metadata = load_metadata(metadata_fp)
