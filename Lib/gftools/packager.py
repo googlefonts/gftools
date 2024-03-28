@@ -177,6 +177,8 @@ def load_metadata(fp: "Path | str"):
     metadata.source.repository_url = re.sub(
         r"\.git$", "", metadata.source.repository_url
     )
+    if metadata.source.repository_url.endswith("/"):
+        metadata.source.repository_url = metadata.source.repository_url[:-1]
     return metadata
 
 
