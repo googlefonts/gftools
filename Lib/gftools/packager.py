@@ -173,12 +173,6 @@ def load_metadata(fp: "Path | str"):
                     item.source_file = src
                     item.dest_file = dst
                     metadata.source.files.append(item)
-
-    metadata.source.repository_url = re.sub(
-        r"\.git$", "", metadata.source.repository_url
-    )
-    if metadata.source.repository_url.endswith("/"):
-        metadata.source.repository_url = metadata.source.repository_url[:-1]
     return metadata
 
 
