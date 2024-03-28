@@ -137,3 +137,9 @@ class GitHubClient:
             # shouldn't hit any issues.
             time.sleep(sleep)
         return res
+
+    def add_labels(self, issue_number: int, labels: typing.List[str]):
+        return self._post(
+            self.rest_url(f"issues/{issue_number}/labels"),
+            {"labels": labels},
+        )
