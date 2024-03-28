@@ -184,11 +184,9 @@ def load_metadata(fp: "Path | str"):
 
 def save_metadata(fp: Path, metadata: fonts_pb2.FamilyProto):
     """Save METADATA.pb file and delete old upstream.yaml file."""
-    _, _, _, user, repo = metadata.source.repository_url.split("/")
-    github = GitHubClient(user, repo)
-    url = github.rest_url(f"commits/{metadata.source.branch}")
-    resp = github._get(url)
-    git_commit = resp["sha"]
+    github = GitHubClient.from_url(metadata.source.repository_url)
+    commit = github.get_commit(metadata.source.branch)
+    git_commit = commit["sha"]
     metadata.source.commit = git_commit
     language_comments = fonts.LanguageComments(LoadLanguages())
     fonts.WriteProto(metadata, fp, comments=language_comments)
