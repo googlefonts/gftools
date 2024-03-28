@@ -643,3 +643,13 @@ def shell_quote(s: Union[str, Path]) -> str:
         return subprocess.list2cmdline([s])
     else:
         return shlex.quote(s)
+
+
+def github_user_repo(github_url):
+    pattern = r'https?://github\.com/(?P<user>[^/]+)/(?P<repo>[^/^.]+)'
+    match = re.search(pattern, github_url)
+    if not match:
+        raise ValueError(
+            f"Cannot extract github user and repo name from url '{github_url}'."
+        )
+    return match.group('user'), match.group('repo')

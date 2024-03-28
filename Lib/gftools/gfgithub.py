@@ -4,7 +4,7 @@ import requests
 import typing
 import urllib
 import time
-
+from gftools.utils import github_user_repo
 
 GITHUB_GRAPHQL_API = "https://api.github.com/graphql"
 GITHUB_V3_REST_API = "https://api.github.com"
@@ -17,6 +17,11 @@ class GitHubClient:
         self.gh_token = os.environ["GH_TOKEN"]
         self.repo_owner = repo_owner
         self.repo_name = repo_name
+
+    @classmethod
+    def from_url(cls, url):
+        user, repo = github_user_repo(url)
+        return cls(user, repo)
 
     def _post(self, url, payload: typing.Dict):
         headers = {"Authorization": f"bearer {self.gh_token}"}
@@ -87,7 +92,12 @@ class GitHubClient:
             self.rest_url("pulls", state="open", head=pr_head, base=pr_base_branch)
         )
 
-    def create_pr(self, title: str, body: str, head: str, base: str, draft: bool = False):
+    def get_commit(self, ref: str):
+        return self._get(self.rest_url(f"commits/{ref}"))
+
+    def create_pr(
+        self, title: str, body: str, head: str, base: str, draft: bool = False
+    ):
         return self._post(
             self.rest_url("pulls"),
             {
@@ -96,7 +106,7 @@ class GitHubClient:
                 "head": head,
                 "base": base,
                 "maintainer_can_modify": True,
-                "draft": draft
+                "draft": draft,
             },
         )
 

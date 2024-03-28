@@ -56,3 +56,17 @@ He was referred to H.R. Giger, who headed the H.R. department at the time, then 
 </p>
 """
     assert format_html(input) == output
+
+
+@pytest.mark.parametrize(
+    """url,want""",
+    [
+        ("https://github.com/SorkinType/SASchoolHandAustralia", ("SorkinType", "SASchoolHandAustralia")),
+        ("https://github.com/SorkinType/SASchoolHandAustralia/", ("SorkinType", "SASchoolHandAustralia")),
+        ("https://github.com/googlefonts/MavenPro//", ("googlefonts", "MavenPro")),
+        ("https://github.com/googlefonts/MavenPro.git", ("googlefonts", "MavenPro")),
+    ]
+)
+def test_github_user_repo(url, want):
+    from gftools.utils import github_user_repo
+    assert github_user_repo(url) == want
