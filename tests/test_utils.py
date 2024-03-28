@@ -64,6 +64,7 @@ He was referred to H.R. Giger, who headed the H.R. department at the time, then 
         ("https://github.com/SorkinType/SASchoolHandAustralia", ("SorkinType", "SASchoolHandAustralia")),
         ("https://github.com/SorkinType/SASchoolHandAustralia/", ("SorkinType", "SASchoolHandAustralia")),
         ("https://github.com/googlefonts/MavenPro//", ("googlefonts", "MavenPro")),
+        ("https://github.com/googlefonts/MavenPro.git", ("googlefonts", "MavenPro")),
     ]
 )
 def test_github_user_repo(url, want):
