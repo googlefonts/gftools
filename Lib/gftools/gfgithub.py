@@ -93,11 +93,11 @@ class GitHubClient:
         )
 
     def get_commit(self, ref: str):
-        return self._get(
-            self.rest_url(f"commits/{ref}")
-        )
+        return self._get(self.rest_url(f"commits/{ref}"))
 
-    def create_pr(self, title: str, body: str, head: str, base: str, draft: bool = False):
+    def create_pr(
+        self, title: str, body: str, head: str, base: str, draft: bool = False
+    ):
         return self._post(
             self.rest_url("pulls"),
             {
@@ -106,7 +106,7 @@ class GitHubClient:
                 "head": head,
                 "base": base,
                 "maintainer_can_modify": True,
-                "draft": draft
+                "draft": draft,
             },
         )
 

@@ -219,8 +219,7 @@ def download_assets(
     metadata: fonts_pb2.FamilyProto, out: Path, latest_release: bool = False
 ) -> List[str]:
     """Download assets listed in the metadata's source field"""
-    _, _, _, owner, repo = metadata.source.repository_url.split("/")
-    upstream = GitHubClient(owner, repo)
+    upstream = GitHubClient.from_url(metadata.source.repository_url)
     res = []
     # Getting files from an archive always takes precedence over a
     # repo dir
