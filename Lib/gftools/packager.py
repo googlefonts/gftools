@@ -23,7 +23,12 @@ from gftools.gfgithub import GitHubClient
 from gftools.scripts.add_font import main as add_font
 from gftools.tags import GFTags
 from gftools.util import google_fonts as fonts
-from gftools.utils import download_file, is_google_fonts_repo, format_html
+from gftools.utils import (
+    download_file,
+    is_google_fonts_repo,
+    format_html,
+    Google_Fonts_has_family,
+)
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"
@@ -422,6 +427,7 @@ def pr_family(
     family_path: Path,
     title: str,
     body: str,
+    family_name: str,
     base_repo: str = "google",
     head_repo: str = "google",
 ):
@@ -436,6 +442,12 @@ def pr_family(
     else:
         resp = google_fonts.create_issue_comment(open_prs[0]["number"], "Updated")
         log.info(f"Updated PR '{resp['html_url']}'")
+
+    # add labels to pr
+    if Google_Fonts_has_family(family_name):
+        google_fonts.create_issue_comment(open_prs[0]["number"], ["I Font Upgrade"])
+    else:
+        google_fonts.create_issue_comment(open_prs[0]["number"], ["I New Font"])
     return True
 
 
@@ -551,6 +563,7 @@ def make_package(
                 family_path,
                 title,
                 msg,
+                metadata.name,
                 base_repo,
                 head_repo,
             )
