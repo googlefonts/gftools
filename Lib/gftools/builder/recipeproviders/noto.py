@@ -4,12 +4,23 @@ import sys
 from collections import defaultdict
 
 import yaml
-from strictyaml import (Bool, HexInt, Map, Optional, Seq, Str,
-                        YAMLValidationError, load)
+from strictyaml import (
+    Bool,
+    HexInt,
+    Int,
+    Map,
+    Optional,
+    Seq,
+    Str,
+    YAMLValidationError,
+    load,
+)
 
-from gftools.builder.recipeproviders.googlefonts import (DEFAULTS,
-                                                         GOOGLEFONTS_SCHEMA,
-                                                         GFBuilder)
+from gftools.builder.recipeproviders.googlefonts import (
+    DEFAULTS,
+    GOOGLEFONTS_SCHEMA,
+    GFBuilder,
+)
 from gftools.util.styles import STYLE_NAMES
 
 name = "Noto builder"
@@ -19,7 +30,9 @@ subsets_schema = Seq(
         {
             "from": Str(),
             Optional("name"): Str(),
-            Optional("ranges"): Seq(Map({"start": HexInt(), "end": HexInt()})),
+            Optional("ranges"): Seq(
+                Map({"start": Int() | HexInt(), "end": Int() | HexInt()})
+            ),
             Optional("layoutHandling"): Str(),
             Optional("force"): Str(),
         }
