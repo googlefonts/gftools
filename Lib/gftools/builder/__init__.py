@@ -49,10 +49,6 @@ class GFBuilder:
             self.config = yaml.safe_load(config)
         else:
             self._orig_config = yaml.dump(config)
-            try:
-                strictyaml.YAML(config).revalidate(BASE_SCHEMA)
-            except Exception as e:
-                raise ValueError("Could not validate configuration") from e
             self.config = config
 
         self.writer = Writer(open("build.ninja", "w"))
@@ -244,7 +240,9 @@ class GFBuilder:
                     current = existing_edge
                     # If we are expecting a different target name, copy the
                     # file to rename it.
-                    if current.path != target.path and step.object_equals(last_operation):
+                    if current.path != target.path and step.object_equals(
+                        last_operation
+                    ):
                         # print(f"Expected it to be {target.path}, copying")
                         copy_operation = Copy()
                         copy_operation.set_source(current)
@@ -280,7 +278,9 @@ class GFBuilder:
                             step.set_target(binary)
                         self.graph.add_edge(current, binary, operation=step)
                         if str(current.path) == str(binary):
-                            raise ValueError(f"Adding a circular edge: {current.path}->{step.opname}->{binary}")
+                            raise ValueError(
+                                f"Adding a circular edge: {current.path}->{step.opname}->{binary}"
+                            )
                     # print(
                     #     f"Creating an edge from {current.path} to {binary} via {step.opname}"
                     # )
