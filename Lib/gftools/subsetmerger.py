@@ -281,7 +281,7 @@ class SubsetMerger:
         if os.path.exists(dest):
             return
         user, repo = fullrepo.split("/")
-        os.makedirs(os.path.join(self.cache_dir, user))
+        os.makedirs(os.path.join(self.cache_dir, user), exist_ok=True)
         repo_zipball = f"https://github.com/{fullrepo}/archive/refs/heads/main.zip"
         logger.info(f"Downloading {fullrepo}")
         repo_zip = ZipFile(download_file(repo_zipball))
