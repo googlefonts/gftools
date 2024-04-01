@@ -49,10 +49,6 @@ class GFBuilder:
             self.config = yaml.safe_load(config)
         else:
             self._orig_config = yaml.dump(config)
-            try:
-                strictyaml.YAML(config).revalidate(BASE_SCHEMA)
-            except Exception as e:
-                raise ValueError("Could not validate configuration") from e
             self.config = config
 
         self.writer = Writer(open("build.ninja", "w"))
