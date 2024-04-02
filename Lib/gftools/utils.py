@@ -54,11 +54,24 @@ PROD_FAMILY_DOWNLOAD = 'https://fonts.google.com/download?family={}'
 
 def download_family_from_Google_Fonts(family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True):
     """Download a font family from Google Fonts"""
-    url = dl_url.format(
-        family.replace(' ', '%20')
-    )
-    fonts_zip = ZipFile(download_file(url))
-    return fonts_from_zip(fonts_zip, dst, ignore_static)
+    # TODO (M Foley) update all dl_urls in .ini files.
+    dl_url = dl_url.replace("download?family=", "download/list?family=")
+    url = dl_url.format(family.replace(' ', '%20'))
+    data = json.loads(requests.get(url).text[5:])
+    res = []
+    for item in data["manifest"]["fileRefs"]:
+        filename = item["filename"]
+        dl_url = item["url"]
+        if "static" in filename and ignore_static:
+            continue
+        if not filename.endswith(("otf", "ttf")):
+            continue
+        if dst:
+            target = os.path.join(dst, filename)
+            download_file(dl_url, target)
+        else:
+            res.append(download_file(dl_url))
+    return res
 
 
 def Google_Fonts_has_family(name):
