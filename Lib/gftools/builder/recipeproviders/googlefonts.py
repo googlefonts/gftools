@@ -7,8 +7,11 @@ import yaml
 from strictyaml import load, YAMLValidationError
 
 from gftools.builder.recipeproviders import RecipeProviderBase
-from gftools.builder.schema import (GOOGLEFONTS_SCHEMA, stat_schema,
-                                    stat_schema_by_font_name)
+from gftools.builder.schema import (
+    GOOGLEFONTS_SCHEMA,
+    stat_schema,
+    stat_schema_by_font_name,
+)
 
 logger = logging.getLogger("GFBuilder")
 
@@ -65,7 +68,9 @@ class GFBuilder(RecipeProviderBase):
         self.revalidate()
         self.config = {**DEFAULTS, **self.config}
         for field in ["vfDir", "ttDir", "otDir", "woffDir"]:
-            self.config[field] = self.config[field].replace("$outputDir", self.config["outputDir"])
+            self.config[field] = self.config[field].replace(
+                "$outputDir", self.config["outputDir"]
+            )
         self.config["buildWebfont"] = self.config.get(
             "buildWebfont", self.config.get("buildStatic", True)
         )
