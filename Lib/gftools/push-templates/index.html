@@ -91,11 +91,6 @@
         <div class="table" id="commits-table">
         </div>
 
-        <h2>Issues</h2>
-        <div class="full">
-            <canvas id="issues-chart" width="800" height="450"></canvas>
-        </div>
-
         <h2>Server Pushes</h2>
         <h3>Going to sandbox server:</h3>
         <div class="table" id="sandbox-push-table"></div>
@@ -352,71 +347,16 @@ commitsTotalsGraphData = (commits) => {
     };
 }
 
-issuesGraphData = (issues, duration) => {
-    var delta = new Date(issues[0]['date'])
-    var label = delta.toDateString();
-    let res = {};
-    for (i in issues) {
-    let date = Date.parse(issues[i]['date']);
-    var label = delta.toISOString();
-    if (date > delta) {
-        if (issues[i]['closed'] === false) {
-        res[label]['opened'] += 1
-        } else {
-        res[label]['closed'] += 1
-        }
-    }
-    else {
-        console.log(duration)
-        var delta = offsetDate(delta, duration);
-        var label = delta.toISOString();
-        res[label] = {"opened": 0, "closed": 0};
-    }
-    }
-    var keys = Object.keys(res).sort();
-    var opened = [];
-    var closed = [];
-    for (i in keys) {
-    var issue = res[keys[i]];
-    opened.push(issue['opened'])
-    closed.push(issue['closed'])
-    }
-    var data = {
-    type: 'bar',
-    data: {
-        labels: keys,
-        datasets: [
-        {
-        label: "Opened",
-        backgroundColor: colors[2],
-        data: opened
-        }, {
-        label: "Closed",
-        backgroundColor: colors[1],
-        data: closed
-        }
-        ]
-    },
-    options: {
-        title: {
-        display: true,
-        text: 'Issues opened and closed'
-        }
-    }
-    }
-    return data;
-}
-
-
 // init constants. TODO refactor using builder pattern if this gets more complicated
+currentDate = new Date()
 duration = "quarterly"
 startDate = document.getElementsByName("start-date")[0].value
-endDate = document.getElementsByName("end-date")[0].value
+endDate = currentDate.toISOString().split('T')[0]
+document.getElementById("end-date").value = endDate
 
 commitsChart = null;
 commitsTotalsChart = null;
 contributorsChart = null;
-issuesChart = null;
 
 commitsTable = null;
 sandboxTable = null;
@@ -424,18 +364,15 @@ productionTable = null;
 
 buildCharts = (start, end, duration) => {
     var commits = filterCommits(data['commits'], start, end);
-    var issues = filterCommits(data['issues'], start, end);
     
     if (commitsChart != null) {
         commitsChart.destroy();
         commitsTotalsChart.destroy();
         contributorsChart.destroy();
-        issuesChart.destroy();
     }
     commitsChart = new Chart(document.getElementById("commits-chart"), commitsGraphData(commits, duration));
     commitsTotalsChart = new Chart(document.getElementById("commits-totals-chart"), commitsTotalsGraphData(commits));
     contributorsChart = new Chart(document.getElementById("contributors-chart"), contributorsGraphData(commits, 7));
-    issuesChart = new Chart(document.getElementById("issues-chart"), issuesGraphData(issues, duration));
 }
 
 buildTables = (start, end) => {
