@@ -70,22 +70,6 @@ def get_commits(repo):
     return res
 
 
-def get_issues(repo, since=datetime(2014, 1, 1)):
-    issues = list(repo.get_issues(state="all", since=since))
-    res = []
-    for i in issues:
-        if i.pull_request:  # ignore prs
-            continue
-        d = {
-            "date": i.created_at.isoformat().split("T")[0],
-            "title": i.title,
-            "closed": True if i.closed_at else False,
-        }
-        res.append(d)
-    return res
-
-
-
 def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("repo_path")
@@ -110,14 +94,6 @@ def main(args=None):
     repo = pygit2.Repository(args.repo_path)
     commits = get_commits(repo)
 
-    print("Getting issues")
-    github = Github(os.environ["GH_TOKEN"])
-    repo = github.get_repo("google/fonts")
-    issues = {i["title"]: i for i in get_issues(repo, since=last_run)}
-    old_issues = {i["title"]: i for i in commit_data["issues"]}
-    issues = list({**issues, **old_issues}.values())
-    issues.sort(key=lambda k: k["date"])
-
     print("Getting server files")
     sb_path = os.path.join(args.repo_path, "to_sandbox.txt")
     sb_families = PushItems.from_server_file(sb_path)
@@ -129,7 +105,6 @@ def main(args=None):
     print("Writing json data")
     commit_data = {
         "last_run": datetime.now().strftime("%Y-%m-%d"),
-        "issues": issues,
         "commits": commits,
         "pushes": {
             "sandbox": [i.to_json() for i in sb_families],
