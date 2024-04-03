@@ -12,6 +12,7 @@ from gftools.builder.schema import (
     stat_schema,
     stat_schema_by_font_name,
 )
+from gftools.utils import open_ufo
 
 logger = logging.getLogger("GFBuilder")
 
@@ -33,6 +34,7 @@ DEFAULTS = {
     "buildStatic": True,
     "buildOTF": True,
     "buildTTF": True,
+    "buildSmallCap": True,
     "autohintTTF": True,
     "autohintOTF": False,
     "ttfaUseScript": False,
@@ -74,6 +76,7 @@ class GFBuilder(RecipeProviderBase):
         self.config["buildWebfont"] = self.config.get(
             "buildWebfont", self.config.get("buildStatic", True)
         )
+
         if "stat" in self.config:
             self.statfile = NamedTemporaryFile(delete=False, mode="w+")
             try:
@@ -191,7 +194,12 @@ class GFBuilder(RecipeProviderBase):
 
         # We've built a bunch of variables here, but we may also have
         # some woff2 we added as part of the process, so ignore them.
-        all_variables = [x for x in self.recipe.keys() if x.endswith("ttf")]
+        # We also ignore any small cap VFs we made
+        all_variables = [
+            x
+            for x in self.recipe.keys()
+            if x.endswith("ttf") and not ("SC[" in x or "SC-Italic[" in x)
+        ]
         if len(all_variables) > 0:
             last_target = all_variables[-1]
             if self.statfile:
@@ -232,6 +240,10 @@ class GFBuilder(RecipeProviderBase):
         )
         self.recipe[target] = steps
         self.build_a_webfont(target, self._vf_filename(source, extension="woff2"))
+        if self._do_smallcap(source):
+            self.recipe[self._vf_filename(source, suffix="SC")] = self._smallcap_steps(
+                source, target
+            )
 
     def build_all_statics(self):
         if not self.config.get("buildStatic", True):
@@ -266,6 +278,10 @@ class GFBuilder(RecipeProviderBase):
         )
         self.recipe[target] = steps
         self.build_a_webfont(target, self._static_filename(instance, extension="woff2"))
+        if self._do_smallcap(source):
+            self.recipe[
+                self._static_filename(instance, extension=output, suffix="SC")
+            ] = self._smallcap_steps(source, target)
 
     def build_a_webfont(self, original_target, wf_filename):
         if not self.config["buildWebfont"]:
@@ -288,3 +304,27 @@ class GFBuilder(RecipeProviderBase):
 
     def _fix_step(self):
         return [{"operation": "fix", "args": self.fix_args()}]
+
+    def _do_smallcap(self, source):
+        if not self.config.get("buildSmallCap"):
+            return False
+        if source.is_glyphs:
+            return "smcp" in source.gsfont.features
+        elif source.is_designspace:
+            source.designspace.loadSourceFonts(open_ufo)
+            return "feature smcp" in source.designspace.sources[0].font.features.text
+        else:  # UFO
+            return "feature smcp" in open_ufo(source.path).features.text
+
+    def _smallcap_steps(self, source, original):
+        new_family_name = source.family_name + " SC"
+        return [
+            {"source": original},
+            {"operation": "remapLayout", "args": "'smcp -> ccmp'"},
+            {
+                "operation": "rename",
+                "args": "--just-family",
+                "name": new_family_name,
+            },
+            {"operation": "fix", "args": self.fix_args()},
+        ]
