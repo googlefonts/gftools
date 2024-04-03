@@ -79,10 +79,10 @@ class File:
     def family_name(self):
         # Figure out target name
         if self.is_glyphs:
-            name = self.gsfont.familyName.replace(" ", "")
+            name = self.gsfont.familyName
         elif self.designspace.sources[0].familyName:
             return self.designspace.sources[0].familyName
         else:
             self.designspace.loadSourceFonts(open_ufo)
-            self.designspace.sources[0].font.info.familyName
+            return self.designspace.sources[0].font.info.familyName
         return name
