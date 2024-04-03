@@ -104,8 +104,14 @@ class GFBuilder(RecipeProviderBase):
         directory = self.config["vfDir"]
         if extension == "woff2":
             directory = self.config["woffDir"]
+        if suffix:
+            # Put any suffix before the -Italic element
+            if "-Italic" in sourcebase:
+                sourcebase = sourcebase.replace("-Italic", suffix + "-Italic")
+            else:
+                sourcebase += suffix
 
-        return os.path.join(directory, f"{sourcebase}{suffix}[{axis_tags}].{extension}")
+        return os.path.join(directory, f"{sourcebase}[{axis_tags}].{extension}")
 
     def _static_filename(self, instance, suffix="", extension="ttf"):
         """Determine the file name for a static font."""
@@ -120,7 +126,7 @@ class GFBuilder(RecipeProviderBase):
             # This is horrible; insert the suffix at the end of the family
             # name, before the style name.
             familyname, path = instancebase.rsplit("-", 1)
-            instancebase = familyname + suffix + path
+            instancebase = familyname + suffix + "-" + path
 
         return os.path.join(outdir, f"{instancebase}.{extension}")
 
