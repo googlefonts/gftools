@@ -439,15 +439,16 @@ def pr_family(
         body += PR_CHECKLIST
         resp = google_fonts.create_pr(title, body, pr_head, "main")
         log.info(f"Created PR '{resp['html_url']}'")
+        # Add PR label
+        # fetch open prs again since we've just created one
+        open_prs = google_fonts.open_prs(pr_head, "main")
+        if Google_Fonts_has_family(family_name):
+            google_fonts.create_issue_comment(open_prs[0]["number"], ["I Font Upgrade"])
+        else:
+            google_fonts.create_issue_comment(open_prs[0]["number"], ["I New Font"])
     else:
         resp = google_fonts.create_issue_comment(open_prs[0]["number"], "Updated")
         log.info(f"Updated PR '{resp['html_url']}'")
-
-    # add labels to pr
-    if Google_Fonts_has_family(family_name):
-        google_fonts.create_issue_comment(open_prs[0]["number"], ["I Font Upgrade"])
-    else:
-        google_fonts.create_issue_comment(open_prs[0]["number"], ["I New Font"])
     return True
 
 
