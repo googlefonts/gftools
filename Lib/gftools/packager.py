@@ -353,6 +353,7 @@ def commit_family(
     metadata: fonts_pb2.FamilyProto,
     repo: Repository,
     head_repo="google",
+    issue_number=None,
 ) -> Tuple[str, str, Branch]:
     """Commit family to a new branch in the google/fonts repo."""
     branch = _create_git_branch(metadata, repo, head_repo)
@@ -373,6 +374,8 @@ def commit_family(
         f"Taken from the upstream repo {metadata.source.repository_url} at "
         f"commit {commit}."
     )
+    if issue_number:
+        body += f"\n\nResolves #{issue_number}"
     msg = f"{title}\n\n{body}"
 
     ref = branch.name
@@ -449,6 +452,7 @@ def pr_family(
     else:
         resp = google_fonts.create_issue_comment(open_prs[0]["number"], "Updated")
         log.info(f"Updated PR '{resp['html_url']}'")
+
     return True
 
 
@@ -480,6 +484,7 @@ def make_package(
     base_repo: str = "google",
     head_repo: str = "google",
     latest_release: bool = False,
+    issue_number=None,
     **kwargs,
 ):
     repo = Repository(repo_path)
@@ -560,7 +565,9 @@ def make_package(
         packaged = package_family(family_path, metadata, latest_release)
         if not packaged:
             return
-        title, msg, branch = commit_family(family_path, metadata, repo, head_repo)
+        title, msg, branch = commit_family(
+            family_path, metadata, repo, head_repo, issue_number
+        )
 
         if pr:
             pr_family(

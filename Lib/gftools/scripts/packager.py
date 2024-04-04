@@ -75,6 +75,7 @@ def main(args=None):
         choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
         default="INFO",
     )
+    parser.add_argument("-i", "--issue-number", help="Issue number to reference in PR")
     parser.add_argument("--skip-tags", action="store_true")
     args = parser.parse_args(args)
 
