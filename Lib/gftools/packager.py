@@ -16,7 +16,7 @@ from zipfile import ZipFile
 import yaml
 from fontTools.ttLib import TTFont
 from gflanguages import LoadLanguages
-from pygit2 import GIT_RESET_HARD, Branch, Repository
+from pygit2 import GIT_RESET_HARD, GIT_RESET_SOFT, Branch, Repository, GIT_RESET_MIXED
 
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.gfgithub import GitHubClient
@@ -443,9 +443,9 @@ def pr_family(
         # fetch open prs again since we've just created one
         open_prs = google_fonts.open_prs(pr_head, "main")
         if Google_Fonts_has_family(family_name):
-            google_fonts.create_issue_comment(open_prs[0]["number"], ["I Font Upgrade"])
+            google_fonts.add_labels(open_prs[0]["number"], ["I Font Upgrade"])
         else:
-            google_fonts.create_issue_comment(open_prs[0]["number"], ["I New Font"])
+            google_fonts.add_labels(open_prs[0]["number"], ["I New Font"])
     else:
         resp = google_fonts.create_issue_comment(open_prs[0]["number"], "Updated")
         log.info(f"Updated PR '{resp['html_url']}'")
@@ -508,9 +508,11 @@ def make_package(
                     family_branch, paths=[metadata_path.relative_to(repo.workdir)]
                 )
                 log.warning(
-                    f"Found '{metadata_path}' in branch '{branch_name}'.\n"
-                    "Make your modifications to this file and rerun tool with same commands."
+                    f"Found '{metadata_path}' in branch '{branch_name}'. The file has "
+                    "been moved into the main branch.\nMake your modifications to this "
+                    "file and rerun tool with same commands."
                 )
+                repo.reset(repo.head.target, GIT_RESET_MIXED)
             else:
                 metadata_path = create_metadata(repo_path, family_name, license)
                 log.warning(
