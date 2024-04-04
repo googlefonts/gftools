@@ -549,8 +549,10 @@ def make_package(
         log.fatal(
             f"'{metadata.name}' does not have family tagging data! "
             "Please complete the following form, "
-            "https://forms.gle/jcp3nDv63LaV1rxH6. This is a hard requirement "
-            "set by Google Fonts management."
+            "https://forms.gle/jcp3nDv63LaV1rxH6. Once tags have been added, "
+            "you may need to wait around five minutes in order for the tags "
+            "to be registered before rerunning the tool. This is a hard "
+            "requirement set by Google Fonts management."
         )
         return
 
