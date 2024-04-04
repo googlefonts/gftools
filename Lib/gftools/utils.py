@@ -659,7 +659,7 @@ def shell_quote(s: Union[str, Path]) -> str:
 
 
 def github_user_repo(github_url):
-    pattern = r'https?://github\.com/(?P<user>[^/]+)/(?P<repo>[^/^.]+)'
+    pattern = r'https?://w?w?w?\.?github\.com/(?P<user>[^/]+)/(?P<repo>[^/^.]+)'
     match = re.search(pattern, github_url)
     if not match:
         raise ValueError(
