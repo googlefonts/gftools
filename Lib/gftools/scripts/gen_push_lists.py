@@ -25,7 +25,7 @@ from gftools.tags import GFTags
 from pathlib import Path
 from gftools.utils import is_google_fonts_repo
 from contextlib import contextmanager
-
+import pygit2
 
 @contextmanager
 def in_google_fonts_repo(gf_path):
@@ -72,6 +72,13 @@ def main(args=None):
 
     tags = GFTags()
     tags.to_csv(gf_path / "tags" / "all" / "families.csv")
+    repo = pygit2.Repository(str(gf_path))
+    if any("tags/all/families.csv" in  d.delta.new_file.path for d in repo.diff()):
+        with open(to_sandbox_fp, "r", encoding="utf-8") as doc:
+            string = doc.read()
+        string += "\n# Tags\ntags/all/families.csv\n"
+        with open(to_sandbox_fp, "w", encoding="utf-8") as doc:
+            doc.write(string)
 
 
 if __name__ == "__main__":
