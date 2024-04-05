@@ -69,6 +69,7 @@ def download_family_from_Google_Fonts(family, dst=None, dl_url=PROD_FAMILY_DOWNL
         if dst:
             target = os.path.join(dst, filename)
             download_file(dl_url, target)
+            res.append(target)
         else:
             res.append(download_file(dl_url))
     return res
