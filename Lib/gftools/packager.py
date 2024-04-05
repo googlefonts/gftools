@@ -10,6 +10,8 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
+import requests
+import sys
 from typing import List, Optional, Tuple
 from zipfile import ZipFile
 
@@ -29,6 +31,8 @@ from gftools.utils import (
     format_html,
     Google_Fonts_has_family,
 )
+import sys
+
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"
@@ -245,7 +249,7 @@ def download_assets(
                     with open(out_fp, "wb") as f:
                         f.write(zf.read(file))
             if not found:
-                log.error(
+                raise ValueError(
                     f"Could not find '{item.source_file}' in archive '{metadata.source.archive_url}'"
                 )
             res.append(out_fp)
@@ -253,9 +257,16 @@ def download_assets(
 
     for item in metadata.source.files:
         log.debug(f"Downloading {item.source_file}")
-        file_content = upstream.get_content(
-            f"{item.source_file}", metadata.source.branch
-        )
+        try:
+            file_content = upstream.get_content(
+                f"{item.source_file}", metadata.source.branch
+            )
+        except requests.exceptions.HTTPError:
+            raise ValueError(
+                f"Could not find '{item.source_file}' in repository's "
+                f"'{metadata.source.branch}' branch.\n\nPlease check the file "
+                "is in the repo and the branch name is correct."
+            )
         out_fp = Path(out / item.dest_file)
         if not out_fp.parent.exists():
             os.makedirs(out_fp.parent, exist_ok=True)
@@ -532,26 +543,24 @@ def make_package(
     # Ensure the family's METADATA.pb file has the required source fields
     if no_source_metadata(metadata):
         append_source_template(metadata_fp, metadata)
-        log.warning(
+        raise ValueError(
             f"'{metadata_fp}' lacks source info! Please populate the "
             "updated METADATA.pb file and rerun tool with the "
             "same commands."
         )
-        return
 
     if incomplete_source_metadata(metadata):
-        log.warning(
+        raise ValueError(
             f"'{metadata_fp}' Please fill in the source placeholder fields "
             "in the METADATA.pb file and rerun tool with the same commands."
         )
-        return
 
     # All font families must have tagging data. This data helps users on Google
     # Fonts find font families. It's enabled by default since it's a hard
     # requirements set by management.
     tags = GFTags()
     if not skip_tags and not tags.has_family(metadata.name):
-        log.fatal(
+        raise ValueError(
             f"'{metadata.name}' does not have family tagging data! "
             "Please complete the following form, "
             "https://forms.gle/jcp3nDv63LaV1rxH6. Once tags have been added, "
@@ -559,7 +568,6 @@ def make_package(
             "to be registered before rerunning the tool. This is a hard "
             "requirement set by Google Fonts management."
         )
-        return
 
     with current_git_state(repo):
         packaged = package_family(family_path, metadata, latest_release)
