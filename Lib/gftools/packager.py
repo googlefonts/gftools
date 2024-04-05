@@ -10,13 +10,15 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
+import requests
+import sys
 from typing import List, Optional, Tuple
 from zipfile import ZipFile
 
 import yaml
 from fontTools.ttLib import TTFont
 from gflanguages import LoadLanguages
-from pygit2 import GIT_RESET_HARD, Branch, Repository
+from pygit2 import GIT_RESET_HARD, GIT_RESET_SOFT, Branch, Repository, GIT_RESET_MIXED
 
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.gfgithub import GitHubClient
@@ -29,6 +31,8 @@ from gftools.utils import (
     format_html,
     Google_Fonts_has_family,
 )
+import sys
+
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"
@@ -245,7 +249,7 @@ def download_assets(
                     with open(out_fp, "wb") as f:
                         f.write(zf.read(file))
             if not found:
-                log.error(
+                raise ValueError(
                     f"Could not find '{item.source_file}' in archive '{metadata.source.archive_url}'"
                 )
             res.append(out_fp)
@@ -253,9 +257,16 @@ def download_assets(
 
     for item in metadata.source.files:
         log.debug(f"Downloading {item.source_file}")
-        file_content = upstream.get_content(
-            f"{item.source_file}", metadata.source.branch
-        )
+        try:
+            file_content = upstream.get_content(
+                f"{item.source_file}", metadata.source.branch
+            )
+        except requests.exceptions.HTTPError:
+            raise ValueError(
+                f"Could not find '{item.source_file}' in repository's "
+                f"'{metadata.source.branch}' branch.\n\nPlease check the file "
+                "is in the repo and the branch name is correct."
+            )
         out_fp = Path(out / item.dest_file)
         if not out_fp.parent.exists():
             os.makedirs(out_fp.parent, exist_ok=True)
@@ -353,6 +364,7 @@ def commit_family(
     metadata: fonts_pb2.FamilyProto,
     repo: Repository,
     head_repo="google",
+    issue_number=None,
 ) -> Tuple[str, str, Branch]:
     """Commit family to a new branch in the google/fonts repo."""
     branch = _create_git_branch(metadata, repo, head_repo)
@@ -373,6 +385,8 @@ def commit_family(
         f"Taken from the upstream repo {metadata.source.repository_url} at "
         f"commit {commit}."
     )
+    if issue_number:
+        body += f"\n\nResolves #{issue_number}"
     msg = f"{title}\n\n{body}"
 
     ref = branch.name
@@ -439,15 +453,17 @@ def pr_family(
         body += PR_CHECKLIST
         resp = google_fonts.create_pr(title, body, pr_head, "main")
         log.info(f"Created PR '{resp['html_url']}'")
+        # Add PR label
+        # fetch open prs again since we've just created one
+        open_prs = google_fonts.open_prs(pr_head, "main")
+        if Google_Fonts_has_family(family_name):
+            google_fonts.add_labels(open_prs[0]["number"], ["I Font Upgrade"])
+        else:
+            google_fonts.add_labels(open_prs[0]["number"], ["I New Font"])
     else:
         resp = google_fonts.create_issue_comment(open_prs[0]["number"], "Updated")
         log.info(f"Updated PR '{resp['html_url']}'")
 
-    # add labels to pr
-    if Google_Fonts_has_family(family_name):
-        google_fonts.create_issue_comment(open_prs[0]["number"], ["I Font Upgrade"])
-    else:
-        google_fonts.create_issue_comment(open_prs[0]["number"], ["I New Font"])
     return True
 
 
@@ -479,6 +495,7 @@ def make_package(
     base_repo: str = "google",
     head_repo: str = "google",
     latest_release: bool = False,
+    issue_number=None,
     **kwargs,
 ):
     repo = Repository(repo_path)
@@ -507,9 +524,11 @@ def make_package(
                     family_branch, paths=[metadata_path.relative_to(repo.workdir)]
                 )
                 log.warning(
-                    f"Found '{metadata_path}' in branch '{branch_name}'.\n"
-                    "Make your modifications to this file and rerun tool with same commands."
+                    f"Found '{metadata_path}' in branch '{branch_name}'. The file has "
+                    "been moved into the main branch.\nMake your modifications to this "
+                    "file and rerun tool with same commands."
                 )
+                repo.reset(repo.head.target, GIT_RESET_MIXED)
             else:
                 metadata_path = create_metadata(repo_path, family_name, license)
                 log.warning(
@@ -524,38 +543,39 @@ def make_package(
     # Ensure the family's METADATA.pb file has the required source fields
     if no_source_metadata(metadata):
         append_source_template(metadata_fp, metadata)
-        log.warning(
+        raise ValueError(
             f"'{metadata_fp}' lacks source info! Please populate the "
             "updated METADATA.pb file and rerun tool with the "
             "same commands."
         )
-        return
 
     if incomplete_source_metadata(metadata):
-        log.warning(
+        raise ValueError(
             f"'{metadata_fp}' Please fill in the source placeholder fields "
             "in the METADATA.pb file and rerun tool with the same commands."
         )
-        return
 
     # All font families must have tagging data. This data helps users on Google
     # Fonts find font families. It's enabled by default since it's a hard
     # requirements set by management.
     tags = GFTags()
     if not skip_tags and not tags.has_family(metadata.name):
-        log.fatal(
+        raise ValueError(
             f"'{metadata.name}' does not have family tagging data! "
             "Please complete the following form, "
-            "https://forms.gle/jcp3nDv63LaV1rxH6. This is a hard requirement "
-            "set by Google Fonts management."
+            "https://forms.gle/jcp3nDv63LaV1rxH6. Once tags have been added, "
+            "you may need to wait around five minutes in order for the tags "
+            "to be registered before rerunning the tool. This is a hard "
+            "requirement set by Google Fonts management."
         )
-        return
 
     with current_git_state(repo):
         packaged = package_family(family_path, metadata, latest_release)
         if not packaged:
             return
-        title, msg, branch = commit_family(family_path, metadata, repo, head_repo)
+        title, msg, branch = commit_family(
+            family_path, metadata, repo, head_repo, issue_number
+        )
 
         if pr:
             pr_family(

@@ -24,10 +24,17 @@ from gftools import packager
 import argparse
 import logging
 from rich.logging import RichHandler
+import sys
 
 
 log = logging.getLogger("gftools.packager")
 LOG_FORMAT = "%(message)s"
+
+
+def user_error_messages(type, value, traceback):
+    """Print user-friendly error messages to the console when exceptions
+    are raised. Intended for non-power users/type designers."""
+    log.fatal(value)
 
 
 def main(args=None):
@@ -75,6 +82,16 @@ def main(args=None):
         choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
         default="INFO",
     )
+    parser.add_argument(
+        "--show-tracebacks",
+        action="store_true",
+        help=(
+            "By default, exceptions will only print out error messages. "
+            "Tracebacks won't be included since the tool is intended for "
+            "type designers and not developers."
+        ),
+    )
+    parser.add_argument("-i", "--issue-number", help="Issue number to reference in PR")
     parser.add_argument("--skip-tags", action="store_true")
     args = parser.parse_args(args)
 
@@ -84,6 +101,8 @@ def main(args=None):
         datefmt="[%X]",
         handlers=[RichHandler()],
     )
+    if not args.show_tracebacks:
+        sys.excepthook = user_error_messages
     packager.make_package(**args.__dict__)
 
 
