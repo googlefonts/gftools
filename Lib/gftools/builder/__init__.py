@@ -346,9 +346,30 @@ def main(args=None):
         help="Just generate and output recipe from recipe builder",
         action="store_true",
     )
-    parser.add_argument("config", help="Path to config file")
+    parser.add_argument("config", help="Path to config file or source file", nargs="+")
     args = parser.parse_args(args)
-    pd = GFBuilder(args.config)
+    yaml_files = []
+    source_files = []
+    for config in args.config:
+        if config.endswith(".yaml") or config.endswith(".yml"):
+            yaml_files.append(config)
+        else:
+            source_files.append(config)
+    if yaml_files and source_files:
+        raise ValueError(
+            "Cannot mix YAML config files and font source files on command line"
+        )
+    if source_files:
+        config = {
+            "sources": source_files,
+            "outputDir": "fonts/",
+        }
+    else:
+        if len(args.config) > 1:
+            raise ValueError("Only one config file can be given for now")
+        config = args.config[0]
+
+    pd = GFBuilder(config)
     if args.generate:
         config = pd.config
         config["recipe"] = pd.recipe
