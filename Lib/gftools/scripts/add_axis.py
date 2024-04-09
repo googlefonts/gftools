@@ -116,6 +116,8 @@ def add_axis(font: str):
     fallback_proto.name = 'Default'
     fallback_proto.value = fvar_axis.defaultValue
     axis_proto.fallback.append(fallback_proto)
+    # Is the axis fallback only?
+    axis_proto.fallback_only = False
 
     text_proto = text_format.MessageToString(axis_proto, as_utf8=True,
                                              use_index_order=True)
