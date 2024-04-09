@@ -143,3 +143,6 @@ class GitHubClient:
             self.rest_url(f"issues/{issue_number}/labels"),
             {"labels": labels},
         )
+
+    def get_labels(self, issue_number):
+        return self._get(self.rest_url(f"issues/{issue_number}/labels"))

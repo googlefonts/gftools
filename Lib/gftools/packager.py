@@ -444,6 +444,7 @@ def pr_family(
     family_name: str,
     base_repo: str = "google",
     head_repo: str = "google",
+    issue_number=None,
 ):
     push_family(family_path, branch_name, head_repo)
     google_fonts = GitHubClient(base_repo, "fonts")
@@ -464,6 +465,12 @@ def pr_family(
         resp = google_fonts.create_issue_comment(open_prs[0]["number"], "Updated")
         log.info(f"Updated PR '{resp['html_url']}'")
 
+    # inherit labels from issue
+    if issue_number:
+        issue_labels = google_fonts.get_labels(issue_number)
+        google_fonts.add_labels(
+            open_prs[0]["number"], [l["name"] for l in issue_labels]
+        )
     return True
 
 
@@ -586,6 +593,7 @@ def make_package(
                 metadata.name,
                 base_repo,
                 head_repo,
+                issue_number,
             )
             log.info(
                 f"\nPR submitted to google/fonts repo!\n\n"
