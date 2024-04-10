@@ -80,6 +80,9 @@ class File:
         # Figure out target name
         if self.is_glyphs:
             name = self.gsfont.familyName
+        elif self.is_ufo:
+            ufo = open_ufo(self.path)
+            name = ufo.info.familyName
         elif self.designspace.sources[0].familyName:
             return self.designspace.sources[0].familyName
         else:
