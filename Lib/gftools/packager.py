@@ -343,7 +343,7 @@ def _create_git_branch(
         repo_url = f"git@github.com:{head_repo}/fonts.git"
     else:
         repo_url = f"https://github.com/{head_repo}/fonts.git"
-    subprocess.run(
+    result = subprocess.run(
         [
             "git",
             "-C",
@@ -353,10 +353,18 @@ def _create_git_branch(
             f"main:{branch_name}",
             "--force",
         ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
-    return repo.branches.get(branch_name)
+    branch = repo.branches.get(branch_name)
+    if not branch:
+        raise ValueError(
+            "Could not create a git branch "
+            + branch_name
+            + ": \n"
+            + result.stderr.decode("utf-8")
+        )
+    return branch
 
 
 def commit_family(
