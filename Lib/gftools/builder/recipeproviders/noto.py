@@ -85,7 +85,10 @@ class NotoBuilder(GFBuilder):
         )
         self.recipe[target] = [
             {"source": source.path},
-            {"operation": "buildVariable", "args": self.fontmake_args(variable=True)},
+            {
+                "operation": "buildVariable",
+                "args": self.fontmake_args(source, variable=True),
+            },
             {"operation": "fix"},
         ]
 
@@ -107,7 +110,7 @@ class NotoBuilder(GFBuilder):
                 {"source": source.path},
                 {
                     "operation": "buildVariable",
-                    "args": self.fontmake_args(variable=True),
+                    "args": self.fontmake_args(source, variable=True),
                 },
                 {"operation": "fix"},
                 {
@@ -140,7 +143,7 @@ class NotoBuilder(GFBuilder):
                 },
                 {
                     "operation": "buildVariable",
-                    "args": self.fontmake_args(variable=True),
+                    "args": self.fontmake_args(source, variable=True),
                 },
             ]
             self.slim(target, tags)
@@ -163,7 +166,7 @@ class NotoBuilder(GFBuilder):
                 },
                 {
                     "operation": "buildVariable",
-                    "args": self.fontmake_args(variable=True),
+                    "args": self.fontmake_args(source, variable=True),
                 },
                 {"operation": "fix", "args": "--include-source-fixes"},
             ]
@@ -181,7 +184,7 @@ class NotoBuilder(GFBuilder):
                 {"source": source.path},
                 {
                     "operation": "buildVariable",
-                    "args": self.fontmake_args(variable=True),
+                    "args": self.fontmake_args(source, variable=True),
                 },
                 {"operation": "fix", "args": "--include-source-fixes"},
             ]
@@ -215,7 +218,7 @@ class NotoBuilder(GFBuilder):
             },
             {
                 "operation": "buildTTF" if output == "ttf" else "buildOTF",
-                "args": self.fontmake_args(variable=False),
+                "args": self.fontmake_args(source, variable=False),
             },
         ]
 
@@ -274,7 +277,7 @@ class NotoBuilder(GFBuilder):
                 },
                 {
                     "operation": "buildTTF" if output == "ttf" else "buildOTF",
-                    "args": self.fontmake_args(variable=False),
+                    "args": self.fontmake_args(source, variable=False),
                 },
             ]
             if output == "ttf":
@@ -318,7 +321,10 @@ class NotoBuilder(GFBuilder):
                     "operation": "instantiateUfo",
                     "instance_name": instance.name,
                 },
-                {"operation": "buildTTF", "args": self.fontmake_args(variable=False)},
+                {
+                    "operation": "buildTTF",
+                    "args": self.fontmake_args(source, variable=False),
+                },
                 {
                     "operation": "autohint",
                     "args": "--fail-ok --auto-script --discount-latin",

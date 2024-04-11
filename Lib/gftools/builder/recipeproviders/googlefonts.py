@@ -7,8 +7,12 @@ import yaml
 from strictyaml import load, YAMLValidationError
 
 from gftools.builder.recipeproviders import RecipeProviderBase
-from gftools.builder.schema import (GOOGLEFONTS_SCHEMA, stat_schema,
-                                    stat_schema_by_font_name)
+from gftools.builder.schema import (
+    GOOGLEFONTS_SCHEMA,
+    stat_schema,
+    stat_schema_by_font_name,
+)
+from gftools.utils import open_ufo
 
 logger = logging.getLogger("GFBuilder")
 
@@ -30,6 +34,7 @@ DEFAULTS = {
     "buildStatic": True,
     "buildOTF": True,
     "buildTTF": True,
+    "buildSmallCap": True,
     "autohintTTF": True,
     "autohintOTF": False,
     "ttfaUseScript": False,
@@ -65,10 +70,13 @@ class GFBuilder(RecipeProviderBase):
         self.revalidate()
         self.config = {**DEFAULTS, **self.config}
         for field in ["vfDir", "ttDir", "otDir", "woffDir"]:
-            self.config[field] = self.config[field].replace("$outputDir", self.config["outputDir"])
+            self.config[field] = self.config[field].replace(
+                "$outputDir", self.config["outputDir"]
+            )
         self.config["buildWebfont"] = self.config.get(
             "buildWebfont", self.config.get("buildStatic", True)
         )
+
         if "stat" in self.config:
             self.statfile = NamedTemporaryFile(delete=False, mode="w+")
             try:
@@ -85,7 +93,47 @@ class GFBuilder(RecipeProviderBase):
         self.build_all_statics()
         return self.recipe
 
-    def fontmake_args(self, variable=False):
+    def _vf_filename(self, source, suffix="", extension="ttf"):
+        """Determine the file name for a variable font."""
+        sourcebase = os.path.splitext(source.basename)[0]
+        if source.is_glyphs:
+            tags = [ax.axisTag for ax in source.gsfont.axes]
+        elif source.is_designspace:
+            tags = [ax.tag for ax in source.designspace.axes]
+        else:
+            raise ValueError("Unknown source type")
+
+        axis_tags = ",".join(sorted(tags))
+        directory = self.config["vfDir"]
+        if extension == "woff2":
+            directory = self.config["woffDir"]
+        if suffix:
+            # Put any suffix before the -Italic element
+            if "-Italic" in sourcebase:
+                sourcebase = sourcebase.replace("-Italic", suffix + "-Italic")
+            else:
+                sourcebase += suffix
+
+        return os.path.join(directory, f"{sourcebase}[{axis_tags}].{extension}")
+
+    def _static_filename(self, instance, suffix="", extension="ttf"):
+        """Determine the file name for a static font."""
+        if extension == "ttf":
+            outdir = self.config["ttDir"]
+        elif extension == "otf":
+            outdir = self.config["otDir"]
+        elif extension == "woff2":
+            outdir = self.config["woffDir"]
+        instancebase = os.path.splitext(os.path.basename(instance.filename))[0]
+        if suffix:
+            # This is horrible; insert the suffix at the end of the family
+            # name, before the style name.
+            familyname, path = instancebase.rsplit("-", 1)
+            instancebase = familyname + suffix + "-" + path
+
+        return os.path.join(outdir, f"{instancebase}.{extension}")
+
+    def fontmake_args(self, source, variable=False):
         args = "--filter ... "
         if self.config.get("flattenComponents", True):
             args += " --filter FlattenComponentsFilter"
@@ -103,11 +151,17 @@ class GFBuilder(RecipeProviderBase):
         if self.config.get("extraFontmakeArgs") is not None:
             args += " " + str(self.config["extraFontmakeArgs"])
         if variable:
+            if self.config.get("checkCompatibility") == False:
+                args += " --no-check-compatibility"
             if self.config.get("extraVariableFontmakeArgs") is not None:
                 args += " " + str(self.config["extraVariableFontmakeArgs"])
         else:
             if self.config.get("extraStaticFontmakeArgs") is not None:
                 args += " " + str(self.config["extraStaticFontmakeArgs"])
+
+        if source.is_glyphs:
+            for gd in self.config.get("glyphData", []):
+                args += " --glyph-data " + gd
         return args
 
     def fix_args(self):
@@ -140,7 +194,12 @@ class GFBuilder(RecipeProviderBase):
 
         # We've built a bunch of variables here, but we may also have
         # some woff2 we added as part of the process, so ignore them.
-        all_variables = [x for x in self.recipe.keys() if x.endswith("ttf")]
+        # We also ignore any small cap VFs we made
+        all_variables = [
+            x
+            for x in self.recipe.keys()
+            if x.endswith("ttf") and not ("SC[" in x or "SC-Italic[" in x)
+        ]
         if len(all_variables) > 0:
             last_target = all_variables[-1]
             if self.statfile:
@@ -156,51 +215,35 @@ class GFBuilder(RecipeProviderBase):
                 build_stat_step["needs"] = other_variables
             self.recipe[last_target].append(build_stat_step)
 
-    def build_a_variable(self, source):
-        # Figure out target name
-        sourcebase = os.path.splitext(source.basename)[0]
-        vf_args = ""
-
-        if self.config.get("checkCompatibility") == False:
-            vf_args += "--no-check-compatibility "
-
-        if source.is_glyphs:
-            tags = [ax.axisTag for ax in source.gsfont.axes]
-        elif source.is_designspace:
-            tags = [ax.tag for ax in source.designspace.axes]
-        else:
-            raise ValueError("Unknown source type")
-
-        axis_tags = ",".join(sorted(tags))
-
-        if source.is_glyphs:
-            for gd in self.config.get("glyphData", []):
-                vf_args += " --glyph-data " + gd
-
-        target = os.path.join(self.config["vfDir"], f"{sourcebase}[{axis_tags}].ttf")
-        steps = [
-            {"source": source.path},
-            {
-                "operation": "buildVariable",
-                "args": vf_args + self.fontmake_args(variable=True),
-            },
-        ]
+    def _vtt_steps(self, target):
         if os.path.basename(target) in self.config.get("vttSources", {}):
-            steps.append(
+            return [
                 {
                     "operation": "buildVTT",
                     "vttfile": self.config["vttSources"][os.path.basename(target)],
                 }
-            )
-        steps.append(
-            {"operation": "fix", "args": self.fix_args()},
+            ]
+        return []
+
+    def build_a_variable(self, source):
+        target = self._vf_filename(source)
+        steps = (
+            [
+                {"source": source.path},
+                {
+                    "operation": "buildVariable",
+                    "args": self.fontmake_args(source, variable=True),
+                },
+            ]
+            + self._vtt_steps(target)
+            + self._fix_step()
         )
         self.recipe[target] = steps
-        if self.config["buildWebfont"]:
-            target = os.path.join(
-                self.config["woffDir"], f"{sourcebase}[{axis_tags}].woff2"
+        self.build_a_webfont(target, self._vf_filename(source, extension="woff2"))
+        if self._do_smallcap(source):
+            self.recipe[self._vf_filename(source, suffix="SC")] = self._smallcap_steps(
+                source, target
             )
-            self.recipe[target] = copy.deepcopy(steps) + [{"operation": "compress"}]
 
     def build_all_statics(self):
         if not self.config.get("buildStatic", True):
@@ -213,17 +256,7 @@ class GFBuilder(RecipeProviderBase):
                     self.build_a_static(source, instance, output="otf")
 
     def build_a_static(self, source, instance, output):
-        if output == "ttf":
-            outdir = self.config["ttDir"]
-        else:
-            outdir = self.config["otDir"]
-        instancebase = os.path.splitext(os.path.basename(instance.filename))[0]
-        target = os.path.join(outdir, f"{instancebase}.{output}")
-
-        static_args = ""
-        if source.is_glyphs:
-            for gd in self.config.get("glyphData", []):
-                static_args += " --glyph-data " + gd
+        target = self._static_filename(instance, extension=output)
 
         steps = [
             {"source": source.path},
@@ -232,29 +265,66 @@ class GFBuilder(RecipeProviderBase):
             steps.append(
                 {"operation": "instantiateUfo", "instance_name": instance.name}
             )
-        steps.append(
-            {
-                "operation": "buildTTF" if output == "ttf" else "buildOTF",
-                "args": self.fontmake_args(variable=False) + static_args,
-            }
+        steps += (
+            [
+                {
+                    "operation": "buildTTF" if output == "ttf" else "buildOTF",
+                    "args": self.fontmake_args(source, variable=False),
+                }
+            ]
+            + self._autohint_steps(target)
+            + self._vtt_steps(target)
+            + self._fix_step()
         )
-        if bool(self.config.get("autohintTTF")) and output == "ttf":
+        self.recipe[target] = steps
+        self.build_a_webfont(target, self._static_filename(instance, extension="woff2"))
+        if self._do_smallcap(source):
+            self.recipe[
+                self._static_filename(instance, extension=output, suffix="SC")
+            ] = self._smallcap_steps(source, target)
+
+    def build_a_webfont(self, original_target, wf_filename):
+        if not self.config["buildWebfont"]:
+            return
+        if not original_target.endswith(".ttf"):
+            return
+        self.recipe[wf_filename] = copy.deepcopy(self.recipe[original_target]) + [
+            {"operation": "compress"}
+        ]
+
+    def _autohint_steps(self, target):
+        if bool(self.config.get("autohintTTF")) and target.endswith("ttf"):
             args = "--fail-ok "
             if self.config.get("ttfaUseScript"):
                 args += " --auto-script"
-            steps.append({"operation": "autohint", "args": args})
-        if bool(self.config.get("autohintOTF")) and output == "otf":
-            steps.append({"operation": "autohintOTF"})
-        if os.path.basename(target) in self.config.get("vttSources", {}):
-            steps.append(
-                {
-                    "operation": "buildVTT",
-                    "vttfile": self.config["vttSources"][os.path.basename(target)],
-                }
-            )
-        steps.append({"operation": "fix", "args": self.fix_args()})
-        self.recipe[target] = steps
+            return [{"operation": "autohint", "args": args}]
+        if bool(self.config.get("autohintOTF")) and target.endswith("otf"):
+            return [{"operation": "autohintOTF"}]
+        return []
 
-        if self.config["buildWebfont"] and output == "ttf":
-            target = os.path.join(self.config["woffDir"], f"{instancebase}.woff2")
-            self.recipe[target] = copy.deepcopy(steps) + [{"operation": "compress"}]
+    def _fix_step(self):
+        return [{"operation": "fix", "args": self.fix_args()}]
+
+    def _do_smallcap(self, source):
+        if not self.config.get("buildSmallCap"):
+            return False
+        if source.is_glyphs:
+            return "smcp" in source.gsfont.features
+        elif source.is_designspace:
+            source.designspace.loadSourceFonts(open_ufo)
+            return "feature smcp" in source.designspace.sources[0].font.features.text
+        else:  # UFO
+            return "feature smcp" in open_ufo(source.path).features.text
+
+    def _smallcap_steps(self, source, original):
+        new_family_name = source.family_name + " SC"
+        return [
+            {"source": original},
+            {"operation": "remapLayout", "args": "'smcp -> ccmp'"},
+            {
+                "operation": "rename",
+                "args": "--just-family",
+                "name": new_family_name,
+            },
+            {"operation": "fix", "args": self.fix_args()},
+        ]
