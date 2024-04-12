@@ -1,6 +1,6 @@
 import argparse
 from defcon import Font
-from pathops.operations import _draw
+from pathops import Path
 from ufo2ft.filters.decomposeComponents import DecomposeComponentsFilter
 from ufo2ft.preProcessor import TTFPreProcessor
 import math
@@ -19,12 +19,15 @@ def set_overlap_bits(ufo):
 
     overlaps = set()
     for glyph in outline_glyphset.values():
-        paths = _draw(glyph)
-        area = paths.area
+        skia_path = Path()
+        pen = skia_path.getPen()
+        for contour in glyph:
+            contour.draw(pen)
+        area = skia_path.area
         # rm overlaps
-        paths.simplify()
-        simplified_area = paths.area
-        if math.ceil(area) != math.ceil(simplified_area):
+        skia_path.simplify()
+        simplified_area = skia_path.area
+        if not math.isclose(area, simplified_area, abs_tol=0.1):
             ufo[glyph.name].lib["public.truetype.overlap"] = True
             overlaps.add(glyph.name)
     return overlaps
