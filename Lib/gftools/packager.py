@@ -18,6 +18,7 @@ from zipfile import ZipFile
 import yaml
 from fontTools.ttLib import TTFont
 from gflanguages import LoadLanguages
+import pygit2
 from pygit2 import GIT_RESET_HARD, GIT_RESET_SOFT, Branch, Repository, GIT_RESET_MIXED
 
 import gftools.fonts_public_pb2 as fonts_pb2
@@ -307,8 +308,7 @@ def package_family(
         tmp_dir = Path(tmp)
         download_assets(metadata, tmp_dir, latest_release)
         if assets_are_same(tmp_dir, family_path):
-            log.info(f"'{family_path}' already has latest files, Aborting.")
-            return False
+            raise ValueError(f"'{family_path}' already has latest files, Aborting.")
         # rm existing fonts. Sometimes the font count will change if a family
         # increases its styles or becomes a variable font.
         for fp in family_path.iterdir():
@@ -359,6 +359,31 @@ def _create_git_branch(
     return repo.branches.get(branch_name)
 
 
+def auto_insert(repo, treebuilder, path, thing, mode):
+    """figure out and deal with the necessary subtree structure"""
+    path_parts = path.split("/", 1)
+    if len(path_parts) == 1:  # base case
+        treebuilder.insert(path, thing, mode)
+        return treebuilder.write()
+
+    subtree_name, sub_path = path_parts
+    tree_oid = treebuilder.write()
+    tree = repo.get(tree_oid)
+    try:
+        entry = tree[subtree_name]
+        assert (
+            entry.filemode == pygit2.GIT_FILEMODE_TREE
+        ), "{} already exists as a blob, not a tree".format(entry.name)
+        existing_subtree = repo.get(entry.hex)
+        sub_treebuilder = repo.TreeBuilder(existing_subtree)
+    except KeyError:
+        sub_treebuilder = repo.TreeBuilder()
+
+    subtree_oid = auto_insert(repo, sub_treebuilder, sub_path, thing, mode)
+    treebuilder.insert(subtree_name, subtree_oid, pygit2.GIT_FILEMODE_TREE)
+    return treebuilder.write()
+
+
 def commit_family(
     family_path: Path,
     metadata: fonts_pb2.FamilyProto,
@@ -392,15 +417,18 @@ def commit_family(
     ref = branch.name
     parents = [branch.target]
 
-    index = repo.index
+    tree_builder = repo.TreeBuilder(branch.peel().tree_id)
     for dirpath, _, filenames in os.walk(family_path):
         for f in filenames:
             if f in [".DS_Store"]:
                 continue
             path = Path(dirpath) / f
             rel_path = path.relative_to(repo.workdir)
-            index.add(rel_path)
-    tree = index.write_tree()
+            blob_id = repo.create_blob_fromworkdir(rel_path)
+            auto_insert(
+                repo, tree_builder, str(rel_path), blob_id, pygit2.GIT_FILEMODE_BLOB
+            )
+    tree = tree_builder.write()
     author = repo.default_signature
     repo.create_commit(ref, author, author, msg, tree, parents)
     return title, body, branch
@@ -475,7 +503,7 @@ def pr_family(
 
 
 @contextmanager
-def current_git_state(repo: Repository):
+def current_git_state(repo: Repository, family_path):
     """Stash current git state and restore it after the context is done."""
     stashed = False
     try:
@@ -488,6 +516,8 @@ def current_git_state(repo: Repository):
         yield True
     finally:
         log.debug("Restoring previous git state")
+        to_rm = family_path.relative_to(repo.workdir)
+        shutil.rmtree(to_rm, ignore_errors=True)
         repo.reset(repo.head.target, GIT_RESET_HARD)
         if stashed:
             repo.stash_pop()
@@ -576,10 +606,8 @@ def make_package(
             "requirement set by Google Fonts management."
         )
 
-    with current_git_state(repo):
+    with current_git_state(repo, family_path):
         packaged = package_family(family_path, metadata, latest_release)
-        if not packaged:
-            return
         title, msg, branch = commit_family(
             family_path, metadata, repo, head_repo, issue_number
         )
