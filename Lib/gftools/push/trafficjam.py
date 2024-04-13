@@ -293,6 +293,12 @@ class PushItems(list):
         return PushItems([i for i in self if i.status == PushStatus.LIVE])
 
     def add(self, item: PushItem):
+        # some designer profiles may include updates to ofl/familyname/METADATA.pb files.
+        # Skip these family directories.
+        if item.category == PushCategory.DESIGNER_PROFILE and any(
+            p in item.path.parts for p in ("ofl", "apache", "ufl")
+        ):
+            return
         # noto font projects projects often contain an article/ dir, we remove this.
         # Same for legacy VF projects which may have a static/ dir.
         if "article" in item.path.parts or "static" in item.path.parts:
