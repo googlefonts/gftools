@@ -69,7 +69,6 @@ def update_file_list(metadata):
                     metadata.source.files.append(item)
                 elif file == "DESCRIPTION.en_us.html":
                     description_found = True
-                    metadata["files"][relpath] = file
                     item.source_file = relpath
                     item.dest_file = file
                     metadata.source.files.append(item)
