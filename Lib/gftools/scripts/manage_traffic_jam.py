@@ -270,6 +270,10 @@ def main(args=None):
     else:
         servers = GFServers.open(args.server_data)
 
+    if "GH_TOKEN" not in os.environ:
+        log.error("GH_TOKEN not found in environment variables. Please set it.")
+        sys.exit(1)
+
     servers.update_all()
     servers.save(args.server_data)
 
