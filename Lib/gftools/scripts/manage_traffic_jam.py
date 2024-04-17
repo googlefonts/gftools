@@ -8,6 +8,7 @@ Users will need to have Github Hub installed.
 https://hub.github.com/
 
 """
+
 import subprocess
 from rich.pretty import pprint
 from gftools.push.utils import branch_matches_google_fonts_main
@@ -305,7 +306,9 @@ def main(args=None):
         )
     if "fonts" in args.filter:
         push_items = PushItems(
-            i for i in push_items if i.category in [PushCategory.NEW, PushCategory.UPGRADE]
+            i
+            for i in push_items
+            if i.category in [PushCategory.NEW, PushCategory.UPGRADE]
         )
     if args.pr_range:
         pr_start, pr_end = args.pr_range.split("-")
