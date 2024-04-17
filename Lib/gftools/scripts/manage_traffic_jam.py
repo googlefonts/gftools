@@ -263,7 +263,7 @@ def main(args=None):
     branch_matches_google_fonts_main(args.fonts_repo)
 
     if not args.server_data.exists():
-        log.warn(
+        log.warning(
             f"{args.server_data} not found. Generating file. This may take a while"
         )
         servers = GFServers()
