@@ -146,6 +146,7 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
                 }
               }
               merged
+              closed
             }
           }
         }
@@ -520,6 +521,10 @@ class PushItems(list):
 
         results = cls()
         for item in board_items:
+            # Don't let closed PRs affect the status
+            if item["content"]["closed"] and not item["content"]["merged"]:
+                continue
+
             status = item.get("status", {}).get("name", None)
             if status:
                 status = PushStatus.from_string(status)
