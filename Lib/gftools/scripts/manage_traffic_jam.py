@@ -11,6 +11,7 @@ https://hub.github.com/
 
 import subprocess
 from rich.pretty import pprint
+from gftools.logging import setup_logging
 from gftools.push.utils import branch_matches_google_fonts_main
 from gftools.push.servers import GFServers, Items
 from gftools.push.items import Family, FamilyMeta
@@ -258,7 +259,7 @@ def main(args=None):
     )
     args = parser.parse_args(args)
 
-    logging.basicConfig(level=args.log_level)
+    setup_logging("manage_traffic_jam", args, __name__)
 
     branch_matches_google_fonts_main(args.fonts_repo)
 
