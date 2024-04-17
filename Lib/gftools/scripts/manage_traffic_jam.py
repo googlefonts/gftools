@@ -173,7 +173,11 @@ class ItemChecker:
             return
         item = push_item.item
         if item == None:
-            log.warning(f"Cannot update server for {push_item}.")
+            # Generally this is because this is something we don't
+            # track; e.g. lang data
+            log.debug(
+                f"Cannot update server for {push_item.path} ({push_item.category})."
+            )
             return
         if item == servers.production.find_item(item):
             push_item.set_server(STATUS_OPTION_IDS.LIVE)
@@ -194,7 +198,9 @@ class ItemChecker:
                 continue
 
             if push_item.category == PushCategory.OTHER:
-                print("no push category defined. Skipping")
+                log.info(
+                    f"No push category defined for {push_item.path} ({push_item.url}), skipping"
+                )
                 continue
 
             self.git_checkout_item(push_item)
@@ -214,7 +220,9 @@ class ItemChecker:
                 continue
 
             if push_item.category == PushCategory.OTHER:
-                print("no push category defined. Skipping")
+                log.debug(
+                    f"No push category defined for {push_item.path} ({push_item.url})"
+                )
                 continue
             self.update_server(push_item, self.servers)
 
@@ -326,7 +334,7 @@ def main(args=None):
         push_items[::-1], args.fonts_repo, servers, args.server_data
     ) as checker:
         if args.update_servers_only:
-            print("Updating servers")
+            log.info("Updating servers")
             checker.update_servers()
         else:
             checker.run()
