@@ -70,7 +70,7 @@ axis_registry = AxisRegistry()
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--min_pct", type=int, default=50, help='What percentage of subset codepoints have to be supported'
                      ' for a non-ext subset.')
-parser.add_argument("--min_pct_ext", type=float, default=1, help='What percentage of subset codepoints have to be supported'
+parser.add_argument("--min_pct_ext", type=float, default=2, help='What percentage of subset codepoints have to be supported'
                    ' for a -ext subset.')
 parser.add_argument("--min_relaxed_pct", type=int, default=50, help='What percentage of subset codepoints have to be supported'
                      f' for a relaxed subset ({", ".join(RELAXED_SUBSETS)}).')

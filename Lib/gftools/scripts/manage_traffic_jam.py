@@ -8,8 +8,10 @@ Users will need to have Github Hub installed.
 https://hub.github.com/
 
 """
+
 import subprocess
 from rich.pretty import pprint
+from gftools.logging import setup_logging
 from gftools.push.utils import branch_matches_google_fonts_main
 from gftools.push.servers import GFServers, Items
 from gftools.push.items import Family, FamilyMeta
@@ -171,7 +173,11 @@ class ItemChecker:
             return
         item = push_item.item
         if item == None:
-            log.warning(f"Cannot update server for {push_item}.")
+            # Generally this is because this is something we don't
+            # track; e.g. lang data
+            log.debug(
+                f"Cannot update server for {push_item.path} ({push_item.category})."
+            )
             return
         if item == servers.production.find_item(item):
             push_item.set_server(STATUS_OPTION_IDS.LIVE)
@@ -192,7 +198,9 @@ class ItemChecker:
                 continue
 
             if push_item.category == PushCategory.OTHER:
-                print("no push category defined. Skipping")
+                log.info(
+                    f"No push category defined for {push_item.path} ({push_item.url}), skipping"
+                )
                 continue
 
             self.git_checkout_item(push_item)
@@ -212,7 +220,9 @@ class ItemChecker:
                 continue
 
             if push_item.category == PushCategory.OTHER:
-                print("no push category defined. Skipping")
+                log.debug(
+                    f"No push category defined for {push_item.path} ({push_item.url})"
+                )
                 continue
             self.update_server(push_item, self.servers)
 
@@ -257,17 +267,21 @@ def main(args=None):
     )
     args = parser.parse_args(args)
 
-    logging.basicConfig(level=args.log_level)
+    setup_logging("manage_traffic_jam", args, __name__)
 
     branch_matches_google_fonts_main(args.fonts_repo)
 
     if not args.server_data.exists():
-        log.warn(
+        log.warning(
             f"{args.server_data} not found. Generating file. This may take a while"
         )
         servers = GFServers()
     else:
         servers = GFServers.open(args.server_data)
+
+    if "GH_TOKEN" not in os.environ:
+        log.error("GH_TOKEN not found in environment variables. Please set it.")
+        sys.exit(1)
 
     servers.update_all()
     servers.save(args.server_data)
@@ -305,7 +319,9 @@ def main(args=None):
         )
     if "fonts" in args.filter:
         push_items = PushItems(
-            i for i in push_items if i.category in [PushCategory.NEW, PushCategory.UPGRADE]
+            i
+            for i in push_items
+            if i.category in [PushCategory.NEW, PushCategory.UPGRADE]
         )
     if args.pr_range:
         pr_start, pr_end = args.pr_range.split("-")
@@ -318,7 +334,7 @@ def main(args=None):
         push_items[::-1], args.fonts_repo, servers, args.server_data
     ) as checker:
         if args.update_servers_only:
-            print("Updating servers")
+            log.info("Updating servers")
             checker.update_servers()
         else:
             checker.run()

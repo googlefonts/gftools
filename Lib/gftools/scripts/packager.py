@@ -19,22 +19,10 @@ The tool will return a path that contains a placeholder METADATA.pb file.
 Modify this file by hand using your favorite text editor and then rerun
 the tool using the same commands.
 """
-from gftools import packager
-
 import argparse
-import logging
-from rich.logging import RichHandler
-import sys
 
-
-log = logging.getLogger("gftools.packager")
-LOG_FORMAT = "%(message)s"
-
-
-def user_error_messages(type, value, traceback):
-    """Print user-friendly error messages to the console when exceptions
-    are raised. Intended for non-power users/type designers."""
-    log.fatal(value)
+from gftools import packager
+from gftools.logging import setup_logging
 
 
 def main(args=None):
@@ -94,15 +82,7 @@ def main(args=None):
     parser.add_argument("-i", "--issue-number", help="Issue number to reference in PR")
     parser.add_argument("--skip-tags", action="store_true")
     args = parser.parse_args(args)
-
-    logging.basicConfig(
-        level=args.log_level,
-        format=LOG_FORMAT,
-        datefmt="[%X]",
-        handlers=[RichHandler()],
-    )
-    if not args.show_tracebacks:
-        sys.excepthook = user_error_messages
+    setup_logging("gftools.packager", args, __name__)
     packager.make_package(**args.__dict__)
 
 
