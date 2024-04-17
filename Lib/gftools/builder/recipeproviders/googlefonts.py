@@ -43,10 +43,7 @@ DEFAULTS = {
     "includeSourceFixes": False,
     "fvarInstanceAxisDflts": None,
     "flattenComponents": True,
-    "addGftoolsVersion": True,
     "decomposeTransformedComponents": True,
-    "interpolate": False,
-    "useMutatorMath": False,
     "checkCompatibility": True,
     "overlaps": "booleanOperations",
 }
