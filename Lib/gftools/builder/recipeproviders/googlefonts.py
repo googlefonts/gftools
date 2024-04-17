@@ -253,6 +253,11 @@ class GFBuilder(RecipeProviderBase):
                     self.build_a_static(source, instance, output="otf")
 
     def build_a_static(self, source, instance, output):
+        if not instance.filename:
+            logger.warning(
+                f"Instance {instance.familyName} {instance.styleName} has no filename, skipping"
+            )
+            return
         target = self._static_filename(instance, extension=output)
 
         steps = [
