@@ -3,7 +3,7 @@ import logging
 from abc import ABC
 from dataclasses import dataclass
 
-from fontTools.ttLib import TTFont  # type: ignore
+from fontTools.ttLib import TTFont, TTLibError  # type: ignore
 from gftools.designers_pb2 import DesignerInfoProto
 from gftools.fonts_public_pb2 import FamilyProto
 from gftools.push.utils import google_path_to_repo_path
@@ -73,7 +73,7 @@ class Family(Itemer):
             version = font_version(ttFont)
             name = ttFont["name"].getBestFamilyName()
             return cls(name, version)
-        except zipfile.BadZipFile:
+        except (zipfile.BadZipFile, TTLibError):
             return None
 
 
