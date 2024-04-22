@@ -88,12 +88,14 @@ def freeze_lookuplist(table):
     """Turns the header of a GSUB/GPOS table into a dictionary, keyed by
     (script,lang) with the values being dictionaries mapping feature tags
     to a list of lookup indices."""
+    params = {}
     lookuplist = defaultdict(lambda: defaultdict(list))
     featurelist = table.FeatureList.FeatureRecord
 
     def freeze_langsys(script_tag, lang_tag, langsys):
         for index in langsys.FeatureIndex:
             feature_tag = featurelist[index].FeatureTag
+            params[feature_tag] = featurelist[index].Feature.FeatureParams
             lookups = featurelist[index].Feature.LookupListIndex
             lookuplist[(script_tag, lang_tag)][feature_tag].extend(lookups)
 
@@ -102,7 +104,7 @@ def freeze_lookuplist(table):
         freeze_langsys(script_tag, "dflt", scriptrecord.Script.DefaultLangSys)
         for langsys in scriptrecord.Script.LangSysRecord:
             freeze_langsys(script_tag, langsys.LangSysTag, langsys.LangSys)
-    return lookuplist
+    return lookuplist, params
 
 
 def thaw_lookuplist(table, lookuplist, params):
@@ -176,7 +178,7 @@ def remap_lookups(table, src, dst, operation="copy", start=False):
     tag = type(table).__name__
     src_script, src_lang, src_feature_name = src
     dst_script, dst_lang, dst_feature_name = dst
-    lookuplists = freeze_lookuplist(table)
+    lookuplists, params = freeze_lookuplist(table)
     src_langsyses = find_langsyses(lookuplists, src_script, src_lang)
     dst_langsyses = find_langsyses(lookuplists, dst_script, dst_lang)
     logging.debug("[%s] Before: %s", tag, de_default(lookuplists))
@@ -209,18 +211,23 @@ def remap_lookups(table, src, dst, operation="copy", start=False):
             lookuplists[(dst_script, dst_lang)][dst_feature_name].extend(lookups)
     for script, lang, feature, lookups in to_remove:
         logging.info(
-            "[%s/%s/%s/%s] Removing lookups %s", tag, script, lang, feature, list(lookups)
+            "[%s/%s/%s/%s] Removing lookups %s",
+            tag,
+            script,
+            lang,
+            feature,
+            list(lookups),
         )
         lookuplists[(script, lang)][feature] = [
             l for l in lookuplists[(script, lang)][feature] if l not in lookups
         ]
     logging.debug("[%s] After: %s", tag, de_default(lookuplists))
-    thaw_lookuplist(table, lookuplists, {})
+    thaw_lookuplist(table, lookuplists, params)
 
 
 def delete_feature(table, script, lang, feature):
     tag = type(table).__name__
-    lookuplists = freeze_lookuplist(table)
+    lookuplists, params = freeze_lookuplist(table)
     logging.debug("[%s] Before: %s", tag, de_default(lookuplists))
     src_langsyses = find_langsyses(lookuplists, script, lang)
     for src_script, src_lang in src_langsyses:
@@ -231,7 +238,7 @@ def delete_feature(table, script, lang, feature):
         lookuplists[(src_script, src_lang)][feature] = []
         logging.info("[%s/%s] Removed feature %s", tag, key, feature)
     logging.debug("[%s] After: %s", tag, de_default(lookuplists))
-    thaw_lookuplist(table, lookuplists, {})
+    thaw_lookuplist(table, lookuplists, params)
 
 
 def main(args=None):
