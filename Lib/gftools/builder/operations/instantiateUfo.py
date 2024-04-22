@@ -64,6 +64,9 @@ class InstantiateUFO(FontmakeOperationBase):
         else:
             vars["args"] += f"--output-dir {escape_path(str(self.instance_dir))}"
         vars["instance_name"] = self.original["instance_name"]
+        if self.original.get("glyphData") is not None:
+            for glyphData in self.original["glyphData"]:
+                vars["args"] += f" --glyph-data {escape_path(glyphData)}"
         return vars
 
     def set_target(self, target: File):
