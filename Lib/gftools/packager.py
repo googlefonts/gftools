@@ -40,8 +40,8 @@ LOG_FORMAT = "%(message)s"
 
 
 SOURCE_TEMPLATE = """source {
-  repository_url: "https://www.github.com/user/repo"
- # archive_url: "https://www.github.com/user/repo/family.zip"
+  repository_url: "https://github.com/user/repo"
+ # archive_url: "https://github.com/user/repo/family.zip"
   branch: "main"
   files {
     source_file: "OFL.txt"
