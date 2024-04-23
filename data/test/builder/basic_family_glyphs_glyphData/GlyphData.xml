@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<glyphData>
+  <glyph
+      name="foo"
+      script="latin"
+      category="Mark"
+      subCategory="Nonspacing"
+      direction="LTR"
+  />
+</glyphData>

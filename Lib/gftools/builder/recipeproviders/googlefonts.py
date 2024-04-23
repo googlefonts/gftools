@@ -155,13 +155,13 @@ class GFBuilder(RecipeProviderBase):
                 args += " --no-check-compatibility"
             if self.config.get("extraVariableFontmakeArgs") is not None:
                 args += " " + str(self.config["extraVariableFontmakeArgs"])
+            if source.is_glyphs:
+                for gd in self.config.get("glyphData", []):
+                    args += " --glyph-data " + gd
         else:
             if self.config.get("extraStaticFontmakeArgs") is not None:
                 args += " " + str(self.config["extraStaticFontmakeArgs"])
 
-        if source.is_glyphs:
-            for gd in self.config.get("glyphData", []):
-                args += " --glyph-data " + gd
         return args
 
     def fix_args(self):
@@ -263,7 +263,11 @@ class GFBuilder(RecipeProviderBase):
         ]
         if not source.is_ufo:
             steps.append(
-                {"operation": "instantiateUfo", "instance_name": instance.name}
+                {
+                    "operation": "instantiateUfo",
+                    "instance_name": instance.name,
+                    "glyphData": self.config.get("glyphData"),
+                }
             )
         steps += (
             [
