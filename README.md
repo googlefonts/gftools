@@ -53,13 +53,7 @@ Please install these tools using pip:
 
     pip install gftools
 
-(Mac OS users on M1 chips will need to upgrade pip first to support universal wheels: `pip install -U pip`.)
-
-If you need to use `gftools qa`, you will need to install cairo and pkg-config. These can be installed on OS X using homebrew:
-
-    brew install cairo pkg-config
-
-Once you have installed these system packages, install gftools using the following command:
+If you would like to use `gftools qa`:
 
     pip install 'gftools[qa]'
 
