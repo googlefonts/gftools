@@ -255,10 +255,10 @@ def test_fix_colr_v0_font(font_path):
     gid1 = font.getGlyphOrder()[1]
     assert font["glyf"][gid1].numberOfContours != 0
 
-    fixed = fix_colr_font(font)
-    gid1 = fixed.getGlyphOrder()[1]
-    assert fixed["glyf"][gid1].numberOfContours == 0
-    assert "SVG " not in fixed
+    fix_colr_font(font)
+    gid1 = font.getGlyphOrder()[1]
+    assert font["glyf"][gid1].numberOfContours == 0
+    assert "SVG " not in font
 
 
 @pytest.fixture
@@ -272,8 +272,8 @@ def test_fix_colr_v1_font(colr_v1_font):
 
     assert "SVG " not in colr_v1_font
     colr_v1_font["COLR"].version = 1
-    fixed = fix_colr_font(colr_v1_font)
-    assert "SVG " in fixed
+    fix_colr_font(colr_v1_font)
+    assert "SVG " in colr_v1_font
 
 
 def test_ofl_license_strings(static_font):
