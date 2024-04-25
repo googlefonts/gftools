@@ -735,10 +735,10 @@ def fix_colr_font(ttfont: TTFont) -> TTFont:
         raise NotImplementedError(f"COLR version '{colr_version}' not supported.")
 
 
-def fix_nbspace_glyph(ttfont: TTFont):
-    cmap = ttfont.getBestCmap()
-    if 0x00A0 in cmap:
-        return
+# def fix_nbspace_glyph(ttfont: TTFont):
+#     cmap = ttfont.getBestCmap()
+#     if 0x00A0 in cmap:
+#         return
 
 
 def fix_license_strings(ttfont: TTFont):
