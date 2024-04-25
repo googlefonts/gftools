@@ -1,16 +1,18 @@
+import os
 import subprocess
+import tempfile
 from collections import defaultdict
 from os import chdir
 from pathlib import Path
 from tempfile import NamedTemporaryFile, gettempdir
 from typing import Any, Dict, List, Union
-import yaml
 
 import networkx as nx
+import strictyaml
+import yaml
 from fontmake.font_project import FontProject
 from ninja import _program
 from ninja.ninja_syntax import Writer, escape_path
-import strictyaml
 
 from gftools.builder.file import File
 from gftools.builder.operations import OperationBase, known_operations
@@ -273,7 +275,21 @@ class GFBuilder:
                         elif step.targets:  #  Step already knows its own target
                             binary = step.targets[0]
                         else:
-                            binary = File(NamedTemporaryFile().name)
+                            if self.config.get("logLevel") == "DEBUG":
+                                debugnames = []
+                                for s in steps[0 : ix + 1]:
+                                    if isinstance(s, OperationBase):
+                                        debugnames.append(s.opname)
+                                    if isinstance(s, File):
+                                        debugnames = [s.basename]
+                                binary = File(
+                                    os.path.join(
+                                        tempfile.gettempdir(),
+                                        f"builder-{target.basename}-{'-'.join(debugnames)}",
+                                    )
+                                )
+                            else:
+                                binary = File(NamedTemporaryFile().name)
                             self.graph.add_node(binary)
                             step.set_target(binary)
                         self.graph.add_edge(current, binary, operation=step)
