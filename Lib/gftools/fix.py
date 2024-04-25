@@ -100,6 +100,15 @@ UNWANTED_TABLES = frozenset(
 )
 
 
+# Wrapper to communicate metadata
+def fixes(*fb_ids):
+    def _predicate(func):
+        func.fb_ids = fb_ids
+        return func
+
+    return _predicate
+
+
 def _expect(
     ttFont: TTFont, table: str, field: str, value: any, getter=None, setter=None
 ) -> FixResult:
@@ -122,6 +131,7 @@ def _combine_results(*results: List[FixResult]) -> FixResult:
     return any(r[0] for r in results), itertools.chain(*[r[1] for r in results])
 
 
+@fixes("com.google.fonts/check/unwanted_tables")
 def remove_tables(ttFont: TTFont, tables=None) -> FixResult:
     """Remove unwanted tables from a font. The unwanted tables must belong
     to the UNWANTED_TABLES set.
@@ -161,6 +171,9 @@ def add_dummy_dsig(ttFont: TTFont) -> FixResult:
     Args:
         ttFont: a TTFont instance
     """
+    log.warning(
+        "Adding dummy DSIG table - the current recommendation is *not* to do this"
+    )
     newDSIG = newTable("DSIG")
     newDSIG.ulVersion = 1
     newDSIG.usFlag = 0
@@ -170,6 +183,7 @@ def add_dummy_dsig(ttFont: TTFont) -> FixResult:
     return ttFont, ["Added dummy DSIG table"]
 
 
+@fixes("com.google.fonts/check/gasp")
 def fix_unhinted_font(ttFont: TTFont) -> FixResult:
     """Improve the appearance of an unhinted font on Win platforms by:
         - Add a new GASP table with a newtable that has a single
@@ -197,6 +211,7 @@ def fix_unhinted_font(ttFont: TTFont) -> FixResult:
     return True, ["Added GASP and prep tables for unhinted font"]
 
 
+@fixes("com.google.fonts/check/integer_ppem_if_hinted")
 def fix_hinted_font(ttFont: TTFont) -> FixResult:
     """Improve the appearance of a hinted font on Win platforms by enabling
     the head table's flag 3.
@@ -209,6 +224,7 @@ def fix_hinted_font(ttFont: TTFont) -> FixResult:
     return _expect(ttFont, "head", "flags", ttFont["head"].flags | 1 << 3)
 
 
+@fixes("com.google.fonts/check/fstype")
 def fix_fs_type(ttFont: TTFont) -> FixResult:
     """Set the OS/2 table's fsType flag to 0 (Installable embedding).
 
@@ -218,6 +234,7 @@ def fix_fs_type(ttFont: TTFont) -> FixResult:
     return _expect(ttFont, "OS/2", "fsType", 0)
 
 
+@fixes("com.google.fonts/check/usweightclass")
 def fix_weight_class(ttFont: TTFont) -> FixResult:
     """Set the OS/2 table's usWeightClass so it conforms to GF's supported
     styles table:
@@ -250,6 +267,9 @@ def fix_weight_class(ttFont: TTFont) -> FixResult:
     )
 
 
+@fixes(
+    "com.google.fonts/check/os2/use_typo_metrics", "com.google.fonts/check/fsselection"
+)
 def fix_fs_selection(ttFont: TTFont) -> FixResult:
     """Fix the OS/2 table's fsSelection so it conforms to GF's supported
     styles table:
@@ -293,6 +313,7 @@ def fix_mac_style(ttFont: TTFont) -> FixResult:
     return _expect(ttFont, "head", "macStyle", mac_style)
 
 
+@fixes("com.google.fonts/check/fvar_instances")
 def fix_fvar_instances(ttFont, axis_dflts=None) -> FixResult:
     """Replace a variable font's fvar instances with a set of new instances
     that conform to the Google Fonts instance spec:
@@ -325,6 +346,7 @@ def fix_fvar_instances(ttFont, axis_dflts=None) -> FixResult:
     return False, []
 
 
+@fixes("com.google.fonts/check/font_names")
 def fix_nametable(ttFont) -> FixResult:
     """Fix a static font's name table so it conforms to the Google Fonts
     supported styles table:
@@ -460,6 +482,7 @@ def fix_italic_angle(ttFont) -> FixResult:
     return False, []
 
 
+@fixes("com.google.fonts/check/caret_slope")
 def fix_hhea_caret_slope_run(ttFont: TTFont) -> FixResult:
     if ttFont["post"].italicAngle == 0:
         return False, []
@@ -475,6 +498,7 @@ def fix_hhea_caret_slope_run(ttFont: TTFont) -> FixResult:
     )
 
 
+@fixes("com.google.fonts/check/name/unwanted_chars")
 def fix_ascii_fontmetadata(font: TTFont) -> FixResult:
     """Fixes TTF 'name' table strings to be ascii only"""
     results = []
@@ -555,6 +579,7 @@ def fix_pua(font) -> FixResult:
     return True, ["Added UCS-4 cmap for PUA glyphs"]
 
 
+@fixes("com.google.fonts/check/monospace")
 def fix_isFixedPitch(ttfont) -> FixResult:
     same_width = set()
     glyph_metrics = ttfont["hmtx"].metrics
@@ -667,6 +692,7 @@ def drop_mac_names(ttfont) -> FixResult:
     return ttfont, messages
 
 
+@fixes("com.google.fonts/check/empty_glyph_on_gid1_for_colrv0")
 def fix_colr_v0_gid1(ttfont) -> FixResult:
     assert "COLR" in ttfont and ttfont["COLR"].version == 0
     if ttfont["maxp"].numGlyphs < 2:
@@ -739,6 +765,7 @@ def _add_empty_glyph_to_gid1(ttfont):
     return True
 
 
+@fixes("com.google.fonts/check/colorfont_tables")
 def fix_colr_v1_add_svg(ttfont) -> FixResult:
     if "SVG " in ttfont:
         return ttfont, []
@@ -762,6 +789,10 @@ def fix_colr_v1_add_svg(ttfont) -> FixResult:
         return True, ["Added SVG table to COLR v1 font"]
 
 
+@fixes(
+    "com.google.fonts/check/colorfont_tables",
+    "com.google.fonts/check/empty_glyph_on_gid1_for_colrv0",
+)
 def fix_colr_font(ttfont: TTFont) -> FixResult:
     """For COLR v0 fonts, we need to ensure that the 2nd glyph is whitespace glyph,
     https://github.com/googlefonts/gftools/issues/609. For COLR v1 fonts, we need
@@ -786,6 +817,7 @@ def fix_colr_font(ttfont: TTFont) -> FixResult:
 #         return
 
 
+@fixes("com.google.fonts/check/name/license", "com.google.fonts/check/name/license_url")
 def fix_license_strings(ttfont: TTFont) -> FixResult:
     """Update font's nametable license and license url strings"""
     from gftools.constants import OFL_LICENSE_URL, OFL_LICENSE_INFO
@@ -828,6 +860,7 @@ def fix_ofl_license(ttfont):
     return f"{first_line}\n{OFL_BODY_TEXT}"
 
 
+@fixes("com.google.fonts/check/metadata/valid_nameid25")
 def fix_no_varpsname(ttFont: TTFont) -> FixResult:
     if "fvar" not in ttFont:
         return ttFont, []
