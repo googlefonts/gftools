@@ -460,6 +460,20 @@ def fix_italic_angle(ttFont) -> FixResult:
     return False, []
 
 
+def fix_hhea_caret_slope_run(ttFont: TTFont) -> FixResult:
+    if ttFont["post"].italicAngle == 0:
+        return False, []
+
+    expected_rise = ttFont["head"].unitsPerEm
+    expected_run = round(
+        math.tan(math.radians(-1 * ttFont["post"].italicAngle))
+        * ttFont["head"].unitsPerEm
+    )
+    return _combine_results(
+        _expect(ttFont, "hhea", "caretSlopeRise", expected_rise),
+        _expect(ttFont, "hhea", "caretSlopeRun", expected_run),
+    )
+
 
 def fix_ascii_fontmetadata(font: TTFont) -> FixResult:
     """Fixes TTF 'name' table strings to be ascii only"""
