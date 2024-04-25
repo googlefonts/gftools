@@ -444,13 +444,20 @@ def copy_vertical_metrics(src_font, dst_font):
         setattr(dst_font[table], key, val)
 
 
-def fix_italic_angle(ttFont):
+def fix_italic_angle(ttFont) -> FixResult:
     style_name = font_stylename(ttFont)
-    if "Italic" not in style_name and ttFont["post"].italicAngle != 0:
-        ttFont["post"].italicAngle = 0
-        return True
-    # TODO (Marc F) implement for italic fonts
-    return False
+    if "Italic" not in style_name:
+        return _expect(ttFont, "post", "italicAngle", 0)
+    if "Italic" in style_name and ttFont["hhea"].caretSlopeRun != 0:
+        return _expect(
+            ttFont,
+            "post",
+            "italicAngle",
+            -math.degrees(
+                math.atan(ttFont["hhea"].caretSlopeRun / ttFont["hhea"].caretSlopeRise)
+            ),
+        )
+    return False, []
 
 
 
