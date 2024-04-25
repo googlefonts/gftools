@@ -141,7 +141,7 @@ class GFBuilder(RecipeProviderBase):
             args += " --filter DecomposeTransformedComponentsFilter"
 
         if self.config.get("logLevel") != "WARN":
-            args += " --verbose " + self.config["logLevel"].value
+            args += " --verbose " + self.config["logLevel"]
         if self.config.get("reverseOutlineDirection"):
             args += " --keep-direction"
         if self.config.get("removeOutlineOverlaps") is False:
