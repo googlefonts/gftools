@@ -4,6 +4,8 @@ specification:
 https://github.com/googlefonts/gf-docs/tree/main/Spec
 """
 
+import itertools
+from typing import List, Sequence, Tuple
 from fontTools.misc.fixedTools import otRound
 from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
@@ -81,6 +83,7 @@ WEIGHT_NAMES["Hairline"] = 1
 WEIGHT_NAMES["ExtraBlack"] = 1000
 WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
+FixResult = Tuple[bool, List[str]]
 
 UNWANTED_TABLES = frozenset(
     [
