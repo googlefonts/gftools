@@ -7,6 +7,7 @@ https://github.com/googlefonts/gf-docs/tree/main/Spec
 import itertools
 from typing import List, Sequence, Tuple
 from fontTools.misc.fixedTools import otRound
+from fontTools import ttLib
 from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
@@ -118,7 +119,7 @@ def _expect(
     else:
         previous = getattr(ttFont[table], field)
     if previous == value:
-        return ttFont, []
+        return False, []
     if setter is not None:
         setter(ttFont, value)
     else:
@@ -126,9 +127,9 @@ def _expect(
     return True, [f"Set {table}.{field} to {value} (was {previous})"]
 
 
-def _combine_results(*results: List[FixResult]) -> FixResult:
+def _combine_results(*results: FixResult) -> FixResult:
     """Combine multiple FixResults into a single FixResult"""
-    return any(r[0] for r in results), itertools.chain(*[r[1] for r in results])
+    return any(r[0] for r in results), list(itertools.chain(*[r[1] for r in results]))
 
 
 @fixes("com.google.fonts/check/unwanted_tables")
@@ -588,7 +589,7 @@ def fix_isFixedPitch(ttfont) -> FixResult:
         same_width.add(glyph_metrics[character][0])
 
     if len(same_width) == 1:
-        ttfont, messages = _expect(ttfont, "post", "isFixedPitch", 1)
+        _, messages = _expect(ttfont, "post", "isFixedPitch", 1)
 
         familyType = ttfont["OS/2"].panose.bFamilyType
         if familyType == 2:
@@ -624,8 +625,8 @@ def fix_isFixedPitch(ttfont) -> FixResult:
         widths = [m[0] for m in ttfont["hmtx"].metrics.values() if m[0] > 0]
         width_max = max(widths)
         avg_width = otRound(sum(widths) / len(widths))
-        ttfont, messages = _combine_results(
-            [ttfont, messages],
+        changed, messages = _combine_results(
+            (ttfont, messages),
             _expect(ttfont, "hhea", "advanceWidthMax", width_max),
             _expect(ttfont, "OS/2", "xAvgCharWidth", avg_width),
         )
@@ -634,7 +635,7 @@ def fix_isFixedPitch(ttfont) -> FixResult:
         def set_panose(fnt, value):
             fnt["OS/2"].panose.bProportion = value
 
-        ttfont, messages = _combine_results(
+        changed, messages = _combine_results(
             _expect(ttfont, "post", "isFixedPitch", 0),
             _expect(
                 ttfont,
@@ -645,7 +646,7 @@ def fix_isFixedPitch(ttfont) -> FixResult:
                 setter=set_panose,
             ),
         )
-    return ttfont, messages
+    return changed, messages
 
 
 def drop_superfluous_mac_names(ttfont) -> FixResult:
@@ -833,8 +834,8 @@ def fix_license_strings(ttfont: TTFont) -> FixResult:
                 name_table.setName(
                     OFL_LICENSE_URL, 14, r.platformID, r.platEncID, r.langID
                 )
-                return ttfont, ["Updated license strings"]
-    return []
+                return True, ["Updated license strings"]
+    return False, []
 
 
 def fix_ofl_license(ttfont):
@@ -910,7 +911,10 @@ def fix_font(
         )
 
     for fixer in fixes:
-        _, messages = fixer(fixed_font)
+        result = fixer(fixed_font)
+        if len(result) != 2:
+            log.error(f"{fixer} returned an unexpected result: {result}")
+        _, messages = result
         if messages:
             log.info("\n".join(messages))
 
