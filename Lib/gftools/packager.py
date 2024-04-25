@@ -19,7 +19,15 @@ import yaml
 from fontTools.ttLib import TTFont
 from gflanguages import LoadLanguages
 import pygit2
-from pygit2 import GIT_RESET_HARD, GIT_RESET_SOFT, Branch, Repository, GIT_RESET_MIXED
+from pygit2 import (
+    GIT_RESET_HARD,
+    GIT_RESET_SOFT,
+    Branch,
+    Repository,
+    GIT_RESET_MIXED,
+    TreeBuilder,
+)
+from pygit2.enums import FileStatus
 
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.gfgithub import GitHubClient
@@ -367,28 +375,38 @@ def _create_git_branch(
     return branch
 
 
-def auto_insert(repo, treebuilder, path, thing, mode):
-    """figure out and deal with the necessary subtree structure"""
-    path_parts = path.split("/", 1)
-    if len(path_parts) == 1:  # base case
-        treebuilder.insert(path, thing, mode)
-        return treebuilder.write()
+def git_tree_traverse(func, *args, **kwargs):
+    def traverse(
+        repo: Repository, treebuilder: TreeBuilder, path: str, *args, **kwargs
+    ):
+        path_parts = path.split("/", 1)
+        if len(path_parts) == 1:  # base case
+            return func(repo, treebuilder, path, *args, **kwargs)
 
-    subtree_name, sub_path = path_parts
-    tree_oid = treebuilder.write()
-    tree = repo.get(tree_oid)
-    try:
+        subtree_name, sub_path = path_parts
+        tree_oid = treebuilder.write()
+        tree = repo.get(tree_oid)
         entry = tree[subtree_name]
-        assert (
-            entry.filemode == pygit2.GIT_FILEMODE_TREE
-        ), "{} already exists as a blob, not a tree".format(entry.name)
         existing_subtree = repo.get(entry.hex)
         sub_treebuilder = repo.TreeBuilder(existing_subtree)
-    except KeyError:
-        sub_treebuilder = repo.TreeBuilder()
+        subtree_oid = traverse(repo, sub_treebuilder, sub_path, *args, **kwargs)
+        treebuilder.insert(subtree_name, subtree_oid, pygit2.GIT_FILEMODE_TREE)
+        return treebuilder.write()
 
-    subtree_oid = auto_insert(repo, sub_treebuilder, sub_path, thing, mode)
-    treebuilder.insert(subtree_name, subtree_oid, pygit2.GIT_FILEMODE_TREE)
+    return traverse
+
+
+@git_tree_traverse
+def git_add_file(
+    repo: Repository, treebuilder: TreeBuilder, path: str, *args, **kwargs
+):
+    treebuilder.insert(path, kwargs["blob"], pygit2.GIT_FILEMODE_BLOB)
+    return treebuilder.write()
+
+
+@git_tree_traverse
+def git_rm_file(repo: Repository, treebuilder: TreeBuilder, path: str, *args, **kwargs):
+    treebuilder.remove(path)
     return treebuilder.write()
 
 
@@ -426,16 +444,19 @@ def commit_family(
     parents = [branch.target]
 
     tree_builder = repo.TreeBuilder(branch.peel().tree_id)
-    for dirpath, _, filenames in os.walk(family_path):
-        for f in filenames:
-            if f in [".DS_Store"]:
-                continue
-            path = Path(dirpath) / f
-            rel_path = path.relative_to(repo.workdir)
-            blob_id = repo.create_blob_fromworkdir(rel_path)
-            auto_insert(
-                repo, tree_builder, str(rel_path), blob_id, pygit2.GIT_FILEMODE_BLOB
-            )
+    for fp, file_status in repo.status().items():
+        fp = Path(fp)
+        if family_path.relative_to(repo.workdir) not in fp.parents:
+            continue
+
+        if file_status in [FileStatus.WT_MODIFIED, FileStatus.WT_NEW]:
+            blob = repo.create_blob_fromworkdir(fp)
+            git_add_file(repo, tree_builder, str(fp), blob=blob)
+        elif file_status == FileStatus.WT_DELETED:
+            git_rm_file(repo, tree_builder, str(fp))
+        else:
+            raise ValueError(f"Unknown file status: {file_status}")
+
     tree = tree_builder.write()
     author = repo.default_signature
     repo.create_commit(ref, author, author, msg, tree, parents)
@@ -524,8 +545,7 @@ def current_git_state(repo: Repository, family_path):
         yield True
     finally:
         log.debug("Restoring previous git state")
-        to_rm = family_path.relative_to(repo.workdir)
-        shutil.rmtree(to_rm, ignore_errors=True)
+        shutil.rmtree(family_path, ignore_errors=True)
         repo.reset(repo.head.target, GIT_RESET_HARD)
         if stashed:
             repo.stash_pop()
