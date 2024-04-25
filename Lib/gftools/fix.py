@@ -100,7 +100,27 @@ UNWANTED_TABLES = frozenset(
 )
 
 
-def remove_tables(ttFont, tables=None):
+def _expect(
+    ttFont: TTFont, table: str, field: str, value: any, getter=None, setter=None
+) -> FixResult:
+    """Check that a table has a field with the expected value"""
+    if getter is not None:
+        previous = getter(ttFont)
+    else:
+        previous = getattr(ttFont[table], field)
+    if previous == value:
+        return ttFont, []
+    if setter is not None:
+        setter(ttFont, value)
+    else:
+        setattr(ttFont[table], field, value)
+    return True, [f"Set {table}.{field} to {value} (was {previous})"]
+
+
+def _combine_results(*results: List[FixResult]) -> FixResult:
+    """Combine multiple FixResults into a single FixResult"""
+    return any(r[0] for r in results), itertools.chain(*[r[1] for r in results])
+
     """Remove unwanted tables from a font. The unwanted tables must belong
     to the UNWANTED_TABLES set.
 
