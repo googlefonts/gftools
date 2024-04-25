@@ -854,60 +854,34 @@ def fix_font(
     if fixed_font["OS/2"].version > 1:
         fixed_font["OS/2"].version = 4
 
-    fix_license_strings(fixed_font)
-
-    if "fpgm" in fixed_font:
-        fix_hinted_font(fixed_font)
-    else:
-        fix_unhinted_font(fixed_font)
-
-    if "fvar" in fixed_font:
-        name_table = fixed_font["name"]
-        variation_ps_name = name_table.getName(25, 3, 1, 0x409)
-        if not variation_ps_name:
-            build_variations_ps_name(fixed_font)
-            var_ps_name = fixed_font["name"].getName(25, 3, 1, 0x409).toUnicode()
-            log.info(
-                f"Added a Variations PostScript Name Prefix (NameID 25) '{var_ps_name}'"
-            )
-
-    if "COLR" in fixed_font:
-        log.info("Fixing COLR font")
-        fixed_font = fix_colr_font(fixed_font)
+    fixes = [
+        fix_license_strings,
+        fix_hinted_font,
+        fix_unhinted_font,
+        fix_no_varpsname,
+        fix_colr_font,
+        fix_hhea_caret_slope_run,
+    ]
 
     if include_source_fixes:
-        remove_tables(fixed_font)
-        fix_nametable(fixed_font)
-        if fix_fs_type(fixed_font):
-            log.info("Changed OS/2 table's fsType flag to 0 (Installable embedding)")
-            log.info(
-                "Consider fixing in the source (e.g. adding a 'fsType' custom parameter in Glyphs)\n"
-            )
-        if fix_fs_selection(fixed_font):
-            log.info(
-                "Changed OS/2 table's fsSelection flag to %i",
-                fixed_font["OS/2"].fsSelection,
-            )
-            log.info(
-                "Consider fixing in the source (e.g. adding an 'openTypeOS2Selection' or 'Use Typo Metrics' custom parameter in Glyphs)\n"
-            )
-        if fix_mac_style(fixed_font):
-            log.info("Changed head table's macStyle to %i", fixed_font["head"].macStyle)
-            log.info("Consider fixing in the source\n")
-        if fix_weight_class(fixed_font):
-            log.info(
-                "Changed OS/2 table's usWeightClass to %i",
-                fixed_font["OS/2"].usWeightClass,
-            )
-            log.info("Consider fixing in the source\n")
-        if fix_italic_angle(fixed_font):
-            log.info(
-                "Changed post table's italicAngle to %f", fixed_font["post"].italicAngle
-            )
-            log.info("Consider fixing in the source\n")
+        fixes.extend(
+            [
+                remove_tables,
+                fix_nametable,
+                fix_fs_type,
+                fix_fs_selection,
+                fix_mac_style,
+                fix_weight_class,
+                fix_italic_angle,
+            ]
+        )
 
-        if "fvar" in fixed_font:
-            fix_fvar_instances(fixed_font, fvar_instance_axis_dflts)
+    for fixer in fixes:
+        _, messages = fixer(fixed_font)
+        if messages:
+            log.info("\n".join(messages))
+
+    fix_fvar_instances(fixed_font, fvar_instance_axis_dflts)
     return fixed_font
 
 
