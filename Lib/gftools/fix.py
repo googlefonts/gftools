@@ -828,6 +828,20 @@ def fix_ofl_license(ttfont):
     return f"{first_line}\n{OFL_BODY_TEXT}"
 
 
+def fix_no_varpsname(ttFont: TTFont) -> FixResult:
+    if "fvar" not in ttFont:
+        return ttFont, []
+    name_table = ttFont["name"]
+    variation_ps_name = name_table.getName(25, 3, 1, 0x409)
+    if not variation_ps_name:
+        build_variations_ps_name(ttFont)
+        var_ps_name = ttFont["name"].getName(25, 3, 1, 0x409).toUnicode()
+        return ttFont, [
+            f"Added a Variations PostScript Name Prefix (NameID 25) '{var_ps_name}'"
+        ]
+    return ttFont, []
+
+
 def fix_font(
     font,
     include_source_fixes=False,
