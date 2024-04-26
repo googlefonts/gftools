@@ -89,11 +89,15 @@ class GFServer(Itemer):
         self.designers: dict[str, Designer] = {}
         self.metadata: dict[str, FamilyMeta] = {}
         self.axisregistry: dict[str, Axis] = {}
-        self.family_versions = json.loads(requests.get(self.version_url).text[5:])
+        self.family_versions_data = json.loads(requests.get(self.version_url).text[5:])
         self.family_versions = {
             i["name"]: i["fontVersions"][0]["version"]
-            for i in self.family_versions["familyVersions"]
+            for i in self.family_versions_data["familyVersions"]
         }
+
+    @property
+    def last_push(self):
+        return datetime.fromtimestamp(self.family_versions_data["lastUpdate"]["seconds"])
 
     def compare_push_item(self, item: Items):
         server_item = self.find_item(item)
@@ -188,6 +192,14 @@ class GFServers(Itemer):
         )
         self.fp = None
 
+    def last_pushes(self):
+        log.info(
+            "Last pushes for each server:\n"
+            f"Dev: {self.dev.last_push}\n"
+            f"Sandbox: {self.sandbox.last_push}\n"
+            f"Production: {self.production.last_push}\n"
+        )
+
     def __iter__(self):
         for server in GFServers.SERVERS:
             yield getattr(self, server)
@@ -215,8 +227,11 @@ class GFServers(Itemer):
 
         cp = deepcopy(self)
         # do not save family_versions data. We want to request this each time
-        if hasattr(cp, "family_versions"):
-            delattr(cp, "family_versions")
+        for attr in ["family_versions", "family_versions_data"]:
+            for server_name in ["dev", "sandbox", "production"]:
+                server = getattr(cp, server_name)
+                if hasattr(server, attr):
+                    delattr(server, attr)
         data = cp.to_json()
         json.dump(data, open(fp, "w", encoding="utf8"), indent=4)
 
