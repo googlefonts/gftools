@@ -550,7 +550,7 @@ class PushItems(list):
                 cat = PushCategory.UPGRADE
             elif "I New Font" in labels:
                 cat = PushCategory.NEW
-            elif "I Description/Metadata/OFL" in labels:
+            elif "I Description/Article/Metadata/OFL" in labels:
                 cat = PushCategory.METADATA
             elif "I Designer profile" in labels:
                 cat = PushCategory.DESIGNER_PROFILE
