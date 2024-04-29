@@ -386,9 +386,12 @@ def git_tree_traverse(func, *args, **kwargs):
         subtree_name, sub_path = path_parts
         tree_oid = treebuilder.write()
         tree = repo.get(tree_oid)
-        entry = tree[subtree_name]
-        existing_subtree = repo.get(entry.hex)
-        sub_treebuilder = repo.TreeBuilder(existing_subtree)
+        try:
+            entry = tree[subtree_name]
+            existing_subtree = repo.get(entry.hex)
+            sub_treebuilder = repo.TreeBuilder(existing_subtree)
+        except KeyError:
+            sub_treebuilder = repo.TreeBuilder()
         subtree_oid = traverse(repo, sub_treebuilder, sub_path, *args, **kwargs)
         treebuilder.insert(subtree_name, subtree_oid, pygit2.GIT_FILEMODE_TREE)
         return treebuilder.write()
