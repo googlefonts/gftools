@@ -294,8 +294,6 @@ class PushItems(list):
         return PushItems([i for i in self if i.status == PushStatus.LIVE])
 
     def add(self, item: PushItem):
-        # some designer profiles may include updates to ofl/familyname/METADATA.pb files.
-        # Skip these family directories.
         if item.category == PushCategory.DESIGNER_PROFILE and any(
             p in item.path.parts for p in ("ofl", "apache", "ufl")
         ):
@@ -333,22 +331,6 @@ class PushItems(list):
         if len(item.path.parts) == 1:
             return
 
-        # Pop any existing item which has the same path. We always want the latest
-        existing_idx = next(
-            (idx for idx, i in enumerate(self) if i.path == item.path), None
-        )
-        if existing_idx != None:
-            self.pop(existing_idx)  # type: ignore
-
-        # Pop any push items which are a child of the item's path
-        to_pop = None
-        for idx, i in enumerate(self):
-            if str(i.path.parent) in str(i.path) or i.path == item.path:
-                to_pop = idx
-                break
-        if to_pop:
-            self.pop(to_pop)
-
         self.append(item)
 
     def missing_paths(self) -> list[Path]:
@@ -366,10 +348,12 @@ class PushItems(list):
     def to_server_file(self, fp: "str | Path"):
         from collections import defaultdict
 
+        seen = set()
         bins = defaultdict(set)
         for item in self:
-            if item.category == PushCategory.BLOCKED:
+            if item.category == PushCategory.BLOCKED or item.path in seen:
                 continue
+            seen.add(item.path)
             bins[item.category.value].add(item)
 
         res = []
