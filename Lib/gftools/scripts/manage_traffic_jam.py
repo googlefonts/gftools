@@ -75,11 +75,7 @@ class ItemChecker:
         self.git_checkout_main()
 
     def user_input(self, item: PushItem):
-        is_family_related = isinstance(item.item, (Family, FamilyMeta))
-        if is_family_related:
-            input_text = "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], repull family server data [f], quit: [q]?: "
-        else:
-            input_text = "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], quit: [q]?: "
+        input_text = "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], quit: [q]?: "
         user_input = input(input_text)
 
         if "*" in user_input:
@@ -97,11 +93,6 @@ class ItemChecker:
             self.skip_pr = item.url
         if "i" in user_input:
             self.vim_diff(item.item)
-            self.user_input(item)
-        if is_family_related and "f" in user_input:
-            self.servers.update(item.item.name)
-            self.servers.save(self.servers_fp)
-            self.display_item(item)
             self.user_input(item)
         if "q" in user_input:
             self.__exit__(None, None, None)
@@ -202,6 +193,8 @@ class ItemChecker:
                     f"No push category defined for {push_item.path} ({push_item.url}), skipping"
                 )
                 continue
+            if isinstance(push_item.item, (Family, FamilyMeta)):
+                self.servers.update(push_item.item.name)
 
             self.git_checkout_item(push_item)
             self.update_server(push_item, self.servers)
@@ -290,6 +283,7 @@ def main(args=None):
 
     traffic_jam_data = (Path("~") / ".gf_traffic_jam_data.json").expanduser()
     push_items = PushItems.from_traffic_jam(traffic_jam_data)
+    push_items.sort(key=lambda x: x.category in [PushCategory.NEW, PushCategory.UPGRADE])
     if not args.show_open_prs:
         push_items = PushItems(i for i in push_items if i.merged == True)
     if "lists" in args.filter:
