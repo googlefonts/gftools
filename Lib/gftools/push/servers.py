@@ -199,7 +199,10 @@ class GFServers(Itemer):
 
     def update(self, family_name):
         for server in self:
-            server.update(family_name)
+            try:
+                server.update(family_name)
+            except Exception as e:
+                log.error(f"Error updating {family_name} on {server.name}: {e}")
 
     def compare_item(self, item: Items):
         res = item.to_json()

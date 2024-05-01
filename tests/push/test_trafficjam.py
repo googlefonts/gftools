@@ -110,6 +110,9 @@ def test_push_item_set(items, expected_size):
             PushItems(
                 [
                     PushItem(
+                        Path("ofl/mavenpro"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
+                    PushItem(
                         Path("ofl/mavenpro"),
                         PushCategory.NEW,
                         PushStatus.IN_SANDBOX,
@@ -451,7 +454,7 @@ def test_push_items_operators(operator, item1, item2, expected):
                 ]
             ),
         ),
-        # ensure latest push item is used
+        # ensure both items are added
         (
             [
                 PushItem(
@@ -463,6 +466,9 @@ def test_push_items_operators(operator, item1, item2, expected):
             ],
             PushItems(
                 [
+                    PushItem(
+                        Path("ofl/mavenpro"), PushCategory.NEW, PushStatus.IN_DEV, "1"
+                    ),
                     PushItem(
                         Path("ofl/mavenpro"),
                         PushCategory.UPGRADE,
