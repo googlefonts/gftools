@@ -31,7 +31,7 @@ dependencies = [
   'axisregistry>=0.4.9', # Needed for "aggressive" param to build_name_table
   'absl-py',
   'glyphsLib',
-  'gflanguages>=0.4.0',
+  'gflanguages>=0.6.0',
   'gfsubsets>=2024.02.05',
   'glyphsets>=0.6.13',
   'PyGithub',

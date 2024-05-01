@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
 import gftools.fonts_public_pb2 as fonts_pb2
 from fontTools import ttLib
-from gflanguages import LoadLanguages
+from gflanguages import LoadLanguages, parse
 from google.protobuf import text_format
 
 
@@ -463,24 +463,13 @@ def SupportedLanguages(ttFont, languages=LoadLanguages()):
 
   Languages are pulled from the given set. Based on whether exemplar character
   sets are present in the given font.
-
-  Logic based on Hyperglot: https://github.com/rosettatype/hyperglot/blob/3172061ca05a62c0ff330eb802a17d4fad8b1a4d/lib/hyperglot/language.py#L273-L301
   """
   chars = [chr(c) for c in ttFont["cmap"].getBestCmap()]
   supported = []
   for lang in languages.values():
     if not lang.HasField('exemplar_chars') or not lang.exemplar_chars.HasField('base'):
       continue
-    base = set()
-    for base_chars in lang.exemplar_chars.base.split():
-      if len(base_chars) > 1:
-        base_chars = base_chars.lstrip("{").rstrip("}")
-      normalized_base_chars = unicodedata.normalize("NFC", base_chars)
-      if normalized_base_chars != base_chars:
-        for char in normalized_base_chars:
-          base.add(char)
-      for char in base_chars:
-        base.add(char)
+    base = parse(lang.exemplar_chars.base)
     if base.issubset(chars):
       supported.append(lang)
   return supported
