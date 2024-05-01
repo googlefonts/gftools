@@ -276,6 +276,7 @@ def main(args=None):
         log.error("GH_TOKEN not found in environment variables. Please set it.")
         sys.exit(1)
 
+    servers.last_pushes()
     servers.update_all()
     servers.save(args.server_data)
 
