@@ -60,11 +60,6 @@ If you would like to use `gftools qa`:
 
 ### Tool Requirements and Dependencies
 
-These tools depend on the submodule `GlyphsInfo`.
-Make sure the submodule is up to date by running:
-
-    git submodule update --init --recursive
-
 `gftools packager` needs the command line `git` program in a version >= Git 2.5 (Q2 2015) in order to perform a shallow clone (`--depth 1`) of the font upstream repository and branch. This is not supported by pygit2/libgit2 yet.
 
 `gftools manage-traffic-jam` requires two private files which contain sensitive data. Ask m4rc1e for them.
@@ -81,6 +76,5 @@ key = your-newly-generated-googlefonts-api-key
 
 **Upstream project repos**
 
-* https://github.com/schriftgestalt/GlyphsInfo
 * https://github.com/google/protobuf
 * https://github.com/behdad/fonttools
