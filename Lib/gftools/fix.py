@@ -3,7 +3,11 @@ Functions to fix fonts so they conform to the Google Fonts
 specification:
 https://github.com/googlefonts/gf-docs/tree/main/Spec
 """
+
+import itertools
+from typing import List, Sequence, Tuple
 from fontTools.misc.fixedTools import otRound
+from fontTools import ttLib
 from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
@@ -26,13 +30,14 @@ from axisregistry import (
     build_filename,
     build_name_table,
     build_fvar_instances,
-    build_variations_ps_name
+    build_variations_ps_name,
 )
 from gftools.stat import gen_stat_tables
 
 from os.path import basename, splitext
 from copy import deepcopy
 import logging
+import math
 import subprocess
 import os
 import tempfile
@@ -67,7 +72,7 @@ __all__ = [
     "fix_font",
     "fix_family",
     "rename_font",
-    "fix_filename"
+    "fix_filename",
 ]
 
 
@@ -79,6 +84,7 @@ WEIGHT_NAMES["Hairline"] = 1
 WEIGHT_NAMES["ExtraBlack"] = 1000
 WEIGHT_VALUES = {v: k for k, v in WEIGHT_NAMES.items()}
 
+FixResult = Tuple[bool, List[str]]
 
 UNWANTED_TABLES = frozenset(
     [
@@ -95,7 +101,39 @@ UNWANTED_TABLES = frozenset(
 )
 
 
-def remove_tables(ttFont, tables=None):
+# Wrapper to communicate metadata
+def fixes(*fb_ids):
+    def _predicate(func):
+        func.fb_ids = fb_ids
+        return func
+
+    return _predicate
+
+
+def _expect(
+    ttFont: TTFont, table: str, field: str, value: any, getter=None, setter=None
+) -> FixResult:
+    """Check that a table has a field with the expected value"""
+    if getter is not None:
+        previous = getter(ttFont)
+    else:
+        previous = getattr(ttFont[table], field)
+    if previous == value:
+        return False, []
+    if setter is not None:
+        setter(ttFont, value)
+    else:
+        setattr(ttFont[table], field, value)
+    return True, [f"Set {table}.{field} to {value} (was {previous})"]
+
+
+def _combine_results(*results: FixResult) -> FixResult:
+    """Combine multiple FixResults into a single FixResult"""
+    return any(r[0] for r in results), list(itertools.chain(*[r[1] for r in results]))
+
+
+@fixes("com.google.fonts/check/unwanted_tables")
+def remove_tables(ttFont: TTFont, tables=None) -> FixResult:
     """Remove unwanted tables from a font. The unwanted tables must belong
     to the UNWANTED_TABLES set.
 
@@ -121,28 +159,33 @@ def remove_tables(ttFont, tables=None):
 
     tables_to_remove = UNWANTED_TABLES & font_tables & tables_to_remove
     if not tables_to_remove:
-        return
-    log.info(f"Removing tables '{list(tables_to_remove)}' from font")
+        return False, []
     for tbl in tables_to_remove:
         del ttFont[tbl]
+    return True, [f"Removed tables '{list(tables_to_remove)}'"]
 
 
-def add_dummy_dsig(ttFont):
+def add_dummy_dsig(ttFont: TTFont) -> FixResult:
     """Add a dummy dsig table to a font. Older versions of MS Word
     require this table.
 
     Args:
         ttFont: a TTFont instance
     """
+    log.warning(
+        "Adding dummy DSIG table - the current recommendation is *not* to do this"
+    )
     newDSIG = newTable("DSIG")
     newDSIG.ulVersion = 1
     newDSIG.usFlag = 0
     newDSIG.usNumSigs = 0
     newDSIG.signatureRecords = []
     ttFont.tables["DSIG"] = newDSIG
+    return ttFont, ["Added dummy DSIG table"]
 
 
-def fix_unhinted_font(ttFont):
+@fixes("com.google.fonts/check/gasp")
+def fix_unhinted_font(ttFont: TTFont) -> FixResult:
     """Improve the appearance of an unhinted font on Win platforms by:
         - Add a new GASP table with a newtable that has a single
           range which is set to smooth.
@@ -151,6 +194,8 @@ def fix_unhinted_font(ttFont):
     Args:
         ttFont: a TTFont instance
     """
+    if "fpgm" in ttFont or ("gasp" in ttFont and "prep" in ttFont):
+        return False, []
     gasp = newTable("gasp")
     # Set GASP so all sizes are smooth
     gasp.gaspRange = {0xFFFF: 15}
@@ -164,34 +209,34 @@ def fix_unhinted_font(ttFont):
 
     ttFont["gasp"] = gasp
     ttFont["prep"] = prep
+    return True, ["Added GASP and prep tables for unhinted font"]
 
 
-def fix_hinted_font(ttFont):
+@fixes("com.google.fonts/check/integer_ppem_if_hinted")
+def fix_hinted_font(ttFont: TTFont) -> FixResult:
     """Improve the appearance of a hinted font on Win platforms by enabling
     the head table's flag 3.
 
     Args:
         ttFont: a TTFont instance
     """
-    if not 'fpgm' in ttFont:
-        return False, ["Skipping. Font is not hinted."]
-    old = ttFont["head"].flags
-    ttFont["head"].flags |= 1 << 3
-    return ttFont["head"].flags != old
+    if not "fpgm" in ttFont:
+        return False, []
+    return _expect(ttFont, "head", "flags", ttFont["head"].flags | 1 << 3)
 
 
-def fix_fs_type(ttFont):
+@fixes("com.google.fonts/check/fstype")
+def fix_fs_type(ttFont: TTFont) -> FixResult:
     """Set the OS/2 table's fsType flag to 0 (Installable embedding).
 
     Args:
         ttFont: a TTFont instance
     """
-    old = ttFont["OS/2"].fsType
-    ttFont["OS/2"].fsType = 0
-    return old != 0
+    return _expect(ttFont, "OS/2", "fsType", 0)
 
 
-def fix_weight_class(ttFont):
+@fixes("com.google.fonts/check/usweightclass")
+def fix_weight_class(ttFont: TTFont) -> FixResult:
     """Set the OS/2 table's usWeightClass so it conforms to GF's supported
     styles table:
     https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
@@ -199,28 +244,23 @@ def fix_weight_class(ttFont):
     Args:
         ttFont: a TTFont instance
     """
-    old_weight_class = ttFont["OS/2"].usWeightClass
-
-    if 'fvar' in ttFont:
-        fvar = ttFont['fvar']
+    if "fvar" in ttFont:
+        fvar = ttFont["fvar"]
         default_axis_values = {a.axisTag: a.defaultValue for a in fvar.axes}
-        v = default_axis_values.get('wght', None)
+        v = default_axis_values.get("wght", None)
 
         if v is not None:
-            ttFont["OS/2"].usWeightClass = int(v)
-            return ttFont["OS/2"].usWeightClass != old_weight_class
+            return _expect(ttFont, "OS/2", "usWeightClass", int(v))
 
     stylename = font_stylename(ttFont)
     tokens = stylename.split()
     # Order WEIGHT_NAMES so longest names are first
-    for style in sorted(WEIGHT_NAMES, key=lambda k: len(k), reverse=True):
+    for style in sorted(WEIGHT_NAMES, key=len, reverse=True):
         if style in tokens:
-            ttFont["OS/2"].usWeightClass = WEIGHT_NAMES[style]
-            return ttFont["OS/2"].usWeightClass != old_weight_class
+            return _expect(ttFont, "OS/2", "usWeightClass", WEIGHT_NAMES[style])
 
     if "Italic" in tokens:
-        ttFont["OS/2"].usWeightClass = 400
-        return ttFont["OS/2"].usWeightClass != old_weight_class
+        return _expect(ttFont, "OS/2", "usWeightClass", 400)
     raise ValueError(
         f"Cannot determine usWeightClass because font style, '{stylename}' "
         f"doesn't have a weight token which is in our known "
@@ -228,7 +268,10 @@ def fix_weight_class(ttFont):
     )
 
 
-def fix_fs_selection(ttFont):
+@fixes(
+    "com.google.fonts/check/os2/use_typo_metrics", "com.google.fonts/check/fsselection"
+)
+def fix_fs_selection(ttFont: TTFont) -> FixResult:
     """Fix the OS/2 table's fsSelection so it conforms to GF's supported
     styles table:
     https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
@@ -238,7 +281,7 @@ def fix_fs_selection(ttFont):
     """
     stylename = font_stylename(ttFont)
     tokens = set(stylename.split())
-    old_selection = fs_selection = ttFont["OS/2"].fsSelection
+    fs_selection = ttFont["OS/2"].fsSelection
 
     # turn off all bits except for bit 7 (USE_TYPO_METRICS)
     fs_selection &= 1 << 7
@@ -250,11 +293,10 @@ def fix_fs_selection(ttFont):
     # enable Regular bit for all other styles
     if not tokens & set(["Bold", "Italic"]):
         fs_selection |= 1 << 6
-    ttFont["OS/2"].fsSelection = fs_selection
-    return old_selection != fs_selection
+    return _expect(ttFont, "OS/2", "fsSelection", fs_selection)
 
 
-def fix_mac_style(ttFont):
+def fix_mac_style(ttFont: TTFont) -> FixResult:
     """Fix the head table's macStyle so it conforms to GF's supported
     styles table:
     https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
@@ -262,7 +304,6 @@ def fix_mac_style(ttFont):
     Args:
         ttFont: a TTFont instance
     """
-    old_mac_style = ttFont["head"].macStyle
     stylename = font_stylename(ttFont)
     tokens = set(stylename.split())
     mac_style = 0
@@ -270,11 +311,11 @@ def fix_mac_style(ttFont):
         mac_style |= 1 << 1
     if "Bold" in tokens:
         mac_style |= 1 << 0
-    ttFont["head"].macStyle = mac_style
-    return old_mac_style != mac_style
+    return _expect(ttFont, "head", "macStyle", mac_style)
 
 
-def fix_fvar_instances(ttFont, axis_dflts=None):
+@fixes("com.google.fonts/check/fvar_instances")
+def fix_fvar_instances(ttFont, axis_dflts=None) -> FixResult:
     """Replace a variable font's fvar instances with a set of new instances
     that conform to the Google Fonts instance spec:
     https://github.com/googlefonts/gf-docs/tree/main/Spec#fvar-instances
@@ -283,19 +324,31 @@ def fix_fvar_instances(ttFont, axis_dflts=None):
         ttFont: a TTFont instance
     """
     if "fvar" not in ttFont:
-        raise ValueError("ttFont is not a variable font")
+        return False, []
 
-    fvar = ttFont['fvar']
-    old_instances = { (ttFont["name"].getDebugName(inst.subfamilyNameID) or "<removed>"): inst.coordinates for inst in fvar.instances }
+    fvar = ttFont["fvar"]
+    old_instances = {
+        (
+            ttFont["name"].getDebugName(inst.subfamilyNameID) or "<removed>"
+        ): inst.coordinates
+        for inst in fvar.instances
+    }
     build_fvar_instances(ttFont, axis_dflts)
-    new_instances = { ttFont["name"].getDebugName(inst.subfamilyNameID): inst.coordinates for inst in fvar.instances }
-    if new_instances != old_instances:
-        log.info("Set instances in fvar table to: %s", ", ".join(new_instances.keys()))
-        log.info("(Old instances were: %s)", ", ".join(old_instances.keys()))
-        log.info("Consider fixing export list in source\n")
+    new_instances = {
+        ttFont["name"].getDebugName(inst.subfamilyNameID): inst.coordinates
+        for inst in fvar.instances
+    }
+    if old_instances != new_instances:
+        return True, [
+            "Set instances in fvar table to: %s" % ", ".join(new_instances.keys()),
+            "(Old instances were: %s)" % ", ".join(old_instances.keys()),
+            "Consider fixing export list in source\n",
+        ]
+    return False, []
 
 
-def fix_nametable(ttFont):
+@fixes("com.google.fonts/check/font_names")
+def fix_nametable(ttFont) -> FixResult:
     """Fix a static font's name table so it conforms to the Google Fonts
     supported styles table:
     https://github.com/googlefonts/gf-docs/tree/main/Spec#supported-styles
@@ -307,14 +360,16 @@ def fix_nametable(ttFont):
     build_name_table(ttFont)
     new_nametable = {n.nameID: n.toStr() for n in ttFont["name"].names}
 
-    if old_nametable != new_nametable:
-        log.info("Name table entries changed (consider fixing the source instead):")
-        for nid, old_name in old_nametable.items():
-            new_name = new_nametable.get(nid, "<removed>")
-            if new_name != old_name:
-                log.info("- %i: %s", nid, old_name)
-                log.info("+ %i: %s", nid, new_name)
-        log.info("")
+    if old_nametable == new_nametable:
+        return False, []
+
+    messages = ["Name table entries changed (consider fixing the source instead):"]
+    for nid, old_name in old_nametable.items():
+        new_name = new_nametable.get(nid, "<removed>")
+        if new_name != old_name:
+            messages.append("- %i: %s" % (nid, old_name))
+            messages.append("+ %i: %s" % (nid, new_name))
+    return True, messages
 
 
 def rename_font(font, new_name, aggressive=True):
@@ -361,7 +416,7 @@ def inherit_vertical_metrics(ttFonts, family_name=None):
             font["OS/2"].fsSelection |= 1 << 7
 
 
-def fix_vertical_metrics(ttFonts):
+def fix_vertical_metrics(ttFonts: Sequence[TTFont]):
     """Fix a family's vertical metrics based on:
     https://github.com/googlefonts/gf-docs/tree/main/VerticalMetrics
 
@@ -412,57 +467,88 @@ def copy_vertical_metrics(src_font, dst_font):
         setattr(dst_font[table], key, val)
 
 
-def fix_italic_angle(ttFont):
+def fix_italic_angle(ttFont) -> FixResult:
     style_name = font_stylename(ttFont)
-    if "Italic" not in style_name and ttFont["post"].italicAngle != 0:
-        ttFont["post"].italicAngle = 0
-        return True
-    # TODO (Marc F) implement for italic fonts
-    return False
+    if "Italic" not in style_name:
+        return _expect(ttFont, "post", "italicAngle", 0)
+    if "Italic" in style_name and ttFont["hhea"].caretSlopeRun != 0:
+        return _expect(
+            ttFont,
+            "post",
+            "italicAngle",
+            -math.degrees(
+                math.atan(ttFont["hhea"].caretSlopeRun / ttFont["hhea"].caretSlopeRise)
+            ),
+        )
+    return False, []
 
 
-def fix_ascii_fontmetadata(font):
+@fixes("com.google.fonts/check/caret_slope")
+def fix_hhea_caret_slope_run(ttFont: TTFont) -> FixResult:
+    if ttFont["post"].italicAngle == 0:
+        return False, []
+
+    expected_rise = ttFont["head"].unitsPerEm
+    expected_run = round(
+        math.tan(math.radians(-1 * ttFont["post"].italicAngle))
+        * ttFont["head"].unitsPerEm
+    )
+    return _combine_results(
+        _expect(ttFont, "hhea", "caretSlopeRise", expected_rise),
+        _expect(ttFont, "hhea", "caretSlopeRun", expected_run),
+    )
+
+
+@fixes("com.google.fonts/check/name/unwanted_chars")
+def fix_ascii_fontmetadata(font: TTFont) -> FixResult:
     """Fixes TTF 'name' table strings to be ascii only"""
-    for name in font['name'].names:
-        title = name.string.decode(name.getEncoding())
-        title = normalize_unicode_marks(title)
-        name.string = title.encode(name.getEncoding())
+    results = []
+    for name in font["name"].names:
+        old = name.string.decode(name.getEncoding())
+        title = normalize_unicode_marks(old)
+        if title != old:
+            name.string = title.encode(name.getEncoding())
+            results.append(f"Updated nameID={name.nameId} '{old}' to '{title}'")
+    return font, results
 
 
 def convert_cmap_subtables_to_v4(font):
-  """Converts all cmap subtables to format 4.
+    """Converts all cmap subtables to format 4.
 
-  Returns a list of tuples (format, platformID, platEncID) of the tables
-  which needed conversion."""
-  cmap = font['cmap']
-  outtables = []
-  converted = []
-  for table in cmap.tables:
-    if table.format != 4:
-      converted.append((table.format, table.platformID, table.platEncID))
-    newtable = CmapSubtable.newSubtable(4)
-    newtable.platformID = table.platformID
-    newtable.platEncID = table.platEncID
-    newtable.language = table.language
-    newtable.cmap = table.cmap
-    outtables.append(newtable)
-  font['cmap'].tables = outtables
-  return converted
+    Returns a list of tuples (format, platformID, platEncID) of the tables
+    which needed conversion."""
+    cmap = font["cmap"]
+    outtables = []
+    converted = []
+    for table in cmap.tables:
+        if table.format != 4:
+            converted.append((table.format, table.platformID, table.platEncID))
+        newtable = CmapSubtable.newSubtable(4)
+        newtable.platformID = table.platformID
+        newtable.platEncID = table.platEncID
+        newtable.language = table.language
+        newtable.cmap = table.cmap
+        outtables.append(newtable)
+    font["cmap"].tables = outtables
+    return converted
 
 
 def drop_nonpid0_cmap(font, report=True):
-  keep, drop = partition_cmap(font, lambda table: table.platformID == 0, report)
-  return drop
+    keep, drop = partition_cmap(font, lambda table: table.platformID == 0, report)
+    return drop
 
 
 def drop_mac_cmap(font, report=True):
-  keep, drop = partition_cmap(font, lambda table: table.platformID != 1 or table.platEncID != 0, report)
-  return drop
+    keep, drop = partition_cmap(
+        font, lambda table: table.platformID != 1 or table.platEncID != 0, report
+    )
+    return drop
 
-def fix_pua(font):
+
+def fix_pua(font) -> FixResult:
     unencoded_glyphs = get_unencoded_glyphs(font)
     if not unencoded_glyphs:
-        return
+        return False, []
 
     ucs2cmap = None
     cmap = font["cmap"]
@@ -476,7 +562,7 @@ def fix_pua(font):
     # unless UCS 4 cmap already exists
     ucs4cmap = cmap.getcmap(3, 10)
     if not ucs4cmap:
-        cmapModule = getTableModule('cmap')
+        cmapModule = getTableModule("cmap")
         ucs4cmap = cmapModule.cmap_format_12(12)
         ucs4cmap.platformID = 3
         ucs4cmap.platEncID = 10
@@ -490,80 +576,80 @@ def fix_pua(font):
     for glyphID, glyph in enumerate(font.getGlyphOrder()):
         if glyph in unencoded_glyphs:
             ucs4cmap.cmap[0xF0000 + glyphID] = glyph
-    font['cmap'] = cmap
-    return True
+    font["cmap"] = cmap
+    return True, ["Added UCS-4 cmap for PUA glyphs"]
 
 
-def fix_isFixedPitch(ttfont):
-
+@fixes("com.google.fonts/check/monospace")
+def fix_isFixedPitch(ttfont) -> FixResult:
     same_width = set()
-    glyph_metrics = ttfont['hmtx'].metrics
+    glyph_metrics = ttfont["hmtx"].metrics
     messages = []
-    changed = False
     for character in [chr(c) for c in range(65, 91)]:
         same_width.add(glyph_metrics[character][0])
 
     if len(same_width) == 1:
-        if ttfont['post'].isFixedPitch == 1:
-            messages.append("Skipping isFixedPitch is set correctly")
-        else:
-            messages.append("Font is monospace. Updating isFixedPitch to 0")
-            ttfont['post'].isFixedPitch = 1
-            changed = True
+        _, messages = _expect(ttfont, "post", "isFixedPitch", 1)
 
-        familyType = ttfont['OS/2'].panose.bFamilyType
+        familyType = ttfont["OS/2"].panose.bFamilyType
         if familyType == 2:
             expected = 9
         elif familyType == 3 or familyType == 5:
             expected = 3
         elif familyType == 0:
-            messages.append("Font is monospace but panose fields seems to be not set."
-                  " Setting values to defaults (FamilyType = 2, Proportion = 9).")
-            ttfont['OS/2'].panose.bFamilyType = 2
-            ttfont['OS/2'].panose.bProportion = 9
-            changed = True
+            messages.append(
+                "Font is monospace but panose fields seems to be not set."
+                " Setting values to defaults (FamilyType = 2, Proportion = 9)."
+            )
+            ttfont["OS/2"].panose.bFamilyType = 2
+            ttfont["OS/2"].panose.bProportion = 9
             expected = None
         else:
             expected = None
 
         if expected:
-            if ttfont['OS/2'].panose.bProportion == expected:
+            if ttfont["OS/2"].panose.bProportion == expected:
                 messages.append("Skipping OS/2.panose.bProportion is set correctly")
             else:
-                messages.append(("Font is monospace."
-                       " Since OS/2.panose.bFamilyType is {}"
-                       " we're updating OS/2.panose.bProportion"
-                       " to {}").format(familyType, expected))
-                ttfont['OS/2'].panose.bProportion = expected
+                messages.append(
+                    (
+                        "Font is monospace."
+                        " Since OS/2.panose.bFamilyType is {}"
+                        " we're updating OS/2.panose.bProportion"
+                        " to {}"
+                    ).format(familyType, expected)
+                )
+                ttfont["OS/2"].panose.bProportion = expected
                 changed = True
 
-        widths = [m[0] for m in ttfont['hmtx'].metrics.values() if m[0] > 0]
+        widths = [m[0] for m in ttfont["hmtx"].metrics.values() if m[0] > 0]
         width_max = max(widths)
-        if ttfont['hhea'].advanceWidthMax == width_max:
-            messages.append("Skipping hhea.advanceWidthMax is set correctly")
-        else:
-            messsages.append("Font is monospace. Updating hhea.advanceWidthMax to %i" %
-                  width_max)
-            ttfont['hhea'].advanceWidthMax = width_max
-            changed = True
-
         avg_width = otRound(sum(widths) / len(widths))
-        if avg_width == ttfont['OS/2'].xAvgCharWidth:
-            messages.append("Skipping OS/2.xAvgCharWidth is set correctly")
-        else:
-            messages.append("Font is monospace. Updating OS/2.xAvgCharWidth to %i" %
-                  avg_width)
-            ttfont['OS/2'].xAvgCharWidth = avg_width
-            changed = True
+        changed, messages = _combine_results(
+            (ttfont, messages),
+            _expect(ttfont, "hhea", "advanceWidthMax", width_max),
+            _expect(ttfont, "OS/2", "xAvgCharWidth", avg_width),
+        )
     else:
-        if ttfont['post'].isFixedPitch != 0 or ttfont['OS/2'].panose.bProportion != 0:
-            changed = True
-        ttfont['post'].isFixedPitch = 0
-        ttfont['OS/2'].panose.bProportion = 0
+
+        def set_panose(fnt, value):
+            fnt["OS/2"].panose.bProportion = value
+
+        changed, messages = _combine_results(
+            _expect(ttfont, "post", "isFixedPitch", 0),
+            _expect(
+                ttfont,
+                "OS/2",
+                "panose.bProportion",
+                0,
+                getter=lambda fnt: fnt["OS/2"].panose.bProportion,
+                setter=set_panose,
+            ),
+        )
     return changed, messages
 
 
-def drop_superfluous_mac_names(ttfont):
+def drop_superfluous_mac_names(ttfont) -> FixResult:
     """Drop superfluous Mac nameIDs.
 
     The following nameIDS are kept:
@@ -586,53 +672,58 @@ def drop_superfluous_mac_names(ttfont):
 
     https://www.microsoft.com/typography/otspec/name.htm"""
     keep_ids = [1, 2, 3, 4, 5, 6, 16, 17, 18, 20, 21, 22, 25]
-    changed = False
+    messages = []
     for n in range(255):
         if n not in keep_ids:
-            name = ttfont['name'].getName(n, 1, 0, 0)
+            name = ttfont["name"].getName(n, 1, 0, 0)
             if name:
-                changed = True
-                ttfont['name'].names.remove(name)
-    return changed
+                messages.append(f"Removed nameID {n}: {name.toStr()}")
+                ttfont["name"].names.remove(name)
+    return ttfont, messages
 
 
-def drop_mac_names(ttfont):
+def drop_mac_names(ttfont) -> FixResult:
     """Drop all mac names"""
-    changed = False
+    messages = []
     for n in range(255):
-        name = ttfont['name'].getName(n, 1, 0, 0)
+        name = ttfont["name"].getName(n, 1, 0, 0)
         if name:
-            ttfont['name'].names.remove(name)
-            changed = True
-    return changed
+            ttfont["name"].names.remove(name)
+            messages.append(f"Removed nameID {n}: {name.toStr()}")
+    return ttfont, messages
 
 
-def fix_colr_v0_gid1(ttfont):
+@fixes("com.google.fonts/check/empty_glyph_on_gid1_for_colrv0")
+def fix_colr_v0_gid1(ttfont) -> FixResult:
     assert "COLR" in ttfont and ttfont["COLR"].version == 0
     if ttfont["maxp"].numGlyphs < 2:
-        return ttfont
+        return ttfont, []
     glyph_names = ttfont.getGlyphOrder()
     glyf_table = ttfont["glyf"]
     second_glyph = glyph_names[1]
     if glyf_table[second_glyph].numberOfContours == 0:
-        return ttfont
+        return ttfont, []
     has_empty_glyphs = any(glyf_table[g].numberOfContours == 0 for g in glyph_names)
     if has_empty_glyphs:
-        fixed_font = _swap_empty_glyph_to_gid1(ttfont)
+        return (
+            _swap_empty_glyph_to_gid1(ttfont),
+            ["Swapped empty glyph to GID 1 in COLR v0 font"],
+        )
     else:
-        fixed_font = _add_empty_glyph_to_gid1(ttfont)
-    return fixed_font
+        return (
+            _add_empty_glyph_to_gid1(ttfont),
+            ["Added empty glyph to GID 1 in COLR v0 font"],
+        )
 
 
 def _swap_empty_glyph_to_gid1(ttfont):
     from nanoemoji.reorder_glyphs import reorder_glyphs
-    from nanoemoji.util import load_fully
+
     glyf_table = ttfont["glyf"]
-    ttfont = load_fully(ttfont)
+    ttfont.ensureDecompiled()
     glyph_order = ttfont.getGlyphOrder()
     empty_glyph = next(
-        (g for g in glyph_order if glyf_table[g].numberOfContours == 0),
-        None
+        (g for g in glyph_order if glyf_table[g].numberOfContours == 0), None
     )
     if empty_glyph is None:
         raise ValueError(
@@ -642,13 +733,14 @@ def _swap_empty_glyph_to_gid1(ttfont):
     new_order.remove(empty_glyph)
     new_order.insert(1, empty_glyph)
     reorder_glyphs(ttfont, new_order)
-    return ttfont
+    return True
 
 
 def _add_empty_glyph_to_gid1(ttfont):
     from nanoemoji.util import load_fully
     from fontTools.ttLib.tables._g_l_y_f import Glyph
     from fontTools.ttLib.tables.otTables import NO_VARIATION_INDEX
+
     ttfont = load_fully(ttfont)
     glyph_order = ttfont.getGlyphOrder()
     glyf_table = ttfont["glyf"]
@@ -666,42 +758,51 @@ def _add_empty_glyph_to_gid1(ttfont):
         if hvar.LsbMap:
             hvar.LsbMap.mapping[empty_name] = NO_VARIATION_INDEX
         if hvar.RsbMap:
-           hvar.RsbMap.mapping[empty_name] = NO_VARIATION_INDEX
+            hvar.RsbMap.mapping[empty_name] = NO_VARIATION_INDEX
 
     new_order = list(glyph_order)
     new_order.insert(1, empty_name)
     ttfont.setGlyphOrder(new_order)
-    return ttfont
+    return True
 
 
-def fix_colr_v1_add_svg(ttfont):
+@fixes("com.google.fonts/check/colorfont_tables")
+def fix_colr_v1_add_svg(ttfont) -> FixResult:
     if "SVG " in ttfont:
-        return ttfont
+        return ttfont, []
     font_filename = os.path.basename(ttfont.reader.file.name)
     with tempfile.TemporaryDirectory() as build_dir:
         subprocess.run(
             [
                 "maximum_color",
                 ttfont.reader.file.name,
-                "--build_dir", build_dir,
-                "--output_file", font_filename,
+                "--build_dir",
+                build_dir,
+                "--output_file",
+                font_filename,
             ],
             check=True,
         )
         out_fp = os.path.join(build_dir, font_filename)
         fixed_ttfont = TTFont(out_fp)
         assert "SVG " in fixed_ttfont, "SVG table is missing"
-        return fixed_ttfont
+        ttfont["SVG "] = fixed_ttfont["SVG "]
+        return True, ["Added SVG table to COLR v1 font"]
 
 
-def fix_colr_font(ttfont: TTFont) -> TTFont:
+@fixes(
+    "com.google.fonts/check/colorfont_tables",
+    "com.google.fonts/check/empty_glyph_on_gid1_for_colrv0",
+)
+def fix_colr_font(ttfont: TTFont) -> FixResult:
     """For COLR v0 fonts, we need to ensure that the 2nd glyph is whitespace glyph,
     https://github.com/googlefonts/gftools/issues/609. For COLR v1 fonts, we need
     to run Nanoemoji's maximum_color script in order to generate an SVG table for
     applications that don't support COLRv1 yet,
     https://github.com/googlefonts/fontbakery/issues/3888.
     """
-    assert "COLR" in ttfont, "Not a COLR font"
+    if "COLR" not in ttfont:
+        return ttfont, []
     colr_version = ttfont["COLR"].version
     if colr_version == 0:
         return fix_colr_v0_gid1(ttfont)
@@ -711,22 +812,30 @@ def fix_colr_font(ttfont: TTFont) -> TTFont:
         raise NotImplementedError(f"COLR version '{colr_version}' not supported.")
 
 
-def fix_nbspace_glyph(ttfont: TTFont):
-    cmap = ttfont.getBestCmap()
-    if 0x00A0 in cmap:
-        return
+# def fix_nbspace_glyph(ttfont: TTFont):
+#     cmap = ttfont.getBestCmap()
+#     if 0x00A0 in cmap:
+#         return
 
 
-def fix_license_strings(ttfont: TTFont):
+@fixes("com.google.fonts/check/name/license", "com.google.fonts/check/name/license_url")
+def fix_license_strings(ttfont: TTFont) -> FixResult:
     """Update font's nametable license and license url strings"""
     from gftools.constants import OFL_LICENSE_URL, OFL_LICENSE_INFO
+
     name_table = ttfont["name"]
     for r in name_table.names:
         if r.nameID == 13:
             current_string = r.toUnicode()
             if "SIL Open Font License" in current_string:
-                name_table.setName(OFL_LICENSE_INFO, r.nameID, r.platformID, r.platEncID, r.langID)
-                name_table.setName(OFL_LICENSE_URL, 14, r.platformID, r.platEncID, r.langID)
+                name_table.setName(
+                    OFL_LICENSE_INFO, r.nameID, r.platformID, r.platEncID, r.langID
+                )
+                name_table.setName(
+                    OFL_LICENSE_URL, 14, r.platformID, r.platEncID, r.langID
+                )
+                return True, ["Updated license strings"]
+    return False, []
 
 
 def fix_ofl_license(ttfont):
@@ -746,61 +855,79 @@ def fix_ofl_license(ttfont):
     git_url = re.search(r"(\()(.*)(\))", font_copyright)
     if not git_url:
         raise ValueError("Font copyright doesn't contain a git url")
-    first_line = f"Copyright {font_year} The {font_name} Project Authors ({git_url.group(2)})"
+    first_line = (
+        f"Copyright {font_year} The {font_name} Project Authors ({git_url.group(2)})"
+    )
     return f"{first_line}\n{OFL_BODY_TEXT}"
 
 
-def fix_font(font, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
+@fixes("com.google.fonts/check/metadata/valid_nameid25")
+def fix_no_varpsname(ttFont: TTFont) -> FixResult:
+    if "fvar" not in ttFont:
+        return ttFont, []
+    name_table = ttFont["name"]
+    variation_ps_name = name_table.getName(25, 3, 1, 0x409)
+    if not variation_ps_name:
+        build_variations_ps_name(ttFont)
+        var_ps_name = ttFont["name"].getName(25, 3, 1, 0x409).toUnicode()
+        return ttFont, [
+            f"Added a Variations PostScript Name Prefix (NameID 25) '{var_ps_name}'"
+        ]
+    return ttFont, []
+
+
+def fix_font(
+    font,
+    include_source_fixes=False,
+    new_family_name=None,
+    fvar_instance_axis_dflts=None,
+):
     fixed_font = deepcopy(font)
     if new_family_name:
         rename_font(fixed_font, new_family_name)
     if fixed_font["OS/2"].version > 1:
         fixed_font["OS/2"].version = 4
 
-    fix_license_strings(fixed_font)
-
-    if "fpgm" in fixed_font:
-        fix_hinted_font(fixed_font)
-    else:
-        fix_unhinted_font(fixed_font)
-
-    if "fvar" in fixed_font:
-        name_table = fixed_font["name"]
-        variation_ps_name = name_table.getName(25, 3, 1, 0x409)
-        if not variation_ps_name:
-            build_variations_ps_name(fixed_font)
-            var_ps_name = fixed_font["name"].getName(25, 3, 1, 0x409).toUnicode()
-            log.info(f"Added a Variations PostScript Name Prefix (NameID 25) '{var_ps_name}'")
-    
-    if "COLR" in fixed_font:
-        log.info("Fixing COLR font")
-        fixed_font = fix_colr_font(fixed_font)
+    fixes = [
+        fix_license_strings,
+        fix_hinted_font,
+        fix_unhinted_font,
+        fix_no_varpsname,
+        fix_colr_font,
+        fix_hhea_caret_slope_run,
+    ]
 
     if include_source_fixes:
-        remove_tables(fixed_font)
-        fix_nametable(fixed_font)
-        if fix_fs_type(fixed_font):
-            log.info("Changed OS/2 table's fsType flag to 0 (Installable embedding)")
-            log.info("Consider fixing in the source (e.g. adding a 'fsType' custom parameter in Glyphs)\n")
-        if fix_fs_selection(fixed_font):
-            log.info("Changed OS/2 table's fsSelection flag to %i", fixed_font["OS/2"].fsSelection)
-            log.info("Consider fixing in the source (e.g. adding an 'openTypeOS2Selection' or 'Use Typo Metrics' custom parameter in Glyphs)\n")
-        if fix_mac_style(fixed_font):
-            log.info("Changed head table's macStyle to %i", fixed_font["head"].macStyle)
-            log.info("Consider fixing in the source\n")
-        if fix_weight_class(fixed_font):
-            log.info("Changed OS/2 table's usWeightClass to %i", fixed_font["OS/2"].usWeightClass)
-            log.info("Consider fixing in the source\n")
-        if fix_italic_angle(fixed_font):
-            log.info("Changed post table's italicAngle to %f", fixed_font["post"].italicAngle)
-            log.info("Consider fixing in the source\n")
+        fixes.extend(
+            [
+                remove_tables,
+                fix_nametable,
+                fix_fs_type,
+                fix_fs_selection,
+                fix_mac_style,
+                fix_weight_class,
+                fix_italic_angle,
+            ]
+        )
 
-        if "fvar" in fixed_font:
-            fix_fvar_instances(fixed_font, fvar_instance_axis_dflts)
+    for fixer in fixes:
+        result = fixer(fixed_font)
+        if len(result) != 2:
+            log.error(f"{fixer} returned an unexpected result: {result}")
+        _, messages = result
+        if messages:
+            log.info("\n".join(messages))
+
+    fix_fvar_instances(fixed_font, fvar_instance_axis_dflts)
     return fixed_font
 
 
-def fix_family(fonts, include_source_fixes=False, new_family_name=None, fvar_instance_axis_dflts=None):
+def fix_family(
+    fonts,
+    include_source_fixes=False,
+    new_family_name=None,
+    fvar_instance_axis_dflts=None,
+):
     """Fix all fonts in a family"""
     validate_family(fonts)
 
@@ -810,7 +937,7 @@ def fix_family(fonts, include_source_fixes=False, new_family_name=None, fvar_ins
             font,
             include_source_fixes=include_source_fixes,
             new_family_name=new_family_name,
-            fvar_instance_axis_dflts=fvar_instance_axis_dflts
+            fvar_instance_axis_dflts=fvar_instance_axis_dflts,
         )
         fixed_fonts.append(fixed_font)
     family_name = font_familyname(fixed_fonts[0])
@@ -834,7 +961,7 @@ def fix_family(fonts, include_source_fixes=False, new_family_name=None, fvar_ins
     return fixed_fonts
 
 
-class FontFixer():
+class FontFixer:
     def __init__(self, path, report=True, verbose=False, **kwargs):
         self.font = TTFont(path)
         self.path = path
@@ -853,10 +980,10 @@ class FontFixer():
             print("\n".join(self.messages))
         if self.saveit:
             if self.verbose:
-                print('Saving %s to %s.fix' % (self.font_filename, self.path))
+                print("Saving %s to %s.fix" % (self.font_filename, self.path))
             self.font.save(self.path + ".fix")
         elif self.verbose:
-            print('There were no changes needed on %s!' % self.font_filename)
+            print("There were no changes needed on %s!" % self.font_filename)
 
     def show(self):
         pass
@@ -877,26 +1004,26 @@ class GaspFixer(FontFixer):
 
     def fix(self, value=15):
         try:
-            table = self.font.get('gasp')
+            table = self.font.get("gasp")
             table.gaspRange[65535] = value
             self.saveit = True
         except:
-            print(('ER: {}: no table gasp... '
-                  'Creating new table. ').format(self.path))
-            table = ttLib.newTable('gasp')
+            print(
+                ("ER: {}: no table gasp... " "Creating new table. ").format(self.path)
+            )
+            table = ttLib.newTable("gasp")
             table.gaspRange = {65535: value}
-            self.font['gasp'] = table
+            self.font["gasp"] = table
             self.saveit = True
 
     def show(self):
         try:
-            self.font.get('gasp')
+            self.font.get("gasp")
         except:
-            print('ER: {}: no table gasp'.format(self.path))
+            print("ER: {}: no table gasp".format(self.path))
             return
 
         try:
-            print(self.font.get('gasp').gaspRange[65535])
+            print(self.font.get("gasp").gaspRange[65535])
         except IndexError:
-            print('ER: {}: no index 65535'.format(self.path))
-
+            print("ER: {}: no index 65535".format(self.path))
