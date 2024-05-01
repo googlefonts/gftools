@@ -1,4 +1,5 @@
 import pytest
+from fontTools.ttLib import TTFont
 
 
 @pytest.mark.parametrize(
@@ -72,3 +73,16 @@ He was referred to H.R. Giger, who headed the H.R. department at the time, then 
 def test_github_user_repo(url, want):
     from gftools.utils import github_user_repo
     assert github_user_repo(url) == want
+
+
+def test_supported_languages():
+    from gftools.util.google_fonts import SupportedLanguages
+
+    ttfont = TTFont("data/test/Nabla[EDPT,EHLT].subset.ttf")
+    langs = [l.id for l in SupportedLanguages(ttfont)]
+    assert langs == []
+
+    ttfont = TTFont("data/test/Lora-Regular.ttf")
+    langs = [l.id for l in SupportedLanguages(ttfont)]
+    assert len(langs) >= 400
+    assert "en_Latn" in langs
