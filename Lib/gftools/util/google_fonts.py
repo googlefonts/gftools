@@ -30,7 +30,7 @@ import os
 import re
 import sys
 import glob
-from pkg_resources import resource_filename
+import unicodedata
 
 if __name__ == '__main__':
   # some of the imports here wouldn't work otherwise
@@ -39,9 +39,8 @@ if __name__ == '__main__':
 
 import gftools.fonts_public_pb2 as fonts_pb2
 from fontTools import ttLib
-from gflanguages import LoadLanguages
+from gflanguages import LoadLanguages, parse
 from google.protobuf import text_format
-from hyperglot import parse
 
 
 
@@ -459,25 +458,19 @@ def LicenseFromPath(path):
   return _EntryForEndOfPath(path, _KNOWN_LICENSE_DIRS)
 
 
-# Note:      This function uses hyperglot, which is licensed GPLv3
-# See also:  https://github.com/googlefonts/gftools/issues/498
 def SupportedLanguages(ttFont, languages=LoadLanguages()):
   """Get languages supported by given ttFont.
 
   Languages are pulled from the given set. Based on whether exemplar character
   sets are present in the given font.
-
-  Logic based on Hyperglot: https://github.com/rosettatype/hyperglot/blob/3172061ca05a62c0ff330eb802a17d4fad8b1a4d/lib/hyperglot/language.py#L273-L301
   """
   chars = [chr(c) for c in ttFont["cmap"].getBestCmap()]
   supported = []
   for lang in languages.values():
     if not lang.HasField('exemplar_chars') or not lang.exemplar_chars.HasField('base'):
       continue
-    base = parse.parse_chars(lang.exemplar_chars.base,
-                             decompose=False,
-                             retainDecomposed=False)
-    if set(base).issubset(chars):
+    base = parse(lang.exemplar_chars.base)
+    if base.issubset(chars):
       supported.append(lang)
   return supported
 
