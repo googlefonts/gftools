@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from configparser import ConfigParser
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from io import TextIOWrapper
 from pathlib import Path
@@ -145,6 +145,12 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
                   name
                 }
               }
+              closingIssuesReferences(first: 10) {
+                nodes {
+                  id
+                  url
+                }
+              }
               merged
               closed
             }
@@ -181,6 +187,7 @@ class PushItem:
     push_list: Optional[PushList] = None
     merged: Optional[bool] = None
     id_: Optional[str] = None
+    linked_issues: list = field(default_factory=lambda: [])
 
     def __hash__(self) -> int:
         return hash(self.path)
@@ -522,6 +529,8 @@ class PushItems(list):
                 continue
             labels = [i["name"] for i in item["content"]["labels"]["nodes"]]
 
+            linked_issues = item["content"]["closingIssuesReferences"]["nodes"]
+
             files = [Path(i["path"]) for i in item["content"]["files"]["nodes"]]
             url = item["content"]["url"]
             merged = item["content"]["merged"]
@@ -548,5 +557,16 @@ class PushItems(list):
                 cat = PushCategory.OTHER
 
             for f in files:
-                results.add(PushItem(Path(f), cat, status, url, push_list, merged, id_))
+                results.add(
+                    PushItem(
+                        Path(f),
+                        cat,
+                        status,
+                        url,
+                        push_list,
+                        merged,
+                        id_,
+                        linked_issues
+                    )
+                )
         return results
