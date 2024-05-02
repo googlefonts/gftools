@@ -266,7 +266,7 @@ class PushItem:
                     GF_BOARD_ID,
                     project_item["id"],
                     GF_BOARD_STATUS_FIELD_ID,
-                    getattr(GF_BOARD_STATUS_OPTION_IDS, server.name).value
+                    getattr(GF_BOARD_STATUS_OPTION_IDS, server.name).value,
                 )
                 g._run_graphql(mutation, {})
 
@@ -593,14 +593,7 @@ class PushItems(list):
             for f in files:
                 results.add(
                     PushItem(
-                        Path(f),
-                        cat,
-                        status,
-                        url,
-                        push_list,
-                        merged,
-                        id_,
-                        linked_issues
+                        Path(f), cat, status, url, push_list, merged, id_, linked_issues
                     )
                 )
         return results

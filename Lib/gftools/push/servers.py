@@ -97,7 +97,9 @@ class GFServer(Itemer):
 
     @property
     def last_push(self):
-        return datetime.fromtimestamp(self.family_versions_data["lastUpdate"]["seconds"])
+        return datetime.fromtimestamp(
+            self.family_versions_data["lastUpdate"]["seconds"]
+        )
 
     def compare_push_item(self, item: Items):
         server_item = self.find_item(item)
