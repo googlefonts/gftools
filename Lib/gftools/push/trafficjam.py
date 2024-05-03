@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from configparser import ConfigParser
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from io import TextIOWrapper
 from pathlib import Path
@@ -33,6 +33,13 @@ if os.path.exists(config_fp):
     TO_SANDBOX_ID = config["board_meta"]["to_sandbox_id"]
     TO_PRODUCTION_ID = config["board_meta"]["to_production_id"]
     BLOCKED_ID = config["board_meta"]["blocked_id"]
+
+    GF_BOARD_ID = config["gf_board_meta"]["board_id"]
+    GF_BOARD_STATUS_FIELD_ID = config["gf_board_meta"]["board_id"]
+    GF_BOARD_PR_GF_ID = config["gf_board_meta"]["pr_gf_id"]
+    GF_BOARD_IN_DEV_ID = config["gf_board_meta"]["in_dev_id"]
+    GF_BOARD_IN_SANDBOX_ID = config["gf_board_meta"]["in_sandbox_id"]
+    GF_BOARD_LIVE_ID = config["gf_board_meta"]["live_id"]
 else:
     TRAFFIC_JAM_ID = os.environ.get("TRAFFIC_JAM_ID")
     STATUS_FIELD_ID = os.environ.get("STATUS_FIELD_ID")
@@ -45,12 +52,26 @@ else:
     TO_PRODUCTION_ID = os.environ.get("TO_PRODUCTION_ID")
     BLOCKED_ID = os.environ.get("BLOCKED_ID")
 
+    GF_BOARD_ID = os.environ.get("GF_BOARD_ID")
+    GF_BOARD_STATUS_FIELD_ID = os.environ.get("GF_BOARD_STATUS_FIELD_ID")
+    GF_BOARD_PR_GF_ID = os.environ.get("GF_BOARD_PR_GF_ID")
+    GF_BOARD_IN_DEV_ID = os.environ.get("GF_BOARD_IN_DEV_ID")
+    GF_BOARD_IN_SANDBOX_ID = os.environ.get("GF_BOARD_IN_SANDBOX_ID")
+    GF_BOARD_LIVE_ID = os.environ.get("GF_BOARD_LIVE_ID")
+
 
 class STATUS_OPTION_IDS(Enum):
     PR_GF = PR_GF_ID
     IN_DEV = IN_DEV_ID
     IN_SANDBOX = IN_SANDBOX_ID
     LIVE = LIVE_ID
+
+
+class GF_BOARD_STATUS_OPTION_IDS(Enum):
+    PR_GF = GF_BOARD_PR_GF_ID
+    IN_DEV = GF_BOARD_IN_DEV_ID
+    IN_SANDBOX = GF_BOARD_IN_SANDBOX_ID
+    LIVE = GF_BOARD_LIVE_ID
 
 
 class LIST_OPTION_IDS(Enum):
@@ -145,6 +166,16 @@ GOOGLE_FONTS_TRAFFIC_JAM_QUERY = """
                   name
                 }
               }
+              closingIssuesReferences(first: 10) {
+                nodes {
+                  url
+                  projectItems(first: 10) {
+                    nodes {
+                      id
+                    }
+                  }
+                }
+              }
               merged
               closed
             }
@@ -181,6 +212,7 @@ class PushItem:
     push_list: Optional[PushList] = None
     merged: Optional[bool] = None
     id_: Optional[str] = None
+    linked_issues: list = field(default_factory=lambda: [])
 
     def __hash__(self) -> int:
         return hash(self.path)
@@ -227,7 +259,16 @@ class PushItem:
             STATUS_FIELD_ID,
             server.value,
         )
-        g._run_graphql(mutation, {})
+        # Update the projects board as well
+        for linked_issue in self.linked_issues:
+            for project_item in linked_issue["projectItems"]["nodes"]:
+                mutation = GOOGLE_FONTS_UPDATE_ITEM % (
+                    GF_BOARD_ID,
+                    project_item["id"],
+                    GF_BOARD_STATUS_FIELD_ID,
+                    getattr(GF_BOARD_STATUS_OPTION_IDS, server.name).value,
+                )
+                g._run_graphql(mutation, {})
 
     def set_pushlist(self, listt: LIST_OPTION_IDS):
         from gftools.gfgithub import GitHubClient
@@ -522,6 +563,8 @@ class PushItems(list):
                 continue
             labels = [i["name"] for i in item["content"]["labels"]["nodes"]]
 
+            linked_issues = item["content"]["closingIssuesReferences"]["nodes"]
+
             files = [Path(i["path"]) for i in item["content"]["files"]["nodes"]]
             url = item["content"]["url"]
             merged = item["content"]["merged"]
@@ -548,5 +591,9 @@ class PushItems(list):
                 cat = PushCategory.OTHER
 
             for f in files:
-                results.add(PushItem(Path(f), cat, status, url, push_list, merged, id_))
+                results.add(
+                    PushItem(
+                        Path(f), cat, status, url, push_list, merged, id_, linked_issues
+                    )
+                )
         return results
