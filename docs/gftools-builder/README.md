@@ -138,6 +138,9 @@ The build can be customized by adding the following keys to the YAML file:
 -   `autohintTTF`: Whether or not to autohint TTF files. Defaults to
     `true`.
 
+-   `autohintOTF`: Whether or not to autohint OTF files. Defaults to
+    `false`.
+
 -   `ttfaUseScript`: Whether or not to detect a font\'s primary script
     and add a `-D<script>` flag to ttfautohint. Defaults to `false`.
 
