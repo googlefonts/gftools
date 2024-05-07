@@ -35,7 +35,7 @@ if os.path.exists(config_fp):
     BLOCKED_ID = config["board_meta"]["blocked_id"]
 
     GF_BOARD_ID = config["gf_board_meta"]["board_id"]
-    GF_BOARD_STATUS_FIELD_ID = config["gf_board_meta"]["board_id"]
+    GF_BOARD_STATUS_FIELD_ID = config["gf_board_meta"]["status_field_id"]
     GF_BOARD_PR_GF_ID = config["gf_board_meta"]["pr_gf_id"]
     GF_BOARD_IN_DEV_ID = config["gf_board_meta"]["in_dev_id"]
     GF_BOARD_IN_SANDBOX_ID = config["gf_board_meta"]["in_sandbox_id"]
