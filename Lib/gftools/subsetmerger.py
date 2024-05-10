@@ -106,6 +106,8 @@ class SubsetMerger:
         for master in ds.sources:
             newpath = os.path.join(outpath, os.path.basename(master.path))
             target_ufo = open_ufo(master.path)
+            if master.layerName is not None:
+                continue
 
             master.path = newpath
 
