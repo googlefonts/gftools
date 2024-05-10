@@ -259,6 +259,8 @@ class PushItem:
             STATUS_FIELD_ID,
             server.value,
         )
+        g._run_graphql(mutation, {})
+        self.status = server
         # Update the projects board as well
         for linked_issue in self.linked_issues:
             for project_item in linked_issue["projectItems"]["nodes"]:
