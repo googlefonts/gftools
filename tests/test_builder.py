@@ -89,7 +89,7 @@ def test_builder(fp, font_paths):
             os.path.join(TEST_DIR, "recipeprovider_noto_glyphData"),
             [
                 os.path.join(
-                    "TestFamily", "unhinted", "variable", "TestFamily[wght].ttf"
+                    "TestFamily", "unhinted", "variable-ttf", "TestFamily[wght].ttf"
                 ),
                 os.path.join("TestFamily", "unhinted", "ttf", "TestFamily-Black.ttf"),
                 os.path.join("TestFamily", "unhinted", "ttf", "TestFamily-Regular.ttf"),
