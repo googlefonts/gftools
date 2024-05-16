@@ -83,12 +83,12 @@ class LIST_OPTION_IDS(Enum):
 class PushCategory(Enum):
     NEW = "New"
     UPGRADE = "Upgrade"
-    OTHER = "Other"
     DESIGNER_PROFILE = "Designer profile"
     AXIS_REGISTRY = "Axis Registry"
     KNOWLEDGE = "Knowledge"
     METADATA = "Metadata / Description / License"
     SAMPLE_TEXTS = "Sample texts"
+    OTHER = "Other"
     BLOCKED = "Blocked"
     DELETED = "Deleted"
 
