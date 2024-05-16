@@ -667,3 +667,9 @@ def github_user_repo(github_url):
             f"Cannot extract github user and repo name from url '{github_url}'."
         )
     return match.group('user'), match.group('repo')
+
+
+def has_gh_token():
+    if "GH_TOKEN" in os.environ:
+        return True
+    return False
