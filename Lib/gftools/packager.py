@@ -39,6 +39,7 @@ from gftools.utils import (
     is_google_fonts_repo,
     format_html,
     Google_Fonts_has_family,
+    has_gh_token,
 )
 import sys
 
@@ -566,6 +567,11 @@ def make_package(
     issue_number=None,
     **kwargs,
 ):
+    if pr and not has_gh_token():
+        raise ValueError(
+            f"Tool requires 'GH_TOKEN' environment variable in order to make "
+            "the pull request."
+        )
     repo = Repository(repo_path)
     repo_path = Path(repo.workdir)
     if not is_google_fonts_repo(repo_path):
