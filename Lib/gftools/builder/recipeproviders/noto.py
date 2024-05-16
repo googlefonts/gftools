@@ -80,7 +80,7 @@ class NotoBuilder(GFBuilder):
             "fonts",
             familyname_path,
             "unhinted",
-            "variable",
+            "variable-ttf",
             f"{sourcebase}[{axis_tags}].ttf",
         )
         self.recipe[target] = [
@@ -103,7 +103,7 @@ class NotoBuilder(GFBuilder):
                 "fonts",
                 familyname_path,
                 "unhinted",
-                "variable",
+                "variable-ttf",
                 f"{sourcebase}-UI-VF.ttf",
             )
             self.recipe[uivftarget] = [
@@ -131,7 +131,7 @@ class NotoBuilder(GFBuilder):
                 "fonts",
                 familyname_path,
                 "full",
-                "variable",
+                "variable-ttf",
                 f"{sourcebase}[{axis_tags}].ttf",
             )
             self.recipe[target] = [
@@ -154,7 +154,7 @@ class NotoBuilder(GFBuilder):
                 "fonts",
                 familyname_path,
                 "googlefonts",
-                "variable",
+                "variable-ttf",
                 f"{sourcebase}[{axis_tags}].ttf",
             )
             self.recipe[target] = [
@@ -177,7 +177,7 @@ class NotoBuilder(GFBuilder):
                 "fonts",
                 familyname_path,
                 "googlefonts",
-                "variable",
+                "variable-ttf",
                 f"{sourcebase}[{axis_tags}].ttf",
             )
             self.recipe[target] = [
@@ -338,7 +338,7 @@ class NotoBuilder(GFBuilder):
         if "wdth" in tags:
             axes += " wdth=drop"
 
-        newtarget = target.replace("variable", "slim-variable-ttf").replace(
+        newtarget = target.replace("variable-ttf", "slim-variable-ttf").replace(
             axis_tags, "wght"
         )
         self.recipe[newtarget] = copy.deepcopy(self.recipe[target]) + [
