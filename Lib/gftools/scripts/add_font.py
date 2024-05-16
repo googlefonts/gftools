@@ -329,14 +329,19 @@ def main(args=None):
   fonts.WriteProto(metadata, os.path.join(fontdir, 'METADATA.pb'), comments=language_comments)
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
+  articledir = os.path.join(fontdir, "article")
+  article = os.path.join(articledir, "ARTICLE.en_us.html")
   if os.path.isfile(desc):
     print('DESCRIPTION.en_us.html exists')
+  elif os.path.isfile(article):
+    print("ARTICLE.en_us.html exists")
   else:
+    os.makedirs(os.path.join(fontdir, "article"))
     desc_text = "N/A"
     if args.github_url:
       human_url = remove_url_prefix(args.github_url)
       desc_text += f'\n<p>To contribute, please see <a href="{args.github_url}">{human_url}</a>.</p>'
-    _WriteTextFile(desc, desc_text)
+    _WriteTextFile(article, desc_text)
 
 
 if __name__ == '__main__':

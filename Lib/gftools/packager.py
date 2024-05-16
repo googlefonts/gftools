@@ -326,10 +326,18 @@ def package_family(
         save_metadata(family_path / "METADATA.pb", metadata)
         # Format HTML
         desc_file = family_path / "DESCRIPTION.en_us.html"
-        with open(desc_file, encoding="utf-8") as fin:
-            description = format_html(fin.read())
-        with open(desc_file, "w", encoding="utf-8") as fout:
-            fout.write(description)
+        article_file = family_path / "article" / "ARTICLE.en_us.html"
+        if article_file.exists():
+            # Remove description file if an article already exists
+            if desc_file.exists():
+                os.remove(desc_file)
+            about_file = article_file
+        else:
+            about_file = desc_file
+        with open(about_file, encoding="utf-8") as fin:
+            about = format_html(fin.read())
+        with open(about_file, "w", encoding="utf-8") as fout:
+            fout.write(about)
     return True
 
 
