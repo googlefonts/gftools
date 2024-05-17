@@ -348,7 +348,7 @@ def _git_branch_name(family_name: str, license: str) -> str:
     return f"gftools_packager_{license}_{family_dir_name}"
 
 
-def _create_git_branch(
+def create_git_branch(
     metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo
 ) -> Branch:
     branch_name = _git_branch_name(metadata.name, metadata.license)
@@ -423,6 +423,7 @@ def git_rm_file(repo: Repository, treebuilder: TreeBuilder, path: str, *args, **
 
 
 def commit_family(
+    branch,
     family_path: Path,
     metadata: fonts_pb2.FamilyProto,
     repo: Repository,
@@ -430,7 +431,6 @@ def commit_family(
     issue_number=None,
 ) -> Tuple[str, str, Branch]:
     """Commit family to a new branch in the google/fonts repo."""
-    branch = _create_git_branch(metadata, repo, head_repo)
     log.info(
         f"Committing family to branch '{_branch_name(branch.name)}'. "
         "Please make hand modifications to the family on this branch. "
@@ -652,9 +652,10 @@ def make_package(
         )
 
     with current_git_state(repo, family_path):
+        branch = create_git_branch(metadata, repo, head_repo)
         packaged = package_family(family_path, metadata, latest_release)
         title, msg, branch = commit_family(
-            family_path, metadata, repo, head_repo, issue_number
+            branch, family_path, metadata, repo, head_repo, issue_number
         )
 
         if pr:
