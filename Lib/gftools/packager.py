@@ -42,6 +42,7 @@ from gftools.utils import (
     has_gh_token,
 )
 import sys
+from gftools.push.trafficjam import TRAFFIC_JAM_ID
 
 
 log = logging.getLogger("gftools.packager")
@@ -91,6 +92,22 @@ PR_CHECKLIST = """
 - [ ] Check designers order in metadata.pb, since the first one of the list appears as “principal designer”
 - [ ] Social media formatted visual assets for all new commissioned projects in the Drive directory, communicate with the repository Maintainer so that they can push this content to the Social Media tracker spreadsheet
 - [ ] Social media content draft for all new commissioned projects in the Drive directory and Social Media tracker spreadsheet, communicate with the repository Maintainer so that they can push this content to the Social Media tracker spreadsheet
+"""
+
+
+ADD_TO_TRAFFIC_JAM="""
+  mutation {{
+    addProjectV2ItemById(
+        input: {{
+            projectId: "{project_id}"
+            contentId: "{content_id}"
+        }}
+    ) {{
+        item {{
+        id
+      }}
+    }}
+  }}
 """
 
 
@@ -539,6 +556,15 @@ def pr_family(
         issue_labels = google_fonts.get_labels(issue_number)
         google_fonts.add_labels(
             open_prs[0]["number"], [l["name"] for l in issue_labels]
+        )
+    # add item to traffic board
+    if TRAFFIC_JAM_ID:
+        google_fonts._run_graphql(
+            ADD_TO_TRAFFIC_JAM.format(
+                project_id=TRAFFIC_JAM_ID,
+                content_id=resp["node_id"],
+            ),
+            {}
         )
     return True
 
