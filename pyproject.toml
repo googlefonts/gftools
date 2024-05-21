@@ -164,3 +164,16 @@ where = ["Lib"]
 
 [tool.setuptools_scm]
 write_to = "Lib/gftools/_version.py"
+
+[tool.pylint.'MESSAGES CONTROL']
+max-line-length = 120
+disable = [
+  "R",  # Disable all recommendations for now
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "missing-module-docstring",
+  "duplicate-code",
+  "protected-access",
+  "attribute-defined-outside-init",
+  "invalid-name",  # For now, we would like to fix these
+]
