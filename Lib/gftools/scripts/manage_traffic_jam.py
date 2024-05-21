@@ -11,7 +11,7 @@ https://hub.github.com/
 
 import subprocess
 from rich.pretty import pprint
-from gftools.logging import setup_logging
+from gftools.gflogging import setup_logging
 from gftools.push.utils import branch_matches_google_fonts_main
 from gftools.push.servers import GFServers, Items
 from gftools.push.items import Family, FamilyMeta
@@ -23,7 +23,7 @@ from gftools.push.trafficjam import (
     STATUS_OPTION_IDS,
 )
 import os
-import argparse
+from gftools.gfargparse import GFArgumentParser
 from pathlib import Path
 import tempfile
 import json
@@ -221,7 +221,7 @@ class ItemChecker:
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser()
+    parser = GFArgumentParser()
     parser.add_argument("fonts_repo", type=Path)
     parser.add_argument(
         "-f",
@@ -247,12 +247,6 @@ def main(args=None):
         "-s", "--server-data", default=(Path("~") / ".gf_server_data.json").expanduser()
     )
     parser.add_argument(
-        "-l",
-        "--log-level",
-        choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
-        default="INFO",
-    )
-    parser.add_argument(
         "--update-servers-only",
         "-uso",
         action="store_true",
@@ -260,7 +254,6 @@ def main(args=None):
     )
     args = parser.parse_args(args)
 
-    setup_logging("manage_traffic_jam", args, __name__)
 
     branch_matches_google_fonts_main(args.fonts_repo)
 

@@ -44,7 +44,7 @@ gftools gen-stat font.ttf --src my_stat.yaml
 from axisregistry import AxisRegistry
 from fontTools.ttLib import TTFont
 from gftools.stat import gen_stat_tables, gen_stat_tables_from_config
-import argparse
+from gftools.gfargparse import GFArgumentParser
 import yaml
 import os
 
@@ -52,7 +52,7 @@ axis_registry = AxisRegistry()
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser()
+    parser = GFArgumentParser()
     parser.add_argument(
         "fonts", nargs="+", help="Variable TTF files which make up a family"
     )

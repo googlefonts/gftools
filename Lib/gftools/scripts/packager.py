@@ -21,12 +21,13 @@ the tool using the same commands.
 """
 import argparse
 
+from gftools.gfargparse import GFArgumentParser
 from gftools import packager
-from gftools.logging import setup_logging
+from gftools.gflogging import setup_logging
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser()
+    parser = GFArgumentParser()
     parser.add_argument(
         "family_name",
         type=str,
@@ -65,24 +66,10 @@ def main(args=None):
         help="Get assets from latest upstream release",
         action="store_true",
     )
-    parser.add_argument(
-        "--log-level",
-        choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
-        default="INFO",
-    )
-    parser.add_argument(
-        "--show-tracebacks",
-        action="store_true",
-        help=(
-            "By default, exceptions will only print out error messages. "
-            "Tracebacks won't be included since the tool is intended for "
-            "type designers and not developers."
-        ),
-    )
     parser.add_argument("-i", "--issue-number", help="Issue number to reference in PR")
     parser.add_argument("--skip-tags", action="store_true")
     args = parser.parse_args(args)
-    setup_logging("gftools.packager", args, __name__)
+    import pdb; pdb.set_trace()
     packager.make_package(**args.__dict__)
 
 
