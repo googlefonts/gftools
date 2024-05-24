@@ -40,6 +40,7 @@ from gftools.utils import (
     Google_Fonts_has_family,
     has_gh_token,
 )
+from gftools.packager.build import build_to_directory
 import sys
 from gftools.push.trafficjam import TRAFFIC_JAM_ID
 
@@ -331,10 +332,14 @@ def package_family(
     build_from_source=False,
 ):
     """Create a family into a google/fonts repo."""
-    log.info(f"Downloading family to '{family_path}'")
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
-        download_assets(metadata, tmp_dir, latest_release)
+        if build_from_source:
+            log.info(f"Building '{metadata.name}' from source")
+            build_to_directory(tmp_dir, family_path, metadata)
+        else:
+            log.info(f"Downloading family to '{family_path}'")
+            download_assets(metadata, tmp_dir, latest_release)
         if assets_are_same(tmp_dir, family_path):
             raise ValueError(f"'{family_path}' already has latest files, Aborting.")
         # rm existing fonts. Sometimes the font count will change if a family
