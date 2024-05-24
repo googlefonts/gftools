@@ -325,7 +325,10 @@ def assets_are_same(src: Path, dst: Path) -> bool:
 
 
 def package_family(
-    family_path: Path, metadata: fonts_pb2.FamilyProto, latest_release=False
+    family_path: Path,
+    metadata: fonts_pb2.FamilyProto,
+    latest_release=False,
+    build_from_source=False,
 ):
     """Create a family into a google/fonts repo."""
     log.info(f"Downloading family to '{family_path}'")
@@ -597,6 +600,7 @@ def make_package(
     base_repo: str = "google",
     head_repo: str = "google",
     latest_release: bool = False,
+    build_from_source: bool = False,
     issue_number=None,
     **kwargs,
 ):
@@ -678,7 +682,9 @@ def make_package(
 
     with current_git_state(repo, family_path):
         branch = create_git_branch(metadata, repo, head_repo)
-        packaged = package_family(family_path, metadata, latest_release)
+        packaged = package_family(
+            family_path, metadata, latest_release, build_from_source
+        )
         title, msg, branch = commit_family(
             branch, family_path, metadata, repo, head_repo, issue_number
         )
