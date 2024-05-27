@@ -147,8 +147,6 @@ The build can be customized by adding the following keys to the YAML file:
 -   `vttSources`: To patch a manual VTT hinting program (ttx format) to
     font binaries.
 
--   `axisOrder`: STAT table axis order. Defaults to fvar order.
-
 -   `familyName`: Family name for variable fonts. Defaults to family
     name of first source file.
 
@@ -183,6 +181,24 @@ The build can be customized by adding the following keys to the YAML file:
 -   `glyphData`: An array of custom GlyphData XML files for with glyph
     info (production name, script, category, subCategory, etc.).
     Used only for Glyphs sources.
+
+-   `includeSourceFixes`: Whether to pass the `--include-source-fixes`
+    argument when fixing the fonts. Defaults to true.
+
+-   `checkCompatibility`: Check the compatibility of outlines before building
+    a variable font. Defaults to true.
+
+-   `extraFontmakeArgs`: A string of additional arguments to pass to
+    `fontmake` when building all fonts.
+
+-   `extraVariableFontmakeArgs`: A string of additional arguments to pass to
+    `fontmake` when building variable fonts.
+
+-   `extraStaticFontmakeArgs`: A string of additional arguments to pass to
+    `fontmake` when building static fonts.
+
+-   `buildSmallCap`: Automatically build smallcap families from source with a
+    `smcp` feature. Defaults to true.
 
 ## *Really* customizing the build process
 
