@@ -106,5 +106,6 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("extraFontmakeArgs"): Str(),
         Optional("extraVariableFontmakeArgs"): Str(),
         Optional("extraStaticFontmakeArgs"): Str(),
+        Optional("buildSmallCap"): Bool(),
     }
 )
