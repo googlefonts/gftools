@@ -1,6 +1,7 @@
 """
 This schema represents all known key/value pairs for the builder config file.
 """
+
 from strictyaml import (
     Map,
     MapPattern,
@@ -16,7 +17,7 @@ from strictyaml import (
     MapCombined,
 )
 
-CATEGORIES = ['DISPLAY', 'SERIF', 'SANS_SERIF', 'HANDWRITING', 'MONOSPACE']
+CATEGORIES = ["DISPLAY", "SERIF", "SANS_SERIF", "HANDWRITING", "MONOSPACE"]
 
 
 BASE_SCHEMA = MapCombined(
@@ -33,7 +34,7 @@ stat_schema = Seq(
         {
             "name": Str(),
             "tag": Str(),
-            Optional("values")  : Seq(
+            Optional("values"): Seq(
                 Map(
                     {
                         "name": Str(),
@@ -106,5 +107,6 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("extraFontmakeArgs"): Str(),
         Optional("extraVariableFontmakeArgs"): Str(),
         Optional("extraStaticFontmakeArgs"): Str(),
+        Optional("buildSmallCap"): Bool(),
     }
 )
