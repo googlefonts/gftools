@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import re
 from tempfile import NamedTemporaryFile
 
 import yaml
@@ -81,8 +82,13 @@ class GFBuilder(RecipeProviderBase):
             self.statfile = NamedTemporaryFile(delete=False, mode="w+")
             try:
                 load(yaml.dump(self.config["stat"]), stat_schema)
-            except:
+            except YAMLValidationError:
                 load(yaml.dump(self.config["stat"]), stat_schema_by_font_name)
+                if self.config.get("buildSmallCap"):
+                    for font in list(self.config["stat"].keys()):
+                        scfont = re.sub(r"((?:-Italic)?\[)", r"SC\1", font)
+                        self.config["stat"][scfont] = self.config["stat"][font]
+
             yaml.dump(self.config["stat"], self.statfile)
             self.statfile.close()
         else:
@@ -194,12 +200,7 @@ class GFBuilder(RecipeProviderBase):
 
         # We've built a bunch of variables here, but we may also have
         # some woff2 we added as part of the process, so ignore them.
-        # We also ignore any small cap VFs we made
-        all_variables = [
-            x
-            for x in self.recipe.keys()
-            if x.endswith("ttf") and not ("SC[" in x or "SC-Italic[" in x)
-        ]
+        all_variables = [x for x in self.recipe.keys() if x.endswith("ttf")]
         if len(all_variables) > 0:
             last_target = all_variables[-1]
             if self.statfile:
