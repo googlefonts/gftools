@@ -108,7 +108,7 @@ def find_config_yaml(source_dir: Path):
 def find_sources(source_dir: Path) -> List[Path]:
     # Extensions in order of preference
     for extension in [".glyphs", ".glyphspackage", ".designspace", ".ufo"]:
-        sources = source_dir.glob("sources/*" + extension)
+        sources = list(source_dir.glob("sources/*" + extension))
         if sources:
             return sources
     return []
