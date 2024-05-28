@@ -64,7 +64,8 @@ dependencies = [
   'rich',
   'packaging',
   'ninja',
-  'networkx'
+  'networkx',
+  'ruamel.yaml',
 ]
 
 [project.optional-dependencies]
