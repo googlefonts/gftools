@@ -1,3 +1,12 @@
+"""
+This script is used to set values in a font file's tables using a YAML file.
+The yaml file should be formatted as follows:
+
+    name->setName: ["Hello world", 0, 3, 1, 0x409]
+    OS/2->sTypoAscender: 1200
+    head->macStyle: |= 0x01  # or with the current value
+"""
+
 from fontTools.misc.cliTools import makeOutputFileName
 from fontTools.ttLib import TTFont
 import types
