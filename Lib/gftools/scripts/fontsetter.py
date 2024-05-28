@@ -3,6 +3,7 @@ from fontTools.ttLib import TTFont
 import types
 import yaml
 import argparse
+import re
 
 
 def loads(string):
@@ -59,7 +60,12 @@ def setter(obj, path, val):
         if isinstance(key, str) and hasmethod(obj, key):
             getattr(obj, key)(*val)
         elif isinstance(key, str) and hasattr(obj, key):
-            setattr(obj, key, val)
+            if isinstance(val, str) and (m := re.match(r"\|=\s*(.*)", val)):
+                setattr(obj, key, getattr(obj, key) | int(m.group(1), 0))
+            else:
+                setattr(obj, key, val)
+        elif isinstance(val, str) and (m := re.match(r"\|=\s*(.*)", val)):
+            obj[key] = obj[key] | int(m.group(1), 0)
         else:
             obj[path[0]] = val
         return
