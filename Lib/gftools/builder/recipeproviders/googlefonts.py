@@ -5,7 +5,7 @@ import re
 from tempfile import NamedTemporaryFile
 from typing import Optional, Tuple
 
-import babelfont
+from glyphsLib.builder import UFOBuilder
 import yaml
 from strictyaml import load, YAMLValidationError
 
@@ -104,19 +104,32 @@ class GFBuilder(RecipeProviderBase):
         return self.recipe
 
     def _has_slant_ital(self, source: File) -> Italic:
-        # Glyphs doesn't have explicit axis max/min, and working through the
-        # mapping is a pain. We'll use babelfont here.
-        font = babelfont.load(source.path)
-        # Look for ital first, because if we have ital and slnt, we'll use ital
-        # and keep slnt.
-        for ax in font.axes:
-            if ax.tag == "ital":
-                return ("ital", ax.minimum, ax.maximum)
-        for ax in font.axes:
-            if ax.tag == "slnt":
-                # This appears backwards compared to the above
-                # because negative angle is italic, 0 is upright.
-                return ("slnt", ax.maximum, ax.minimum)
+        if source.is_glyphs:
+            tags = [ax.axisTag for ax in source.gsfont.axes]
+        elif source.is_designspace:
+            tags = [ax.tag for ax in source.designspace.axes]
+        else:
+            return
+        if "ital" in tags:
+            slanty_axis = "ital"
+        elif "slnt" in tags:
+            slanty_axis = "slnt"
+        else:
+            return
+        if source.is_glyphs:
+            gsfont = source.gsfont
+            builder = UFOBuilder(gsfont, minimal=True)
+            builder.to_designspace_axes()
+            axes = builder.designspace.axes
+        else:
+            axes = source.designspace.axes
+        wanted = [axis for axis in axes if axis.tag == slanty_axis]
+        if slanty_axis == "ital":
+            return (slanty_axis, wanted[0].minimum, wanted[0].maximum)
+        else:
+            # We expect the italic value to have negative slant, so it
+            # turns out as the minimum.
+            return (slanty_axis, wanted[0].maximum, wanted[0].minimum)
 
     def _vf_filename(
         self, source, suffix="", extension="ttf", italic_ds=None, roman=False
