@@ -200,6 +200,10 @@ The build can be customized by adding the following keys to the YAML file:
 -   `buildSmallCap`: Automatically build smallcap families from source with a
     `smcp` feature. Defaults to true.
 
+-   `splitItalic`: For variable fonts containing a `slnt` or `ital` axis,
+    subspace them into separate roman and italic VF files to comply with
+    Google Fonts' specification. Defaults to true.
+
 ## *Really* customizing the build process
 
 If the options above aren't enough for you - let's say you want to run your
