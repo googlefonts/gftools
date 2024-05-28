@@ -1,41 +1,69 @@
 """
-This script is used to set values in a font file's tables using a YAML file.
-The yaml file should be formatted as follows:
+This script is used to set values in a font file's tables using a YAML-like file.
+The configuration file should be formatted as follows:
+
+    OS/2->sTypoAscender: 1200 # Set a value in the OS/2 table
+    name->setName: ["Hello world", 0, 3, 1, 0x409] # A method call on the name table
+    head->macStyle: |= 0x01  # or with the current value
+
+Unlike standard YAML, this script allows duplicate keys:
 
     name->setName: ["Hello world", 0, 3, 1, 0x409]
-    OS/2->sTypoAscender: 1200
-    head->macStyle: |= 0x01  # or with the current value
+    name->setName: ["Cheese", 1, 3, 1, 0x409]
+
 """
 
-from fontTools.misc.cliTools import makeOutputFileName
-from fontTools.ttLib import TTFont
-import types
-import yaml
 import argparse
 import re
+import types
+
+import ruamel.yaml
+from fontTools.misc.cliTools import makeOutputFileName
+from fontTools.ttLib import TTFont
+from ruamel.yaml.constructor import SafeConstructor
 
 
-def loads(string):
+# This bit of magic turns the top level dictionary into a list of
+# (key, value) pairs, so that we can allow duplicate keys.
+# This is helpful to allow us to call the same method (e.g. name->setName)
+# multiple times with different arguments.
+def construct_yaml_map(self, node):
+    if self.deep_construct:
+        data = {}
+        yield data
+
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=True)
+            val = self.construct_object(value_node, deep=True)
+            data[key] = val
+    else:
+        data = []
+        yield data
+
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=True)
+            val = self.construct_object(value_node, deep=True)
+            data.append((key, val))
+
+
+SafeConstructor.add_constructor("tag:yaml.org,2002:map", construct_yaml_map)
+yaml = ruamel.yaml.YAML(typ="safe")
+yaml.allow_duplicate_keys = True
+
+
+def load_config(fp):
     """
     name->setName: ["Hello world", 0, 3, 1, 0x409]
     OS/2->sTypoAscender: 1200
     -->
-    {
+    [
         ("name", "setName): ["Hello world", 0, 3, 1, 0x409],
         ("OS/2", "sTypoAscender"): 1200,
-    }
+    ]
     """
-    config = yaml.safe_load(string)
-    res = {}
-    for k, v in config.items():
-        path = k.split("->")
-        res[tuple(path)] = v
-    return res
-
-
-def load_config(fp):
     with open(fp, encoding="utf-8") as doc:
-        return loads(doc.read())
+        config = yaml.load(doc)
+    return [(tuple(path.split("->")), value) for path, value in config]
 
 
 def hasmethod(obj, name):
@@ -43,7 +71,7 @@ def hasmethod(obj, name):
 
 
 def set_all(obj, config):
-    for path, value in config.items():
+    for path, value in config:
         setter(obj, path, value)
 
 
