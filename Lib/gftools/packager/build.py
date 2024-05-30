@@ -142,14 +142,16 @@ class SourceBuilder:
             with tempfile.TemporaryDirectory() as source_dir:
                 source_dir = Path(source_dir)
                 self.clone_source(source_dir)
-                if not (source_dir / "sources").exists():
-                    raise ValueError(f"Could not find sources directory in {self.name}")
                 # Do we have our own local config.yaml?
                 if (self.family_path / "config.yaml").exists():
                     # If so, copy it over
+                    os.makedirs(source_dir / "sources", exist_ok=True)
                     shutil.copy(
                         self.family_path / "config.yaml", source_dir / "sources"
                     )
+
+                if not (source_dir / "sources").exists():
+                    raise ValueError(f"Could not find sources directory in {self.name}")
 
                 # Locate the config.yaml file or first source
                 arg = find_config_yaml(source_dir)
