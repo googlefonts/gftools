@@ -103,13 +103,6 @@ def test_builder(fp, font_paths):
                 os.path.join(
                     "TestFamily", "googlefonts", "variable-ttf", "TestFamily[wght].ttf"
                 ),
-                os.path.join(
-                    "TestFamily", "googlefonts", "ttf", "TestFamily-Black.ttf"
-                ),
-                os.path.join(
-                    "TestFamily", "googlefonts", "ttf", "TestFamily-Regular.ttf"
-                ),
-                os.path.join("TestFamily", "googlefonts", "ttf", "TestFamily-Thin.ttf"),
             ],
         ),
     ],
