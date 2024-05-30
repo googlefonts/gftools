@@ -62,6 +62,7 @@ class NotoBuilder(GFBuilder):
         # Find variable fonts
         self.recipe = {}
         self.build_all_variables()
+        self.has_variables = bool(self.recipe)
         self.build_all_statics()
         return self.recipe
 
@@ -292,7 +293,9 @@ class NotoBuilder(GFBuilder):
             self.recipe[target] = steps
 
             # Googlefonts static
-            if output == "ttf" and instance.styleName in STYLE_NAMES:
+            if not self.has_variables and (
+                output == "ttf" and instance.styleName in STYLE_NAMES
+            ):
                 target = os.path.join(
                     "../",
                     "fonts",
@@ -305,8 +308,12 @@ class NotoBuilder(GFBuilder):
                     {"operation": "fix", "args": "--include-source-fixes"},
                 ]
                 self.recipe[target] = steps
-        elif output == "ttf" and instance.styleName in STYLE_NAMES:
-            # GF static, no subsets
+        # There are no subsets to be added
+        # We only build a googlefonts static if we don't have any variable fonts
+        # since the GF PR will be either one variable or loads of statics, not both.
+        elif not self.has_variables and (
+            output == "ttf" and instance.styleName in STYLE_NAMES
+        ):
             target = os.path.join(
                 "../",
                 "fonts",
