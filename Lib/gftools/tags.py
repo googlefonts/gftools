@@ -40,7 +40,7 @@ class GFTags(object):
             "Neo Grotesque",
             "Geometric",
             "Rounded",
-            "Superelipse",
+            "Superellipse",
             "Glyphic",
         ],
         "Slab": ["Geometric", "Humanist", "Clarendon"],
