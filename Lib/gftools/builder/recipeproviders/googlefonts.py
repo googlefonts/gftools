@@ -5,8 +5,10 @@ import re
 from tempfile import NamedTemporaryFile
 
 import yaml
+from fontTools.designspaceLib import DesignSpaceDocument, InstanceDescriptor
 from strictyaml import load, YAMLValidationError
 
+from gftools.builder.file import File
 from gftools.builder.recipeproviders import RecipeProviderBase
 from gftools.builder.schema import (
     GOOGLEFONTS_SCHEMA,
@@ -122,7 +124,9 @@ class GFBuilder(RecipeProviderBase):
 
         return os.path.join(directory, f"{sourcebase}[{axis_tags}].{extension}")
 
-    def _static_filename(self, instance, suffix="", extension="ttf"):
+    def _static_filename(
+        self, instance: InstanceDescriptor, suffix: str = "", extension: str = "ttf"
+    ):
         """Determine the file name for a static font."""
         if extension == "ttf":
             outdir = self.config["ttDir"]
@@ -256,17 +260,24 @@ class GFBuilder(RecipeProviderBase):
                 if self.config["buildOTF"]:
                     self.build_a_static(source, instance, output="otf")
 
-    def build_a_static(self, source, instance, output):
+    def build_a_static(self, source: File, instance: InstanceDescriptor, output):
         target = self._static_filename(instance, extension=output)
 
         steps = [
             {"source": source.path},
         ]
         if not source.is_ufo:
+            instancename = instance.name
+            if instancename is None:
+                if not instance.familyName or not instance.styleName:
+                    raise ValueError(
+                        f"Instance {instance.filename} must have a name, or familyName and styleName"
+                    )
+                instancename = instance.familyName + " " + instance.styleName
             steps.append(
                 {
                     "operation": "instantiateUfo",
-                    "instance_name": instance.name,
+                    "instance_name": instancename,
                     "glyphData": self.config.get("glyphData"),
                 }
             )
