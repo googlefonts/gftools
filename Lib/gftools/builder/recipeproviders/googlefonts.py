@@ -3,7 +3,9 @@ import logging
 import os
 import re
 from tempfile import NamedTemporaryFile
+from typing import Optional, Tuple
 
+from glyphsLib.builder import UFOBuilder
 import yaml
 from fontTools.designspaceLib import DesignSpaceDocument, InstanceDescriptor
 from strictyaml import load, YAMLValidationError
@@ -18,6 +20,8 @@ from gftools.builder.schema import (
 from gftools.utils import open_ufo
 
 logger = logging.getLogger("GFBuilder")
+
+Italic = Optional[Tuple[str, float, float]]  # tag, regular value, italic value
 
 # Things not ported from old builder:
 #  - cleanup
@@ -52,6 +56,7 @@ DEFAULTS = {
     "useMutatorMath": False,
     "checkCompatibility": True,
     "overlaps": "booleanOperations",
+    "splitItalic": True,
 }
 
 
@@ -90,9 +95,7 @@ class GFBuilder(RecipeProviderBase):
                     for font in list(self.config["stat"].keys()):
                         scfont = re.sub(r"((?:-Italic)?\[)", r"SC\1", font)
                         self.config["stat"][scfont] = self.config["stat"][font]
-
             yaml.dump(self.config["stat"], self.statfile)
-            self.statfile.close()
         else:
             self.statfile = None
         # Find variable fonts
@@ -101,7 +104,37 @@ class GFBuilder(RecipeProviderBase):
         self.build_all_statics()
         return self.recipe
 
-    def _vf_filename(self, source, suffix="", extension="ttf"):
+    def _has_slant_ital(self, source: File) -> Italic:
+        if source.is_glyphs:
+            tags = [ax.axisTag for ax in source.gsfont.axes]
+        elif source.is_designspace:
+            tags = [ax.tag for ax in source.designspace.axes]
+        else:
+            return
+        if "ital" in tags:
+            slanty_axis = "ital"
+        elif "slnt" in tags:
+            slanty_axis = "slnt"
+        else:
+            return
+        if source.is_glyphs:
+            gsfont = source.gsfont
+            builder = UFOBuilder(gsfont, minimal=True)
+            builder.to_designspace_axes()
+            axes = builder.designspace.axes
+        else:
+            axes = source.designspace.axes
+        wanted = [axis for axis in axes if axis.tag == slanty_axis]
+        if slanty_axis == "ital":
+            return (slanty_axis, wanted[0].minimum, wanted[0].maximum)
+        else:
+            # We expect the italic value to have negative slant, so it
+            # turns out as the minimum.
+            return (slanty_axis, wanted[0].maximum, wanted[0].minimum)
+
+    def _vf_filename(
+        self, source, suffix="", extension="ttf", italic_ds=None, roman=False
+    ):
         """Determine the file name for a variable font."""
         sourcebase = os.path.splitext(source.basename)[0]
         if source.is_glyphs:
@@ -111,6 +144,10 @@ class GFBuilder(RecipeProviderBase):
         else:
             raise ValueError("Unknown source type")
 
+        if italic_ds:
+            if not roman:
+                sourcebase += "-Italic"
+            tags.remove(italic_ds[0])
         axis_tags = ",".join(sorted(tags))
         directory = self.config["vfDir"]
         if extension == "woff2":
@@ -196,7 +233,16 @@ class GFBuilder(RecipeProviderBase):
                 or (source.is_designspace and len(source.designspace.sources) < 2)
             ):
                 continue
-            self.build_a_variable(source)
+            italic_ds = None
+            if self.config["splitItalic"]:
+                italic_ds = self._has_slant_ital(source)
+            if italic_ds:
+                self.build_a_variable(source, italic_ds=italic_ds, roman=True)
+                self.build_a_variable(source, italic_ds=italic_ds, roman=False)
+                if self.statfile:
+                    self._italicize_stat_file(source, italic_ds)
+            else:
+                self.build_a_variable(source)
         self.build_STAT()
 
     def build_STAT(self):
@@ -208,6 +254,7 @@ class GFBuilder(RecipeProviderBase):
         if len(all_variables) > 0:
             last_target = all_variables[-1]
             if self.statfile:
+                self.statfile.close()
                 args = {"args": "--src " + self.statfile.name}
             else:
                 args = {}
@@ -220,7 +267,7 @@ class GFBuilder(RecipeProviderBase):
                 build_stat_step["needs"] = other_variables
             self.recipe[last_target].append(build_stat_step)
 
-    def _vtt_steps(self, target):
+    def _vtt_steps(self, target: str):
         if os.path.basename(target) in self.config.get("vttSources", {}):
             return [
                 {
@@ -230,19 +277,33 @@ class GFBuilder(RecipeProviderBase):
             ]
         return []
 
-    def build_a_variable(self, source):
-        target = self._vf_filename(source)
-        steps = (
-            [
-                {"source": source.path},
-                {
-                    "operation": "buildVariable",
-                    "args": self.fontmake_args(source, variable=True),
-                },
-            ]
-            + self._vtt_steps(target)
-            + self._fix_step()
-        )
+    def build_a_variable(
+        self, source: File, italic_ds: Italic = None, roman: bool = False
+    ):
+        if roman:
+            target = self._vf_filename(source, italic_ds=italic_ds, roman=True)
+        else:
+            target = self._vf_filename(source, italic_ds=italic_ds, roman=False)
+        steps = [
+            {"source": source.path},
+            {
+                "operation": "buildVariable",
+                "args": self.fontmake_args(source, variable=True),
+            },
+        ] + self._vtt_steps(target)
+        if italic_ds:
+            desired_slice = italic_ds[0] + "="
+            if roman:
+                desired_slice += str(italic_ds[1])
+                steps += [{"operation": "subspace", "axes": desired_slice}]
+            else:
+                desired_slice += str(italic_ds[2])
+                steps += [
+                    {"operation": "subspace", "axes": desired_slice},
+                ] + self._italic_fixup()
+
+        steps += self._fix_step()
+
         self.recipe[target] = steps
         self.build_a_webfont(target, self._vf_filename(source, extension="woff2"))
         if self._do_smallcap(source):
@@ -343,4 +404,64 @@ class GFBuilder(RecipeProviderBase):
                 "name": new_family_name,
             },
             {"operation": "fix", "args": self.fix_args()},
+        ]
+
+    def _italicize_stat_file(self, source: File, italic_ds: Italic):
+        # In this situation we have a stat file, and we have a font with
+        # either an ital or a slnt axis that we have split into two subspaced
+        # VFs. We now need to rewrite the stat file to remove the slnt axis,
+        # and potentially to copy the STAT table to the newly created file.
+
+        # What kind of STAT file are we? A global one or a font-specific one?
+        if isinstance(self.config["stat"], dict):
+            old_font = self._vf_filename(source)
+            new_font = self._vf_filename(source, italic_ds=italic_ds, roman=False)
+            if old_font in self.config["stat"] and new_font not in self.config["stat"]:
+                raise ValueError(
+                    f"We are splitting the font on the {italic_ds[0]} axis, "
+                    "but the stat: entry in the config file does not contain "
+                    f"an entry for {new_font}. Please add one and try again."
+                )
+            # Presume the user has done the right thing
+            return
+        # This is easy, just drop slnt
+        self.config["stat"] = [
+            axis for axis in self.config["stat"] if axis["tag"] != "slnt"
+        ]
+        # Rewrite the stat file
+        self.statfile.seek(0)
+        self.statfile.truncate(0)
+        yaml.dump(self.config["stat"], self.statfile)
+
+    def _italic_fixup(self):
+        # We have a font created by subspacing the ital or slnt axis, but its
+        # name table is not italic yet (and we can't use --update-name-table
+        # because we don't have a STAT table eyt). So we need to make this font
+        # "italic enough" to convince gftools-fix-font to apply all its italic
+        # font fixes (post.italicAngle etc.) when we call it with
+        # --include-source-fixes.
+        configfile = NamedTemporaryFile(delete=False, mode="w+")
+        family_name = self.sources[0].family_name.replace(" ", "")
+        # Since this is mad YAML, we can't use the normal YAML library
+        # to write this. We'll just write it out manually.
+        configfile.write(
+            f"""
+OS/2->fsSelection: 129
+head->macStyle: "|= 0x02"
+name->setName: ["{family_name}Italic", 25, 3, 1, 0x409]
+name->setName: ["Italic", 2, 3, 1, 0x409]
+name->setName: ["Italic", 17, 3, 1, 0x409]
+        """
+        )
+        configfile.close()
+        return [
+            {
+                "operation": "exec",
+                "exe": "gftools-fontsetter",
+                "args": "-o $out $in " + configfile.name,
+            },
+            {
+                "operation": "fix",
+                "args": "--include-source-fixes",
+            },
         ]
