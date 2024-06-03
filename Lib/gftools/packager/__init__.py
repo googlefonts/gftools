@@ -330,13 +330,15 @@ def package_family(
     metadata: fonts_pb2.FamilyProto,
     latest_release=False,
     build_from_source=False,
+    their_venv=False,
+    **kwargs,
 ):
     """Create a family into a google/fonts repo."""
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
         if build_from_source:
             log.info(f"Building '{metadata.name}' from source")
-            build_to_directory(tmp_dir, family_path, metadata)
+            build_to_directory(tmp_dir, family_path, metadata, their_venv=their_venv)
         else:
             log.info(f"Downloading family to '{family_path}'")
             download_assets(metadata, tmp_dir, latest_release)
@@ -688,7 +690,7 @@ def make_package(
     with current_git_state(repo, family_path):
         branch = create_git_branch(metadata, repo, head_repo)
         packaged = package_family(
-            family_path, metadata, latest_release, build_from_source
+            family_path, metadata, latest_release, build_from_source, **kwargs
         )
         title, msg, branch = commit_family(
             branch, family_path, metadata, repo, head_repo, issue_number

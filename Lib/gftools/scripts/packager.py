@@ -72,6 +72,11 @@ def main(args=None):
         action="store_true",
     )
     parser.add_argument(
+        "--their-venv",
+        help="Use upstream's virtual environment when building (defaults to current venv)",
+        action="store_true",
+    )
+    parser.add_argument(
         "--log-level",
         choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
         default="INFO",
