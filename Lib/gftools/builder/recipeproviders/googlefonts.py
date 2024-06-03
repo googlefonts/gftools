@@ -307,9 +307,9 @@ class GFBuilder(RecipeProviderBase):
         self.recipe[target] = steps
         self.build_a_webfont(target, self._vf_filename(source, extension="woff2"))
         if self._do_smallcap(source):
-            self.recipe[self._vf_filename(source, suffix="SC")] = self._smallcap_steps(
-                source, target
-            )
+            self.recipe[
+                self._vf_filename(source, italic_ds=italic_ds, roman=roman, suffix="SC")
+            ] = self._smallcap_steps(source, target)
 
     def build_all_statics(self):
         if not self.config.get("buildStatic", True):
