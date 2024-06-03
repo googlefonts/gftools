@@ -133,7 +133,7 @@ class SourceBuilder:
 
     def setup_venv(self, source_dir: Path):
         venv_task = self.progressbar.add_task(
-            "[yellow]Setup venv", total=100, visible=False
+            "[yellow]Setup venv", total=500, visible=False
         )
         self.progressbar.update(
             venv_task,
@@ -141,16 +141,22 @@ class SourceBuilder:
             completed=0,
             visible=True,
         )
-        if (source_dir / "Makefile").exists:
+        if (source_dir / "Makefile").exists():
             with contextlib.chdir(source_dir):
+                # self.progressbar.console.print(
+                #     "[yellow]Running make venv in " + str(source_dir)
+                # )
                 rc = self.run_command_with_callback(
                     ["make", "venv"],
                     lambda line: self.progressbar.update(venv_task, advance=1),
                 )
-        elif (source_dir / "requirements.txt").exists:
-            builder = EnvBuilder(system_site_packages=True, with_pip=True)
+        elif (source_dir / "requirements.txt").exists():
+            builder = EnvBuilder(system_site_packages=False, with_pip=True)
             builder.create(str(source_dir / "venv"))
             self.progressbar.update(venv_task, completed=10)
+            # self.progressbar.console.print(
+            #     "[yellow]Running pip install in " + str(source_dir)
+            # )
             with contextlib.chdir(source_dir):
                 rc = self.run_command_with_callback(
                     ["venv/bin/pip", "install", "-r", "requirements.txt"],
