@@ -6,7 +6,8 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List
+from venv import EnvBuilder
 
 import git
 import yaml
@@ -130,6 +131,52 @@ class SourceBuilder:
         self.progressbar = None
         self.source_dir = tempfile.TemporaryDirectory()
 
+    def setup_venv(self, source_dir: Path):
+        venv_task = self.progressbar.add_task(
+            "[yellow]Setup venv", total=100, visible=False
+        )
+        self.progressbar.update(
+            venv_task,
+            description="[yellow] Setting up venv for " + self.name + "...",
+            completed=0,
+            visible=True,
+        )
+        if (source_dir / "Makefile").exists:
+            with contextlib.chdir(source_dir):
+                rc = self.run_command_with_callback(
+                    ["make", "venv"],
+                    lambda line: self.progressbar.update(venv_task, advance=1),
+                )
+        elif (source_dir / "requirements.txt").exists:
+            builder = EnvBuilder(system_site_packages=True, with_pip=True)
+            builder.create(str(source_dir / "venv"))
+            self.progressbar.update(venv_task, completed=10)
+            with contextlib.chdir(source_dir):
+                rc = self.run_command_with_callback(
+                    ["venv/bin/pip", "install", "-r", "requirements.txt"],
+                    lambda line: self.progressbar.update(venv_task, advance=1),
+                )
+        else:
+            raise ValueError(
+                "--their-venv was provided but no Makefile or requirements.txt upstream"
+            )
+        if rc != 0:
+            self.progressbar.console.print(
+                "[red]Error setting up venv for " + self.name
+            )
+            raise ValueError("Venv setup failed")
+        self.progressbar.remove_task(venv_task)
+
+    def local_overrides(
+        self, upstream: Path, downstream: Path, overrides: Dict[str, str]
+    ):
+        for source, dest in overrides.items():
+            if (downstream / source).exists():
+                dest_path = upstream / dest
+                os.makedirs(dest_path.parent, exist_ok=True)
+                self.progressbar.console.print("[grey]Using our " + source)
+                shutil.copy(downstream / source, dest_path)
+
     def build(self):
         with Progress(
             progress.TimeElapsedColumn(),
@@ -142,16 +189,19 @@ class SourceBuilder:
             with tempfile.TemporaryDirectory() as source_dir:
                 source_dir = Path(source_dir)
                 self.clone_source(source_dir)
-                # Do we have our own local config.yaml?
-                if (self.family_path / "config.yaml").exists():
-                    # If so, copy it over
-                    os.makedirs(source_dir / "sources", exist_ok=True)
-                    shutil.copy(
-                        self.family_path / "config.yaml", source_dir / "sources"
-                    )
+                self.local_overrides(
+                    source_dir,
+                    self.family_path,
+                    {
+                        "config.yaml": "sources/config.yaml",
+                        "requirements.txt": "requirements.txt",
+                    },
+                )
 
                 if not (source_dir / "sources").exists():
                     raise ValueError(f"Could not find sources directory in {self.name}")
+                if self.their_venv:
+                    self.setup_venv(source_dir)
 
                 # Locate the config.yaml file or first source
                 arg = find_config_yaml(source_dir)
@@ -164,14 +214,18 @@ class SourceBuilder:
                     arg = sources[0]
 
                 with contextlib.chdir(source_dir):
-                    buildcmd = ["gftools-builder", str(arg)]
+                    if self.their_venv:
+                        buildcmd = ["venv/bin/gftools-builder", str(arg)]
+                    else:
+                        buildcmd = ["gftools-builder", str(arg)]
                     self.run_build_command(buildcmd)
                     self.copy_files()
 
-    def run_build_command(self, buildcmd):
-        build_task = self.progressbar.add_task("[green]Build " + self.name, total=1)
+    def run_command_with_callback(self, cmd, callback):
         process = subprocess.Popen(
-            buildcmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
         sel = selectors.DefaultSelector()
         sel.register(process.stdout, selectors.EVENT_READ)
@@ -185,12 +239,8 @@ class SourceBuilder:
                 if not line:
                     ok = False
                     break
-                if key.fileobj is process.stdout and (
-                    m := re.match(r"^\[(\d+)/(\d+)\]", line.decode("utf8"))
-                ):
-                    self.progressbar.update(
-                        build_task, completed=int(m.group(1)), total=int(m.group(2))
-                    )
+                if key.fileobj is process.stdout:
+                    callback(line)
                 elif key.fileobj is process.stderr:
                     stderrlines.append(line)
                 else:
@@ -201,7 +251,18 @@ class SourceBuilder:
                 self.progressbar.console.print(line.decode("utf-8"), end="")
             for line in stderrlines:
                 self.progressbar.console.print("[red]" + line.decode("utf8"), end="")
+        return rc
 
+    def run_build_command(self, buildcmd):
+        build_task = self.progressbar.add_task("[green]Build " + self.name, total=1)
+
+        def progress_callback(line):
+            if m := re.match(r"^\[(\d+)/(\d+)\]", line.decode("utf8")):
+                self.progressbar.update(
+                    build_task, completed=int(m.group(1)), total=int(m.group(2))
+                )
+
+        if self.run_command_with_callback(buildcmd, progress_callback) != 0:
             self.progressbar.console.print("[red]Error building " + self.name)
             raise ValueError("Build failed")
         else:
