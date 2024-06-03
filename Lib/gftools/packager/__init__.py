@@ -676,8 +676,7 @@ def make_package(
     # All font families must have tagging data. This data helps users on Google
     # Fonts find font families. It's enabled by default since it's a hard
     # requirements set by management.
-    tags = GFTags()
-    if not skip_tags and not tags.has_family(metadata.name):
+    if not skip_tags and not GFTags().has_family(metadata.name):
         raise ValueError(
             f"'{metadata.name}' does not have family tagging data! "
             "Please complete the following form, "
