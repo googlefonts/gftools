@@ -95,7 +95,7 @@ PR_CHECKLIST = """
 """
 
 
-ADD_TO_TRAFFIC_JAM="""
+ADD_TO_TRAFFIC_JAM = """
   mutation {{
     addProjectV2ItemById(
         input: {{
@@ -564,7 +564,7 @@ def pr_family(
                 project_id=TRAFFIC_JAM_ID,
                 content_id=resp["node_id"],
             ),
-            {}
+            {},
         )
     return True
 

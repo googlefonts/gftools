@@ -15,49 +15,73 @@
 # limitations under the License.
 #
 from argparse import ArgumentParser
-from gftools.fix import convert_cmap_subtables_to_v4, drop_nonpid0_cmap, drop_mac_cmap, FontFixer
+from gftools.fix import (
+    convert_cmap_subtables_to_v4,
+    drop_nonpid0_cmap,
+    drop_mac_cmap,
+    FontFixer,
+)
 
 description = "Manipulate a collection of fonts' cmap tables."
 
 
 def convert_cmap_subtables_to_v4_with_report(font):
-  converted = convert_cmap_subtables_to_v4(font)
-  for c in converted:
-    print(('Converted format {} cmap subtable'
-     ' with Platform ID = {} and Encoding ID = {}'
-     ' to format 4.').format(c))
-  return converted
+    converted = convert_cmap_subtables_to_v4(font)
+    for c in converted:
+        print(
+            (
+                "Converted format {} cmap subtable"
+                " with Platform ID = {} and Encoding ID = {}"
+                " to format 4."
+            ).format(c)
+        )
+    return converted
+
 
 def main(args=None):
-  parser = ArgumentParser(description=description)
-  parser.add_argument('fonts', nargs='+')
-  parser.add_argument('--format-4-subtables', '-f4', default=False,
-                      action='store_true',
-                      help="Convert cmap subtables to format 4")
-  parser.add_argument('--drop-mac-subtable', '-dm', default=False,
-                      action='store_true',
-                      help='Drop Mac cmap subtables')
-  parser.add_argument('--keep-only-pid-0', '-k0', default=False,
-                      action='store_true',
-                      help=('Keep only cmap subtables with pid=0'
-                            ' and drop the rest.'))
-  args = parser.parse_args(args)
+    parser = ArgumentParser(description=description)
+    parser.add_argument("fonts", nargs="+")
+    parser.add_argument(
+        "--format-4-subtables",
+        "-f4",
+        default=False,
+        action="store_true",
+        help="Convert cmap subtables to format 4",
+    )
+    parser.add_argument(
+        "--drop-mac-subtable",
+        "-dm",
+        default=False,
+        action="store_true",
+        help="Drop Mac cmap subtables",
+    )
+    parser.add_argument(
+        "--keep-only-pid-0",
+        "-k0",
+        default=False,
+        action="store_true",
+        help=("Keep only cmap subtables with pid=0" " and drop the rest."),
+    )
+    args = parser.parse_args(args)
 
-  for path in args.fonts:
-    fixer = FontFixer(path, verbose=True)
-    if args.format_4_subtables:
-      print('\nConverting Cmap subtables to format 4...')
-      fixer.fixes.append(convert_cmap_subtables_to_v4_with_report)
+    for path in args.fonts:
+        fixer = FontFixer(path, verbose=True)
+        if args.format_4_subtables:
+            print("\nConverting Cmap subtables to format 4...")
+            fixer.fixes.append(convert_cmap_subtables_to_v4_with_report)
 
-    if args.keep_only_pid_0:
-      print('\nDropping all Cmap subtables,'
-            ' except the ones with PlatformId = 0...')
-      fixer.fixes.append(drop_nonpid0_cmap)
-    elif args.drop_mac_subtable:
-      print('\nDropping any Cmap Mac subtable...')
-      fixer.fixes.append(drop_mac_cmap)
+        if args.keep_only_pid_0:
+            print(
+                "\nDropping all Cmap subtables,"
+                " except the ones with PlatformId = 0..."
+            )
+            fixer.fixes.append(drop_nonpid0_cmap)
+        elif args.drop_mac_subtable:
+            print("\nDropping any Cmap Mac subtable...")
+            fixer.fixes.append(drop_mac_cmap)
 
-    fixer.fix()
+        fixer.fix()
 
-if __name__ == '__main__':
-  main()
+
+if __name__ == "__main__":
+    main()

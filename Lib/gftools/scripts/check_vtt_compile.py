@@ -4,6 +4,7 @@ from vttLib import *
 from fontTools.ttLib import TTFont
 import argparse
 
+
 def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("font_path")
@@ -39,12 +40,11 @@ def main(args=None):
         return
     if args.remove_incompatible_hinting:
         for _, glyph_name in incompatible_glyphs:
-            font['TSI1'].glyphPrograms[glyph_name] = ""
-            font['TSI3'].glyphPrograms[glyph_name] = ""
+            font["TSI1"].glyphPrograms[glyph_name] = ""
+            font["TSI3"].glyphPrograms[glyph_name] = ""
     font.save(args.font_path + ".fix")
     print("Incompatible glyph hints have been removed")
 
-    
+
 if __name__ == "__main__":
     main()
-

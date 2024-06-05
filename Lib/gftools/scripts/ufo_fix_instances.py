@@ -15,6 +15,7 @@ import sys
 
 axis_reg = AxisRegistry()
 
+
 def build_instances(ds):
     """Generate Designspace instances which are gf spec complaint"""
     instances = []

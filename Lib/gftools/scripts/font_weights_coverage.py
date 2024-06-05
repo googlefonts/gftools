@@ -34,37 +34,37 @@ import sys
 from gfsubsets import CodepointsInFont
 
 
-parser = argparse.ArgumentParser(description='Compare size and coverage of two fonts')
-parser.add_argument('dirpath', help="a directory containing font files.", metavar="DIR")
+parser = argparse.ArgumentParser(description="Compare size and coverage of two fonts")
+parser.add_argument("dirpath", help="a directory containing font files.", metavar="DIR")
+
 
 def main(args=None):
-  args = parser.parse_args(args)
+    args = parser.parse_args(args)
 
-  cps = set()
-  for f in _GetFontFiles(args.dirpath):
-    cps.update(CodepointsInFont(os.path.join(args.dirpath, f)))
+    cps = set()
+    for f in _GetFontFiles(args.dirpath):
+        cps.update(CodepointsInFont(os.path.join(args.dirpath, f)))
 
-  for f in _GetFontFiles(args.dirpath):
-    diff = cps - CodepointsInFont(os.path.join(args.dirpath, f))
-    if bool(diff):
-      print('%s failed' % (f))
-      for c in diff:
-        print('0x%04X' % (c))
-    else:
-      print('%s passed' % (f))
+    for f in _GetFontFiles(args.dirpath):
+        diff = cps - CodepointsInFont(os.path.join(args.dirpath, f))
+        if bool(diff):
+            print("%s failed" % (f))
+            for c in diff:
+                print("0x%04X" % (c))
+        else:
+            print("%s passed" % (f))
 
 
 def _GetFontFiles(path):
-  """Returns list of font files in a path.
+    """Returns list of font files in a path.
 
-  Args:
-    path: directory path
-  Returns:
-    Set of font files
-  """
-  return [f for f in listdir(path)
-          if os.path.splitext(f)[1] in ('.ttf', '.otf')]
+    Args:
+      path: directory path
+    Returns:
+      Set of font files
+    """
+    return [f for f in listdir(path) if os.path.splitext(f)[1] in (".ttf", ".otf")]
 
 
-if __name__ == '__main__':
-  main()
+if __name__ == "__main__":
+    main()

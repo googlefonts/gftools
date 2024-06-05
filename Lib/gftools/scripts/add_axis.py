@@ -8,14 +8,11 @@ from fontTools.ttLib import TTFont
 
 
 parser = argparse.ArgumentParser(
-    prog='gftools add-axis',
+    prog="gftools add-axis",
     description=__doc__,
-    )
+)
 
-parser.add_argument(
-            'font',
-            type=str,
-            help='The font file to the axis values from.')
+parser.add_argument("font", type=str, help="The font file to the axis values from.")
 
 
 class ProgramAbortError(Exception):
@@ -29,56 +26,61 @@ class UserAbortError(Exception):
 def _get_fvar_axis(name_table, fvar_table):
     axes = []
     for axis in fvar_table.axes:
-        axes.append((axis, f'{name_table.getName(axis.axisNameID, 3, 1, 0x0409)} {axis.axisTag}'))
-    axes.sort(key=lambda a:a[0].axisTag)
-    choices = '\n'.join([f'  {index}: {label}' for index, (_, label) in enumerate(axes)])
-    question = ('Found axes:\n'
-                f'{choices}'
-                '\n'
-                'pick one by number (e.g. 0), q=quit:')
+        axes.append(
+            (
+                axis,
+                f"{name_table.getName(axis.axisNameID, 3, 1, 0x0409)} {axis.axisTag}",
+            )
+        )
+    axes.sort(key=lambda a: a[0].axisTag)
+    choices = "\n".join(
+        [f"  {index}: {label}" for index, (_, label) in enumerate(axes)]
+    )
+    question = "Found axes:\n" f"{choices}" "\n" "pick one by number (e.g. 0), q=quit:"
     while True:
         try:
             answer = input(question).strip()
-            if answer == 'q':
+            if answer == "q":
                 raise UserAbortError()
             index = int(answer)  # raises ValueError
             fvar_axis, _ = axes[index]  # raises IndexError
         except (ValueError, IndexError):
             # must try again
             continue
-        print(f'You picked: {fvar_axis.axisTag}.')
+        print(f"You picked: {fvar_axis.axisTag}.")
         return fvar_axis
 
 
 def _get_fallbacks_gen(name_table, stat_axis_index, AxisValue):
     for stat_axis_value in AxisValue:
-
         if stat_axis_value.Format in (1, 3):
             if stat_axis_value.AxisIndex == stat_axis_index:
                 yield (
                     name_table.getName(stat_axis_value.ValueNameID, 3, 1, 0x0409),
-                    stat_axis_value.Value
+                    stat_axis_value.Value,
                 )
         elif stat_axis_value.Format == 4:
             for avr in stat_axis_value.AxisValueRecord:
                 if avr.AxisIndex == stat_axis_index:
                     yield (
                         name_table.getName(stat_axis_value.ValueNameID, 3, 1, 0x0409),
-                        avr.Value
+                        avr.Value,
                     )
         else:
-            print(f'SKIP STAT AxisValue can\'t handel Format {stat_axis_value.Format} '
-                  f'({name_table.getName(stat_axis_value.ValueNameID, 3, 1, 0x0409)})')
+            print(
+                f"SKIP STAT AxisValue can't handel Format {stat_axis_value.Format} "
+                f"({name_table.getName(stat_axis_value.ValueNameID, 3, 1, 0x0409)})"
+            )
 
 
 def add_axis(font: str):
     axis_proto = AxisProto()
     ttFont = TTFont(font)
-    name_table = ttFont['name']
+    name_table = ttFont["name"]
     try:
-        fvar_table = ttFont['fvar']
+        fvar_table = ttFont["fvar"]
     except KeyError:
-        raise ProgramAbortError('No fvar present')
+        raise ProgramAbortError("No fvar present")
     fvar_axis = _get_fvar_axis(name_table, fvar_table)
 
     # Axis tag
@@ -91,8 +93,9 @@ def add_axis(font: str):
     #           <Platform ID: 3 = Windows>,
     #           <encodingID, Platform-specific encoding ID: 1 = Unicode BMP>,
     #           <Language ID: 0x0409 = 1033 = en_us>)
-    axis_proto.display_name = \
-        f'{name_table.getName(fvar_axis.axisNameID, 3, 1, 0x0409)}'
+    axis_proto.display_name = (
+        f"{name_table.getName(fvar_axis.axisNameID, 3, 1, 0x0409)}"
+    )
     # Lower bound for the axis
     axis_proto.min_value = fvar_axis.minValue
     # The default position to use and to prefer for exemplars
@@ -103,28 +106,29 @@ def add_axis(font: str):
     axis_proto.precision = 1  # ask user?
     # Short descriptive paragraph
     axis_proto.description = (  # ask user?
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod'
-        ' tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim'
-        ' veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea'
-        ' commodo consequat. Duis aute irure dolor in reprehenderit in voluptate'
-        ' velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint'
-        ' occaecat cupidatat non proident, sunt in culpa qui officia deserunt'
-        ' mollit anim id est laborum.'
-        )
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod"
+        " tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim"
+        " veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea"
+        " commodo consequat. Duis aute irure dolor in reprehenderit in voluptate"
+        " velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint"
+        " occaecat cupidatat non proident, sunt in culpa qui officia deserunt"
+        " mollit anim id est laborum."
+    )
 
     fallback_proto = FallbackProto()
-    fallback_proto.name = 'Default'
+    fallback_proto.name = "Default"
     fallback_proto.value = fvar_axis.defaultValue
     axis_proto.fallback.append(fallback_proto)
     # Is the axis fallback only?
     axis_proto.fallback_only = False
 
-    text_proto = text_format.MessageToString(axis_proto, as_utf8=True,
-                                             use_index_order=True)
-    filename = f'{axis_proto.display_name.lower()}.textproto'
-    with open(filename, 'x') as f:
+    text_proto = text_format.MessageToString(
+        axis_proto, as_utf8=True, use_index_order=True
+    )
+    filename = f"{axis_proto.display_name.lower()}.textproto"
+    with open(filename, "x") as f:
         f.write(text_proto)
-    print(f'DONE create {filename}!')
+    print(f"DONE create {filename}!")
 
 
 def main(args=None):
@@ -132,12 +136,12 @@ def main(args=None):
         args = parser.parse_args(args)
         add_axis(args.font)
     except UserAbortError:
-        print('Aborted by user!')
+        print("Aborted by user!")
         sys.exit(1)
     except ProgramAbortError as e:
-        print(f'Aborted by program: {e}')
+        print(f"Aborted by program: {e}")
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

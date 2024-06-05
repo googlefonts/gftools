@@ -14,6 +14,7 @@ E.g.:
 Credit to Cosimo Lupo (anthrotype) for starting this as a gist:
 https://gist.github.com/anthrotype/531a425c8a0ba5ee975bc2ec8add7b82
 """
+
 from collections import deque, defaultdict
 import re
 from typing import (

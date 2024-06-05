@@ -75,7 +75,9 @@ class ItemChecker:
         self.git_checkout_main()
 
     def user_input(self, item: PushItem):
-        input_text = "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], quit: [q]?: "
+        input_text = (
+            "Bump pushlist: [y/n], block: [b] skip pr: [s], inspect: [i], quit: [q]?: "
+        )
         user_input = input(input_text)
 
         if "*" in user_input:
@@ -284,7 +286,9 @@ def main(args=None):
 
     traffic_jam_data = (Path("~") / ".gf_traffic_jam_data.json").expanduser()
     push_items = PushItems.from_traffic_jam(traffic_jam_data)
-    push_items.sort(key=lambda x: x.category in [PushCategory.NEW, PushCategory.UPGRADE])
+    push_items.sort(
+        key=lambda x: x.category in [PushCategory.NEW, PushCategory.UPGRADE]
+    )
     if not args.show_open_prs:
         push_items = PushItems(i for i in push_items if i.merged == True)
     if "lists" in args.filter:

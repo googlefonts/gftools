@@ -24,20 +24,30 @@ import os
 from gfsubsets import SubsetsInFont
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--min_pct', type=int, default=0, help='What percentage of subset codepoints have to be supported'
-                     ' for a non-ext subset.')
-parser.add_argument('--min_pct_ext', type=int, default=0, help='What percentage of subset codepoints have to be supported'
-                     ' for an -ext subset.')
-parser.add_argument('fonts', nargs='+', metavar="FONT")
+parser.add_argument(
+    "--min_pct",
+    type=int,
+    default=0,
+    help="What percentage of subset codepoints have to be supported"
+    " for a non-ext subset.",
+)
+parser.add_argument(
+    "--min_pct_ext",
+    type=int,
+    default=0,
+    help="What percentage of subset codepoints have to be supported"
+    " for an -ext subset.",
+)
+parser.add_argument("fonts", nargs="+", metavar="FONT")
 
 
 def main(args=None):
-  args = parser.parse_args(args)
-  for arg in args.fonts:
-    subsets = SubsetsInFont(arg, args.min_pct, args.min_pct_ext)
-    for (subset, available, total) in subsets:
-      print('%s %s %d/%d' % (os.path.basename(arg), subset, available, total))
+    args = parser.parse_args(args)
+    for arg in args.fonts:
+        subsets = SubsetsInFont(arg, args.min_pct, args.min_pct_ext)
+        for subset, available, total in subsets:
+            print("%s %s %d/%d" % (os.path.basename(arg), subset, available, total))
 
 
-if __name__ == '__main__':
-  main()
+if __name__ == "__main__":
+    main()

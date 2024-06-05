@@ -19,23 +19,24 @@ import os
 import tabulate
 from fontTools import ttLib
 
-parser = argparse.ArgumentParser(
-    description='Print out italicAngle of the fonts')
-parser.add_argument('font', nargs="+")
-parser.add_argument('--csv', default=False, action='store_true')
+parser = argparse.ArgumentParser(description="Print out italicAngle of the fonts")
+parser.add_argument("font", nargs="+")
+parser.add_argument("--csv", default=False, action="store_true")
+
 
 def main(args=None):
     arg = parser.parse_args(args)
 
-    headers = ['filename', 'italicAngle']
+    headers = ["filename", "italicAngle"]
     rows = []
     for font in arg.font:
         ttfont = ttLib.TTFont(font)
-        rows.append([os.path.basename(font), ttfont['post'].italicAngle])
+        rows.append([os.path.basename(font), ttfont["post"].italicAngle])
 
     if arg.csv:
         import csv
         import sys
+
         writer = csv.writer(sys.stdout)
         writer.writerows([headers])
         writer.writerows(rows)
@@ -43,5 +44,5 @@ def main(args=None):
         print(tabulate.tabulate(rows, headers, tablefmt="pipe"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

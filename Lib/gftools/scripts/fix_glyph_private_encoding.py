@@ -23,29 +23,33 @@ from gftools.fix import fix_pua, FontFixer
 from gftools.utils import get_unencoded_glyphs
 
 
-description = 'Fixes TTF unencoded glyphs to have Private Use Area encodings'
+description = "Fixes TTF unencoded glyphs to have Private Use Area encodings"
 
 parser = argparse.ArgumentParser(description=description)
-parser.add_argument('ttf_font', nargs='+',
-                    help='Font in OpenType (TTF/OTF) format')
-parser.add_argument('--autofix', action="store_true",
-                    help='Apply autofix. '
-                         'Otherwise just check if there are unencoded glyphs')
+parser.add_argument("ttf_font", nargs="+", help="Font in OpenType (TTF/OTF) format")
+parser.add_argument(
+    "--autofix",
+    action="store_true",
+    help="Apply autofix. " "Otherwise just check if there are unencoded glyphs",
+)
 
 
 def main(args=None):
-  args = parser.parse_args(args)
-  for path in args.ttf_font:
-    if not os.path.exists(path):
-      continue
+    args = parser.parse_args(args)
+    for path in args.ttf_font:
+        if not os.path.exists(path):
+            continue
 
-    if args.autofix:
-      FontFixer(path, fixes=[fix_pua], verbose=True).fix()
-    else:
-      font = ttLib.TTFont(path, 0)
-      print(("\nThese are the unencoded glyphs in font file '{0}':\n"
-             "{1}").format(path, '\n'.join(get_unencoded_glyphs(font))))
+        if args.autofix:
+            FontFixer(path, fixes=[fix_pua], verbose=True).fix()
+        else:
+            font = ttLib.TTFont(path, 0)
+            print(
+                ("\nThese are the unencoded glyphs in font file '{0}':\n" "{1}").format(
+                    path, "\n".join(get_unencoded_glyphs(font))
+                )
+            )
 
-if __name__ == '__main__':
-  main()
 
+if __name__ == "__main__":
+    main()

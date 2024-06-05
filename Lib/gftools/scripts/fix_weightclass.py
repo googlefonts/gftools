@@ -26,9 +26,9 @@ import sys
 def main(font_path):
     FontFixer(font_path, verbose=True, fixes=[fix_weight_class]).fix()
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Please include a path to a font")
     else:
         main(sys.argv[1])
-

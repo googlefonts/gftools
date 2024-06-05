@@ -24,24 +24,27 @@ import unicodedata
 import sys
 import argparse
 
-parser = argparse.ArgumentParser(description='Add Unicode character names to a nam file')
-parser.add_argument('--nam_file', help='Location of nam file')
+parser = argparse.ArgumentParser(
+    description="Add Unicode character names to a nam file"
+)
+parser.add_argument("--nam_file", help="Location of nam file")
 
 
 def main(args=None):
-  args = parser.parse_args(args)
-  with open(args.nam_file, 'r') as f:
-    for line in f:
-      print(_ReformatLine(line))
+    args = parser.parse_args(args)
+    with open(args.nam_file, "r") as f:
+        for line in f:
+            print(_ReformatLine(line))
 
 
 def _ReformatLine(line):
-  if line.startswith('0x'):
-    codepoint = int(line[2:6], 16)  # This'll only work for BMP...
-    out = chr(codepoint) + ' ' + unicodedata.name(chr(codepoint), '')
-    return '0x%04X  %s' % (codepoint, out)
-  else:
-    return line
+    if line.startswith("0x"):
+        codepoint = int(line[2:6], 16)  # This'll only work for BMP...
+        out = chr(codepoint) + " " + unicodedata.name(chr(codepoint), "")
+        return "0x%04X  %s" % (codepoint, out)
+    else:
+        return line
 
-if __name__ == '__main__':
-  main()
+
+if __name__ == "__main__":
+    main()

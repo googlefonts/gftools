@@ -15,14 +15,15 @@ import sys
 
 from fontTools.ttLib import TTFont
 
+
 def grovel_substitutions(font, lookup, glyphmap):
     if lookup.LookupType == 7:
         raise NotImplementedError
-    gmap = lambda g: glyphmap.get(g,g)
+    gmap = lambda g: glyphmap.get(g, g)
     go = font.getGlyphOrder()
 
     def do_coverage(c):
-        c.glyphs = list(sorted([gmap(g) for g in c.glyphs], key=lambda g:go.index(g)))
+        c.glyphs = list(sorted([gmap(g) for g in c.glyphs], key=lambda g: go.index(g)))
         return c
 
     for st in lookup.SubTable:
@@ -52,7 +53,9 @@ def grovel_substitutions(font, lookup, glyphmap):
                         subrule.Input = [gmap(c) for c in subrule.Input]
             elif st.Format == 2:
                 do_coverage(st.Coverage)
-                st.ClassDef.classDefs = {gmap(k):v for k,v in st.ClassDef.classDefs.items()}
+                st.ClassDef.classDefs = {
+                    gmap(k): v for k, v in st.ClassDef.classDefs.items()
+                }
             else:
                 st.Coverage = [do_coverage(c) for c in st.Coverage]
         elif lookup.LookupType == 6:
@@ -65,20 +68,28 @@ def grovel_substitutions(font, lookup, glyphmap):
                         subrule.LookAhead = [gmap(c) for c in subrule.LookAhead]
             elif st.Format == 2:
                 do_coverage(st.Coverage)
-                st.BacktrackClassDef.classDefs = {gmap(k):v for k,v in st.BacktrackClassDef.classDefs.items()}
-                st.InputClassDef.classDefs = {gmap(k):v for k,v in st.InputClassDef.classDefs.items()}
-                st.LookAheadClassDef.classDefs = {gmap(k):v for k,v in st.LookAheadClassDef.classDefs.items()}
+                st.BacktrackClassDef.classDefs = {
+                    gmap(k): v for k, v in st.BacktrackClassDef.classDefs.items()
+                }
+                st.InputClassDef.classDefs = {
+                    gmap(k): v for k, v in st.InputClassDef.classDefs.items()
+                }
+                st.LookAheadClassDef.classDefs = {
+                    gmap(k): v for k, v in st.LookAheadClassDef.classDefs.items()
+                }
             elif st.Format == 3:
-                st.BacktrackCoverage = [ do_coverage(c) for c in st.BacktrackCoverage]
-                st.InputCoverage = [ do_coverage(c) for c in st.InputCoverage]
-                st.LookAheadCoverage = [ do_coverage(c) for c in st.LookAheadCoverage]
+                st.BacktrackCoverage = [do_coverage(c) for c in st.BacktrackCoverage]
+                st.InputCoverage = [do_coverage(c) for c in st.InputCoverage]
+                st.LookAheadCoverage = [do_coverage(c) for c in st.LookAheadCoverage]
 
 
 def main(args=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--map-file", metavar="TXT", help="Newline-separated mappings")
     parser.add_argument("--output", "-o", metavar="TTF", help="Output font binary")
-    parser.add_argument("--deep", action="store_true", help="Also remap inside GSUB table")
+    parser.add_argument(
+        "--deep", action="store_true", help="Also remap inside GSUB table"
+    )
     parser.add_argument("font", metavar="TTF", help="Input font binary")
     parser.add_argument("mapping", nargs="*", help="Codepoint-to-glyph mapping")
 
@@ -113,7 +124,9 @@ def main(args=None):
             codepoint = ord(codepoint)
         mapping[codepoint] = newglyph
         if newglyph not in font.getGlyphOrder():
-            print(f"Glyph '{newglyph}' (to be mapped to U+{codepoint:04X}) not found in font")
+            print(
+                f"Glyph '{newglyph}' (to be mapped to U+{codepoint:04X}) not found in font"
+            )
             sys.exit(1)
         if codepoint in cmap:
             glyph_mapping[cmap[codepoint]] = newglyph
