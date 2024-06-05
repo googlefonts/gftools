@@ -161,7 +161,7 @@ def append_source_template(metadata_fp: Path, metadata: fonts_pb2.FamilyProto):
             metadata.source.files.append(item)
         metadata.source.repository_url = "https://www.github.com/user/repo"
         metadata.source.branch = "main"
-        fonts.WriteProto(metadata, metadata_fp)
+        fonts.WriteMetadata(metadata, metadata_fp, write_comments=False)
         return
     with open(metadata_fp, "r") as doc:
         text = doc.read()
@@ -218,8 +218,8 @@ def save_metadata(fp: Path, metadata: fonts_pb2.FamilyProto):
     commit = github.get_commit(metadata.source.branch)
     git_commit = commit["sha"]
     metadata.source.commit = git_commit
-    language_comments = fonts.LanguageComments(LoadLanguages())
-    fonts.WriteProto(metadata, fp, comments=language_comments)
+    fonts.WriteMetadata(metadata, fp)
+
     add_font([str(fp.parent)])
 
     # Remove redundant upstream.yaml file
