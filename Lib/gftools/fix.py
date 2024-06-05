@@ -1001,7 +1001,6 @@ class FontFixer:
 
 
 class GaspFixer(FontFixer):
-
     def fix(self, value=15):
         try:
             table = self.font.get("gasp")

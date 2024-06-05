@@ -1,6 +1,12 @@
 import pytest
 import operator
-from gftools.push.trafficjam import PushItem, PushItems, PushCategory, PushStatus, PushList
+from gftools.push.trafficjam import (
+    PushItem,
+    PushItems,
+    PushCategory,
+    PushStatus,
+    PushList,
+)
 from pathlib import Path
 import os
 

@@ -16,10 +16,7 @@ gftools font-dependencies read font.ttf
 gftools font-dependencies read font.ttf -o requirements.txt
 """
 from argparse import ArgumentParser
-from gftools.builder.dependencies import (
-    write_font_requirements,
-    read_font_requirements
-)
+from gftools.builder.dependencies import write_font_requirements, read_font_requirements
 from fontTools.ttLib import TTFont
 from fontTools.misc.cliTools import makeOutputFileName
 
@@ -65,9 +62,7 @@ def main(args=None):
         try:
             requirements = read_font_requirements(ttfont)
         except KeyError:
-            parser.error(
-                "Font doesn't contain dependencies"
-            )
+            parser.error("Font doesn't contain dependencies")
         if args.out:
             with open(args.out, "w") as doc:
                 doc.write(requirements)

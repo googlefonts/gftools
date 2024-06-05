@@ -40,6 +40,7 @@ from ufo2ft.util import classifyGlyphs
 from collections import Counter
 from collections import defaultdict
 from pathlib import Path
+
 if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
@@ -49,14 +50,16 @@ from bs4 import BeautifulSoup
 # =====================================
 # HELPER FUNCTIONS
 
-PROD_FAMILY_DOWNLOAD = 'https://fonts.google.com/download?family={}'
+PROD_FAMILY_DOWNLOAD = "https://fonts.google.com/download?family={}"
 
 
-def download_family_from_Google_Fonts(family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True):
+def download_family_from_Google_Fonts(
+    family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True
+):
     """Download a font family from Google Fonts"""
     # TODO (M Foley) update all dl_urls in .ini files.
     dl_url = dl_url.replace("download?family=", "download/list?family=")
-    url = dl_url.format(family.replace(' ', '%20'))
+    url = dl_url.format(family.replace(" ", "%20"))
     data = json.loads(requests.get(url).text[5:])
     res = []
     for item in data["manifest"]["fileRefs"]:
@@ -155,13 +158,11 @@ def download_files_in_github_pr(
         dirs = set([os.path.dirname(p.filename) for p in files])
         results = []
         for d in dirs:
-            if ignore_static_dir and '/static' in d:
+            if ignore_static_dir and "/static" in d:
                 continue
             url = os.path.join(
-                pull.head.repo.html_url,
-                "tree",
-                pull.head.ref, # head branch
-                d)
+                pull.head.repo.html_url, "tree", pull.head.ref, d  # head branch
+            )
             results += download_files_in_github_dir(url, dst, overwrite=False)
         return results
 
@@ -181,12 +182,7 @@ def download_files_in_github_pr(
     return results
 
 
-def download_files_in_github_dir(
-    orig_url,
-    dst,
-    filter_files=[],
-    overwrite=True
-):
+def download_files_in_github_dir(orig_url, dst, filter_files=[], overwrite=True):
     """Download files in a github dir e.g
     https://github.com/google/fonts/tree/main/ofl/abhayalibre
 
@@ -241,7 +237,7 @@ def download_file(url, dst_path=None):
     request = requests.get(url, stream=True)
     if not dst_path:
         return BytesIO(request.content)
-    with open(dst_path, 'wb') as downloaded_file:
+    with open(dst_path, "wb") as downloaded_file:
         downloaded_file.write(request.content)
 
 
@@ -296,7 +292,7 @@ def _html_custom_formatter(string):
     strings = string.split("\n")
     # Cycle through list to find abbreviations
     for i in range(1, len(strings)):
-        this_line = strings[i-1]
+        this_line = strings[i - 1]
         next_line = strings[i]
         if this_line == "":
             continue
@@ -313,7 +309,7 @@ def _html_custom_formatter(string):
                 and next_line[1] == next_line[1].lower()
             )  # H.R. Giger
         ):
-            strings[i-1] = strings[i-1] + strings[i]
+            strings[i - 1] = strings[i - 1] + strings[i]
             strings[i] = ""
     # Join back together
     string = "\n".join(strings)
@@ -327,6 +323,7 @@ def format_html(html):
 
 
 ## Font-related utility functions
+
 
 def font_stylename(ttFont):
     """Get a font's stylename using the name table. Since our fonts use the
@@ -416,62 +413,66 @@ def _font_version(font, platEncLang=(3, 1, 0x409)):
 
 
 def partition_cmap(font, test, report=True):
-  """Drops all cmap tables from the font which do not pass the supplied test.
+    """Drops all cmap tables from the font which do not pass the supplied test.
 
-  Arguments:
-    font: A ``TTFont`` instance
-    test: A function which takes a cmap table and returns True if it should
-      be kept or False if it should be removed from the font.
-    report: Reports to stdout which tables were dropped and which were kept.
+    Arguments:
+      font: A ``TTFont`` instance
+      test: A function which takes a cmap table and returns True if it should
+        be kept or False if it should be removed from the font.
+      report: Reports to stdout which tables were dropped and which were kept.
 
-  Returns two lists: a list of `fontTools.ttLib.tables._c_m_a_p.*` objects
-  which were kept in the font, and a list of those which were removed."""
-  keep = []
-  drop = []
+    Returns two lists: a list of `fontTools.ttLib.tables._c_m_a_p.*` objects
+    which were kept in the font, and a list of those which were removed."""
+    keep = []
+    drop = []
 
-  for index, table in enumerate(font['cmap'].tables):
-    if test(table):
-      keep.append(table)
-    else:
-      drop.append(table)
+    for index, table in enumerate(font["cmap"].tables):
+        if test(table):
+            keep.append(table)
+        else:
+            drop.append(table)
 
-  if report:
-    for table in keep:
-        print(("Keeping format {} cmap subtable with Platform ID = {}"
-               " and Encoding ID = {}").format(table.format,
-                                               table.platformID,
-                                               table.platEncID))
-    for table in drop:
-        print(("--- Removed format {} cmap subtable with Platform ID = {}"
-             " and Encoding ID = {} ---").format(table.format,
-                                                 table.platformID,
-                                                 table.platEncID))
+    if report:
+        for table in keep:
+            print(
+                (
+                    "Keeping format {} cmap subtable with Platform ID = {}"
+                    " and Encoding ID = {}"
+                ).format(table.format, table.platformID, table.platEncID)
+            )
+        for table in drop:
+            print(
+                (
+                    "--- Removed format {} cmap subtable with Platform ID = {}"
+                    " and Encoding ID = {} ---"
+                ).format(table.format, table.platformID, table.platEncID)
+            )
 
-  font['cmap'].tables = keep
-  return keep, drop
+    font["cmap"].tables = keep
+    return keep, drop
 
 
 def _unicode_marks(string):
-    unicodemap = [(u'©', '(c)'), (u'®', '(r)'), (u'™', '(tm)')]
+    unicodemap = [("©", "(c)"), ("®", "(r)"), ("™", "(tm)")]
     return filter(lambda char: char[0] in string, unicodemap)
 
 
 def normalize_unicode_marks(string):
-    """ Converts special characters like copyright,
-        trademark signs to ascii name """
+    """Converts special characters like copyright,
+    trademark signs to ascii name"""
     # print("input: '{}'".format(string))
     input_string = string
     for mark, ascii_repl in _unicode_marks(string):
         string = string.replace(mark, ascii_repl)
 
     rv = []
-#    for c in unicodedata.normalize('NFKC', smart_text(string)):
-    for c in unicodedata.normalize('NFKC', string):
+    #    for c in unicodedata.normalize('NFKC', smart_text(string)):
+    for c in unicodedata.normalize("NFKC", string):
         # cat = unicodedata.category(c)[0]
         # if cat in 'LN' or c in ok:
         rv.append(c)
 
-    new = ''.join(rv).strip()
+    new = "".join(rv).strip()
     result = unidecode(new)
     if result != input_string:
         print("Fixed string: '{}'".format(result))
@@ -479,11 +480,11 @@ def normalize_unicode_marks(string):
 
 
 def get_fsSelection_byte2(ttfont):
-    return ttfont['OS/2'].fsSelection >> 8
+    return ttfont["OS/2"].fsSelection >> 8
 
 
 def get_fsSelection_byte1(ttfont):
-    return ttfont['OS/2'].fsSelection & 255
+    return ttfont["OS/2"].fsSelection & 255
 
 
 def get_encoded_glyphs(ttFont):
@@ -492,8 +493,8 @@ def get_encoded_glyphs(ttFont):
 
 
 def get_unencoded_glyphs(font):
-    """ Check if font has unencoded glyphs """
-    cmap = font['cmap']
+    """Check if font has unencoded glyphs"""
+    cmap = font["cmap"]
 
     new_cmap = cmap.getcmap(3, 10)
     if not new_cmap:
@@ -505,9 +506,8 @@ def get_unencoded_glyphs(font):
     if not new_cmap:
         return []
 
-    diff = list(set(font.getGlyphOrder()) -
-                set(new_cmap.cmap.values()) - {'.notdef'})
-    return [g for g in diff[:] if g != '.notdef']
+    diff = list(set(font.getGlyphOrder()) - set(new_cmap.cmap.values()) - {".notdef"})
+    return [g for g in diff[:] if g != ".notdef"]
 
 
 def has_mac_names(ttfont):
@@ -515,7 +515,7 @@ def has_mac_names(ttfont):
     field values:
     platformID: 1, encodingID: 0, LanguageID: 0"""
     for i in range(255):
-        if ttfont['name'].getName(i, 1, 0, 0):
+        if ttfont["name"].getName(i, 1, 0, 0):
             return True
     return False
 
@@ -537,6 +537,7 @@ def font_sample_text(ttFont):
     cmap = set(ttFont.getBestCmap())
     words = []
     seen_chars = set()
+
     def _add_words(words, text, seen_chars):
         for word in text.split():
             chars = set(ord(l) for l in word)
@@ -574,27 +575,31 @@ def parse_axis_dflts(string):
     axes = string.split()
     res = {}
     for axis in axes:
-        k,v = axis.split("=")
+        k, v = axis.split("=")
         res[k] = float(v)
     return res
 
 
 def remove_url_prefix(url):
     """https://www.google.com --> google.com"""
-    pattern = r'(https?://)?(www\.)?'
-    cleaned_url = re.sub(pattern, '', url)
+    pattern = r"(https?://)?(www\.)?"
+    cleaned_url = re.sub(pattern, "", url)
     return cleaned_url
 
 
 def primary_script(ttFont, ignore_latin=True):
-    g = classifyGlyphs(lambda uv:list(ftunicodedata.script_extension(chr(uv))), ttFont.getBestCmap(), gsub=ttFont.get("GSUB"))
+    g = classifyGlyphs(
+        lambda uv: list(ftunicodedata.script_extension(chr(uv))),
+        ttFont.getBestCmap(),
+        gsub=ttFont.get("GSUB"),
+    )
     badkeys = ["Zinh", "Zyyy", "Zzzz"]
     if ignore_latin:
         badkeys.append("Latn")
     for badkey in badkeys:
         if badkey in g:
             del g[badkey]
-    script_count = Counter({k:len(v) for k,v in g.items()})
+    script_count = Counter({k: len(v) for k, v in g.items()})
 
     # If there isn't a clear winner, give up
     if (
@@ -615,7 +620,7 @@ def autovivification(items):
     if isinstance(items, (float, int, str, bool)):
         return items
     d = defaultdict(lambda: defaultdict(defaultdict))
-    d.update({k: autovivification(v) for k,v in items.items()})
+    d.update({k: autovivification(v) for k, v in items.items()})
     return d
 
 
@@ -646,6 +651,7 @@ def open_ufo(path):
         return ufoLib2.Font.open(path)
     return False
 
+
 # https://github.com/googlefonts/nanoemoji/blob/fb4b0b3e10f7197e7fe33c4ae6949841e4440397/src/nanoemoji/util.py#L167-L176
 def shell_quote(s: Union[str, Path]) -> str:
     """Quote a string or pathlib.Path for use in a shell command."""
@@ -660,13 +666,13 @@ def shell_quote(s: Union[str, Path]) -> str:
 
 
 def github_user_repo(github_url):
-    pattern = r'https?://w?w?w?\.?github\.com/(?P<user>[^/]+)/(?P<repo>[^/^.]+)'
+    pattern = r"https?://w?w?w?\.?github\.com/(?P<user>[^/]+)/(?P<repo>[^/^.]+)"
     match = re.search(pattern, github_url)
     if not match:
         raise ValueError(
             f"Cannot extract github user and repo name from url '{github_url}'."
         )
-    return match.group('user'), match.group('repo')
+    return match.group("user"), match.group("repo")
 
 
 def has_gh_token():

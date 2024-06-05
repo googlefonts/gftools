@@ -72,156 +72,209 @@ from gftools.util import google_fonts as fonts
 from gfsubsets import CodepointsInFont, CodepointsInSubset
 
 
-parser = argparse.ArgumentParser(description='Compare size and coverage of two fonts')
-parser.add_argument('first_font')
-parser.add_argument('second_font')
-parser.add_argument('--nodiff_tables', dest="diff_tables", action="store_false", help='Whether to print table size diffs')
-parser.add_argument('--nodiff_coverage', dest="diff_coverage", action="store_false", help='Whether to print coverage diffs')
+parser = argparse.ArgumentParser(description="Compare size and coverage of two fonts")
+parser.add_argument("first_font")
+parser.add_argument("second_font")
+parser.add_argument(
+    "--nodiff_tables",
+    dest="diff_tables",
+    action="store_false",
+    help="Whether to print table size diffs",
+)
+parser.add_argument(
+    "--nodiff_coverage",
+    dest="diff_coverage",
+    action="store_false",
+    help="Whether to print coverage diffs",
+)
 
 
-_KNOWN_TABLES = ('BASE', 'CFF ', 'DSIG', 'GDEF', 'GPOS', 'GSUB', 'LTSH',
-                 'OS/2', 'VORG', 'cmap', 'cvt ', 'fpgm', 'gasp', 'glyf', 'hdmx',
-                 'head', 'hhea', 'hmtx', 'loca', 'maxp', 'name', 'post', 'prep',
-                 'FFTM', 'kern', 'vhea', 'vmtx')
+_KNOWN_TABLES = (
+    "BASE",
+    "CFF ",
+    "DSIG",
+    "GDEF",
+    "GPOS",
+    "GSUB",
+    "LTSH",
+    "OS/2",
+    "VORG",
+    "cmap",
+    "cvt ",
+    "fpgm",
+    "gasp",
+    "glyf",
+    "hdmx",
+    "head",
+    "hhea",
+    "hmtx",
+    "loca",
+    "maxp",
+    "name",
+    "post",
+    "prep",
+    "FFTM",
+    "kern",
+    "vhea",
+    "vmtx",
+)
 
 
 def CompareSize(font_filename1, font_filename2, args):
-  """Prints a size comparison for two fonts.
+    """Prints a size comparison for two fonts.
 
-  If so flagged (--diff_tables), prints per-table size change.
+    If so flagged (--diff_tables), prints per-table size change.
 
-  Args:
-    font_filename1: The first font to compare.
-    font_filename2: The second font to compare.
-  Returns:
-    String describing size differences.
-  Raises:
-    OSError: If either argument doesn't point to a file. errno.ENOENT.
-  """
-  if not (os.path.isfile(font_filename1) and os.path.isfile(font_filename2)):
-    raise OSError(errno.ENOENT, 'Missing at least one of %s and %s' % (
-        os.path.basename(font_filename1), os.path.basename(font_filename2)))
+    Args:
+      font_filename1: The first font to compare.
+      font_filename2: The second font to compare.
+    Returns:
+      String describing size differences.
+    Raises:
+      OSError: If either argument doesn't point to a file. errno.ENOENT.
+    """
+    if not (os.path.isfile(font_filename1) and os.path.isfile(font_filename2)):
+        raise OSError(
+            errno.ENOENT,
+            "Missing at least one of %s and %s"
+            % (os.path.basename(font_filename1), os.path.basename(font_filename2)),
+        )
 
-  font_sz1 = os.stat(font_filename1).st_size
-  font_sz2 = os.stat(font_filename2).st_size
-  result = '%s (%d) vs %s (%d) (%+d)\n' % (
-      os.path.basename(font_filename1), font_sz1,
-      os.path.basename(font_filename2), font_sz2, font_sz2 - font_sz1)
+    font_sz1 = os.stat(font_filename1).st_size
+    font_sz2 = os.stat(font_filename2).st_size
+    result = "%s (%d) vs %s (%d) (%+d)\n" % (
+        os.path.basename(font_filename1),
+        font_sz1,
+        os.path.basename(font_filename2),
+        font_sz2,
+        font_sz2 - font_sz1,
+    )
 
-  if args.diff_tables:
-    result += DiffTables(font_filename1, font_filename2)
+    if args.diff_tables:
+        result += DiffTables(font_filename1, font_filename2)
 
-  return result
+    return result
 
 
 def DiffTables(font_filename1, font_filename2):
-  """Prints a table-by-table size comparison of two fonts.
+    """Prints a table-by-table size comparison of two fonts.
 
-  Args:
-    font_filename1: The first font to compare.
-    font_filename2: The second font to compare.
-  Returns:
-    String describing size difference. One line per unique table in either font.
-  """
-  result = ['    Table    Changes  Delta-Bytes(from=>to)  % Change']
-  result.append('    -------------------------------------------------')
-  sfnt1 = sfnt.SFNTReader(open(font_filename1, 'rb'))
-  sfnt2 = sfnt.SFNTReader(open(font_filename2, 'rb'))
+    Args:
+      font_filename1: The first font to compare.
+      font_filename2: The second font to compare.
+    Returns:
+      String describing size difference. One line per unique table in either font.
+    """
+    result = ["    Table    Changes  Delta-Bytes(from=>to)  % Change"]
+    result.append("    -------------------------------------------------")
+    sfnt1 = sfnt.SFNTReader(open(font_filename1, "rb"))
+    sfnt2 = sfnt.SFNTReader(open(font_filename2, "rb"))
 
-  font_sz1 = os.stat(font_filename1).st_size
+    font_sz1 = os.stat(font_filename1).st_size
 
-  sum_tables1 = 0
-  sum_tables2 = 0
+    sum_tables1 = 0
+    sum_tables2 = 0
 
-  table_l1_l2s = []
-  for t in fonts.UniqueSort(sfnt1.tables, sfnt2.tables, _KNOWN_TABLES):
-    table1_sz = sfnt1.tables[t].length if t in sfnt1 else 0
-    table2_sz = sfnt2.tables[t].length if t in sfnt2 else 0
-    sum_tables1 += table1_sz
-    sum_tables2 += table2_sz
-    table_l1_l2s.append((t, table1_sz, table2_sz))
+    table_l1_l2s = []
+    for t in fonts.UniqueSort(sfnt1.tables, sfnt2.tables, _KNOWN_TABLES):
+        table1_sz = sfnt1.tables[t].length if t in sfnt1 else 0
+        table2_sz = sfnt2.tables[t].length if t in sfnt2 else 0
+        sum_tables1 += table1_sz
+        sum_tables2 += table2_sz
+        table_l1_l2s.append((t, table1_sz, table2_sz))
 
-  for (table, table1_sz, table2_sz) in table_l1_l2s:
-    delta_pct = float(table2_sz - table1_sz) / font_sz1 * 100
-    result.append('    %s  %+6d      %06d => %06d %+10.1f%%' % (
-        table, table2_sz - table1_sz, table1_sz, table2_sz, delta_pct))
+    for table, table1_sz, table2_sz in table_l1_l2s:
+        delta_pct = float(table2_sz - table1_sz) / font_sz1 * 100
+        result.append(
+            "    %s  %+6d      %06d => %06d %+10.1f%%"
+            % (table, table2_sz - table1_sz, table1_sz, table2_sz, delta_pct)
+        )
 
-  delta_pct = float(sum_tables2 - sum_tables1) / font_sz1 * 100
-  result.append('    TOTAL %+6d      %06d => %06d %+10.1f%%' % (
-      sum_tables2 - sum_tables1, sum_tables1, sum_tables2, delta_pct))
+    delta_pct = float(sum_tables2 - sum_tables1) / font_sz1 * 100
+    result.append(
+        "    TOTAL %+6d      %06d => %06d %+10.1f%%"
+        % (sum_tables2 - sum_tables1, sum_tables1, sum_tables2, delta_pct)
+    )
 
-  return '\n'.join(result)
+    return "\n".join(result)
 
 
 def DiffCoverage(font_filename1, font_filename2, subset):
-  """Prints a comparison of the coverage of a given subset by two fonts.
+    """Prints a comparison of the coverage of a given subset by two fonts.
 
-  Args:
-    font_filename1: The first font to compare.
-    font_filename2: The second font to compare.
-    subset: The lowercase name of the subset to compare coverage of.
-  """
-  f1cps = CodepointsInFont(font_filename1)
-  f2cps = CodepointsInFont(font_filename2)
+    Args:
+      font_filename1: The first font to compare.
+      font_filename2: The second font to compare.
+      subset: The lowercase name of the subset to compare coverage of.
+    """
+    f1cps = CodepointsInFont(font_filename1)
+    f2cps = CodepointsInFont(font_filename2)
 
-  if subset != 'all':
-    subset_cps = CodepointsInSubset(subset)
-    f1cps &= subset_cps
-    f2cps &= subset_cps
-  else:
-    subset_cps = None
+    if subset != "all":
+        subset_cps = CodepointsInSubset(subset)
+        f1cps &= subset_cps
+        f2cps &= subset_cps
+    else:
+        subset_cps = None
 
-  subset_cp_str = ('/%d' % len(subset_cps)) if subset_cps is not None else ''
+    subset_cp_str = ("/%d" % len(subset_cps)) if subset_cps is not None else ""
 
-  print('  %s %+d (%d%s => %d%s)' % (
-      subset, len(f2cps) - len(f1cps), len(f1cps), subset_cp_str, len(f2cps),
-      subset_cp_str))
+    print(
+        "  %s %+d (%d%s => %d%s)"
+        % (
+            subset,
+            len(f2cps) - len(f1cps),
+            len(f1cps),
+            subset_cp_str,
+            len(f2cps),
+            subset_cp_str,
+        )
+    )
 
 
 def CompareDirs(font1, font2, args):
-  """Compares fonts by assuming font1/2 are dirs containing METADATA.pb."""
+    """Compares fonts by assuming font1/2 are dirs containing METADATA.pb."""
 
-  m1 = fonts.Metadata(font1)
-  m2 = fonts.Metadata(font2)
+    m1 = fonts.Metadata(font1)
+    m2 = fonts.Metadata(font2)
 
-  subsets_to_compare = fonts.UniqueSort(m1.subsets, m2.subsets)
-  subsets_to_compare.remove('menu')
-  subsets_to_compare.append('all')
+    subsets_to_compare = fonts.UniqueSort(m1.subsets, m2.subsets)
+    subsets_to_compare.remove("menu")
+    subsets_to_compare.append("all")
 
-  font_filename1 = os.path.join(font1, fonts.RegularWeight(m1))
-  font_filename2 = os.path.join(font2, fonts.RegularWeight(m2))
+    font_filename1 = os.path.join(font1, fonts.RegularWeight(m1))
+    font_filename2 = os.path.join(font2, fonts.RegularWeight(m2))
 
-  if args.ndiff_coverage:
-    print('Subset Coverage Change (codepoints)')
-    for subset in subsets_to_compare:
-      DiffCoverage(font_filename1, font_filename2, subset)
+    if args.ndiff_coverage:
+        print("Subset Coverage Change (codepoints)")
+        for subset in subsets_to_compare:
+            DiffCoverage(font_filename1, font_filename2, subset)
 
-  print(CompareSize(font_filename1, font_filename2, args))
+    print(CompareSize(font_filename1, font_filename2, args))
 
 
 def CompareFiles(font1, font2, args):
-  """Compares fonts assuming font1/2 are font files."""
-  print(CompareSize(font1, font2, args))
+    """Compares fonts assuming font1/2 are font files."""
+    print(CompareSize(font1, font2, args))
 
 
 def main(args=None):
-  args = parser.parse_args(args)
+    args = parser.parse_args(args)
 
-  font1 = args.first_font
-  font2 = args.second_font
-  dirs = os.path.isdir(font1) and os.path.isdir(font2)
-  files = os.path.isfile(font1) and os.path.isfile(font2)
-  if not dirs and not files:
-    print('%s and %s must both point to directories or font files' % (
-        font1, font2))
-    sys.exit(1)
+    font1 = args.first_font
+    font2 = args.second_font
+    dirs = os.path.isdir(font1) and os.path.isdir(font2)
+    files = os.path.isfile(font1) and os.path.isfile(font2)
+    if not dirs and not files:
+        print("%s and %s must both point to directories or font files" % (font1, font2))
+        sys.exit(1)
 
-  if dirs:
-    CompareDirs(font1, font2, args)
+    if dirs:
+        CompareDirs(font1, font2, args)
 
-  if files:
-    CompareFiles(font1, font2, args)
+    if files:
+        CompareFiles(font1, font2, args)
 
 
-if __name__ == '__main__':
-  main()
+if __name__ == "__main__":
+    main()

@@ -13,7 +13,7 @@ def var_font():
 
 
 def _name_record(ttFont, nameID):
-    nametable = ttFont['name']
+    nametable = ttFont["name"]
     record = nametable.getName(nameID, 3, 1, 0x409)
     if record:
         return record.toUnicode()
@@ -27,10 +27,10 @@ def test_gen_static_font(var_font):
     assert _name_record(static_font, 16) == "Inconsolata Condensed"
     assert _name_record(static_font, 17) == "SemiBold"
 
-    assert static_font['OS/2'].usWeightClass == 600
-    assert static_font['OS/2'].usWidthClass == 5
-    assert static_font['OS/2'].fsSelection & (1 << 6)
-    assert static_font['head'].macStyle == 0
+    assert static_font["OS/2"].usWeightClass == 600
+    assert static_font["OS/2"].usWidthClass == 5
+    assert static_font["OS/2"].fsSelection & (1 << 6)
+    assert static_font["head"].macStyle == 0
 
 
 def test_gen_static_font_custom_names(var_font):
@@ -42,7 +42,9 @@ def test_gen_static_font_custom_names(var_font):
 
 
 def test_gen_static_font_custom_names_without_declaring_wght(var_font):
-    static_font = gen_static_font(var_font, {"wght": 900}, "Custom Family", "8pt SemiCondensed")
+    static_font = gen_static_font(
+        var_font, {"wght": 900}, "Custom Family", "8pt SemiCondensed"
+    )
     assert _name_record(static_font, 1) == "Custom Family 8pt SemiCondensed"
     assert _name_record(static_font, 2) == "Regular"
     assert _name_record(static_font, 16) == None
@@ -50,7 +52,9 @@ def test_gen_static_font_custom_names_without_declaring_wght(var_font):
 
 
 def test_gen_static_font_custom_names_ribbi(var_font):
-    static_font = gen_static_font(var_font, {"wght": 900}, "Custom Family", "8pt SemiCondensed Bold Italic")
+    static_font = gen_static_font(
+        var_font, {"wght": 900}, "Custom Family", "8pt SemiCondensed Bold Italic"
+    )
     assert _name_record(static_font, 1) == "Custom Family 8pt SemiCondensed"
     assert _name_record(static_font, 2) == "Bold Italic"
     assert _name_record(static_font, 16) == None
@@ -58,7 +62,9 @@ def test_gen_static_font_custom_names_ribbi(var_font):
 
 
 def test_gen_static_font_custom_names_non_ribbi(var_font):
-    static_font = gen_static_font(var_font, {"wght": 900}, "Custom Family", "8pt SemiCondensed Medium")
+    static_font = gen_static_font(
+        var_font, {"wght": 900}, "Custom Family", "8pt SemiCondensed Medium"
+    )
     assert _name_record(static_font, 1) == "Custom Family 8pt SemiCondensed Medium"
     assert _name_record(static_font, 2) == "Regular"
     assert _name_record(static_font, 16) == "Custom Family 8pt SemiCondensed"

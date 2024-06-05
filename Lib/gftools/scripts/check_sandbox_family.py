@@ -10,7 +10,7 @@ gftools check-sandbox-family https://www.somesite.com
 import os
 import sys
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options 
+from selenium.webdriver.chrome.options import Options
 from PIL import Image, ImageDraw, ImageFont
 import argparse
 from urllib.parse import urlsplit
@@ -33,8 +33,8 @@ WIDTH = 1024
 def get_font_for_os():
     if sys.platform.startswith("linux"):
         return os.path.join(
-                "usr", "share", "font", "truetype", "noto"
-                "NotoMono-Regular.ttf")
+            "usr", "share", "font", "truetype", "noto" "NotoMono-Regular.ttf"
+        )
     elif sys.platform.startswith("darwin"):
         return os.path.join("Library", "Fonts", "Arial.ttf")
     elif sys.platform.startswith("win"):
@@ -42,13 +42,12 @@ def get_font_for_os():
     else:
         raise NotImplementedError("Please use OSX, Ubuntu or Win")
 
+
 def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("url")
-    parser.add_argument("-o", "--out",
-                        help="Gif out path e.g ~/Desktop/site1.gif")
-    parser.add_argument("-l", "--limit", type=int,
-                        help="limit diff height")
+    parser.add_argument("-o", "--out", help="Gif out path e.g ~/Desktop/site1.gif")
+    parser.add_argument("-l", "--limit", type=int, help="limit diff height")
     args = parser.parse_args(args)
 
     chrome_options = Options()
@@ -56,20 +55,27 @@ def main(args=None):
 
     with webdriver.Chrome(options=chrome_options) as driver:
         driver.get(args.url)
-        required_height = driver.execute_script('return document.body.parentNode.scrollHeight')
+        required_height = driver.execute_script(
+            "return document.body.parentNode.scrollHeight"
+        )
         if args.limit and required_height > args.limit:
             required_height = args.limit
         driver.set_window_size(WIDTH, required_height)
 
         try:
             families_in_use = driver.find_elements_by_xpath(
-                    '//link[contains(@href, "fonts.googleapis.com/css")]'
+                '//link[contains(@href, "fonts.googleapis.com/css")]'
             )
             for family in families_in_use:
-                print("Changing GF url %s to %s" % (
-                    family.get_attribute("href"), family.get_attribute("href").replace(
-                        "fonts.googleapis.com", "fonts.sandbox.google.com")
-                ))
+                print(
+                    "Changing GF url %s to %s"
+                    % (
+                        family.get_attribute("href"),
+                        family.get_attribute("href").replace(
+                            "fonts.googleapis.com", "fonts.sandbox.google.com"
+                        ),
+                    )
+                )
         except:
             raise Exception("No hosted GF families found on %s" % args.url)
 
@@ -84,26 +90,26 @@ def main(args=None):
         else:
             gif_path = urlsplit(args.url).netloc + ".gif"
 
-        with Image.open(BytesIO(before_img)) as before, Image.open(BytesIO(after_img)) as after:
+        with (
+            Image.open(BytesIO(before_img)) as before,
+            Image.open(BytesIO(after_img)) as after,
+        ):
             font_path = get_font_for_os()
             font = ImageFont.truetype(font_path, 32)
             before_draw = ImageDraw.Draw(before)
             before_draw.rectangle((0, 0, WIDTH, 50), fill=(0, 0, 0))
-            before_draw.text((10, 10), "Production",
-                             (255, 0, 0), font=font)
+            before_draw.text((10, 10), "Production", (255, 0, 0), font=font)
             after_draw = ImageDraw.Draw(after)
             after_draw.rectangle((0, 0, WIDTH, 50), fill=(0, 0, 0))
-            after_draw.text((10, 10), "Sandbox",
-                            (255, 0, 0), font=font)
+            after_draw.text((10, 10), "Sandbox", (255, 0, 0), font=font)
             before.save(
-                    gif_path,
-                    save_all=True,
-                    append_images=[after],
-                    loop=10000,
-                    duration=1000,
+                gif_path,
+                save_all=True,
+                append_images=[after],
+                loop=10000,
+                duration=1000,
             )
 
 
 if __name__ == "__main__":
     main()
-

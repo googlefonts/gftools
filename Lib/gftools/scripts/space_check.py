@@ -24,9 +24,12 @@ was added it could move into sanity_check.
 
 
 def main():
-  print("This code has been deprecated; use fontbakery checks\n"
-    "com.google.fonts/check/whitespace_ink and\n"
-    "com.google.fonts/check/whitespace_widths instead")
+    print(
+        "This code has been deprecated; use fontbakery checks\n"
+        "com.google.fonts/check/whitespace_ink and\n"
+        "com.google.fonts/check/whitespace_widths instead"
+    )
 
-if __name__ == '__main__':
-  main()
+
+if __name__ == "__main__":
+    main()

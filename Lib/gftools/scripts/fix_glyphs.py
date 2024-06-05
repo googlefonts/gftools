@@ -15,9 +15,11 @@
 # limitations under the License.
 #
 def main(args=None):
-  print("This script is deprecated (it never really did anything anyway)")
-  print(r"You may be looking for https://github.com/googlefonts/gf-glyphs-scripts/blob/main/Google%20Fonts/fixfonts.py instead")
+    print("This script is deprecated (it never really did anything anyway)")
+    print(
+        r"You may be looking for https://github.com/googlefonts/gf-glyphs-scripts/blob/main/Google%20Fonts/fixfonts.py instead"
+    )
 
-if __name__ == '__main__':
-  main()
 
+if __name__ == "__main__":
+    main()

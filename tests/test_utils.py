@@ -11,10 +11,11 @@ from fontTools.ttLib import TTFont
         ("http://google.com", "google.com"),
         ("google.com", "google.com"),
         ("", ""),
-    ]
+    ],
 )
 def test_remove_url_prefix(url, want):
     from gftools.utils import remove_url_prefix
+
     got = remove_url_prefix(url)
     assert got == want
 
@@ -62,16 +63,26 @@ He was referred to H.R. Giger, who headed the H.R. department at the time, then 
 @pytest.mark.parametrize(
     """url,want""",
     [
-        ("https://github.com/SorkinType/SASchoolHandAustralia", ("SorkinType", "SASchoolHandAustralia")),
-        ("https://github.com/SorkinType/SASchoolHandAustralia/", ("SorkinType", "SASchoolHandAustralia")),
+        (
+            "https://github.com/SorkinType/SASchoolHandAustralia",
+            ("SorkinType", "SASchoolHandAustralia"),
+        ),
+        (
+            "https://github.com/SorkinType/SASchoolHandAustralia/",
+            ("SorkinType", "SASchoolHandAustralia"),
+        ),
         ("https://github.com/googlefonts/MavenPro//", ("googlefonts", "MavenPro")),
         ("https://github.com/googlefonts/MavenPro.git", ("googlefonts", "MavenPro")),
-        ("https://www.github.com/googlefonts/MavenPro.git", ("googlefonts", "MavenPro")),
+        (
+            "https://www.github.com/googlefonts/MavenPro.git",
+            ("googlefonts", "MavenPro"),
+        ),
         ("http://www.github.com/googlefonts/MavenPro.git", ("googlefonts", "MavenPro")),
-    ]
+    ],
 )
 def test_github_user_repo(url, want):
     from gftools.utils import github_user_repo
+
     assert github_user_repo(url) == want
 
 

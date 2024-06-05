@@ -6,6 +6,7 @@ import traceback
 from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
 import sys
+
 try:
     from diffenator2 import ninja_diff, ninja_proof
 except ModuleNotFoundError:
@@ -30,7 +31,7 @@ def report_exceptions(meth):
             print(msg)
             print()
             print(traceback.format_exc())
-            self.post_to_github(msg+"\n\n"+"See CI logs for more details")
+            self.post_to_github(msg + "\n\n" + "See CI logs for more details")
 
     return safe_call
 
@@ -179,4 +180,3 @@ class FontQA:
                 "is not allowed to access the repo's secrets for "
                 f"security reasons. Full traceback:\n{e}"
             )
-

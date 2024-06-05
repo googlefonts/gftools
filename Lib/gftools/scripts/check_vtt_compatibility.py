@@ -20,99 +20,101 @@
 Check a hinted font will successfully transfer
   vtt instructions to an unhinted font.
 """
-from argparse import (ArgumentParser,
-                      RawTextHelpFormatter)
+from argparse import ArgumentParser, RawTextHelpFormatter
 from fontTools.ttLib import TTFont
 import logging
 
 
 def font_glyphs(font):
-  '''return a dict of glyphs objects for font
+    """return a dict of glyphs objects for font
 
-  {'a': <glyf object>, 'b': <glyf object>}'''
-  return {g: font['glyf'][g] for g in font['glyf'].glyphs}
+    {'a': <glyf object>, 'b': <glyf object>}"""
+    return {g: font["glyf"][g] for g in font["glyf"].glyphs}
 
 
 def glyphs_points(font):
-  '''return a dict of glyphs coordinates/composites for each font
+    """return a dict of glyphs coordinates/composites for each font
 
-  {'a': [(0,0), (10,10)], 'b': [(10,10, (20,20))]},
-  '''
-  res = {}
-  for glyph in font:
-    if hasattr(font[glyph], 'coordinates'):
-      res[glyph] = font[glyph].coordinates
-    elif font[glyph].isComposite():
-      res[glyph] = [c.glyphName for c in font[glyph].components]
-    else:
-      res[glyph] = None
-  return res
+    {'a': [(0,0), (10,10)], 'b': [(10,10, (20,20))]},
+    """
+    res = {}
+    for glyph in font:
+        if hasattr(font[glyph], "coordinates"):
+            res[glyph] = font[glyph].coordinates
+        elif font[glyph].isComposite():
+            res[glyph] = [c.glyphName for c in font[glyph].components]
+        else:
+            res[glyph] = None
+    return res
 
 
 def compare_glyph_count(font1, name1, name2):
-  if font1:
-    logging.warning('%s missing glyphs against %s:\n%s' % (
-      name1,
-      name2,
-      ', '.join(font1)
-    ))
-  else:
-    logging.info('%s %s glyphs match' % (name1, name2))
+    if font1:
+        logging.warning(
+            "%s missing glyphs against %s:\n%s" % (name1, name2, ", ".join(font1))
+        )
+    else:
+        logging.info("%s %s glyphs match" % (name1, name2))
 
 
-parser = ArgumentParser(description=__doc__,
-                        formatter_class=RawTextHelpFormatter)
-parser.add_argument('hinted', help='Hinted font')
-parser.add_argument('unhinted', help='Unhinted font')
-parser.add_argument('--count', action="store_true", default=True,
-                    help="Check fonts have the same glyph count")
-parser.add_argument('--compatible', action="store_true", default=True,
-                    help="Check glyphs share same coordinates and composites")
+parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
+parser.add_argument("hinted", help="Hinted font")
+parser.add_argument("unhinted", help="Unhinted font")
+parser.add_argument(
+    "--count",
+    action="store_true",
+    default=True,
+    help="Check fonts have the same glyph count",
+)
+parser.add_argument(
+    "--compatible",
+    action="store_true",
+    default=True,
+    help="Check glyphs share same coordinates and composites",
+)
 
 logging.getLogger().setLevel(logging.DEBUG)
 
 
 def main(args=None):
-  args = parser.parse_args(args)
+    args = parser.parse_args(args)
 
-  hinted = TTFont(args.hinted)
-  unhinted = TTFont(args.unhinted)
+    hinted = TTFont(args.hinted)
+    unhinted = TTFont(args.unhinted)
 
-  hinted_glyphs = font_glyphs(hinted)
-  unhinted_glyphs = font_glyphs(unhinted)
+    hinted_glyphs = font_glyphs(hinted)
+    unhinted_glyphs = font_glyphs(unhinted)
 
-  if args.count:
-    logging.debug('Comparing glyph counts:')
+    if args.count:
+        logging.debug("Comparing glyph counts:")
 
-    hinted_missing = set(unhinted_glyphs.keys()) - set(hinted_glyphs.keys())
-    unhinted_missing = set(hinted_glyphs.keys()) - set(unhinted_glyphs.keys())
+        hinted_missing = set(unhinted_glyphs.keys()) - set(hinted_glyphs.keys())
+        unhinted_missing = set(hinted_glyphs.keys()) - set(unhinted_glyphs.keys())
 
-    compare_glyph_count(hinted_missing, args.hinted, args.unhinted)
-    compare_glyph_count(unhinted_missing, args.unhinted, args.hinted)
+        compare_glyph_count(hinted_missing, args.hinted, args.unhinted)
+        compare_glyph_count(unhinted_missing, args.unhinted, args.hinted)
 
-  if args.compatible:
-    logging.debug('Check glyph structures match')
+    if args.compatible:
+        logging.debug("Check glyph structures match")
 
-    hinted_glyph_points = glyphs_points(hinted_glyphs)
-    unhinted_glyph_points = glyphs_points(unhinted_glyphs)
+        hinted_glyph_points = glyphs_points(hinted_glyphs)
+        unhinted_glyph_points = glyphs_points(unhinted_glyphs)
 
-    shared_glyphs = set(unhinted_glyphs) & set(hinted_glyphs.keys())
+        shared_glyphs = set(unhinted_glyphs) & set(hinted_glyphs.keys())
 
-    incompatible_glyphs = []
-    for glyph in shared_glyphs:
-      if unhinted_glyph_points[glyph] != hinted_glyph_points[glyph]:
-        incompatible_glyphs.append(glyph)
+        incompatible_glyphs = []
+        for glyph in shared_glyphs:
+            if unhinted_glyph_points[glyph] != hinted_glyph_points[glyph]:
+                incompatible_glyphs.append(glyph)
 
-    if incompatible_glyphs:
-      logging.warning('Incompatible glyphs between %s & %s:\n%s' % (
-        args.hinted,
-        args.unhinted,
-        ', '.join(incompatible_glyphs)
-        )
-      )
-    else:
-      logging.info('Glyph sets are compatible')
+        if incompatible_glyphs:
+            logging.warning(
+                "Incompatible glyphs between %s & %s:\n%s"
+                % (args.hinted, args.unhinted, ", ".join(incompatible_glyphs))
+            )
+        else:
+            logging.info("Glyph sets are compatible")
 
 
-if __name__ == '__main__':
-  main()
+if __name__ == "__main__":
+    main()

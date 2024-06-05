@@ -21,7 +21,9 @@ def set_glyph_order(origin, fonts):
     glyph_order = origin.glyphOrder
     for font in fonts:
         if font.glyphOrder != glyph_order:
-            print(f"Updating {os.path.basename(font.path)} since glyph order is different")
+            print(
+                f"Updating {os.path.basename(font.path)} since glyph order is different"
+            )
         font.glyphOrder = glyph_order
 
 
@@ -30,7 +32,9 @@ def main(args=None):
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("fonts", nargs="+")
-    parser.add_argument("--origin", help="Source font to set glyph order for other fonts")
+    parser.add_argument(
+        "--origin", help="Source font to set glyph order for other fonts"
+    )
     args = parser.parse_args(args)
 
     if len(args.fonts) <= 1:
@@ -42,7 +46,7 @@ def main(args=None):
         fonts = args.fonts[1:]
     else:
         origin = args.origin
-    
+
     fonts = [Font(fp) for fp in args.fonts]
     origin = Font(origin)
 

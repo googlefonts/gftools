@@ -25,61 +25,47 @@ e.g:
 gftools update-version [fonts] 2.300 2.301
 """
 from __future__ import print_function
-from argparse import (ArgumentParser,
-                      RawTextHelpFormatter)
+from argparse import ArgumentParser, RawTextHelpFormatter
 from fontTools.ttLib import TTFont
 
-parser = ArgumentParser(description=__doc__,
-                        formatter_class=RawTextHelpFormatter)
-parser.add_argument('--old_version',
-          help="Old version number",
-          required=True,
-          type=str)
-parser.add_argument('--new_version',
-          help="New Version number",
-          required=True,
-          type=str)
-parser.add_argument('fonts',
-          nargs="+",
-          help="Fonts in OpenType (TTF/OTF) format")
+parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
+parser.add_argument("--old_version", help="Old version number", required=True, type=str)
+parser.add_argument("--new_version", help="New Version number", required=True, type=str)
+parser.add_argument("fonts", nargs="+", help="Fonts in OpenType (TTF/OTF) format")
 
 
 def main(args=None):
-  args = parser.parse_args(args)
-  for font_path in args.fonts:
-    font = TTFont(font_path)
+    args = parser.parse_args(args)
+    for font_path in args.fonts:
+        font = TTFont(font_path)
 
-    v_updated = False
-    for field in font['name'].names:
-      field_text = field.toUnicode()
-      if args.old_version in field_text:
-        updated_text = field_text.replace(
-          args.old_version,
-          args.new_version
-        )
-        font['name'].setName(
-          updated_text,
-          field.nameID,
-          field.platformID,
-          field.platEncID,
-          field.langID
-        )
-        v_updated = True
-    if v_updated:
-      font['head'].fontRevision = float(args.new_version)
-      print('%s version updated from %s to %s' % (
-        font_path,
-        args.old_version,
-        args.new_version
-      ))
-      font.save(font_path + '.fix')
-      print('font saved %s.fix' % font_path)
-    else:
-      print ('%s skipping. Could not find old version number %s' % (
-        font_path,
-        args.old_version
-      ))
+        v_updated = False
+        for field in font["name"].names:
+            field_text = field.toUnicode()
+            if args.old_version in field_text:
+                updated_text = field_text.replace(args.old_version, args.new_version)
+                font["name"].setName(
+                    updated_text,
+                    field.nameID,
+                    field.platformID,
+                    field.platEncID,
+                    field.langID,
+                )
+                v_updated = True
+        if v_updated:
+            font["head"].fontRevision = float(args.new_version)
+            print(
+                "%s version updated from %s to %s"
+                % (font_path, args.old_version, args.new_version)
+            )
+            font.save(font_path + ".fix")
+            print("font saved %s.fix" % font_path)
+        else:
+            print(
+                "%s skipping. Could not find old version number %s"
+                % (font_path, args.old_version)
+            )
 
 
-if __name__ == '__main__':
-  main()
+if __name__ == "__main__":
+    main()

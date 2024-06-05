@@ -43,167 +43,174 @@ from __future__ import print_function
 import json
 import requests
 import sys
-from argparse import (ArgumentParser,
-                      RawTextHelpFormatter)
+from argparse import ArgumentParser, RawTextHelpFormatter
 
 GF_API = "https://www.googleapis.com/webfonts/v1/webfonts?key={}"
 
 GF_API_WEIGHT_TO_CSS_WEIGHT = {
-  "100": "100",
-  "100italic": "100i",
-  "200": "200",
-  "200italic": "200i",
-  "300": "300",
-  "300italic": "300i",
-  "regular": "400",
-  "italic": "400i",
-  "500": "500",
-  "500italic": "500i",
-  "600": "600",
-  "600italic": "600i",
-  "700": "700",
-  "700italic": "700i",
-  "800": "800",
-  "800italic": "800i",
-  "900": "900",
-  "900italic": "900i"
+    "100": "100",
+    "100italic": "100i",
+    "200": "200",
+    "200italic": "200i",
+    "300": "300",
+    "300italic": "300i",
+    "regular": "400",
+    "italic": "400i",
+    "500": "500",
+    "500italic": "500i",
+    "600": "600",
+    "600italic": "600i",
+    "700": "700",
+    "700italic": "700i",
+    "800": "800",
+    "800italic": "800i",
+    "900": "900",
+    "900italic": "900i",
 }
 
 API_TO_CSS_STYLE_NAME = {
-  "100": "a",
-  "100i": "b",
-  "200": "c",
-  "200i": "d",
-  "300": "e",
-  "300i": "f",
-  "400": "g",
-  "400i": "h",
-  "500": "i",
-  "500i": "j",
-  "600": "k",
-  "600i": "l",
-  "700": "m",
-  "700i": "n",
-  "800": "o",
-  "800i": "p",
-  "900": "q",
-  "900i": "r",
+    "100": "a",
+    "100i": "b",
+    "200": "c",
+    "200i": "d",
+    "300": "e",
+    "300i": "f",
+    "400": "g",
+    "400i": "h",
+    "500": "i",
+    "500i": "j",
+    "600": "k",
+    "600i": "l",
+    "700": "m",
+    "700i": "n",
+    "800": "o",
+    "800i": "p",
+    "900": "q",
+    "900i": "r",
 }
 
 
 def get_gf_family(family, api_key):
-  """Get data of the given family hosted on Google Fonts"""
-  request = requests.get(GF_API.format(api_key))
+    """Get data of the given family hosted on Google Fonts"""
+    request = requests.get(GF_API.format(api_key))
 
-  try:
-    response = json.loads(request.text)
-    if "error" in response:
-      if response["error"]["errors"][0]["reason"] == "keyInvalid":
-        sys.exit(("The Google Fonts API key '{}'"
-                  " was rejected as being invalid !").format(api_key))
-      else:
-        sys.exit(("There were errors in the"
-                  " Google Fonts API request:"
-                  " {}").format(response["error"]))
-    else:
-      gf_families = response
-  except (ValueError, KeyError):
-    sys.exit("Unable to load and parse data from Google Web Fonts API.")
+    try:
+        response = json.loads(request.text)
+        if "error" in response:
+            if response["error"]["errors"][0]["reason"] == "keyInvalid":
+                sys.exit(
+                    (
+                        "The Google Fonts API key '{}'"
+                        " was rejected as being invalid !"
+                    ).format(api_key)
+                )
+            else:
+                sys.exit(
+                    (
+                        "There were errors in the" " Google Fonts API request:" " {}"
+                    ).format(response["error"])
+                )
+        else:
+            gf_families = response
+    except (ValueError, KeyError):
+        sys.exit("Unable to load and parse data from Google Web Fonts API.")
 
-  for item in gf_families['items']:
-    if family == item['family']:
-        return item
-  return False
+    for item in gf_families["items"]:
+        if family == item["family"]:
+            return item
+    return False
 
 
 def get_family_styles(gf_family):
-  """Get all the styles of a family"""
-  styles = []
-  if gf_family:
-      for var in gf_family['variants']:
-        styles.append((GF_API_WEIGHT_TO_CSS_WEIGHT[var]))
-  return styles
+    """Get all the styles of a family"""
+    styles = []
+    if gf_family:
+        for var in gf_family["variants"]:
+            styles.append((GF_API_WEIGHT_TO_CSS_WEIGHT[var]))
+    return styles
 
 
 def get_family_subsets(family_subsets, gf_family):
-  """Get all the valid subsets from the given family"""
-  valid_subsets = []
-  if family_subsets:
-    for subset in family_subsets:
-      if subset in gf_family['subsets']:
-        valid_subsets.append(subset)
-  return valid_subsets
+    """Get all the valid subsets from the given family"""
+    valid_subsets = []
+    if family_subsets:
+        for subset in family_subsets:
+            if subset in gf_family["subsets"]:
+                valid_subsets.append(subset)
+    return valid_subsets
 
 
 def gen_head_webfonts(family, styles, subsets=None):
-  """Gen the html snippet to load fonts"""
-  server = '"https://fonts.googleapis.com/css?family='
-  if subsets:
-    return '<link href=%s%s:%s&amp;subset=%s" /rel="stylesheet">' % (
-      server, family.replace(' ', '+'), ','.join(styles), ','.join(subsets)
+    """Gen the html snippet to load fonts"""
+    server = '"https://fonts.googleapis.com/css?family='
+    if subsets:
+        return '<link href=%s%s:%s&amp;subset=%s" /rel="stylesheet">' % (
+            server,
+            family.replace(" ", "+"),
+            ",".join(styles),
+            ",".join(subsets),
+        )
+    return '<link href=%s%s:%s" /rel="stylesheet">' % (
+        server,
+        family.replace(" ", "+"),
+        ",".join(styles),
     )
-  return '<link href=%s%s:%s" /rel="stylesheet">' % (
-    server, family.replace(' ', '+'), ','.join(styles)
-  )
 
 
 def gen_css_styles(family, styles):
-  css = []
-  for style in styles:
-    if style.endswith('i'):
-      css.append((".%s{font-family: '%s'; "
-                  "font-weight:%s; "
-                  "font-style: italic;}" % (
-                    API_TO_CSS_STYLE_NAME[style],
-                    family,
-                    style[:-1])
-                  ))
-    else:
-      css.append((".%s{font-family: '%s'; "
-                  "font-weight:%s;}" % (
-                    API_TO_CSS_STYLE_NAME[style],
-                    family,
-                    style)
-                  ))
-  return css
+    css = []
+    for style in styles:
+        if style.endswith("i"):
+            css.append(
+                (
+                    ".%s{font-family: '%s'; "
+                    "font-weight:%s; "
+                    "font-style: italic;}"
+                    % (API_TO_CSS_STYLE_NAME[style], family, style[:-1])
+                )
+            )
+        else:
+            css.append(
+                (
+                    ".%s{font-family: '%s'; "
+                    "font-weight:%s;}" % (API_TO_CSS_STYLE_NAME[style], family, style)
+                )
+            )
+    return css
 
 
 def gen_body_text(styles, sample_text):
-  html = []
-  for style in styles:
-    html.append("<p class='%s'>%s</p>" % (
-      API_TO_CSS_STYLE_NAME[style],
-      sample_text)
-    )
-  return html
+    html = []
+    for style in styles:
+        html.append(
+            "<p class='%s'>%s</p>" % (API_TO_CSS_STYLE_NAME[style], sample_text)
+        )
+    return html
 
 
 def main(args=None):
-  parser = ArgumentParser(description=__doc__,
-                          formatter_class=RawTextHelpFormatter)
-  parser.add_argument('key',
-                      help='Key from Google Fonts Developer API')
-  parser.add_argument('family',
-                      help='family name on fonts.google.com')
-  parser.add_argument('sample_text',
-                      help='sample text used for each font')
-  parser.add_argument('--subsets', nargs='+',
-                      help='family subset(s) seperated by a space')
-  args = parser.parse_args(args)
+    parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
+    parser.add_argument("key", help="Key from Google Fonts Developer API")
+    parser.add_argument("family", help="family name on fonts.google.com")
+    parser.add_argument("sample_text", help="sample text used for each font")
+    parser.add_argument(
+        "--subsets", nargs="+", help="family subset(s) seperated by a space"
+    )
+    args = parser.parse_args(args)
 
-  gf_family = get_gf_family(args.family, args.key)
-  family_styles = get_family_styles(gf_family)
-  family_subsets = get_family_subsets(args.subsets, gf_family)
+    gf_family = get_gf_family(args.family, args.key)
+    family_styles = get_family_styles(gf_family)
+    family_subsets = get_family_subsets(args.subsets, gf_family)
 
-  if family_subsets:
-    head_fonts = gen_head_webfonts(args.family, family_styles, family_subsets)
-  else:
-    head_fonts = gen_head_webfonts(args.family, family_styles)
+    if family_subsets:
+        head_fonts = gen_head_webfonts(args.family, family_styles, family_subsets)
+    else:
+        head_fonts = gen_head_webfonts(args.family, family_styles)
 
-  css_styles = gen_css_styles(args.family, family_styles)
-  body_text = gen_body_text(family_styles, args.sample_text)
+    css_styles = gen_css_styles(args.family, family_styles)
+    body_text = gen_body_text(family_styles, args.sample_text)
 
-  html = """
+    html = """
 <html>
   <head>
     %s
@@ -215,12 +222,12 @@ def main(args=None):
     %s
   </body>
 </html>""" % (
-    head_fonts,
-    '\n      '.join(css_styles),
-    '\n    '.join(body_text)
-  )
-  print(html)
+        head_fonts,
+        "\n      ".join(css_styles),
+        "\n    ".join(body_text),
+    )
+    print(html)
 
 
-if __name__ == '__main__':
-  main()
+if __name__ == "__main__":
+    main()

@@ -32,7 +32,11 @@ gftools push-status /path/to/google/fonts/repo --lint
 import argparse
 from pathlib import Path
 from gftools.push.trafficjam import PushItems, PushStatus
-from gftools.push.servers import gf_server_metadata, PRODUCTION_META_URL, SANDBOX_META_URL
+from gftools.push.servers import (
+    gf_server_metadata,
+    PRODUCTION_META_URL,
+    SANDBOX_META_URL,
+)
 from gftools.push.items import Family
 import os
 
@@ -75,7 +79,11 @@ def lint_server_files(fp: Path):
 
 
 def server_push_status(fp: Path, url: str):
-    families = [i for i in PushItems.from_server_file(fp, None, None) if isinstance(i.item(), Family)]
+    families = [
+        i
+        for i in PushItems.from_server_file(fp, None, None)
+        if isinstance(i.item(), Family)
+    ]
     family_names = [i.item().name for i in families]
 
     gf_meta = gf_server_metadata(url)
@@ -103,8 +111,6 @@ def push_report(fp: Path):
 
     sandbox_path = fp / "to_sandbox.txt"
     server_push_report("Sandbox", sandbox_path, SANDBOX_META_URL)
-
-
 
 
 def main(args=None):

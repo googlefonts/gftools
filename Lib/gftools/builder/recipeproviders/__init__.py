@@ -26,7 +26,6 @@ class RecipeProviderBase:
         return [get_file(str(p)) for p in self.config["sources"]]
 
 
-
 def get_provider(provider: str):
     # First try gftools.builder.recipeproviders.X
     try:

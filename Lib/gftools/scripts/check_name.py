@@ -27,59 +27,57 @@ gftools check-name [fonts]
 Output in csv format
 gftools check-name [fonts] --csv
 """
-from argparse import (ArgumentParser,
-                      RawTextHelpFormatter)
+from argparse import ArgumentParser, RawTextHelpFormatter
 import csv
 import sys
 from fontTools.ttLib import TTFont
 import tabulate
 import ntpath
 
-parser = ArgumentParser(description=__doc__,
-                        formatter_class=RawTextHelpFormatter)
-parser.add_argument('fonts',
-                    nargs="+",
-                    help="Fonts in OpenType (TTF/OTF) format")
-parser.add_argument('--csv', default=False, action='store_true')
+parser = ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
+parser.add_argument("fonts", nargs="+", help="Fonts in OpenType (TTF/OTF) format")
+parser.add_argument("--csv", default=False, action="store_true")
 
 
 def printInfo(rows, save=False):
-  header = [r[0] for r in rows[0]]
-  t = []
-  for row in rows:
-    t.append([r[1] for r in row])
+    header = [r[0] for r in rows[0]]
+    t = []
+    for row in rows:
+        t.append([r[1] for r in row])
 
-  if save:
-    writer = csv.writer(sys.stdout)
-    writer.writerows([header])
-    writer.writerows(t)
-    sys.exit(0)
-  else:
-    print(tabulate.tabulate(t, header, tablefmt="plain"))
+    if save:
+        writer = csv.writer(sys.stdout)
+        writer.writerows([header])
+        writer.writerows(t)
+        sys.exit(0)
+    else:
+        print(tabulate.tabulate(t, header, tablefmt="plain"))
 
 
 def main(args=None):
-  args = parser.parse_args(args)
+    args = parser.parse_args(args)
 
-  rows = []
-  for font_filename in args.fonts:
-    font = TTFont(font_filename)
-    for field in font['name'].names:
-      enc = field.getEncoding()
-      rows.append([
-        ('Font', ntpath.basename(font_filename)),
-        ('platformID', field.platformID),
-        ('encodingID', field.platEncID),
-        ('languageID', field.langID),
-        ('nameID', field.nameID),
-        ('nameString', field.toUnicode()),
-      ])
+    rows = []
+    for font_filename in args.fonts:
+        font = TTFont(font_filename)
+        for field in font["name"].names:
+            enc = field.getEncoding()
+            rows.append(
+                [
+                    ("Font", ntpath.basename(font_filename)),
+                    ("platformID", field.platformID),
+                    ("encodingID", field.platEncID),
+                    ("languageID", field.langID),
+                    ("nameID", field.nameID),
+                    ("nameString", field.toUnicode()),
+                ]
+            )
 
-  if args.csv:
-    printInfo(rows, save=True)
-  else:
-    printInfo(rows)
+    if args.csv:
+        printInfo(rows, save=True)
+    else:
+        printInfo(rows)
 
 
-if __name__ == '__main__':
-  main()
+if __name__ == "__main__":
+    main()

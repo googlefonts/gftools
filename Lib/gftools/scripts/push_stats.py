@@ -109,17 +109,13 @@ def main(args=None):
         "pushes": {
             "sandbox": [i.to_json() for i in sb_families],
             "production": [i.to_json() for i in prod_families],
-        }
+        },
     }
     json.dump(commit_data, open(data_out, "w", encoding="utf8"), indent=4)
 
     print("Writing report")
     with open(args.out, "w") as doc:
-        doc.write(
-            template.render(
-                commit_data=json.dumps(commit_data)
-            )
-        )
+        doc.write(template.render(commit_data=json.dumps(commit_data)))
 
 
 if __name__ == "__main__":

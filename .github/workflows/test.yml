@@ -29,7 +29,10 @@ jobs:
       - name: Install packages
         run: |
           pip install '.[qa]'
-          pip install mypy pytest
+          pip install '.[test]'
+      - name: lint
+        run: |
+            black . --check --diff --color
       - name: Run Tests
         env:
           DEV_FAMILY_DOWNLOAD: ${{ secrets.DEV_FAMILY_DOWNLOAD }}

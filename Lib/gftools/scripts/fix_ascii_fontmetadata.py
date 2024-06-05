@@ -21,15 +21,16 @@ from fontTools import ttLib
 from gftools.fix import fix_ascii_fontmetadata
 
 
-description = 'Fixes TTF NAME table strings to be ascii only'
+description = "Fixes TTF NAME table strings to be ascii only"
 parser = argparse.ArgumentParser(description=description)
-parser.add_argument('ttf_font', nargs='+',
-                    help="Font in OpenType (TTF/OTF) format")
+parser.add_argument("ttf_font", nargs="+", help="Font in OpenType (TTF/OTF) format")
+
 
 def main(args=None):
-  args = parser.parse_args(args)
-  for path in args.ttf_font:
-      fix_ascii_fontmetadata(ttLib.TTFont(path))
+    args = parser.parse_args(args)
+    for path in args.ttf_font:
+        fix_ascii_fontmetadata(ttLib.TTFont(path))
+
 
 if __name__ == "__main__":
-  main()
+    main()
