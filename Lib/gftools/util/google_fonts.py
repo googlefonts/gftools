@@ -524,7 +524,7 @@ def ReadProto(proto, path):
         return proto
 
 
-def WriteProto(proto, path, comments=None):
+def WriteProto(proto: fonts_pb2.FamilyProto, path: str, comments=None):
     with open(path, "w", newline="") as f:
         textproto = text_format.MessageToString(proto, as_utf8=True)
         if comments is not None:
@@ -536,7 +536,9 @@ def WriteProto(proto, path, comments=None):
         f.write(textproto)
 
 
-def WriteMetadata(proto, path="METADATA.pb", write_comments=True):
+def WriteMetadata(
+    proto: fonts_pb2.FamilyProto, path: str = "METADATA.pb", write_comments=True
+):
     comments = None
     if write_comments:
         language = LoadLanguages()
