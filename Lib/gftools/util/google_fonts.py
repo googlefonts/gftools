@@ -534,3 +534,11 @@ def WriteProto(proto, path, comments=None):
             ]
             textproto = "\n".join(lines)
         f.write(textproto)
+
+
+def WriteMetadata(proto, path="METADATA.pb", write_comments=True):
+    comments = None
+    if write_comments:
+        language = LoadLanguages()
+        comments = LanguageComments(language)
+    WriteProto(proto, path, comments)
