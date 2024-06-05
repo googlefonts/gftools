@@ -537,10 +537,13 @@ def WriteProto(proto: fonts_pb2.FamilyProto, path: str, comments=None):
 
 
 def WriteMetadata(
-    proto: fonts_pb2.FamilyProto, path: str = "METADATA.pb", write_comments=True
+    proto: fonts_pb2.FamilyProto, path: str = "METADATA.pb", comments=True
 ):
-    comments = None
-    if write_comments:
+    if comments is None:
+        comment_proto = None
+    elif comments is True:
         language = LoadLanguages()
-        comments = LanguageComments(language)
-    WriteProto(proto, path, comments)
+        comment_proto = LanguageComments(language)
+    else:
+        comment_proto = comments
+    WriteProto(proto, path, comment_proto)
