@@ -22,7 +22,7 @@ from pathlib import Path
 from fontTools.ttLib import TTFont
 
 from gftools.utils import primary_script
-from gftools.util.google_fonts import Metadata, WriteProto, LanguageComments
+from gftools.util.google_fonts import Metadata, WriteMetadata
 from gflanguages import LoadLanguages
 
 
@@ -47,8 +47,7 @@ def main(args=None):
         print("%s -> %s" % (path_obj.parent.name, script))
         metadata.primary_script = script
 
-        language_comments = LanguageComments(LoadLanguages())
-        WriteProto(metadata, path_obj, comments=language_comments)
+        WriteMetadata(metadata, path_obj)
 
 if __name__ == '__main__':
     main()

@@ -149,7 +149,6 @@ def main(args=None):
         unused_scripts.add(s)
     _SampleTextAudit(args.out, languages, scripts, unused_scripts)
   else:
-    language_comments = fonts.LanguageComments(languages)
     for path in args.metadata_files:
       family_metadata = fonts.ReadProto(fonts_public_pb2.FamilyProto(), path)
       if len(family_metadata.languages) > 0:
@@ -163,7 +162,7 @@ def main(args=None):
         supported_languages = [l for l in supported_languages if "Latn" not in l.id]
       supported_languages = sorted([l.id for l in supported_languages])
       family_metadata.languages.extend(supported_languages)
-      fonts.WriteProto(family_metadata, path, comments=language_comments)
+      fonts.WriteMetadata(family_metadata, path)
 
 
 

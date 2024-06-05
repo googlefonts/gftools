@@ -326,7 +326,7 @@ def main(args=None):
     LoadLanguages(base_dir=args.lang)
   )
   metadata = _MakeMetadata(args, is_new)
-  fonts.WriteProto(metadata, os.path.join(fontdir, 'METADATA.pb'), comments=language_comments)
+  fonts.WriteMetadata(metadata, os.path.join(fontdir, 'METADATA.pb'), comments=language_comments)
 
   desc = os.path.join(fontdir, 'DESCRIPTION.en_us.html')
   articledir = os.path.join(fontdir, "article")
