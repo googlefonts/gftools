@@ -181,7 +181,7 @@ class GFBuilder(RecipeProviderBase):
         return os.path.join(outdir, f"{instancebase}.{extension}")
 
     def fontmake_args(self, source, variable=False):
-        args = "--filter ... "
+        args = "--filter 'DottedCircleFilter(pre=True)' --filter ... "
         if self.config.get("flattenComponents", True):
             args += " --filter FlattenComponentsFilter"
         if self.config.get("decomposeTransformedComponents", True):
