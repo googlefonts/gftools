@@ -60,9 +60,20 @@ def main(args=None):
         default="ofl",
         choices=("ofl", "apache", "ufl"),
     )
-    parser.add_argument(
+    obtain_group = parser.add_mutually_exclusive_group()
+    obtain_group.add_argument(
         "--latest-release",
         help="Get assets from latest upstream release",
+        action="store_true",
+    )
+    obtain_group.add_argument(
+        "--build-from-source",
+        help="Download and build fonts from source files",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--their-venv",
+        help="Use upstream's virtual environment when building (defaults to current venv)",
         action="store_true",
     )
     parser.add_argument(

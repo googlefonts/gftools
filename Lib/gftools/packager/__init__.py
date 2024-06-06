@@ -40,6 +40,7 @@ from gftools.utils import (
     Google_Fonts_has_family,
     has_gh_token,
 )
+from gftools.packager.build import build_to_directory
 import sys
 from gftools.push.trafficjam import TRAFFIC_JAM_ID
 
@@ -325,13 +326,22 @@ def assets_are_same(src: Path, dst: Path) -> bool:
 
 
 def package_family(
-    family_path: Path, metadata: fonts_pb2.FamilyProto, latest_release=False
+    family_path: Path,
+    metadata: fonts_pb2.FamilyProto,
+    latest_release=False,
+    build_from_source=False,
+    their_venv=False,
+    **kwargs,
 ):
     """Create a family into a google/fonts repo."""
-    log.info(f"Downloading family to '{family_path}'")
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
-        download_assets(metadata, tmp_dir, latest_release)
+        if build_from_source:
+            log.info(f"Building '{metadata.name}' from source")
+            build_to_directory(tmp_dir, family_path, metadata, their_venv=their_venv)
+        else:
+            log.info(f"Downloading family to '{family_path}'")
+            download_assets(metadata, tmp_dir, latest_release)
         if assets_are_same(tmp_dir, family_path):
             raise ValueError(f"'{family_path}' already has latest files, Aborting.")
         # rm existing fonts. Sometimes the font count will change if a family
@@ -597,6 +607,7 @@ def make_package(
     base_repo: str = "google",
     head_repo: str = "google",
     latest_release: bool = False,
+    build_from_source: bool = False,
     issue_number=None,
     **kwargs,
 ):
@@ -665,8 +676,7 @@ def make_package(
     # All font families must have tagging data. This data helps users on Google
     # Fonts find font families. It's enabled by default since it's a hard
     # requirements set by management.
-    tags = GFTags()
-    if not skip_tags and not tags.has_family(metadata.name):
+    if not skip_tags and not GFTags().has_family(metadata.name):
         raise ValueError(
             f"'{metadata.name}' does not have family tagging data! "
             "Please complete the following form, "
@@ -678,7 +688,9 @@ def make_package(
 
     with current_git_state(repo, family_path):
         branch = create_git_branch(metadata, repo, head_repo)
-        packaged = package_family(family_path, metadata, latest_release)
+        packaged = package_family(
+            family_path, metadata, latest_release, build_from_source, **kwargs
+        )
         title, msg, branch = commit_family(
             branch, family_path, metadata, repo, head_repo, issue_number
         )
