@@ -37,7 +37,6 @@ from gftools.util import google_fonts as fonts
 from gftools.utils import (
     download_file,
     is_google_fonts_repo,
-    format_html,
     Google_Fonts_has_family,
     has_gh_token,
 )
@@ -353,7 +352,7 @@ def package_family(
         else:
             about_file = desc_file
         with open(about_file, encoding="utf-8") as fin:
-            about = format_html(fin.read())
+            about = fin.read()
         with open(about_file, "w", encoding="utf-8") as fout:
             fout.write(about)
     return True
