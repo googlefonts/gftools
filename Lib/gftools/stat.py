@@ -88,7 +88,7 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None, locations=None)
             has_italic = any(font_is_italic(f) for f in varfonts)
         if has_italic:
             for ax in stat:
-                if ax["name"] == "ital":
+                if ax["tag"] == "ital":
                     raise ValueError("ital axis should not appear in stat config")
             ital_stat_for_roman = {
                 "name": "Italic",
