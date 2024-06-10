@@ -234,7 +234,13 @@ def download_files_from_archive(url, dst):
 def download_file(url, dst_path=None):
     """Download a file from a url. If no dst_path is specified, store the file
     as a BytesIO object"""
-    request = requests.get(url, stream=True)
+    if os.environ.get("GH_TOKEN") and re.match(r"^https://(\w+\.)?github.com", url):
+        headers = {"Authorization": f"token {os.environ['GH_TOKEN']}"}
+    else:
+        headers = {}
+
+    request = requests.get(url, stream=True, headers=headers)
+    request.raise_for_status()
     if not dst_path:
         return BytesIO(request.content)
     with open(dst_path, "wb") as downloaded_file:
