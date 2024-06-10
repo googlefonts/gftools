@@ -161,7 +161,7 @@ def append_source_template(metadata_fp: Path, metadata: fonts_pb2.FamilyProto):
             metadata.source.files.append(item)
         metadata.source.repository_url = "https://www.github.com/user/repo"
         metadata.source.branch = "main"
-        fonts.WriteMetadata(metadata, metadata_fp, write_comments=False)
+        fonts.WriteMetadata(metadata, metadata_fp, comments=None)
         return
     with open(metadata_fp, "r") as doc:
         text = doc.read()
@@ -568,6 +568,7 @@ def pr_family(
         )
     # add item to traffic board
     if TRAFFIC_JAM_ID:
+        log.info(f"Adding project to traffic jam")
         google_fonts._run_graphql(
             ADD_TO_TRAFFIC_JAM.format(
                 project_id=TRAFFIC_JAM_ID,
