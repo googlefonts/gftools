@@ -145,9 +145,12 @@ class SubsetMerger:
         # First, we find a donor UFO that matches the location of the
         # UFO to merge.
         location = dict(ds_source.location)
+        newlocation = {}
         for axis in ds.axes:
-            location[axis.name] = axis.map_backward(location[axis.name])
-        source_ufo = self.obtain_upstream(subset["from"], location)
+            # We specify our location in terms of axis tags, because the
+            # axes in the donor designspace file may have been renamed.
+            newlocation[axis.tag] = axis.map_backward(location[axis.name])
+        source_ufo = self.obtain_upstream(subset["from"], newlocation)
         if not source_ufo:
             return False
         existing_handling = "skip"
@@ -230,9 +233,18 @@ class SubsetMerger:
         # Assume a source is good for this location unless proved otherwise.
         # This is useful for merging single-master donors into a multiple
         # master font.
+        # Our location is now specified in terms of tags
+        newlocation = {}
+
+        # Fill out the location with default values of axes we don't know about
+        for axis in source_ds.axes:
+            if axis.tag in location:
+                newlocation[axis.name] = location[axis.tag]
+            else:
+                newlocation[axis.name] = axis.default
         for source in source_ds.sources:
             match = True
-            for axis, loc in location.items():
+            for axis, loc in newlocation.items():
                 if (
                     axis in source.location
                     and axis in source_mappings
@@ -261,11 +273,13 @@ class SubsetMerger:
                     break
 
         if target:
-            logger.info(f"Adding subset from {font_name} for location {location}")
+            logger.info(
+                f"Adding subset {target.filename or target.name} for location {newlocation}"
+            )
             return target
 
         raise ValueError(
-            f"Could not find master in {font_name} for location {location}"
+            f"Could not find master in {font_name} for location {newlocation}"
         )
         return None
 
