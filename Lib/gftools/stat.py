@@ -90,6 +90,12 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None, locations=None)
             for ax in stat:
                 if ax["tag"] == "ital":
                     raise ValueError("ital axis should not appear in stat config")
+                for av in ax.get("values", []):
+                    av_name = av.get("name")
+                    if not isinstance(av_name, str):
+                        raise ValueError(
+                            f"Axis value name must be a string, got {type(av_name)}: {av_name}"
+                        )
             ital_stat_for_roman = {
                 "name": "Italic",
                 "tag": "ital",
