@@ -59,6 +59,7 @@ class InstantiateUFO(FontmakeOperationBase):
     def variables(self):
         vars = super().variables
         vars["args"] += " --ufo-structure=json "
+        vars["args"] += " --expand-features-to-instances "
         if self.first_source.is_glyphs:
             vars["args"] += f"--instance-dir {escape_path(str(self.instance_dir))}"
         else:
