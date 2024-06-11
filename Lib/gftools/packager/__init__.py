@@ -356,7 +356,7 @@ def package_family(
         article_file = family_path / "article" / "ARTICLE.en_us.html"
         if article_file.exists():
             # Remove description file if an article already exists
-            if desc_file.exists():
+            if desc_file.exists() and not metadata.is_noto:
                 os.remove(desc_file)
             about_file = article_file
         else:
