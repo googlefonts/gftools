@@ -146,7 +146,7 @@ class SubsetMerger:
 
         ds.write(self.output)
 
-    def add_subset(self, target_ufo, ds, ds_source, subset):
+    def add_subset(self, target_ufo, ds, ds_source, subset) -> bool:
         # First, we find a donor UFO that matches the location of the
         # UFO to merge.
         location = dict(ds_source.location)
@@ -174,7 +174,9 @@ class SubsetMerger:
         )
         return True
 
-    def obtain_upstream(self, upstream: str | dict[str, Any], location):
+    def obtain_upstream(
+        self, upstream: str | dict[str, Any], location
+    ) -> ufoLib2.Font | None:
         # Either the upstream is a string, in which case we try looking
         # it up in the SUBSET_SOURCES table, or it's a dict, in which
         # case it's a repository / path pair.
@@ -217,7 +219,7 @@ class SubsetMerger:
             return open_ufo(source_ufo.path)
         return None
 
-    def glyphs_to_ufo(self, source, directory=None):
+    def glyphs_to_ufo(self, source: str, directory: Path | None = None) -> str:
         source = Path(source)
         if directory is None:
             directory = source.resolve().parent
