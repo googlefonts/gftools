@@ -13,16 +13,6 @@ def rewrap(text):
     return "\n\n".join("\n".join(wrap(dedent(para), width=72)) for para in paras)
 
 
-def get_repo_from_args(args):
-    # Build objects to match REPO_SCHEMA in ..subsetmerger
-    if args.repo is None:
-        return None
-    elif args.git_ref is None:
-        return {"slug": args.repo}
-    else:
-        return {"slug": args.repo, "ref": args.git_ref}
-
-
 EXAMPLES = """
 
 gftools-add-ds-subsets \\
@@ -84,10 +74,10 @@ Example usage:
 
     parser.add_argument("--yaml", "-y", help="YAML file describing subsets")
 
-    parser.add_argument("--repo", "-r", help="GitHub repository to use for subsetting")
     parser.add_argument(
-        "--git-ref",
-        help="Git commit, tag, or branch to use from the --repo",
+        "--repo",
+        "-r",
+        help="GitHub repository slug to use for subsetting. Use @ after slug to specify branch/tag/commit, e.g. org/repo@v0.1.0",
     )
     parser.add_argument("--file", "-f", help="Source file within GitHub repository")
     parser.add_argument("--name", "-n", help="Name of subset to use from glyphset")
@@ -120,7 +110,7 @@ Example usage:
         subsets = [
             {
                 "from": {
-                    "repo": get_repo_from_args(args),
+                    "repo": args.repo,
                     "path": args.file,
                 }
             }

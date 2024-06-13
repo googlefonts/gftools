@@ -42,25 +42,10 @@ SUBSET_SOURCES: dict[str, tuple[str, str]] = {
 }
 
 
-REPO_SCHEMA = (
-    # Just the repo slug (use FALLBACK_BRANCH_NAME)
-    Str()
-    |
-    # Explicit slug & ref
-    Map(
-        {
-            "slug": Str(),
-            Optional("ref", default=FALLBACK_BRANCH_NAME): Str(),
-        }
-    )
-)
-
-
 subsets_schema = Seq(
     Map(
         {
-            "from": Enum(SUBSET_SOURCES.keys())
-            | Map({"repo": REPO_SCHEMA, "path": Str()}),
+            "from": Enum(SUBSET_SOURCES.keys()) | Map({"repo": Str(), "path": Str()}),
             Optional("name"): Str(),
             Optional("ranges"): Seq(
                 Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})
@@ -200,13 +185,14 @@ class SubsetMerger:
             ref = FALLBACK_BRANCH_NAME
             font_name = f"{upstream}/{ref}"
         else:
-            # See REPO_SCHEMA
-            repo = upstream["repo"]
-            if isinstance(repo, dict):
-                ref = repo["ref"]
-                repo = repo["slug"]
-            else:
+            repo: str = upstream["repo"]
+            parts = repo.split("@", 1)
+            if len(parts) == 1:
+                # Repo was already just the slug, use fallback ref
                 ref = FALLBACK_BRANCH_NAME
+            else:
+                # Guaranteed to be 2 parts
+                repo, ref = parts
             path = upstream["path"]
             font_name = f"{repo}/{ref}/{path}"
         path = os.path.join(self.cache_dir, repo, ref, path)
