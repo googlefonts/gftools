@@ -15,6 +15,7 @@ import ufoLib2
 import yaml
 from fontmake.font_project import FontProject
 from fontTools.designspaceLib import DesignSpaceDocument
+from gftools.gfgithub import GitHubClient
 from glyphsets import unicodes_per_glyphset
 from strictyaml import HexInt, Int, Map, Optional, Seq, Str, Enum
 from ufomerge import merge_ufos
@@ -316,21 +317,40 @@ class SubsetMerger:
             )
 
     def download_for_subsetting(self, fullrepo: str, ref: str) -> None:
+        # FIXME: this should be the resolved tag name in the case that ref is
+        #        "latest"
         dest = os.path.join(self.cache_dir, f"{fullrepo}/{ref}")
         if os.path.exists(dest):
+            # Assume sources exist & are up-to-date (we have no good way of
+            # checking this); do nothing
             return
-        _user, repo = fullrepo.split("/")
         # Make the parent folder to dest but not dest itself. This means that
         # the shutil.move at the end of this function won't create
         # dest/repo-ref, instead having dest contain the contents of repo-ref
         os.makedirs(os.path.join(self.cache_dir, fullrepo), exist_ok=True)
-        # This URL scheme doesn't appear to be 100% official for tags & branches,
-        # but it seems to accept any valid git reference
-        # See https://stackoverflow.com/a/13636954 and
-        # https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
-        repo_zipball = f"https://github.com/{fullrepo}/archive/{ref}.zip"
-        logger.info(f"Downloading {fullrepo} {ref}")
+
+        if ref != "latest":
+            # This URL scheme doesn't appear to be 100% official for tags &
+            # branches, but it seems to accept any valid git reference
+            # See https://stackoverflow.com/a/13636954 and
+            # https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
+            repo_zipball = f"https://github.com/{fullrepo}/archive/{ref}.zip"
+            logger.info(f"Downloading {fullrepo} {ref}")
+        else:
+            # Use the GitHub API to get the source download URL for the latest release
+            client = GitHubClient.from_url(f"https://github.com/{fullrepo}")
+            release_metadata = client.get_latest_release()
+            ref = release_metadata["tag_name"]
+            repo_zipball = release_metadata["zipball_url"]
+            logger.info(f"Using GitHub release {ref}")
+
         repo_zip = ZipFile(download_file(repo_zipball))
-        with TemporaryDirectory() as d:
-            repo_zip.extractall(d)
-            shutil.move(os.path.join(d, f"{repo}-{ref}"), dest)
+        with TemporaryDirectory() as temp_dir:
+            repo_zip.extractall(temp_dir)
+            # Because of inconsistent naming schemes within zipballs, use a
+            # glob to get the top level folder name (as there's always one
+            # top-level folder)
+            # https://github.com/googlefonts/gftools/pull/987#issuecomment-2166051937
+            zip_dir = Path(temp_dir)
+            top_level_dir = next(zip_dir.glob("*"))
+            shutil.move(top_level_dir, dest)

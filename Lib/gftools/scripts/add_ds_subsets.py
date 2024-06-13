@@ -77,7 +77,7 @@ Example usage:
     parser.add_argument(
         "--repo",
         "-r",
-        help="GitHub repository slug to use for subsetting. Use @ after slug to specify branch/tag/commit, e.g. org/repo@v0.1.0",
+        help="GitHub repository slug to use for subsetting. Use @ after slug to specify branch/tag/commit, e.g. org/repo@v0.1.0; 'latest' is supported for latest release",
     )
     parser.add_argument("--file", "-f", help="Source file within GitHub repository")
     parser.add_argument("--name", "-n", help="Name of subset to use from glyphset")
