@@ -196,11 +196,16 @@ class SubsetMerger:
             else:
                 # Guaranteed to be 2 parts
                 repo, ref = parts
+                if ref == "latest":
+                    # Resolve latest release's tag name
+                    ref = GitHubClient.from_url(
+                        f"https://github.com/{repo}"
+                    ).get_latest_release_tag()
             path = upstream["path"]
             font_name = f"{repo}/{ref}/{path}"
-
-        ref = self.download_for_subsetting(repo, ref)
         path = os.path.join(self.cache_dir, repo, ref, path)
+
+        self.download_for_subsetting(repo, ref)
 
         # We're doing a UFO-UFO merge, so Glyphs files will need to be converted
         if path.endswith((".glyphs", ".glyphspackage")):
@@ -316,46 +321,34 @@ class SubsetMerger:
                 os.path.dirname(source_ds.path), instance.filename
             )
 
-    def download_for_subsetting(self, fullrepo: str, ref: str) -> str:
-        """Downloads a GitHub repository at a given reference
-
-        Returns the resolved ref ("latest" will become the tag used for the latest
-        release)"""
-
-        if ref != "latest":
-            # This URL scheme doesn't appear to be 100% official for tags &
-            # branches, but it seems to accept any valid git reference
-            # See https://stackoverflow.com/a/13636954 and
-            # https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
-            repo_zipball = f"https://github.com/{fullrepo}/archive/{ref}.zip"
-            logger.info(f"Using {fullrepo} {ref}")
-        else:
-            # Use the GitHub API to get the source download URL for the latest release
-            client = GitHubClient.from_url(f"https://github.com/{fullrepo}")
-            release_metadata = client.get_latest_release()
-            ref = release_metadata["tag_name"]
-            repo_zipball = release_metadata["zipball_url"]
-            logger.info(f"Using GitHub release {ref}")
-
+    def download_for_subsetting(self, fullrepo: str, ref: str) -> None:
+        """Downloads a GitHub repository at a given reference"""
         dest = os.path.join(self.cache_dir, f"{fullrepo}/{ref}")
         if os.path.exists(dest):
             # Assume sources exist & are up-to-date (we have no good way of
             # checking this); do nothing
             logger.info("Subset files present on disk, skipping download")
-            return ref
+            return
         # Make the parent folder to dest but not dest itself. This means that
         # the shutil.move at the end of this function won't create
         # dest/repo-ref, instead having dest contain the contents of repo-ref
         os.makedirs(os.path.join(self.cache_dir, fullrepo), exist_ok=True)
 
+        # This URL scheme doesn't appear to be 100% official for tags &
+        # branches, but it seems to accept any valid git reference
+        # See https://stackoverflow.com/a/13636954 and
+        # https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
+        repo_zipball = f"https://github.com/{fullrepo}/archive/{ref}.zip"
+        logger.info(f"Downloading {fullrepo} {ref}")
+
         repo_zip = ZipFile(download_file(repo_zipball))
+        _user, repo = fullrepo.split("/", 1)
+        # If the tag name began with a "v" and looked like a version (i.e. has a
+        # digit immediately afterwards), the "v" is stripped by GitHub. We have
+        # to match this behaviour to get the correct name of the top-level
+        # directory within the zip file
+        if re.match(r"^v\d", ref):
+            ref = ref[1:]
         with TemporaryDirectory() as temp_dir:
             repo_zip.extractall(temp_dir)
-            # Because of inconsistent naming schemes within zipballs, use a
-            # glob to get the top level folder name (as there's always one
-            # top-level folder)
-            # https://github.com/googlefonts/gftools/pull/987#issuecomment-2166051937
-            zip_dir = Path(temp_dir)
-            top_level_dir = next(zip_dir.glob("*"))
-            shutil.move(top_level_dir, dest)
-        return ref
+            shutil.move(os.path.join(temp_dir, f"{repo}-{ref}"), dest)
