@@ -317,25 +317,13 @@ class SubsetMerger:
             )
 
     def download_for_subsetting(self, fullrepo: str, ref: str) -> None:
-        # FIXME: this should be the resolved tag name in the case that ref is
-        #        "latest"
-        dest = os.path.join(self.cache_dir, f"{fullrepo}/{ref}")
-        if os.path.exists(dest):
-            # Assume sources exist & are up-to-date (we have no good way of
-            # checking this); do nothing
-            return
-        # Make the parent folder to dest but not dest itself. This means that
-        # the shutil.move at the end of this function won't create
-        # dest/repo-ref, instead having dest contain the contents of repo-ref
-        os.makedirs(os.path.join(self.cache_dir, fullrepo), exist_ok=True)
-
         if ref != "latest":
             # This URL scheme doesn't appear to be 100% official for tags &
             # branches, but it seems to accept any valid git reference
             # See https://stackoverflow.com/a/13636954 and
             # https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
             repo_zipball = f"https://github.com/{fullrepo}/archive/{ref}.zip"
-            logger.info(f"Downloading {fullrepo} {ref}")
+            logger.info(f"Using {fullrepo} {ref}")
         else:
             # Use the GitHub API to get the source download URL for the latest release
             client = GitHubClient.from_url(f"https://github.com/{fullrepo}")
@@ -343,6 +331,17 @@ class SubsetMerger:
             ref = release_metadata["tag_name"]
             repo_zipball = release_metadata["zipball_url"]
             logger.info(f"Using GitHub release {ref}")
+        
+        dest = os.path.join(self.cache_dir, f"{fullrepo}/{ref}")
+        if os.path.exists(dest):
+            # Assume sources exist & are up-to-date (we have no good way of
+            # checking this); do nothing
+            logger.info("Subset files present on disk, skipping download")
+            return
+        # Make the parent folder to dest but not dest itself. This means that
+        # the shutil.move at the end of this function won't create
+        # dest/repo-ref, instead having dest contain the contents of repo-ref
+        os.makedirs(os.path.join(self.cache_dir, fullrepo), exist_ok=True)
 
         repo_zip = ZipFile(download_file(repo_zipball))
         with TemporaryDirectory() as temp_dir:
