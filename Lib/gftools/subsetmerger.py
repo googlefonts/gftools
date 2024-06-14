@@ -198,9 +198,9 @@ class SubsetMerger:
                 repo, ref = parts
             path = upstream["path"]
             font_name = f"{repo}/{ref}/{path}"
-        path = os.path.join(self.cache_dir, repo, ref, path)
 
-        self.download_for_subsetting(repo, ref)
+        ref = self.download_for_subsetting(repo, ref)
+        path = os.path.join(self.cache_dir, repo, ref, path)
 
         # We're doing a UFO-UFO merge, so Glyphs files will need to be converted
         if path.endswith((".glyphs", ".glyphspackage")):
@@ -316,7 +316,12 @@ class SubsetMerger:
                 os.path.dirname(source_ds.path), instance.filename
             )
 
-    def download_for_subsetting(self, fullrepo: str, ref: str) -> None:
+    def download_for_subsetting(self, fullrepo: str, ref: str) -> str:
+        """Downloads a GitHub repository at a given reference
+
+        Returns the resolved ref ("latest" will become the tag used for the latest
+        release)"""
+
         if ref != "latest":
             # This URL scheme doesn't appear to be 100% official for tags &
             # branches, but it seems to accept any valid git reference
@@ -331,13 +336,13 @@ class SubsetMerger:
             ref = release_metadata["tag_name"]
             repo_zipball = release_metadata["zipball_url"]
             logger.info(f"Using GitHub release {ref}")
-        
+
         dest = os.path.join(self.cache_dir, f"{fullrepo}/{ref}")
         if os.path.exists(dest):
             # Assume sources exist & are up-to-date (we have no good way of
             # checking this); do nothing
             logger.info("Subset files present on disk, skipping download")
-            return
+            return ref
         # Make the parent folder to dest but not dest itself. This means that
         # the shutil.move at the end of this function won't create
         # dest/repo-ref, instead having dest contain the contents of repo-ref
@@ -353,3 +358,4 @@ class SubsetMerger:
             zip_dir = Path(temp_dir)
             top_level_dir = next(zip_dir.glob("*"))
             shutil.move(top_level_dir, dest)
+        return ref
