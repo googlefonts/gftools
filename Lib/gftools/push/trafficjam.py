@@ -397,6 +397,9 @@ class PushItems(list):
             if item.category == PushCategory.BLOCKED or item.path in seen:
                 continue
             seen.add(item.path)
+            if str(item.path) == "tags/all/families.csv":
+                bins["tags"].add(item)
+                continue
             bins[item.category.value].add(item)
 
         res = []
