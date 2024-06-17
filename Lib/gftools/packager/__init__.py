@@ -92,6 +92,7 @@ PR_CHECKLIST = """
 - [ ] Check designers order in metadata.pb, since the first one of the list appears as “principal designer”
 - [ ] Social media formatted visual assets for all new commissioned projects in the Drive directory, communicate with the repository Maintainer so that they can push this content to the Social Media tracker spreadsheet
 - [ ] Social media content draft for all new commissioned projects in the Drive directory and Social Media tracker spreadsheet, communicate with the repository Maintainer so that they can push this content to the Social Media tracker spreadsheet
+- [ ] PR has been added to the `Font Traffic Jam` project
 """
 
 
