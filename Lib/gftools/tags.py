@@ -45,6 +45,7 @@ class GFTags(object):
         ],
         "Slab": ["Geometric", "Humanist", "Clarendon"],
         "Script": ["Formal", "Informal", "Handwritten", "Upright Script"],
+        "Monospace": ["Monospace"],
         "Theme": [
             "Blackletter",
             "Wacky",
