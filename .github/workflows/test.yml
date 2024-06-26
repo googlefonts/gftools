@@ -58,6 +58,8 @@ jobs:
         if: github.event.pull_request.head.repo.fork == false
         run: |
           pytest tests/push/*.py
+        shell: bash
       - name: Run Tests
         run: |
           pytest tests/*.py
+        shell: bash
