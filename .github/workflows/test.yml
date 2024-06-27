@@ -8,6 +8,27 @@ on:
 
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DEV_FAMILY_DOWNLOAD: ${{ secrets.DEV_FAMILY_DOWNLOAD }}
+  DEV_META_URL: ${{ secrets.DEV_META_URL }}
+  DEV_URL: ${{ secrets.DEV_URL }}
+  DEV_VERSIONS_URL: ${{ secrets.DEV_VERSIONS_URL }}
+  PRODUCTION_META_URL: ${{ secrets.PRODUCTION_META_URL }}
+  PRODUCTION_URL: ${{ secrets.PRODUCTION_URL}}
+  PRODUCTION_VERSIONS_URL: ${{ secrets.PRODUCTION_VERSIONS_URL }}
+  SANDBOX_FAMILY_DOWNLOAD: ${{ secrets.SANDBOX_FAMILY_DOWNLOAD }}
+  SANDBOX_META_URL: ${{ secrets.SANDBOX_META_URL }}
+  SANDBOX_URL: ${{ secrets.SANDBOX_URL }}
+  SANDBOX_VERSIONS_URL: ${{ secrets.SANDBOX_VERSIONS_URL }}
+  TRAFFIC_JAM_ID: ${{ secrets.TRAFFIC_JAM_ID }}
+  STATUS_FIELD_ID: ${{ secrets.STATUS_FIELD_ID }}
+  LIST_FIELD_ID: ${{ secrets.LIST_FIELD_ID }}
+  PR_GF_ID: ${{ secrets.PR_GF_ID }}
+  IN_DEV_ID: ${{ secrets.IN_DEV_ID }}
+  IN_SANDBOX_ID: ${{ secrets.IN_SANDBOX_ID }}
+  LIVE_ID: ${{ secrets.LIVE_ID }}
+  TO_SANDBOX_ID: ${{ secrets.TO_SANDBOX_ID }}
+  TO_PRODUCTION_ID: ${{ secrets.TO_PRODUCTION_ID }}
+  BLOCKED_ID: ${{ secrets.BLOCKED_ID }}
 
 jobs:
   build:
@@ -33,28 +54,12 @@ jobs:
       - name: lint
         run: |
             black . --check --diff --color
-      - name: Run Tests
-        env:
-          DEV_FAMILY_DOWNLOAD: ${{ secrets.DEV_FAMILY_DOWNLOAD }}
-          DEV_META_URL: ${{ secrets.DEV_META_URL }}
-          DEV_URL: ${{ secrets.DEV_URL }}
-          DEV_VERSIONS_URL: ${{ secrets.DEV_VERSIONS_URL }}
-          PRODUCTION_META_URL: ${{ secrets.PRODUCTION_META_URL }}
-          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL}}
-          PRODUCTION_VERSIONS_URL: ${{ secrets.PRODUCTION_VERSIONS_URL }}
-          SANDBOX_FAMILY_DOWNLOAD: ${{ secrets.SANDBOX_FAMILY_DOWNLOAD }}
-          SANDBOX_META_URL: ${{ secrets.SANDBOX_META_URL }}
-          SANDBOX_URL: ${{ secrets.SANDBOX_URL }}
-          SANDBOX_VERSIONS_URL: ${{ secrets.SANDBOX_VERSIONS_URL }}
-          TRAFFIC_JAM_ID: ${{ secrets.TRAFFIC_JAM_ID }}
-          STATUS_FIELD_ID: ${{ secrets.STATUS_FIELD_ID }}
-          LIST_FIELD_ID: ${{ secrets.LIST_FIELD_ID }}
-          PR_GF_ID: ${{ secrets.PR_GF_ID }}
-          IN_DEV_ID: ${{ secrets.IN_DEV_ID }}
-          IN_SANDBOX_ID: ${{ secrets.IN_SANDBOX_ID }}
-          LIVE_ID: ${{ secrets.LIVE_ID }}
-          TO_SANDBOX_ID: ${{ secrets.TO_SANDBOX_ID }}
-          TO_PRODUCTION_ID: ${{ secrets.TO_PRODUCTION_ID }}
-          BLOCKED_ID: ${{ secrets.BLOCKED_ID }}
+      - name: Run Server Tests
+        if: github.event.pull_request.head.repo.fork == false
         run: |
-          pytest tests
+          pytest tests/push/*.py
+        shell: bash
+      - name: Run Tests
+        run: |
+          pytest tests/*.py
+        shell: bash
