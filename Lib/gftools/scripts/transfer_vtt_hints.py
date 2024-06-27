@@ -6,6 +6,7 @@ Usage:
 
 gftools transfer-vtt-hints src.ttf dst.ttf
 """
+
 from pyparsing import (
     Word,
     alphas,
@@ -22,7 +23,7 @@ from fontTools.ttLib import TTFont
 from fontTools.misc.cliTools import makeOutputFileName
 from copy import deepcopy
 import argparse
-from types import SimpleNamespace 
+from types import SimpleNamespace
 
 
 __all__ = ["transfer_hints"]
@@ -199,7 +200,6 @@ def transfer_hints(source_font: TTFont, target_font: TTFont):
             raise ValueError(f"Source font does not have {tbl} table")
         target_font[tbl] = deepcopy(source_font[tbl])
 
-
     missing_hints = set()
     for glyph_name in matched_glyphs:
         source_is_composite = source_font["glyf"][glyph_name].isComposite()
@@ -222,15 +222,18 @@ def transfer_hints(source_font: TTFont, target_font: TTFont):
             missing_hints.add((target_gid[glyph_name], glyph_name))
 
     if unmatched_glyphs:
-        printer("Following glyphs are new" , unmatched_glyphs)
+        printer("Following glyphs are new", unmatched_glyphs)
     if missing_hints:
-        printer("Following glyphs are missing hints, have changed from components to outlines, or points differ too much", missing_hints)
+        printer(
+            "Following glyphs are missing hints, have changed from components to outlines, or points differ too much",
+            missing_hints,
+        )
 
     # copy over other hinting tables
     for tbl in ("TSI0", "TSI2", "TSI5", "fpgm", "prep", "TSIC", "maxp", "cvt "):
         target_font[tbl] = deepcopy(source_font[tbl])
-    
-    transferred = (len(matched_glyphs) - len(missing_hints))
+
+    transferred = len(matched_glyphs) - len(missing_hints)
     total = len(target_font.getGlyphSet().keys())
     print(f"Transferred {transferred}/{total} glyphs")
     print("Please still check glyphs look good on Windows platforms")
