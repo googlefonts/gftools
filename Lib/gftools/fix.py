@@ -245,12 +245,11 @@ def fix_weight_class(ttFont: TTFont) -> FixResult:
         ttFont: a TTFont instance
     """
     if "fvar" in ttFont:
-        fvar = ttFont["fvar"]
-        default_axis_values = {a.axisTag: a.defaultValue for a in fvar.axes}
-        v = default_axis_values.get("wght", None)
-
-        if v is not None:
-            return _expect(ttFont, "OS/2", "usWeightClass", int(v))
+        # 2024-07-02: We've stopped requiring a VF nametable to reflect the origin
+        # master. We're now setting the name table to either be Regular or Italic.
+        # This approach matches what Adobe Source Sans does. It should fix
+        # the font naming issues in Win MS Word.
+        return _expect(ttFont, "OS/2", "usWeightClass", 400)
 
     stylename = font_stylename(ttFont)
     tokens = stylename.split()
