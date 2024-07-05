@@ -77,6 +77,11 @@ Example usage:
     parser.add_argument("--repo", "-r", help="GitHub repository to use for subsetting")
     parser.add_argument("--file", "-f", help="Source file within GitHub repository")
     parser.add_argument("--name", "-n", help="Name of subset to use from glyphset")
+    parser.add_argument(
+        "--allow-sparse",
+        help="Allow skipping a non-default master missing from the donor designspace",
+        action="store_true",
+    )
     parser.add_argument("--codepoints", "-c", help="Range of codepoints to subset")
     parser.add_argument(
         "--json", "-j", action="store_true", help="Use JSON structured UFOs"
@@ -125,7 +130,12 @@ Example usage:
                     }
                 )
     SubsetMerger(
-        args.input, args.output, subsets, googlefonts=args.googlefonts, json=args.json
+        args.input,
+        args.output,
+        subsets,
+        googlefonts=args.googlefonts,
+        json=args.json,
+        allow_sparse=args.allow_sparse,
     ).add_subsets()
 
 
