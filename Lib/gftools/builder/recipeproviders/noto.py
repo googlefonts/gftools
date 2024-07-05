@@ -141,6 +141,7 @@ class NotoBuilder(GFBuilder):
                     "operation": "addSubset",
                     "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
+                    "args": "--allow-sparse",
                 },
                 {
                     "operation": "buildVariable",
@@ -164,6 +165,7 @@ class NotoBuilder(GFBuilder):
                     "operation": "addSubset",
                     "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
+                    "args": "--allow-sparse",
                 },
                 {
                     "operation": "buildVariable",
@@ -268,6 +270,7 @@ class NotoBuilder(GFBuilder):
                     "operation": "addSubset",
                     "subsets": self.config["includeSubsets"],
                     "directory": "full-designspace",
+                    "args": "--allow-sparse",
                 },
                 {
                     "operation": "instantiateUfo",
