@@ -97,6 +97,7 @@ class SubsetMerger:
         googlefonts=False,
         cache="../subset-files",
         json=False,
+        allow_sparse=False,
     ):
         self.input = input_ds
         self.output = output_ds
@@ -105,6 +106,7 @@ class SubsetMerger:
         self.json = json
         self.cache_dir = cache
         self.subset_instances = {}
+        self.allow_sparse = allow_sparse
 
     def add_subsets(self):
         """Adds the specified subsets to the designspace file and saves it to the output path"""
@@ -278,10 +280,18 @@ class SubsetMerger:
             )
             return target
 
+        if (
+            self.allow_sparse
+            and {axis.tag: axis.default for axis in source_ds.axes} != location
+        ):
+            logger.info(
+                f"Could not find exact match for location {newlocation} in {font_name}, but allowing sparse"
+            )
+            return None
+
         raise ValueError(
             f"Could not find master in {font_name} for location {newlocation}"
         )
-        return None
 
     def generate_subset_instances(self, source_ds, font_name, instance):
         # Instance generation takes ages, cache which ones we've already
@@ -295,7 +305,7 @@ class SubsetMerger:
 
         # We won't return an individual instance; instead we update the
         # path in the donor's designspace object so that it can be taken from there
-        for instance, ufo in zip(source_ds.instances, ufos):
+        for instance, _ufo in zip(source_ds.instances, ufos):
             instance.path = os.path.join(
                 os.path.dirname(source_ds.path), instance.filename
             )

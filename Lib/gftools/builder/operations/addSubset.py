@@ -1,5 +1,4 @@
 import os
-import sys
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import yaml
@@ -10,7 +9,7 @@ from gftools.builder.operations import OperationBase
 
 class AddSubset(OperationBase):
     description = "Add a subset from another font"
-    rule = "gftools-add-ds-subsets -j -y $yaml -o $out $in"
+    rule = "gftools-add-ds-subsets $args -j -y $yaml -o $out $in"
 
     def validate(self):
         # Ensure there is a new name
@@ -19,7 +18,7 @@ class AddSubset(OperationBase):
         if "subsets" not in self.original:
             raise ValueError("No subsets defined")
 
-    def convert_dependencies(self, builder):
+    def convert_dependencies(self, graph):
         self._target = TemporaryDirectory()  # Stow object
         self._orig = NamedTemporaryFile(delete=False, mode="w")
         yaml.dump(self.original["subsets"], self._orig)
@@ -40,4 +39,5 @@ class AddSubset(OperationBase):
     def variables(self):
         return {
             "yaml": self._orig.name,
+            "args": self.original.get("args"),
         }
