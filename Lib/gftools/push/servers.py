@@ -56,7 +56,6 @@ def gf_server_metadata(url: str):
     """Get family json data from a Google Fonts metadata url"""
     # can't do requests.get("url").json() since request text starts with ")]}'"
     info = requests.get(url).json()
-
     return {i["family"]: i for i in info["familyMetadataList"]}
 
 
@@ -94,6 +93,12 @@ class GFServer(Itemer):
             i["name"]: i["fontVersions"][0]["version"]
             for i in self.family_versions_data["familyVersions"]
         }
+
+    def is_online(self):
+        req = requests.head(self.url)
+        if req.status_code == 200:
+            return True
+        return False
 
     @property
     def last_push(self):
@@ -201,6 +206,12 @@ class GFServers(Itemer):
             f"Sandbox: {self.sandbox.last_push}\n"
             f"Production: {self.production.last_push}\n"
         )
+
+    def servers_online(self):
+        for server in self:
+            is_online = server.is_online()
+            if not is_online:
+                raise ValueError(f"Server {server.name} is offline")
 
     def __iter__(self):
         for server in GFServers.SERVERS:
