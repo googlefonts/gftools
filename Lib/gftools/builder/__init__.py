@@ -1,6 +1,8 @@
 import os
 import subprocess
 import tempfile
+import shutil
+import atexit
 from collections import defaultdict
 from os import chdir
 from pathlib import Path
@@ -346,6 +348,14 @@ class GFBuilder:
         else:
             print("Could not parse ninja build file")
 
+    def clean(self):
+        for file in ["./build.ninja", "./.ninja_log"]:
+            if os.path.exists(file):
+                os.remove(file)
+
+        if os.path.exists("instance_ufos"):
+            shutil.rmtree("instance_ufos")
+
 
 def main(args=None):
     import argparse
@@ -397,4 +407,5 @@ def main(args=None):
     if args.graph:
         pd.draw_graph()
     if not args.no_ninja:
+        atexit.register(pd.clean)
         raise SystemExit(_program("ninja", []))
