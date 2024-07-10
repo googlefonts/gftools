@@ -347,7 +347,7 @@ class GFBuilder:
             graphs[0].write_png("graph.png")
         else:
             print("Could not parse ninja build file")
-        
+
     def clean(self):
         for file in ["./build.ninja", "./.ninja_log"]:
             if os.path.exists(file):
@@ -355,6 +355,7 @@ class GFBuilder:
 
         if os.path.exists("instance_ufos"):
             shutil.rmtree("instance_ufos")
+
 
 def main(args=None):
     import argparse
