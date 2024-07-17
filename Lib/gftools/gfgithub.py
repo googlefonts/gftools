@@ -85,7 +85,11 @@ class GitHubClient:
         return response
 
     def get_latest_release(self):
+        """https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#get-the-latest-release"""
         return self._get(self.rest_url("releases/latest"))
+
+    def get_latest_release_tag(self) -> str:
+        return self.get_latest_release()["tag_name"]
 
     def open_prs(self, pr_head: str, pr_base_branch: str) -> typing.List:
         return self._get(

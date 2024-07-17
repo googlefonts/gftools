@@ -74,7 +74,11 @@ Example usage:
 
     parser.add_argument("--yaml", "-y", help="YAML file describing subsets")
 
-    parser.add_argument("--repo", "-r", help="GitHub repository to use for subsetting")
+    parser.add_argument(
+        "--repo",
+        "-r",
+        help="GitHub repository slug to use for subsetting. Use @ after slug to specify branch/tag/commit, e.g. org/repo@v0.1.0; 'latest' is supported for latest release",
+    )
     parser.add_argument("--file", "-f", help="Source file within GitHub repository")
     parser.add_argument("--name", "-n", help="Name of subset to use from glyphset")
     parser.add_argument(
@@ -107,6 +111,7 @@ Example usage:
             print("Must specify --name or --codepoints")
             sys.exit(1)
         # And then construct the YAML-like object ourselves
+        # See subsets_schema in ..subsetmerger
         subsets = [
             {
                 "from": {
