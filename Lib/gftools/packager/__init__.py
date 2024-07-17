@@ -86,7 +86,7 @@ PR_CHECKLIST = """
 - [x] Family categorization tags collected from the type design team with the Categories Form
 - [ ] `minisite_url` definition in the METADATA.pb file for commissioned projects
 - [ ] `primary_script` definition in the METADATA.pb file for all projects that have a primary non-Latin based language support target
-- [ ] `subsets` definitions in the METADATA.pb reflect the actual subsets and languages present in the font files (in alphabetic order). For **CJK fonts**, only one default slicing strategy can be taken, that is only one CJK subset should be listed.
+- [ ] `subsets` definitions in the METADATA.pb reflect the actual subsets and languages present in the font files (in alphabetic order). For **CJK fonts**, only include one of the following subsets `chinese-hongkong`, `chinese-simplified`, `chinese-traditional`, `korean`, `japanese`.
 - [ ] Fontbakery checks are reviewed and failing checks are resolved in collaboration with the upstream font development team
 - [ ] Diffenator2 regression checks for revisions on all projects that are currently in production
 - [ ] Designers bio info have to be present in the designer catalog (at least an issue should be opened for tracking this, if they are not)
