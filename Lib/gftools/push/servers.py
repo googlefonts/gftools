@@ -155,6 +155,9 @@ class GFServer(Itemer):
         families_data = meta["familyMetadataList"]
         for family_data in families_data:
             family_name = family_data["family"]
+            # I beleive this is a test family so we'll skip it for now
+            if family_name == "Roboto_old":
+                continue
             last_modified = family_data["lastModified"]
 
             cached_family_version = self.family_versions.get(family_name)
