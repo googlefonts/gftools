@@ -170,7 +170,7 @@ class FamilyMeta(Itemer):
 
         description_fp = fp / "DESCRIPTION.en_us.html"
         if description_fp.exists():
-            description = open(description_fp, encoding="utf8").read()
+            description = parse_html(open(description_fp, encoding="utf8").read())
         else:
             description = None
         return cls(
