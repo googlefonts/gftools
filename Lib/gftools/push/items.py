@@ -157,7 +157,6 @@ class FamilyMeta(Itemer):
     def from_fp(cls, fp: Path):
         meta_fp = fp / "METADATA.pb"
         data = ReadProto(FamilyProto(), meta_fp)
-        description = open(fp / "DESCRIPTION.en_us.html", encoding="utf8").read()
         stroke = (
             data.category[0]
             if not data.stroke
@@ -168,6 +167,12 @@ class FamilyMeta(Itemer):
             article = parse_html(open(article_fp, encoding="utf-8").read())
         else:
             article = None
+
+        description_fp = fp / "DESCRIPTION.en_us.html"
+        if description_fp.exists():
+            description = open(description_fp, encoding="utf8").read()
+        else:
+            description = None
         return cls(
             name=data.name,
             designer=data.designer.split(", "),
@@ -176,7 +181,7 @@ class FamilyMeta(Itemer):
             subsets=sorted([s for s in data.subsets if s != "menu"]),
             stroke=stroke,
             classifications=[c.lower() for c in data.classifications],
-            description=None if article else parse_html(description),
+            description=description,
             primary_script=None if data.primary_script == "" else data.primary_script,
             article=article,
             minisite_url=None if data.minisite_url == "" else data.minisite_url,
