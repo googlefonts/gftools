@@ -1,60 +1,58 @@
 """
-gftools font-tags
-
-Export Font classification tags to csv, or check the spreadsheet
-is still structured correctly.
-
-Usage:
-# Write tags csv file to google/fonts/tags/all/families.csv
-gftools font-tags write path/to/google/fonts
-
-# Check Google Sheet is still structured correctly
-gftools font-tags lint path/to/google/fonts
+gftools font tag editor.
 """
 
 import os
 from pathlib import Path
-import sys
-from gftools.tags import GFTags
-from argparse import ArgumentParser
-from gftools.utils import is_google_fonts_repo
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+import argparse
+import tempfile
+import shutil
+from importlib.resources import as_file, files
+
+
+class HTTPRequestPostHandler(SimpleHTTPRequestHandler):
+
+    def do_POST(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+
+        message = '{"status": "ok"}'
+        self.wfile.write(bytes(message, "utf8"))
+
+        file_length = int(self.headers["Content-Length"])
+        data = self.rfile.read(file_length)
+        with open("families.csv", "wb") as f:
+            f.write(data)
 
 
 def main(args=None):
-    parser = ArgumentParser()
-    subparsers = parser.add_subparsers(
-        dest="command", required=True, metavar='"write" or "lint"'
-    )
-    universal_options_parser = ArgumentParser(add_help=False)
-    universal_options_parser.add_argument("gf_path", type=Path)
-
-    write_parser = subparsers.add_parser(
-        "write",
-        parents=[universal_options_parser],
-        help="Write Google Sheet to google/fonts csv file",
-    )
-    lint_parser = subparsers.add_parser(
-        "lint",
-        parents=[universal_options_parser],
-        help="Check Google Sheet is structured correctly",
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "repo_path", type=Path, help="Path to the google/fonts repository"
     )
     args = parser.parse_args(args)
 
-    if not is_google_fonts_repo(args.gf_path):
-        raise ValueError(
-            f"'{args.gf_path.absolute()}' is not a path to a valid google/fonts repo"
-        )
+    tagging_fp = args.repo_path / "tags" / "all" / "families.csv"
+    with (
+        tempfile.TemporaryDirectory() as tmpdirname,
+        as_file(files("gftools.tag-templates").joinpath("index.html")) as index_fp,
+    ):
+        shutil.copy(index_fp, tmpdirname)
+        # create a symlink to the families.csv file in the google/fonts repo since
+        # our server dir is a temporary directory
+        os.symlink(tagging_fp, Path(tmpdirname) / "families.csv")
+        os.chdir(tmpdirname)
 
-    gf_tags = GFTags()
-
-    if args.command == "write":
-        out_dir = args.gf_path / "tags" / "all"
-        if not out_dir.exists():
-            os.makedirs(out_dir)
-        out = out_dir / "families.csv"
-        gf_tags.to_csv(out)
-    elif args.command == "lint":
-        gf_tags.check_structure()
+        with HTTPServer(("", 8000), HTTPRequestPostHandler) as server:
+            print("Server started at http://localhost:8000")
+            print("Please keep this server running while you edit the tags.")
+            print(
+                "Once you're done editing, remember to commit the changes in "
+                "your google/fonts repo and open a pr."
+            )
+            server.serve_forever()
 
 
 if __name__ == "__main__":
