@@ -55,6 +55,7 @@ Please install these tools using pip:
 
 If you would like to use `gftools qa`:
 
+    brew install pkg-config # needed for interpolation checks
     pip install 'gftools[qa]'
 
 
