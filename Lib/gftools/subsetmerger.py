@@ -17,7 +17,7 @@ from strictyaml import HexInt, Int, Map, Optional, Seq, Str, Enum
 from ufomerge import merge_ufos
 
 from gftools.util.styles import STYLE_NAMES
-from gftools.utils import download_file, open_ufo
+from gftools.utils import download_file, open_ufo, parse_codepoint
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -47,6 +47,8 @@ subsets_schema = Seq(
             ),
             Optional("layoutHandling"): Str(),
             Optional("force"): Str(),
+            Optional("exclude_codepoints"): Str(),
+            Optional("exclude_codepoints_file"): Str(),
         }
     )
 )
@@ -69,6 +71,31 @@ def prepare_minimal_subsets(subsets):
             for r in subset["ranges"]:
                 for cp in range(r["start"], r["end"] + 1):
                     unicodes.append(cp)
+
+        # Parse in manual exclusions
+        excluded_codepoints = set()
+        if exclude_inline := subset.get("exclude_codepoints"):
+            for raw_value in exclude_inline.split():
+                raw_value = raw_value.strip()
+                if raw_value == "":
+                    continue
+                excluded_codepoints.add(parse_codepoint(raw_value))
+        if exclude_file := subset.get("exclude_codepoints_file"):
+            for line in Path(exclude_file).read_text().splitlines():
+                line = line.strip()
+                if line != "" and not line.startswith(("#", "//")):
+                    continue
+                # Remove in-line comments
+                line = line.split("#", 1)[0]
+                line = line.split("//", 1)[0]
+                line = line.rstrip()
+                excluded_codepoints.add(parse_codepoint(line))
+
+        # Filter unicodes by excluded_codepoints
+        unicodes = [
+            unicode for unicode in unicodes if unicode not in excluded_codepoints
+        ]
+
         key = (
             yaml.dump(subset["from"]),
             subset.get("layoutHandling"),
