@@ -81,6 +81,14 @@ Example usage:
     parser.add_argument(
         "--json", "-j", action="store_true", help="Use JSON structured UFOs"
     )
+    parser.add_argument(
+        "--exclude-codepoints", help="Space-delimited unicodes to exclude"
+    )
+    parser.add_argument(
+        "--exclude-codepoints-file",
+        help="Newline delimited file with unicodes to exclude. "
+        "Allows for comments with either # or //",
+    )
 
     parser.add_argument("--output", "-o", help="Output designspace file")
 
@@ -107,6 +115,8 @@ Example usage:
                 "from": {
                     "repo": args.repo,
                     "path": args.file,
+                    "exclude_codepoints": args.exclude_codepoints,
+                    "exclude_codepoints_file": args.exclude_codepoints_file,
                 }
             }
         ]
