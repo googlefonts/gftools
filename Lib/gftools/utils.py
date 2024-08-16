@@ -685,3 +685,11 @@ def has_gh_token():
     if "GH_TOKEN" in os.environ:
         return True
     return False
+
+
+def parse_codepoint(codepoint: str) -> int:
+    # https://github.com/googlefonts/ufomerge/blob/2257a1d3807a4eec9b515aa98e059383f7814d9a/Lib/ufomerge/cli.py#L118-L126
+    if codepoint.startswith(("U+", "u+", "0x", "0X")):
+        return int(codepoint[2:], 16)
+    else:
+        return int(codepoint)
