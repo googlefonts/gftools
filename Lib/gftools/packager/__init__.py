@@ -32,7 +32,6 @@ from pygit2.enums import FileStatus
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.gfgithub import GitHubClient
 from gftools.scripts.add_font import main as add_font
-from gftools.tags import GFTags
 from gftools.util import google_fonts as fonts
 from gftools.utils import (
     download_file,
@@ -83,7 +82,6 @@ subsets: "menu"
 PR_CHECKLIST = """
 ## PR Checklist:
 
-- [x] Family categorization tags collected from the type design team with the Categories Form
 - [ ] `minisite_url` definition in the METADATA.pb file for commissioned projects
 - [ ] `primary_script` definition in the METADATA.pb file for all projects that have a primary non-Latin based language support target
 - [ ] `subsets` definitions in the METADATA.pb reflect the actual subsets and languages present in the font files (in alphabetic order). For **CJK fonts**, only include one of the following subsets `chinese-hongkong`, `chinese-simplified`, `chinese-traditional`, `korean`, `japanese`.
@@ -613,6 +611,11 @@ def make_package(
     issue_number=None,
     **kwargs,
 ):
+    if skip_tags:
+        log.warning(
+            f"skip_tags is deprecated since we now have a tagging webapp, "
+            "https://google.github.io/fonts/tags.html"
+        )
     if pr and not has_gh_token():
         raise ValueError(
             f"Tool requires 'GH_TOKEN' environment variable in order to make "
@@ -673,19 +676,6 @@ def make_package(
         raise ValueError(
             f"'{metadata_fp}' Please fill in the source placeholder fields "
             "in the METADATA.pb file and rerun tool with the same commands."
-        )
-
-    # All font families must have tagging data. This data helps users on Google
-    # Fonts find font families. It's enabled by default since it's a hard
-    # requirements set by management.
-    if not skip_tags and not GFTags().has_family(metadata.name):
-        raise ValueError(
-            f"'{metadata.name}' does not have family tagging data! "
-            "Please complete the following form, "
-            "https://forms.gle/jcp3nDv63LaV1rxH6. Once tags have been added, "
-            "you may need to wait around five minutes in order for the tags "
-            "to be registered before rerunning the tool. This is a hard "
-            "requirement set by Google Fonts management."
         )
 
     with current_git_state(repo, family_path):
