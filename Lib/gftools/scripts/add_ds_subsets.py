@@ -89,6 +89,14 @@ Example usage:
         help="Newline delimited file with unicodes to exclude. "
         "Allows for comments with either # or //",
     )
+    parser.add_argument(
+        "--exclude-glyphs", help="Space-delimited glyph names to exclude"
+    )
+    parser.add_argument(
+        "--exclude-glyphs-file",
+        help="Newline delimited file with glyph names to exclude. "
+        "Allows for comments with either # or //",
+    )
 
     parser.add_argument("--output", "-o", help="Output designspace file")
 
@@ -117,6 +125,8 @@ Example usage:
                     "path": args.file,
                     "exclude_codepoints": args.exclude_codepoints,
                     "exclude_codepoints_file": args.exclude_codepoints_file,
+                    "exclude_glyphs": args.exclude_glyphs,
+                    "exclude_glyphs_file": args.exclude_glyphs_file,
                 }
             }
         ]
