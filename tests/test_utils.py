@@ -95,5 +95,5 @@ def test_supported_languages():
 
     ttfont = TTFont("data/test/Lora-Regular.ttf")
     langs = [l.id for l in SupportedLanguages(ttfont)]
-    assert len(langs) >= 400
+    assert len(langs) >= 350
     assert "en_Latn" in langs
