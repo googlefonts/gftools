@@ -66,6 +66,10 @@ dependencies = [
   'ninja',
   'networkx',
   'ruamel.yaml',
+  # Used for subset merging, and preferred over the home-grown UFO merge script,
+  # which is deprecated.
+  # Pin avoids bug googlefonts/ufomerge#28.
+  'ufomerge>=1.8.1'
 ]
 
 [project.optional-dependencies]

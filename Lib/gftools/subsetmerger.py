@@ -21,7 +21,7 @@ from strictyaml import HexInt, Int, Map, Optional, Seq, Str, Enum
 from ufomerge import merge_ufos
 
 from gftools.util.styles import STYLE_NAMES
-from gftools.utils import download_file, open_ufo
+from gftools.utils import download_file, open_ufo, parse_codepoint
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -53,6 +53,10 @@ subsets_schema = Seq(
             ),
             Optional("layoutHandling"): Str(),
             Optional("force"): Str(),
+            Optional("exclude_glyphs"): Str(),
+            Optional("exclude_codepoints"): Str(),
+            Optional("exclude_glyphs_file"): Str(),
+            Optional("exclude_codepoints_file"): Str(),
         }
     )
 )
@@ -63,7 +67,15 @@ def prepare_minimal_subsets(subsets):
     # codepoints with the same "donor" font and options. This allows the
     # user to specify multiple subsets from the same font, and they will
     # be merged into a single merge operation.
-    unicodes_by_donor = defaultdict(set)
+    incl_excl_by_donor: dict[
+        tuple[str, str, str],
+        tuple[
+            # Unicodes to include
+            set[int],
+            # Glyph names to exclude
+            set[str],
+        ],
+    ] = defaultdict(lambda: (set(), set()))
     for subset in subsets:
         # Resolved named subsets to a set of Unicode using glyphsets data
         if "name" in subset:
@@ -75,18 +87,74 @@ def prepare_minimal_subsets(subsets):
             for r in subset["ranges"]:
                 for cp in range(r["start"], r["end"] + 1):
                     unicodes.append(cp)
+
+        # Parse in manual exclusions
+        excluded_codepoints = set()
+        if exclude_inline := subset.get("exclude_codepoints"):
+            for raw_value in exclude_inline.split():
+                raw_value = raw_value.strip()
+                if raw_value == "":
+                    continue
+                excluded_codepoints.add(parse_codepoint(raw_value))
+        if exclude_file := subset.get("exclude_codepoints_file"):
+            for line in Path(exclude_file).read_text().splitlines():
+                line = line.strip()
+                if line != "" and not line.startswith(("#", "//")):
+                    continue
+                # Remove in-line comments
+                line = line.split("#", 1)[0]
+                line = line.split("//", 1)[0]
+                line = line.rstrip()
+                excluded_codepoints.add(parse_codepoint(line))
+
+        # Filter unicodes by excluded_codepoints
+        unicodes = [
+            unicode for unicode in unicodes if unicode not in excluded_codepoints
+        ]
+
+        # Load excluded glyphs by name
+        exclude_glyphs = set()
+        if exclude_inline := subset.get("exclude_glyphs"):
+            for glyph_name in exclude_inline.split():
+                glyph_name = glyph_name.strip()
+                if glyph_name == "":
+                    continue
+                exclude_glyphs.add(glyph_name)
+        if exclude_file := subset.get("exclude_glyphs_file"):
+            for line in Path(exclude_file).read_text().splitlines():
+                line = line.strip()
+                if line != "" and not line.startswith(("#", "//")):
+                    continue
+                # Remove in-line comments
+                line = line.split("#", 1)[0]
+                line = line.split("//", 1)[0]
+                line = line.rstrip()
+                exclude_glyphs.add(line)
+
+        # Update incl_excl_by_donor
         key = (
             yaml.dump(subset["from"]),
             subset.get("layoutHandling"),
             subset.get("force"),
         )
-        unicodes_by_donor[key] |= set(unicodes)
+        unicodes_incl, glyph_names_excl = incl_excl_by_donor[key]
+        unicodes_incl |= set(unicodes)
+        glyph_names_excl |= exclude_glyphs
 
     # Now rebuild the subset dictionary, but this time with the codepoints
     # amalgamated into minimal sets.
     newsubsets = []
-    for (donor, layouthandling, force), unicodes in unicodes_by_donor.items():
-        newsubsets.append({"from": yaml.safe_load(donor), "unicodes": list(unicodes)})
+    for (donor, layouthandling, force), (
+        unicodes_incl,
+        glyph_names_excl,
+    ) in incl_excl_by_donor.items():
+        newsubsets.append(
+            {
+                "from": yaml.safe_load(donor),
+                "unicodes": list(unicodes_incl),
+                "exclude_glyphs": list(glyph_names_excl),
+            }
+        )
         if layouthandling:
             newsubsets[-1]["layoutHandling"] = layouthandling
         if force:
@@ -171,6 +239,7 @@ class SubsetMerger:
         merge_ufos(
             target_ufo,
             source_ufo,
+            exclude_glyphs=subset["exclude_glyphs"],
             codepoints=subset["unicodes"],
             existing_handling=existing_handling,
             layout_handling=layout_handling,
