@@ -204,6 +204,9 @@ The build can be customized by adding the following keys to the YAML file:
     subspace them into separate roman and italic VF files to comply with
     Google Fonts' specification. Defaults to true.
 
+-   `localMetadata`: A field that's ignored so you can put whatever you like in it.
+
+
 ## *Really* customizing the build process
 
 If the options above aren't enough for you - let's say you want to run your
