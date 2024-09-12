@@ -79,7 +79,7 @@ qa = [
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
 ]
 test = [
-  "black == 24.4.2",
+  "black ==24.8.0",
   "pytest",  
 ]
 
