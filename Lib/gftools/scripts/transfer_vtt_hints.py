@@ -190,7 +190,7 @@ def printer(msg, items):
     print(f"{msg}:\nGID,Glyph_Name:\n{item_list}\n")
 
 
-def transfer_hints(source_font: TTFont, target_font: TTFont):
+def transfer_hints(source_font: TTFont, target_font: TTFont, skip_components=False):
     target_font["TSI0"] = fontTools.ttLib.newTable("TSI0")
     target_font["TSI2"] = fontTools.ttLib.newTable("TSI2")
     # Add a blank TSI1 and TSI3 table
@@ -210,7 +210,7 @@ def transfer_hints(source_font: TTFont, target_font: TTFont):
     for glyph_name in matched_glyphs:
         source_is_composite = source_font["glyf"][glyph_name].isComposite()
         target_is_composite = target_font["glyf"][glyph_name].isComposite()
-        if source_is_composite and target_is_composite:
+        if source_is_composite and target_is_composite and not skip_components:
             transfer_tsi1(source_font, target_font, glyph_name)
         elif source_is_composite and not target_is_composite:
             missing_hints.add((target_gid[glyph_name], glyph_name))
@@ -252,6 +252,7 @@ def main(args=None):
     parser = argparse.ArgumentParser(description="Transfer VTT hints between two fonts")
     parser.add_argument("source", type=str, help="Source font file")
     parser.add_argument("target", type=str, help="Target font file")
+    parser.add_argument("--skip-components", action="store_true", default=False, help="Skip component hints")
     output = parser.add_mutually_exclusive_group(required=False)
     output.add_argument("-o", "--out", type=str, help="Output file")
     output.add_argument(
@@ -262,7 +263,7 @@ def main(args=None):
     source_font = TTFont(args.source)
     target_font = TTFont(args.target)
 
-    transfer_hints(source_font, target_font)
+    transfer_hints(source_font, target_font, args.skip_components)
 
     if args.inplace:
         target_font.save(args.target)
