@@ -18,7 +18,9 @@ from pyparsing import (
     Optional,
     cppStyleComment,
     Literal,
+    Combine
 )
+import fontTools
 from fontTools.ttLib import TTFont
 from fontTools.misc.cliTools import makeOutputFileName
 from copy import deepcopy
@@ -29,9 +31,20 @@ from types import SimpleNamespace
 __all__ = ["transfer_hints"]
 
 
+MAXP_ATTRS = {
+    "maxZones",
+    "maxTwilightPoints",
+    "maxStorage",
+    "maxFunctionDefs",
+    "maxInstructionDefs",
+    "maxStackElements",
+    "maxSizeOfInstructions",
+}
+
+
 # TSI3 parser
 tsi3_func_name = Word(alphas)  # Function name consists of alphabetic characters
-integer = Word(nums).setParseAction(
+integer = Combine(Optional('-') + Word(nums)).setParseAction(
     lambda t: int(t[0])
 )  # Define integers and convert them to int
 tsi3_args = (
@@ -115,24 +128,16 @@ def _tsi3_to_string(instructions: list[SimpleNamespace]):
 
 
 def _update_tsi1(instructions: list[SimpleNamespace], gid_map, glyf):
-    new_instructions = [
-        i for i in instructions if i.name != "OFFSET[R]" if i.name != "SVTCA[Y]"
-    ]
-    if instructions[0].name != "USEMYMETRICS[]":
-        comp_pos = 0
-    else:
-        comp_pos = 1
-    for component in glyf.components:
-        new_instructions.insert(
-            comp_pos,
-            SimpleNamespace(
-                name="OFFSET[R]",
-                args=[gid_map[component.glyphName], component.x, component.y],
-            ),
-        )
-        comp_pos += 1
-    if new_instructions[-1].name == "USEMYMETRICS[]":
-        new_instructions.pop()
+    new_instructions = []
+    component_idx = 0
+    for instruction in instructions:
+        if instruction.name == "OFFSET[R]":
+            component = glyf.components[component_idx]
+            instruction.args[0] = gid_map[component.glyphName]
+            instruction.args[1] = component.x
+            instruction.args[2] = component.y
+            component_idx += 1
+    new_instructions.append(instruction)
     return new_instructions
 
 
@@ -170,9 +175,7 @@ def transfer_tsi1(source_font: TTFont, target_font: TTFont, glyph_name: str):
     target_glyph_order = {
         name: idx for idx, name in enumerate(target_font.getGlyphOrder())
     }
-
     glyph_instructions = tsi1_parser.parseString(existing_program)
-    glyph = target_font["glyf"][glyph_name]
     updated_instructions = _update_tsi1(
         glyph_instructions, target_glyph_order, target_font["glyf"][glyph_name]
     )
@@ -188,17 +191,20 @@ def printer(msg, items):
 
 
 def transfer_hints(source_font: TTFont, target_font: TTFont):
-    # transfer TSI3 (VTT talk glyph instructions)
+    target_font["TSI0"] = fontTools.ttLib.newTable("TSI0")
+    target_font["TSI2"] = fontTools.ttLib.newTable("TSI2")
+    # Add a blank TSI1 and TSI3 table
+    for tbl in ("TSI1", "TSI3"):
+        target_font[tbl] = fontTools.ttLib.newTable(tbl)
+        setattr(target_font[tbl], "glyphPrograms", {})
+        setattr(target_font[tbl], "extraPrograms", {})
+
     target_gid = {name: idx for idx, name in enumerate(target_font.getGlyphOrder())}
-    matched_glyphs = source_font.getGlyphSet().keys() & target_font.getGlyphSet().keys()
+    matched_glyphs = source_font["TSI1"].glyphPrograms.keys() & target_font.getGlyphSet().keys()
     unmatched_glyphs = (
         target_font.getGlyphSet().keys() - source_font.getGlyphSet().keys()
     )
     unmatched_glyphs = set((target_gid[g], g) for g in unmatched_glyphs)
-    for tbl in ("TSI1", "TSI3"):
-        if tbl not in source_font:
-            raise ValueError(f"Source font does not have {tbl} table")
-        target_font[tbl] = deepcopy(source_font[tbl])
 
     missing_hints = set()
     for glyph_name in matched_glyphs:
@@ -230,8 +236,11 @@ def transfer_hints(source_font: TTFont, target_font: TTFont):
         )
 
     # copy over other hinting tables
-    for tbl in ("TSI0", "TSI2", "TSI5", "fpgm", "prep", "TSIC", "maxp", "cvt "):
+    for tbl in ("TSI5", "fpgm", "prep", "TSIC", "cvt "):
         target_font[tbl] = deepcopy(source_font[tbl])
+
+    for maxp_attr in MAXP_ATTRS:
+        setattr(target_font["maxp"], maxp_attr, getattr(source_font["maxp"], maxp_attr))
 
     transferred = len(matched_glyphs) - len(missing_hints)
     total = len(target_font.getGlyphSet().keys())
@@ -239,7 +248,7 @@ def transfer_hints(source_font: TTFont, target_font: TTFont):
     print("Please still check glyphs look good on Windows platforms")
 
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser(description="Transfer VTT hints between two fonts")
     parser.add_argument("source", type=str, help="Source font file")
     parser.add_argument("target", type=str, help="Target font file")
@@ -248,7 +257,7 @@ def main():
     output.add_argument(
         "-i", "--inplace", action="store_true", help="Inplace modification"
     )
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     source_font = TTFont(args.source)
     target_font = TTFont(args.target)
