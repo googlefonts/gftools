@@ -18,7 +18,7 @@ from pyparsing import (
     Optional,
     cppStyleComment,
     Literal,
-    Combine
+    Combine,
 )
 import fontTools
 from fontTools.ttLib import TTFont
@@ -44,7 +44,7 @@ MAXP_ATTRS = {
 
 # TSI3 parser
 tsi3_func_name = Word(alphas)  # Function name consists of alphabetic characters
-integer = Combine(Optional('-') + Word(nums)).setParseAction(
+integer = Combine(Optional("-") + Word(nums)).setParseAction(
     lambda t: int(t[0])
 )  # Define integers and convert them to int
 tsi3_args = (
@@ -200,7 +200,9 @@ def transfer_hints(source_font: TTFont, target_font: TTFont, skip_components=Fal
         setattr(target_font[tbl], "extraPrograms", {})
 
     target_gid = {name: idx for idx, name in enumerate(target_font.getGlyphOrder())}
-    matched_glyphs = source_font["TSI1"].glyphPrograms.keys() & target_font.getGlyphSet().keys()
+    matched_glyphs = (
+        source_font["TSI1"].glyphPrograms.keys() & target_font.getGlyphSet().keys()
+    )
     unmatched_glyphs = (
         target_font.getGlyphSet().keys() - source_font.getGlyphSet().keys()
     )
@@ -245,7 +247,7 @@ def transfer_hints(source_font: TTFont, target_font: TTFont, skip_components=Fal
 
     # Copy over extraPrograms
     for tbl in ("TSI1", "TSI3"):
-        target_font[tbl].extraPrograms= source_font[tbl].extraPrograms
+        target_font[tbl].extraPrograms = source_font[tbl].extraPrograms
 
     transferred = len(matched_glyphs) - len(missing_hints)
     total = len(target_font.getGlyphSet().keys())
@@ -257,7 +259,12 @@ def main(args=None):
     parser = argparse.ArgumentParser(description="Transfer VTT hints between two fonts")
     parser.add_argument("source", type=str, help="Source font file")
     parser.add_argument("target", type=str, help="Target font file")
-    parser.add_argument("--skip-components", action="store_true", default=False, help="Skip component hints")
+    parser.add_argument(
+        "--skip-components",
+        action="store_true",
+        default=False,
+        help="Skip component hints",
+    )
     output = parser.add_mutually_exclusive_group(required=False)
     output.add_argument("-o", "--out", type=str, help="Output file")
     output.add_argument(
