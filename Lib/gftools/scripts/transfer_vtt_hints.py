@@ -137,7 +137,7 @@ def _update_tsi1(instructions: list[SimpleNamespace], gid_map, glyf):
             instruction.args[1] = component.x
             instruction.args[2] = component.y
             component_idx += 1
-    new_instructions.append(instruction)
+        new_instructions.append(instruction)
     return new_instructions
 
 
