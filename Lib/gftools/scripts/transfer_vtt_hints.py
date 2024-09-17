@@ -235,12 +235,17 @@ def transfer_hints(source_font: TTFont, target_font: TTFont, skip_components=Fal
             missing_hints,
         )
 
-    # copy over other hinting tables
+    # Copy over other hinting tables
     for tbl in ("TSI5", "fpgm", "prep", "TSIC", "cvt "):
         target_font[tbl] = deepcopy(source_font[tbl])
 
+    # Copy over relevant maxp attributes
     for maxp_attr in MAXP_ATTRS:
         setattr(target_font["maxp"], maxp_attr, getattr(source_font["maxp"], maxp_attr))
+
+    # Copy over extraPrograms
+    for tbl in ("TSI1", "TSI3"):
+        target_font[tbl].extraPrograms= source_font[tbl].extraPrograms
 
     transferred = len(matched_glyphs) - len(missing_hints)
     total = len(target_font.getGlyphSet().keys())
