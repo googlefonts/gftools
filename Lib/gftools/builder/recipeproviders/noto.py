@@ -1,5 +1,6 @@
 import copy
 import os
+from pathlib import Path
 import sys
 from collections import defaultdict
 
@@ -210,6 +211,41 @@ class NotoBuilder(GFBuilder):
                 self.recipe[last_target].append(build_stat_step)
 
     def build_a_static(self, source, instance, output):
+        axis_map = {a.name: a.tag for a in source.designspace.axes}
+        if (
+            output == "otf" or not self.has_variables
+        ):  # No choice but to instantiate the UFO
+            return self.build_a_static_from_ufo(source, instance, output)
+        relevant_variable_recipe = {
+            k: v
+            for k, v in self.recipe.items()
+            if v[0]["source"] == source.path and "/variable-ttf" in k
+        }
+        if not relevant_variable_recipe:
+            return self.build_a_static_from_ufo(source, instance, output)
+        for variable_name, recipe in relevant_variable_recipe.items():
+            instancebase = Path(instance.filename).stem + ".ttf"
+            static_name = str(
+                Path(variable_name.replace("variable-ttf", "ttf")).parent / instancebase
+            )
+
+            args = "--retain-gids --name-legacy --passthrough-tables "
+            if "unhinted" in static_name:
+                args += "--no-hinting"
+            loc = ",".join(
+                f"{axis_map[k]}={v}" for k, v in instance.designLocation.items()
+            )
+            args += f' --instance="{loc}"'
+            recipe = copy.deepcopy(recipe)
+            while "postprocess" in recipe[-1]:
+                recipe.pop()
+            recipe += [{"operation": "hbsubset", "args": args}]
+            if "googlefonts" in static_name:
+                recipe.append({"operation": "fix", "args": "--include-source-fixes"})
+
+            self.recipe[static_name] = recipe
+
+    def build_a_static_from_ufo(self, source, instance, output):
         familyname_path = source.family_name.replace(" ", "")
 
         # Unhinted static
