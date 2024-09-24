@@ -349,12 +349,21 @@ class GFBuilder:
             print("Could not parse ninja build file")
 
     def clean(self):
-        for file in ["./build.ninja", "./.ninja_log"]:
-            if os.path.exists(file):
-                os.remove(file)
+        if hasattr(self, "config") and isinstance(self.config, dict):
+            cleanUp = self.config.get("cleanUp")
+            if cleanUp == True:
+                print("Cleaning up temporary files...")
 
-        if os.path.exists("instance_ufos"):
-            shutil.rmtree("instance_ufos")
+                for file in ["./build.ninja", "./.ninja_log"]:
+                    if os.path.exists(file):
+                        os.remove(file)
+
+                if os.path.exists("instance_ufos"):
+                    shutil.rmtree("instance_ufos")
+
+                print("Done cleaning up temporary files")
+        else:
+            print("Configuration not found or invalid, skipping cleanup.")
 
 
 def main(args=None):
