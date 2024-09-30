@@ -520,10 +520,12 @@ def has_mac_names(ttfont):
     """Check if a font has Mac names. Mac names have the following
     field values:
     platformID: 1, encodingID: 0, LanguageID: 0"""
-    for i in range(255):
-        if ttfont["name"].getName(i, 1, 0, 0):
-            return True
-    return False
+    return any(
+        namerecord.platformID == 1
+        and namerecord.platEncID == 0
+        and namerecord.langID == 0
+        for namerecord in ttfont["name"].names
+    )
 
 
 def font_is_italic(ttfont):
