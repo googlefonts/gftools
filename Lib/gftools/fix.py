@@ -677,11 +677,17 @@ def drop_superfluous_mac_names(ttfont) -> FixResult:
 def drop_mac_names(ttfont, keep_ids=[]) -> FixResult:
     """Drop all mac names"""
     messages = []
-    for n in range(255):
-        name = ttfont["name"].getName(n, 1, 0, 0)
-        if name:
-            ttfont["name"].names.remove(name)
-            messages.append(f"Removed nameID {n}: {name.toStr()}")
+    for namerecord in list(  # list() to avoid removing while iterating
+        ttfont["name"].names
+    ):
+        if namerecord.nameID not in keep_ids:
+            messages.append(f"Removed nameID {namerecord.nameID}: {namerecord.toStr()}")
+            if (
+                namerecord.platformID == 1
+                and namerecord.platEncID == 0
+                and namerecord.langID == 0
+            ):
+                ttfont["name"].names.remove(namerecord)
     return ttfont, messages
 
 
