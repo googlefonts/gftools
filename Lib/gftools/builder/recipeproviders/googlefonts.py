@@ -57,6 +57,7 @@ DEFAULTS = {
     "checkCompatibility": True,
     "overlaps": "booleanOperations",
     "splitItalic": True,
+    "expandFeaturesToInstances": True
 }
 
 
@@ -338,6 +339,7 @@ class GFBuilder(RecipeProviderBase):
                     "operation": "instantiateUfo",
                     "instance_name": instancename,
                     "glyphData": self.config.get("glyphData"),
+                    "expandFeaturesToInstances": self.config.get("expandFeaturesToInstances"),
                 }
             )
         steps += (
