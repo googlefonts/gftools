@@ -83,6 +83,7 @@ PR_CHECKLIST = """
 ## PR Checklist:
 
 - [ ] `minisite_url` definition in the METADATA.pb file for commissioned projects
+- [ ] `tags` are added for NEW FONTS
 - [ ] `primary_script` definition in the METADATA.pb file for all projects that have a primary non-Latin based language support target
 - [ ] `subsets` definitions in the METADATA.pb reflect the actual subsets and languages present in the font files (in alphabetic order). For **CJK fonts**, only include one of the following subsets `chinese-hongkong`, `chinese-simplified`, `chinese-traditional`, `korean`, `japanese`.
 - [ ] Fontbakery checks are reviewed and failing checks are resolved in collaboration with the upstream font development team
