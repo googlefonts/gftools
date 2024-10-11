@@ -558,6 +558,7 @@ def pr_family(
             google_fonts.add_labels(open_prs[0]["number"], ["I New Font"])
     else:
         resp = google_fonts.create_issue_comment(open_prs[0]["number"], "Updated")
+        google_fonts.update_pr(open_prs[0]["number"], title=title)
         log.info(f"Updated PR '{resp['html_url']}'")
 
     # inherit labels from issue

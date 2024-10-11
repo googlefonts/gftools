@@ -114,6 +114,14 @@ class GitHubClient:
             },
         )
 
+    def update_pr(
+        self, pull_number: int, title: str = None, body: str = None, state: str = None
+    ):
+        return self._post(
+            self.rest_url(f"pulls/{pull_number}"),
+            {"title": title, "body": body, "state": state},
+        )
+
     def create_issue_comment(self, issue_number: int, body: str):
         return self._post(
             self.rest_url(f"issues/{issue_number}/comments"), {"body": body}
