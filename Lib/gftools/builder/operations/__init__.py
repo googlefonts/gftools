@@ -131,9 +131,16 @@ class OperationBase:
 
 
 class FontmakeOperationBase(OperationBase):
+    COMPILER_ENV_KEY = "GFTOOLS_COMPILER"
+    static = False
+    format = "ttf"
+    rule = "fontmake --output-path $out -o $format $fontmake_type $in $args"
+
     @property
     def variables(self):
         vars = defaultdict(str)
+        vars["compiler"] = self.compiler
+        vars["format"] = self.format  # buildTTF -> ttf, etc.
         for k, v in self.original.items():
             if k != "needs":
                 vars[k] = v
@@ -144,10 +151,31 @@ class FontmakeOperationBase(OperationBase):
             vars["fontmake_type"] = "-m"
         elif self.first_source.is_ufo:
             vars["fontmake_type"] = "-u"
-        if "--verbose" not in vars["fontmake_args"]:
-            vars["fontmake_args"] += " --verbose WARNING "
+        if "--verbose" not in vars["args"]:
+            vars["args"] += " --verbose WARNING "
 
         return vars
+
+    def validate(self):
+        if self.static:
+            if not self.first_source.exists():
+                # We can't check this file (assume it was generated as part of the
+                # build), so user is on their own.
+                return
+            if (
+                self.first_source.is_glyphs
+                and len(self.first_source.gsfont.masters) > 1
+            ):
+                raise ValueError(
+                    f"Cannot build a static font from {self.first_source.path}"
+                )
+            if (
+                self.first_source.designspace
+                and len(self.first_source.designspace.sources) > 1
+            ):
+                raise ValueError(
+                    f"Cannot build a static font from {self.first_source.path}"
+                )
 
 
 known_operations = {}
