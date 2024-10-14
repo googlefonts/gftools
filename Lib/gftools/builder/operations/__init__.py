@@ -5,12 +5,24 @@ import os
 import pkgutil
 import importlib
 import inspect
+import logging
 import sys
 from os.path import dirname
 from tempfile import NamedTemporaryFile
 
 from gftools.builder.file import File
 from gftools.utils import shell_quote
+
+log = logging.getLogger(__name__)
+
+
+# Grossness to allow class properties in Python
+class classproperty:
+    def __init__(self, func):
+        self.fget = func
+
+    def __get__(self, instance, owner):
+        return self.fget(owner)
 
 
 @dataclass
@@ -134,7 +146,15 @@ class FontmakeOperationBase(OperationBase):
     COMPILER_ENV_KEY = "GFTOOLS_COMPILER"
     static = False
     format = "ttf"
-    rule = "fontmake --output-path $out -o $format $fontmake_type $in $args"
+
+    @classproperty
+    def rule(self):
+        if self.compiler == "fontmake":
+            return "fontmake --output-path $out -o $format $fontmake_type $in $args"
+        else:
+            # Construct a ninja rule which correctly builds the requested font type
+            # (Good luck with fontmake args...)
+            return "fontc -o $out $in $args"
 
     @property
     def variables(self):
@@ -154,7 +174,17 @@ class FontmakeOperationBase(OperationBase):
         if "--verbose" not in vars["args"]:
             vars["args"] += " --verbose WARNING "
 
+        if "--filter" in vars["args"] and self.compiler == "fontc":
+            log.warning("Cannot use --filter with fontc, dropping arguments...")
+            del vars["args"]
+
         return vars
+
+    @property
+    def compiler(self):
+        return self.original.get(
+            "compiler", os.environ.get(self.COMPILER_ENV_KEY, "fontmake")
+        )
 
     def validate(self):
         if self.static:
