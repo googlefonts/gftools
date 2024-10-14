@@ -17,7 +17,7 @@ from ninja import _program
 from ninja.ninja_syntax import Writer, escape_path
 
 from gftools.builder.file import File
-from gftools.builder.operations import OperationBase, known_operations
+from gftools.builder.operations import OperationBase, OperationRegistry
 from gftools.builder.operations.copy import Copy
 from gftools.builder.recipeproviders import get_provider
 from gftools.builder.schema import BASE_SCHEMA
@@ -36,7 +36,7 @@ class GFBuilder:
     config: dict
     recipe: Recipe
 
-    def __init__(self, config: Union[dict, str]):
+    def __init__(self, config: Union[dict, str], use_fontc=False):
         if isinstance(config, str):
             parentpath = Path(config).resolve().parent
             with open(config, "r") as file:
@@ -55,6 +55,14 @@ class GFBuilder:
             self._orig_config = yaml.dump(config)
             self.config = config
 
+        # TODO(colin) we also want to suppress instancing when running fontmake
+        # if we're using it to compare with fontc
+        if use_fontc:
+            # override config to turn not build instances if we're variable
+            if self.config.get("buildVariable", True):
+                self.config["buildStatic"] = False
+
+        self.known_operations = OperationRegistry(use_fontc=use_fontc)
         self.writer = Writer(open("build.ninja", "w"))
         self.named_files = {}
         self.used_operations = set([])
@@ -156,9 +164,10 @@ class GFBuilder:
 
     def operation_step_to_object(self, step):
         operation = step.get("operation") or step.get("postprocess")
-        if operation not in known_operations:
+        cls = self.known_operations.get(operation)
+        if cls is None:
             raise ValueError(f"Unknown operation {operation}")
-        cls = known_operations[operation]
+
         if operation not in self.used_operations:
             self.used_operations.add(operation)
             cls.write_rules(self.writer)
@@ -381,6 +390,12 @@ def main(args=None):
         help="Just generate and output recipe from recipe builder",
         action="store_true",
     )
+    parser.add_argument(
+        "--experimental-fontc",
+        help="Use fontc instead of fontmake",
+        action="store_true",
+    )
+
     parser.add_argument("config", help="Path to config file or source file", nargs="+")
     args = parser.parse_args(args)
     yaml_files = []
@@ -404,7 +419,7 @@ def main(args=None):
             raise ValueError("Only one config file can be given for now")
         config = args.config[0]
 
-    pd = GFBuilder(config)
+    pd = GFBuilder(config, use_fontc=args.experimental_fontc)
     if args.generate:
         config = pd.config
         config["recipe"] = pd.recipe

@@ -8,6 +8,7 @@ import inspect
 import sys
 from os.path import dirname
 from tempfile import NamedTemporaryFile
+from typing import Dict
 
 from gftools.builder.file import File
 from gftools.utils import shell_quote
@@ -150,17 +151,43 @@ class FontmakeOperationBase(OperationBase):
         return vars
 
 
-known_operations = {}
+class OperationRegistry:
+    def __init__(self, use_fontc: bool):
+        self.known_operations = get_known_operations()
+        self.use_fontc = use_fontc
 
-for mod in pkgutil.iter_modules([dirname(__file__)]):
-    imp = importlib.import_module("gftools.builder.operations." + mod.name)
-    classes = [
-        (name, cls)
-        for name, cls in inspect.getmembers(sys.modules[imp.__name__], inspect.isclass)
-        if "OperationBase" not in name and issubclass(cls, OperationBase)
-    ]
-    if len(classes) > 1:
-        raise ValueError(
-            f"Too many classes in module gftools.builder.operations.{mod.name}"
-        )
-    known_operations[mod.name] = classes[0][1]
+    def get(self, operation_name: str):
+        if self.use_fontc:
+            if operation_name == "buildVariable":
+                # if we import this at the top level it's a circular import error
+                from .fontc.fontcBuildVariable import FontcBuildVariable
+
+                return FontcBuildVariable
+            if operation_name == "buildTTF":
+                from .fontc.fontcBuildTTF import FontcBuildTTF
+
+                return FontcBuildTTF
+
+        return self.known_operations.get(operation_name)
+
+
+def get_known_operations() -> Dict[str, OperationBase]:
+    known_operations = {}
+
+    for mod in pkgutil.iter_modules([dirname(__file__)]):
+        if "fontc" in mod.name:
+            continue
+        imp = importlib.import_module("gftools.builder.operations." + mod.name)
+        classes = [
+            (name, cls)
+            for name, cls in inspect.getmembers(
+                sys.modules[imp.__name__], inspect.isclass
+            )
+            if "OperationBase" not in name and issubclass(cls, OperationBase)
+        ]
+        if len(classes) > 1:
+            raise ValueError(
+                f"Too many classes in module gftools.builder.operations.{mod.name}"
+            )
+        known_operations[mod.name] = classes[0][1]
+    return known_operations
