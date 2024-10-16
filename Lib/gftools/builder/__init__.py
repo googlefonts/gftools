@@ -58,6 +58,8 @@ class GFBuilder:
         # TODO(colin) we also want to suppress instancing when running fontmake
         # if we're using it to compare with fontc
         if use_fontc:
+            # we stash this flag here to pass it down to the recipe provider
+            self.config["use_fontc"] = use_fontc
             self.config["buildWebfont"] = False
             # override config to turn not build instances if we're variable
             if self.config.get("buildVariable", True):
