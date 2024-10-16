@@ -168,6 +168,7 @@ class OperationRegistry:
 
             if operation_name == "buildOTF":
                 from .fontc.fontcBuildOTF import FontcBuildOTF
+
                 return FontcBuildOTF
 
         return self.known_operations.get(operation_name)
