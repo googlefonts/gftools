@@ -15,6 +15,7 @@ import yaml
 from fontmake.font_project import FontProject
 from ninja import _program
 from ninja.ninja_syntax import Writer, escape_path
+from typing import Union
 
 from gftools.builder.file import File
 from gftools.builder.operations import OperationBase, OperationRegistry
@@ -36,7 +37,12 @@ class GFBuilder:
     config: dict
     recipe: Recipe
 
-    def __init__(self, config: Union[dict, str], use_fontc=False, simple_outputs=False):
+    def __init__(
+        self,
+        config: Union[dict, str],
+        use_fontc=False,
+        simple_outputs=Union[Path, None],
+    ):
         if isinstance(config, str):
             parentpath = Path(config).resolve().parent
             with open(config, "r") as file:
@@ -62,11 +68,16 @@ class GFBuilder:
             # override config to turn not build instances if we're variable
             if self.config.get("buildVariable", True):
                 self.config["buildStatic"] = False
-            # if the font doesn't explicitly request CFF, just built TT outlines
+            # if the font doesn't explicitly request CFF, just build TT outlines
             # if the font _only_ wants CFF outlines, we will try to build them
-            # ( but fail on fontc for now )
+            # ( but fail on fontc for now) (but is this even a thing?)
             elif self.config.get("buildTTF", True):
                 self.config["buildOTF"] = False
+        if simple_outputs:
+            # we dump everything into one dir in this case
+            self.config["outputDir"] = str(simple_outputs)
+            self.config["ttDir"] = str(simple_outputs)
+            self.config["otDir"] = str(simple_outputs)
 
         self.known_operations = OperationRegistry(use_fontc=use_fontc)
         self.writer = Writer(open("build.ninja", "w"))
@@ -173,7 +184,6 @@ class GFBuilder:
         cls = self.known_operations.get(operation)
         if cls is None:
             raise ValueError(f"Unknown operation {operation}")
-
         if operation not in self.used_operations:
             self.used_operations.add(operation)
             cls.write_rules(self.writer)
@@ -404,12 +414,15 @@ def main(args=None):
 
     parser.add_argument(
         "--experimental-simple-output",
-        help="For comparison with fontc: skip instancing, webfonts, and OTF (if building TTF)",
-        action="store_true",
+        help="generate a reduced set of targets, and copy them to the provided directory",
+        type=Path,
     )
 
     parser.add_argument("config", help="Path to config file or source file", nargs="+")
     args = parser.parse_args(args)
+    if args.experimental_simple_output:
+        # get the abs path because we use cwd later and relative paths will break
+        args.experimental_simple_output = args.experimental_simple_output.absolute()
     yaml_files = []
     source_files = []
     for config in args.config:
@@ -431,7 +444,11 @@ def main(args=None):
             raise ValueError("Only one config file can be given for now")
         config = args.config[0]
 
-    pd = GFBuilder(config, use_fontc=args.experimental_fontc, simple_outputs=args.experimental_simple_output)
+    pd = GFBuilder(
+        config,
+        use_fontc=args.experimental_fontc,
+        simple_outputs=args.experimental_simple_output,
+    )
     if args.generate:
         config = pd.config
         config["recipe"] = pd.recipe
