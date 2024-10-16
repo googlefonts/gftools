@@ -58,9 +58,15 @@ class GFBuilder:
         # TODO(colin) we also want to suppress instancing when running fontmake
         # if we're using it to compare with fontc
         if use_fontc:
+            self.config["buildWebfont"] = False
             # override config to turn not build instances if we're variable
             if self.config.get("buildVariable", True):
                 self.config["buildStatic"] = False
+            # if the font doesn't explicitly request CFF, just built TT outlines
+            # if the font _only_ wants CFF outlines, we will try to build them
+            # ( but fail on fontc for now )
+            elif self.config.get("buildTTF", True):
+                self.config["buildOTF"] = False
 
         self.known_operations = OperationRegistry(use_fontc=use_fontc)
         self.writer = Writer(open("build.ninja", "w"))

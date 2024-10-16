@@ -166,7 +166,9 @@ class OperationRegistry:
             if operation_name == "buildTTF":
                 from .fontc.fontcBuildTTF import FontcBuildTTF
 
-                return FontcBuildTTF
+            if operation_name == "buildOTF":
+                from .fontc.fontcBuildOTF import FontcBuildOTF
+                return FontcBuildOTF
 
         return self.known_operations.get(operation_name)
 
