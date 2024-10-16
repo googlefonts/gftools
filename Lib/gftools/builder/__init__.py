@@ -36,7 +36,7 @@ class GFBuilder:
     config: dict
     recipe: Recipe
 
-    def __init__(self, config: Union[dict, str], use_fontc=False):
+    def __init__(self, config: Union[dict, str], use_fontc=False, simple_outputs=False):
         if isinstance(config, str):
             parentpath = Path(config).resolve().parent
             with open(config, "r") as file:
@@ -55,9 +55,7 @@ class GFBuilder:
             self._orig_config = yaml.dump(config)
             self.config = config
 
-        # TODO(colin) we also want to suppress instancing when running fontmake
-        # if we're using it to compare with fontc
-        if use_fontc:
+        if use_fontc or simple_outputs:
             # we stash this flag here to pass it down to the recipe provider
             self.config["use_fontc"] = use_fontc
             self.config["buildWebfont"] = False
@@ -404,6 +402,12 @@ def main(args=None):
         action="store_true",
     )
 
+    parser.add_argument(
+        "--experimental-simple-output",
+        help="For comparison with fontc: skip instancing, webfonts, and OTF (if building TTF)",
+        action="store_true",
+    )
+
     parser.add_argument("config", help="Path to config file or source file", nargs="+")
     args = parser.parse_args(args)
     yaml_files = []
@@ -427,7 +431,7 @@ def main(args=None):
             raise ValueError("Only one config file can be given for now")
         config = args.config[0]
 
-    pd = GFBuilder(config, use_fontc=args.experimental_fontc)
+    pd = GFBuilder(config, use_fontc=args.experimental_fontc, simple_outputs=args.experimental_simple_output)
     if args.generate:
         config = pd.config
         config["recipe"] = pd.recipe
