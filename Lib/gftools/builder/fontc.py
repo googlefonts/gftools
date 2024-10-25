@@ -1,7 +1,10 @@
 """functionality for running fontc via gftools
 
-This mostly exists so that we can keep as much of the fontc logic in one place,
-and not need to dirty up anything else.
+gftools has a few special flags that allow it to use fontc, an alternative
+font compiler (https://github.com/googlefonts/fontc).
+
+This module exists to keep the logic related to fontc in one place, and not
+dirty up everything else.
 """
 
 from argparse import Namespace
@@ -12,14 +15,13 @@ from gftools.builder.operations.fontc import set_global_fontc_path
 
 
 class FontcArgs:
-    simple_output_path: Union[Path, None]
-    fontc_bin_path: Union[Path, None]
-    single_source: Union[str, None]
-
     # init with 'None' returns a default obj where everything is None
     def __init__(self, args: Union[Namespace, None]) -> None:
         if not args:
-            return None
+            self.simple_output_path = None
+            self.fontc_bin_path = None
+            self.single_source = None
+            return
         self.simple_output_path = abspath(args.experimental_simple_output)
         self.fontc_bin_path = abspath(args.experimental_fontc)
         self.single_source = args.experimental_single_source
