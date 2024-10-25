@@ -7,7 +7,7 @@ from collections import defaultdict
 from os import chdir
 from pathlib import Path
 from tempfile import NamedTemporaryFile, gettempdir
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from gftools.builder.fontc import FontcArgs
 import networkx as nx
@@ -399,6 +399,12 @@ def main(args=None):
         "--experimental-simple-output",
         help="generate a reduced set of targets, and copy them to the provided directory",
         type=Path,
+    )
+
+    parser.add_argument(
+        "--experimental-single-source",
+        help="only compile the single named source file",
+        type=str,
     )
 
     parser.add_argument("config", help="Path to config file or source file", nargs="+")

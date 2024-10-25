@@ -14,6 +14,7 @@ from gftools.builder.operations.fontc import set_global_fontc_path
 class FontcArgs:
     simple_output_path: Union[Path, None]
     fontc_bin_path: Union[Path, None]
+    single_source: Union[str, None]
 
     # init with 'None' returns a default obj where everything is None
     def __init__(self, args: Union[Namespace, None]) -> None:
@@ -21,6 +22,7 @@ class FontcArgs:
             return None
         self.simple_output_path = abspath(args.experimental_simple_output)
         self.fontc_bin_path = abspath(args.experimental_fontc)
+        self.single_source = args.experimental_single_source
         if self.fontc_bin_path:
             if not self.fontc_bin_path.is_file():
                 raise ValueError(f"fontc does not exist at {self.fontc_bin_path}")
@@ -51,6 +53,14 @@ class FontcArgs:
             config["outputDir"] = str(output_dir)
             config["ttDir"] = str(output_dir)
             config["otDir"] = str(output_dir)
+        if self.single_source:
+            filtered_sources = [s for s in config["sources"] if self.single_source in s]
+            n_sources = len(filtered_sources)
+            if n_sources != 1:
+                raise ValueError(
+                    f"--exerimental-single-source {self.single_source} must match exactly one of {config['sources']} (matched {n_sources}) "
+                )
+            config["sources"] = filtered_sources
 
 
 def abspath(path: Union[Path, None]) -> Union[Path, None]:
