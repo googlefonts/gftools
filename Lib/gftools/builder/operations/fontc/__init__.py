@@ -1,11 +1,22 @@
+from pathlib import Path
 from typing import List
 from gftools.builder.operations import OperationBase
+
+FONTC_PATH = "FONTC_PATH_NOT_SET"
+
+
+# should only be called once, from main, before doing anything else. This is a
+# relatively non-invasive way to smuggle this value into FontcOperationBase
+def set_global_fontc_path(path: Path):
+    global FONTC_PATH
+    FONTC_PATH = path
 
 
 class FontcOperationBase(OperationBase):
     @property
     def variables(self):
         vars = super().variables
+        vars["fontc_path"] = FONTC_PATH
         args = vars.get("args")
         if args:
             vars["args"] = rewrite_fontmake_args_for_fontc(args)

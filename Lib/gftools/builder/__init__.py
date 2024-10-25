@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile, gettempdir
 from typing import Any, Dict, List, Union
 
+from gftools.builder.operations.fontc import set_global_fontc_path
 import networkx as nx
 import strictyaml
 import yaml
@@ -409,8 +410,8 @@ def main(args=None):
     )
     parser.add_argument(
         "--experimental-fontc",
-        help="Use fontc instead of fontmake",
-        action="store_true",
+        help=f"Use fontc instead of fontmake. Argument is path to the fontc executable",
+        type=Path,
     )
 
     parser.add_argument(
@@ -424,6 +425,10 @@ def main(args=None):
     if args.experimental_simple_output:
         # get the abs path because we use cwd later and relative paths will break
         args.experimental_simple_output = args.experimental_simple_output.absolute()
+    if args.experimental_fontc:
+        fontc_path = Path(args.experimental_fontc).resolve()
+        assert fontc_path.is_file(), f"{fontc_path} is not a file"
+        set_global_fontc_path(Path(fontc_path))
     yaml_files = []
     source_files = []
     for config in args.config:
