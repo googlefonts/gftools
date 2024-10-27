@@ -51,6 +51,7 @@ class FontcArgs:
             config["use_fontc"] = self.fontc_bin_path
             config["buildWebfont"] = False
             config["buildSmallCap"] = False
+            config["splitItalic"] = False
             # override config to turn not build instances if we're variable
             if self.will_build_variable_font(config):
                 config["buildStatic"] = False
@@ -65,6 +66,7 @@ class FontcArgs:
             config["outputDir"] = str(output_dir)
             config["ttDir"] = str(output_dir)
             config["otDir"] = str(output_dir)
+            config["vfDir"] = str(output_dir)
 
     def will_build_variable_font(self, config: dict) -> bool:
         # if config explicitly says dont build variable, believe it
