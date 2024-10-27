@@ -11,6 +11,7 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Union
 
+from gftools.builder.file import File
 from gftools.builder.operations.fontc import set_global_fontc_path
 
 
@@ -36,13 +37,22 @@ class FontcArgs:
 
     # update the config dictionary based on our special needs
     def modify_config(self, config: dict):
+        if self.single_source:
+            filtered_sources = [s for s in config["sources"] if self.single_source in s]
+            n_sources = len(filtered_sources)
+            if n_sources != 1:
+                raise ValueError(
+                    f"--exerimental-single-source {self.single_source} must match exactly one of {config['sources']} (matched {n_sources}) "
+                )
+            config["sources"] = filtered_sources
+
         if self.fontc_bin_path or self.simple_output_path:
             # we stash this flag here to pass it down to the recipe provider
             config["use_fontc"] = self.fontc_bin_path
             config["buildWebfont"] = False
             config["buildSmallCap"] = False
             # override config to turn not build instances if we're variable
-            if config.get("buildVariable", True):
+            if self.will_build_variable_font(config):
                 config["buildStatic"] = False
             # if the font doesn't explicitly request CFF, just build TT outlines
             # if the font _only_ wants CFF outlines, we will try to build them
@@ -55,14 +65,14 @@ class FontcArgs:
             config["outputDir"] = str(output_dir)
             config["ttDir"] = str(output_dir)
             config["otDir"] = str(output_dir)
-        if self.single_source:
-            filtered_sources = [s for s in config["sources"] if self.single_source in s]
-            n_sources = len(filtered_sources)
-            if n_sources != 1:
-                raise ValueError(
-                    f"--exerimental-single-source {self.single_source} must match exactly one of {config['sources']} (matched {n_sources}) "
-                )
-            config["sources"] = filtered_sources
+
+    def will_build_variable_font(self, config: dict) -> bool:
+        # if config explicitly says dont build variable, believe it
+        if not config.get("buildVariable", True):
+            return False
+
+        source = File(config["sources"][0])
+        return source.is_variable
 
 
 def abspath(path: Union[Path, None]) -> Union[Path, None]:
