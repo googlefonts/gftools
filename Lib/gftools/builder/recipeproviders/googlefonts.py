@@ -227,11 +227,7 @@ class GFBuilder(RecipeProviderBase):
         if not self.config.get("buildVariable", True):
             return
         for source in self.sources:
-            if (
-                (source.is_glyphs and len(source.gsfont.masters) < 2)
-                or source.is_ufo
-                or (source.is_designspace and len(source.designspace.sources) < 2)
-            ):
+            if not source.is_variable:
                 continue
             italic_ds = None
             if self.config["splitItalic"]:
