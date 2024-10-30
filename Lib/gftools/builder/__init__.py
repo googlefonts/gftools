@@ -7,7 +7,8 @@ from collections import defaultdict
 from os import chdir
 from pathlib import Path
 from tempfile import NamedTemporaryFile, gettempdir
-from typing import Any, Dict, List, Tuple, Union
+import time
+from typing import Any, Dict, List, Union
 
 from gftools.builder.fontc import FontcArgs
 import networkx as nx
@@ -63,7 +64,8 @@ class GFBuilder:
         fontc_args.modify_config(self.config)
 
         self.known_operations = OperationRegistry(use_fontc=fontc_args.use_fontc)
-        self.writer = Writer(open("build.ninja", "w"))
+        self.ninja_file_name = f"build-{time.time_ns()}.ninja"
+        self.writer = Writer(open(self.ninja_file_name, "w"))
         self.named_files = {}
         self.used_operations = set([])
         self.graph = nx.DiGraph()
@@ -336,7 +338,9 @@ class GFBuilder:
     def draw_graph(self):
         import pydot
 
-        dot = subprocess.run(["ninja", "-t", "graph"], capture_output=True)
+        dot = subprocess.run(
+            ["ninja", "-t", "graph", "-f", self.ninja_file_name], capture_output=True
+        )
         graphs = pydot.graph_from_dot_data(dot.stdout.decode("utf-8"))
         targets = self.recipe.keys()
         if graphs and graphs[0]:
@@ -362,7 +366,7 @@ class GFBuilder:
             if cleanUp == True:
                 print("Cleaning up temporary files...")
 
-                for file in ["./build.ninja", "./.ninja_log"]:
+                for file in [self.ninja_file_name, "./.ninja_log"]:
                     if os.path.exists(file):
                         os.remove(file)
 
@@ -444,4 +448,4 @@ def main(args=None):
         pd.draw_graph()
     if not args.no_ninja:
         atexit.register(pd.clean)
-        raise SystemExit(_program("ninja", []))
+        raise SystemExit(_program("ninja", ["-f", pd.ninja_file_name]))
