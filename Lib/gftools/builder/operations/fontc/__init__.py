@@ -51,6 +51,8 @@ def rewrite_one_arg(args: List[str]) -> str:
         else:
             # glue the filter back together for better reporting below
             next_ = f"{next_} {filter_}"
+    elif next_ == "--no-production-names":
+        return next_
     else:
         raise ValueError(f"unknown fontmake arg '{next_}'")
     return ""
