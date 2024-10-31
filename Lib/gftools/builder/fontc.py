@@ -54,7 +54,7 @@ class FontcArgs:
             config["splitItalic"] = False
             # set --no-production-names, because it's easier to debug
             extra_args = config.get("extraFontmakeArgs") or ""
-            extra_args += " --no-production-names"
+            extra_args += " --no-production-names --drop-implied-oncurves"
             config["extraFontmakeArgs"] = extra_args
             # override config to turn not build instances if we're variable
             if self.will_build_variable_font(config):

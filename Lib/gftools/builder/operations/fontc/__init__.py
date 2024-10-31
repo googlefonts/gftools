@@ -53,6 +53,9 @@ def rewrite_one_arg(args: List[str]) -> str:
             next_ = f"{next_} {filter_}"
     elif next_ == "--no-production-names":
         return next_
+    elif next_ == "--drop-implied-oncurves":
+        # this is our default behaviour so no worries
+        return ""
     else:
         raise ValueError(f"unknown fontmake arg '{next_}'")
     return ""
