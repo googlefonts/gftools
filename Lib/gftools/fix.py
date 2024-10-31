@@ -326,6 +326,9 @@ def fix_fvar_instances(ttFont, axis_dflts=None) -> FixResult:
     if "fvar" not in ttFont:
         return False, []
 
+    if "wght" not in [a.axisTag for a in ttFont["fvar"].axes]:
+        return False, []
+
     fvar = ttFont["fvar"]
     old_instances = {
         (
