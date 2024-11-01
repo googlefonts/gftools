@@ -280,17 +280,26 @@ class GFBuilder(RecipeProviderBase):
     def build_a_variable(
         self, source: File, italic_ds: Italic = None, roman: bool = False
     ):
+        suffix = self.config.get("filenameSuffix", "")
         if roman:
-            target = self._vf_filename(source, italic_ds=italic_ds, roman=True)
+            target = self._vf_filename(
+                source, suffix=suffix, italic_ds=italic_ds, roman=True
+            )
         else:
-            target = self._vf_filename(source, italic_ds=italic_ds, roman=False)
-        steps = [
-            {"source": source.path},
-            {
-                "operation": "buildVariable",
-                "args": self.fontmake_args(source, variable=True),
-            },
-        ] + self._vtt_steps(target)
+            target = self._vf_filename(
+                source, suffix=suffix, italic_ds=italic_ds, roman=False
+            )
+        steps = (
+            [
+                {"source": source.path},
+                {
+                    "operation": "buildVariable",
+                    "args": self.fontmake_args(source, variable=True),
+                },
+            ]
+            + self.config.get("postCompile", [])
+            + self._vtt_steps(target)
+        )
         if italic_ds:
             desired_slice = italic_ds[0] + "="
             if roman:
@@ -322,7 +331,8 @@ class GFBuilder(RecipeProviderBase):
                     self.build_a_static(source, instance, output="otf")
 
     def build_a_static(self, source: File, instance: InstanceDescriptor, output):
-        target = self._static_filename(instance, extension=output)
+        suffix = self.config.get("filenameSuffix", "")
+        target = self._static_filename(instance, suffix=suffix, extension=output)
 
         steps = [
             {"source": source.path},
@@ -349,6 +359,7 @@ class GFBuilder(RecipeProviderBase):
                     "args": self.fontmake_args(source, variable=False),
                 }
             ]
+            + self.config.get("postCompile", [])
             + self._autohint_steps(target)
             + self._vtt_steps(target)
             + self._fix_step()
