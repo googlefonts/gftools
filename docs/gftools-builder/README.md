@@ -206,6 +206,10 @@ The build can be customized by adding the following keys to the YAML file:
 
 -   `localMetadata`: A field that's ignored so you can put whatever you like in it.
 
+-   `filenameSuffix`: A suffix appended to the family name part of filenames.
+
+-   `postCompile`: A list of operations to be run after the font compilation step; you can use this (together with the above option) to build variant fonts, rename families, bake in stylistic sets, etc.
+
 
 ## *Really* customizing the build process
 
