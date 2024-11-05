@@ -7,17 +7,20 @@ from collections import defaultdict
 from os import chdir
 from pathlib import Path
 from tempfile import NamedTemporaryFile, gettempdir
+import time
 from typing import Any, Dict, List, Union
 
+from gftools.builder.fontc import FontcArgs
 import networkx as nx
 import strictyaml
 import yaml
 from fontmake.font_project import FontProject
 from ninja import _program
 from ninja.ninja_syntax import Writer, escape_path
+from typing import Union
 
 from gftools.builder.file import File
-from gftools.builder.operations import OperationBase, known_operations
+from gftools.builder.operations import OperationBase, OperationRegistry
 from gftools.builder.operations.copy import Copy
 from gftools.builder.recipeproviders import get_provider
 from gftools.builder.schema import BASE_SCHEMA
@@ -36,7 +39,11 @@ class GFBuilder:
     config: dict
     recipe: Recipe
 
-    def __init__(self, config: Union[dict, str]):
+    def __init__(
+        self,
+        config: Union[dict, str],
+        fontc_args=FontcArgs(None),
+    ):
         if isinstance(config, str):
             parentpath = Path(config).resolve().parent
             with open(config, "r") as file:
@@ -54,8 +61,11 @@ class GFBuilder:
         else:
             self._orig_config = yaml.dump(config)
             self.config = config
+        fontc_args.modify_config(self.config)
 
-        self.writer = Writer(open("build.ninja", "w"))
+        self.known_operations = OperationRegistry(use_fontc=fontc_args.use_fontc)
+        self.ninja_file_name = f"build-{time.time_ns()}.ninja"
+        self.writer = Writer(open(self.ninja_file_name, "w"))
         self.named_files = {}
         self.used_operations = set([])
         self.graph = nx.DiGraph()
@@ -156,9 +166,9 @@ class GFBuilder:
 
     def operation_step_to_object(self, step):
         operation = step.get("operation") or step.get("postprocess")
-        if operation not in known_operations:
+        cls = self.known_operations.get(operation)
+        if cls is None:
             raise ValueError(f"Unknown operation {operation}")
-        cls = known_operations[operation]
         if operation not in self.used_operations:
             self.used_operations.add(operation)
             cls.write_rules(self.writer)
@@ -328,7 +338,9 @@ class GFBuilder:
     def draw_graph(self):
         import pydot
 
-        dot = subprocess.run(["ninja", "-t", "graph"], capture_output=True)
+        dot = subprocess.run(
+            ["ninja", "-t", "graph", "-f", self.ninja_file_name], capture_output=True
+        )
         graphs = pydot.graph_from_dot_data(dot.stdout.decode("utf-8"))
         targets = self.recipe.keys()
         if graphs and graphs[0]:
@@ -354,7 +366,7 @@ class GFBuilder:
             if cleanUp == True:
                 print("Cleaning up temporary files...")
 
-                for file in ["./build.ninja", "./.ninja_log"]:
+                for file in [self.ninja_file_name, "./.ninja_log"]:
                     if os.path.exists(file):
                         os.remove(file)
 
@@ -381,8 +393,27 @@ def main(args=None):
         help="Just generate and output recipe from recipe builder",
         action="store_true",
     )
+    parser.add_argument(
+        "--experimental-fontc",
+        help=f"Use fontc instead of fontmake. Argument is path to the fontc executable",
+        type=Path,
+    )
+
+    parser.add_argument(
+        "--experimental-simple-output",
+        help="generate a reduced set of targets, and copy them to the provided directory",
+        type=Path,
+    )
+
+    parser.add_argument(
+        "--experimental-single-source",
+        help="only compile the single named source file",
+        type=str,
+    )
+
     parser.add_argument("config", help="Path to config file or source file", nargs="+")
     args = parser.parse_args(args)
+    fontc_args = FontcArgs(args)
     yaml_files = []
     source_files = []
     for config in args.config:
@@ -404,7 +435,7 @@ def main(args=None):
             raise ValueError("Only one config file can be given for now")
         config = args.config[0]
 
-    pd = GFBuilder(config)
+    pd = GFBuilder(config, fontc_args=fontc_args)
     if args.generate:
         config = pd.config
         config["recipe"] = pd.recipe
@@ -417,4 +448,4 @@ def main(args=None):
         pd.draw_graph()
     if not args.no_ninja:
         atexit.register(pd.clean)
-        raise SystemExit(_program("ninja", []))
+        raise SystemExit(_program("ninja", ["-f", pd.ninja_file_name]))
