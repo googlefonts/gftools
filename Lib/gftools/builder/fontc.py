@@ -52,6 +52,8 @@ class FontcArgs:
             config["buildWebfont"] = False
             config["buildSmallCap"] = False
             config["splitItalic"] = False
+            # disable running ttfautohint, because we had a segfault
+            config["autohintTTF"] = False
             # set --no-production-names, because it's easier to debug
             extra_args = config.get("extraFontmakeArgs") or ""
             extra_args += " --no-production-names --drop-implied-oncurves"
