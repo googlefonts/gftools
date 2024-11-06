@@ -423,7 +423,7 @@ def git_tree_traverse(func, *args, **kwargs):
         tree = repo.get(tree_oid)
         try:
             entry = tree[subtree_name]
-            existing_subtree = repo.get(entry.hex)
+            existing_subtree = repo.get(entry.id)
             sub_treebuilder = repo.TreeBuilder(existing_subtree)
         except KeyError:
             sub_treebuilder = repo.TreeBuilder()
