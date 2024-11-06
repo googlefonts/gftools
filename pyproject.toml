@@ -44,7 +44,9 @@ dependencies = [
   'unidecode',
   'opentype-sanitizer',
   'vttlib',
-  'pygit2==1.16.0',
+  # pygit2 1.16.0 only supports 3.10+
+  'pygit2==1.15.0; python_version < "3.13"',
+  'pygit2==1.16.0; python_version >= "3.13"',
   'strictyaml',
   'fontmake[json]>=3.3.0',
   'skia-pathops',
