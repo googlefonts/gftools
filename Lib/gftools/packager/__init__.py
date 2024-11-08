@@ -568,7 +568,7 @@ def pr_family(
             open_prs[0]["number"], [l["name"] for l in issue_labels]
         )
     # add item to traffic board
-    if TRAFFIC_JAM_ID:
+    if TRAFFIC_JAM_ID and not open_prs:
         log.info(f"Adding project to traffic jam")
         google_fonts._run_graphql(
             ADD_TO_TRAFFIC_JAM.format(
