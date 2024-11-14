@@ -7,7 +7,6 @@ from collections import defaultdict
 from os import chdir
 from pathlib import Path
 from tempfile import NamedTemporaryFile, gettempdir
-import time
 from typing import Any, Dict, List, Union
 
 from gftools.builder.fontc import FontcArgs
@@ -64,7 +63,7 @@ class GFBuilder:
         fontc_args.modify_config(self.config)
 
         self.known_operations = OperationRegistry(use_fontc=fontc_args.use_fontc)
-        self.ninja_file_name = f"build-{time.time_ns()}.ninja"
+        self.ninja_file_name = fontc_args.build_file_name()
         self.writer = Writer(open(self.ninja_file_name, "w"))
         self.named_files = {}
         self.used_operations = set([])

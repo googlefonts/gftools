@@ -10,6 +10,7 @@ dirty up everything else.
 from argparse import Namespace
 from pathlib import Path
 from typing import Union
+import time
 
 from gftools.builder.file import File
 from gftools.builder.operations.fontc import set_global_fontc_path
@@ -35,6 +36,15 @@ class FontcArgs:
     def use_fontc(self) -> bool:
         return self.fontc_bin_path is not None
 
+    def build_file_name(self) -> str:
+        if self.fontc_bin_path or self.simple_output_path:
+            # if we're running for fontc we want uniquely named build files,
+            # to ensure they don't collide
+            return f"build-{time.time_ns()}.ninja"
+        else:
+            # otherwise just ues the default name
+            return "build.ninja"
+
     # update the config dictionary based on our special needs
     def modify_config(self, config: dict):
         if self.single_source:
@@ -52,6 +62,7 @@ class FontcArgs:
             config["buildWebfont"] = False
             config["buildSmallCap"] = False
             config["splitItalic"] = False
+            config["cleanUp"] = True
             # disable running ttfautohint, because we had a segfault
             config["autohintTTF"] = False
             # set --no-production-names, because it's easier to debug
