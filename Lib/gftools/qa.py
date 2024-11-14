@@ -42,6 +42,7 @@ class FontQA:
         self.fonts_before = fonts_before
         self.out = out
         self.url = url
+        self.has_error = False
 
     @report_exceptions
     def diffenator(self, **kwargs):
@@ -134,8 +135,7 @@ class FontQA:
             self.post_to_github(msg)
 
         if process.returncode != 0:
-            logger.fatal("Fontbakery has raised a fatal error. Please fix!")
-            sys.exit(1)
+            self.has_error = True
 
     def googlefonts_upgrade(self, imgs=False):
         self.fontbakery()
