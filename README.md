@@ -79,3 +79,11 @@ key = your-newly-generated-googlefonts-api-key
 
 * https://github.com/google/protobuf
 * https://github.com/behdad/fonttools
+
+## Developers
+
+### Releasing a New Version
+
+0. Commit and push your final changes for the new version.
+1. Create an annotated Git tag of the version number, with a prepended "v", like so: `git tag -a v3.1.1`
+2. Write the release notes into the tag message. They will show up as release notes on the release page in GitHub.
