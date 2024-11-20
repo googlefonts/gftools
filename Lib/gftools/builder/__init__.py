@@ -37,6 +37,7 @@ def edge_with_operation(node, operation):
 class GFBuilder:
     config: dict
     recipe: Recipe
+    fontc_args: FontcArgs
 
     def __init__(
         self,
@@ -60,6 +61,7 @@ class GFBuilder:
         else:
             self._orig_config = yaml.dump(config)
             self.config = config
+        self.fontc_args = fontc_args
         fontc_args.modify_config(self.config)
 
         self.known_operations = OperationRegistry(use_fontc=fontc_args.use_fontc)
@@ -150,6 +152,9 @@ class GFBuilder:
         glyph_data = self.config.get("glyphData")
         if glyph_data is not None:
             glyph_data = glyph_data
+        ufo_structure = "json"
+        if self.fontc_args.use_fontc:
+            ufo_structure = "package"
         FontProject().run_from_glyphs(
             str(source.resolve()),
             **{
@@ -157,7 +162,7 @@ class GFBuilder:
                 "output_dir": directory,
                 "master_dir": directory,
                 "designspace_path": output,
-                "ufo_structure": "json",
+                "ufo_structure": ufo_structure,
                 "glyph_data": glyph_data,
             },
         )
