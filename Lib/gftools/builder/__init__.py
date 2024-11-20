@@ -343,7 +343,7 @@ class GFBuilder:
         import pydot
 
         dot = subprocess.run(
-            ["ninja", "-t", "graph", "-f", self.ninja_file_name], capture_output=True
+            ["ninja", "-f", self.ninja_file_name, "-t", "graph"], capture_output=True
         )
         graphs = pydot.graph_from_dot_data(dot.stdout.decode("utf-8"))
         targets = self.recipe.keys()
