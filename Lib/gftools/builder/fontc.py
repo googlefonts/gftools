@@ -69,13 +69,10 @@ class FontcArgs:
             extra_args = config.get("extraFontmakeArgs") or ""
             extra_args += " --no-production-names --drop-implied-oncurves"
             config["extraFontmakeArgs"] = extra_args
-            # override config to turn not build instances if we're variable
-            if self.will_build_variable_font(config):
-                config["buildStatic"] = False
             # if the font doesn't explicitly request CFF, just build TT outlines
             # if the font _only_ wants CFF outlines, we will try to build them
             # ( but fail on fontc for now) (but is this even a thing?)
-            elif config.get("buildTTF", True):
+            if config.get("buildTTF", True):
                 config["buildOTF"] = False
         if self.simple_output_path:
             output_dir = str(self.simple_output_path)

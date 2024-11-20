@@ -178,6 +178,11 @@ class OperationRegistry:
 
                 return FontcAddSubset
 
+            if operation_name == "instantiateUfo":
+                from .fontc.fontcInstantiateUfo import FontcInstantiateUFO
+
+                return FontcInstantiateUFO
+
         return self.known_operations.get(operation_name)
 
 
