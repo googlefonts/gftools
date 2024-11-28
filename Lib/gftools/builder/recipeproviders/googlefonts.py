@@ -218,7 +218,12 @@ class GFBuilder(RecipeProviderBase):
         if self.config.get("fvarInstanceAxisDflts"):
             args += (
                 " --fvar-instance-axis-dflts '"
-                + self.config["fvarInstanceAxisDflts"]
+                + " ".join(
+                    [
+                        f"{k}={v}"
+                        for k, v in self.config["fvarInstanceAxisDflts"].items()
+                    ]
+                )
                 + "'"
             )
         return args
