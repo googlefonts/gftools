@@ -112,6 +112,7 @@ def main(args=None):
 
     glyph_mapping = {}  # Map glyphname->glyphname
     cmap = font.getBestCmap()
+    reversed_cmap = font["cmap"].buildReversed()
 
     for entry in incoming_map:
         entry = entry.strip()
@@ -120,8 +121,21 @@ def main(args=None):
         codepoint, newglyph = entry.split("=")
         if codepoint.startswith("U+") or codepoint.startswith("0x"):
             codepoint = int(codepoint[2:], 16)
-        else:
-            codepoint = ord(codepoint)
+        elif codepoint in cmap:
+            codepoint = cmap[codepoint]
+        elif args.deep:  # It's a glyph name?
+            oldglyph = codepoint
+            if oldglyph not in font.getGlyphOrder():
+                print(f"Glyph '{oldglyph}' not found in font")
+                continue
+            if newglyph not in font.getGlyphOrder():
+                print(f"Glyph '{newglyph}' not found in font")
+                continue
+            glyph_mapping[oldglyph] = newglyph
+            # Fix up cmap if we can
+            for old_codepoint in reversed_cmap.get(oldglyph, []):
+                mapping[old_codepoint] = newglyph
+            continue
         mapping[codepoint] = newglyph
         if newglyph not in font.getGlyphOrder():
             print(
