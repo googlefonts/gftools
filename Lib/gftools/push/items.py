@@ -217,7 +217,7 @@ def parse_html(string: str):
     if not string:
         return None
     text = BeautifulSoup(string, features="lxml").text
-    return re.sub("\s+", " ", text).strip()
+    return re.sub(r"\s+", " ", text).strip()
 
 
 @dataclass
