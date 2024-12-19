@@ -47,6 +47,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install Cairo (Ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: sudo apt-get install libcairo2-dev
       - name: Install packages
         run: |
           pip install '.[qa]'
