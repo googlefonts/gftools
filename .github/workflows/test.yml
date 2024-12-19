@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Cairo (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-latest'
         run: sudo apt-get install libcairo2-dev
       - name: Install packages
         run: |
