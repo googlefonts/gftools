@@ -53,9 +53,24 @@ def rewrite_one_arg(args: List[str]) -> str:
             next_ = f"{next_} {filter_}"
     elif next_ == "--no-production-names":
         return next_
-    elif next_ == "--drop-implied-oncurves":
+    elif next_ == "--verbose":
+        log_level = python_to_rust_log_level(args.pop().strip())
+        return f"--log={log_level}"
+    elif next_ == "--drop-implied-oncurves" or next_ == "--keep-overlaps":
         # this is our default behaviour so no worries
-        return ""
+        pass
+    elif next_ == "--no-check-compatibility":
+        # we don't have an equivalent
+        pass
     else:
         raise ValueError(f"unknown fontmake arg '{next_}'")
     return ""
+
+
+def python_to_rust_log_level(py_level: str):
+    if py_level == "WARNING":
+        return "WARN"
+    elif py_level == "CRITICAL":
+        return "ERROR"
+    else:
+        return py_level
