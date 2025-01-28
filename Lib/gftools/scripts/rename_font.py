@@ -20,6 +20,12 @@ def main(args=None):
     parser.add_argument("new_name", help="New family name")
     parser.add_argument("-o", "--out", help="Output path")
     parser.add_argument(
+        "--suffix", action="store_true", help="New name is added to old name"
+    )
+    parser.add_argument(
+        "--overwrite", action="store_true", help="New font is written on old filename"
+    )
+    parser.add_argument(
         "--just-family",
         action="store_true",
         help="Only change family name and names based off it, such as the "
@@ -31,10 +37,14 @@ def main(args=None):
 
     font = TTFont(args.font)
     current_name = font_familyname(font)
+    if args.suffix:
+        args.new_name = current_name + args.new_name
     rename_font(font, args.new_name, aggressive=not args.just_family)
 
     if args.out:
         out = args.out
+    elif args.overwrite:
+        out = args.font
     else:
         out = args.font.replace(
             current_name.replace(" ", ""), args.new_name.replace(" ", "")
