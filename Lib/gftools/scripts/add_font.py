@@ -152,7 +152,6 @@ def _MakeMetadata(args, is_new):
 
     first_file = file_family_style_weights[0].file
     old_metadata_file = os.path.join(args.directory, "METADATA.pb")
-    font_license = fonts.LicenseFromPath(args.directory)
 
     metadata = fonts_pb2.FamilyProto()
     metadata.name = file_family_style_weights[0].family
@@ -214,7 +213,12 @@ def _MakeMetadata(args, is_new):
             ):
                 metadata.primary_script = script
 
-    metadata.license = font_license
+    try:
+        font_license = fonts.LicenseFromPath(args.directory)
+        metadata.license = font_license
+    except ValueError:
+        print("WARNING: Could not determine license for %s" % args.directory)
+        print("Continuing without setting license.")
     subsets = sorted(subsets)
     for subset in subsets:
         metadata.subsets.append(subset)

@@ -32,7 +32,6 @@ from pygit2.enums import FileStatus
 import gftools.fonts_public_pb2 as fonts_pb2
 from gftools.gfgithub import GitHubClient
 from gftools.scripts.add_font import main as add_font
-from gftools.tags import GFTags
 from gftools.util import google_fonts as fonts
 from gftools.utils import (
     download_file,
@@ -83,10 +82,10 @@ subsets: "menu"
 PR_CHECKLIST = """
 ## PR Checklist:
 
-- [x] Family categorization tags collected from the type design team with the Categories Form
 - [ ] `minisite_url` definition in the METADATA.pb file for commissioned projects
+- [ ] `tags` are added for NEW FONTS
 - [ ] `primary_script` definition in the METADATA.pb file for all projects that have a primary non-Latin based language support target
-- [ ] `subsets` definitions in the METADATA.pb reflect the actual subsets and languages present in the font files (in alphabetic order)
+- [ ] `subsets` definitions in the METADATA.pb reflect the actual subsets and languages present in the font files (in alphabetic order). For **CJK fonts**, only include one of the following subsets `chinese-hongkong`, `chinese-simplified`, `chinese-traditional`, `korean`, `japanese`.
 - [ ] Fontbakery checks are reviewed and failing checks are resolved in collaboration with the upstream font development team
 - [ ] Diffenator2 regression checks for revisions on all projects that are currently in production
 - [ ] Designers bio info have to be present in the designer catalog (at least an issue should be opened for tracking this, if they are not)
@@ -424,7 +423,7 @@ def git_tree_traverse(func, *args, **kwargs):
         tree = repo.get(tree_oid)
         try:
             entry = tree[subtree_name]
-            existing_subtree = repo.get(entry.hex)
+            existing_subtree = repo.get(entry.id)
             sub_treebuilder = repo.TreeBuilder(existing_subtree)
         except KeyError:
             sub_treebuilder = repo.TreeBuilder()
@@ -559,6 +558,7 @@ def pr_family(
             google_fonts.add_labels(open_prs[0]["number"], ["I New Font"])
     else:
         resp = google_fonts.create_issue_comment(open_prs[0]["number"], "Updated")
+        google_fonts.update_pr(open_prs[0]["number"], title=title)
         log.info(f"Updated PR '{resp['html_url']}'")
 
     # inherit labels from issue
@@ -568,7 +568,7 @@ def pr_family(
             open_prs[0]["number"], [l["name"] for l in issue_labels]
         )
     # add item to traffic board
-    if TRAFFIC_JAM_ID:
+    if TRAFFIC_JAM_ID and not open_prs:
         log.info(f"Adding project to traffic jam")
         google_fonts._run_graphql(
             ADD_TO_TRAFFIC_JAM.format(
@@ -613,6 +613,11 @@ def make_package(
     issue_number=None,
     **kwargs,
 ):
+    if skip_tags:
+        log.warning(
+            f"skip_tags is deprecated since we now have a tagging webapp, "
+            "https://google.github.io/fonts/tags.html"
+        )
     if pr and not has_gh_token():
         raise ValueError(
             f"Tool requires 'GH_TOKEN' environment variable in order to make "
@@ -673,19 +678,6 @@ def make_package(
         raise ValueError(
             f"'{metadata_fp}' Please fill in the source placeholder fields "
             "in the METADATA.pb file and rerun tool with the same commands."
-        )
-
-    # All font families must have tagging data. This data helps users on Google
-    # Fonts find font families. It's enabled by default since it's a hard
-    # requirements set by management.
-    if not skip_tags and not GFTags().has_family(metadata.name):
-        raise ValueError(
-            f"'{metadata.name}' does not have family tagging data! "
-            "Please complete the following form, "
-            "https://forms.gle/jcp3nDv63LaV1rxH6. Once tags have been added, "
-            "you may need to wait around five minutes in order for the tags "
-            "to be registered before rerunning the tool. This is a hard "
-            "requirement set by Google Fonts management."
         )
 
     with current_git_state(repo, family_path):

@@ -12,6 +12,7 @@ https://hub.github.com/
 import subprocess
 from rich.pretty import pprint
 from gftools.logging import setup_logging
+from gftools.argparse import GFArgumentParser
 from gftools.push.utils import branch_matches_google_fonts_main
 from gftools.push.servers import GFServers, Items
 from gftools.push.items import Family, FamilyMeta
@@ -223,7 +224,7 @@ class ItemChecker:
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser()
+    parser = GFArgumentParser()
     parser.add_argument("fonts_repo", type=Path)
     parser.add_argument(
         "-f",

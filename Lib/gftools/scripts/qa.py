@@ -20,6 +20,7 @@ Fonts:
 from fontTools.ttLib import TTFont
 import argparse
 import os
+import sys
 import shutil
 import logging
 from gftools.utils import (
@@ -267,6 +268,10 @@ def main(args=None):
         qa.proof()
     if args.interpolations:
         qa.interpolations()
+
+    if qa.has_error:
+        logger.fatal("Fontbakery has raised a fatal error. Please fix!")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

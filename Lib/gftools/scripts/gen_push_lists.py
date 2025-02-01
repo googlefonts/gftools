@@ -21,7 +21,6 @@ from gftools.push.trafficjam import (
     PushList,
 )
 from gftools.push.utils import branch_matches_google_fonts_main
-from gftools.tags import GFTags
 from pathlib import Path
 from gftools.utils import is_google_fonts_repo
 from contextlib import contextmanager
@@ -71,8 +70,6 @@ def main(args=None):
         to_sandbox.to_server_file(to_sandbox_fp)
         to_production.to_server_file(to_production_fp)
 
-    tags = GFTags()
-    tags.to_csv(gf_path / "tags" / "all" / "families.csv")
     repo = pygit2.Repository(str(gf_path))
     if any("tags/all/families.csv" in d.delta.new_file.path for d in repo.diff()):
         with open(to_sandbox_fp, "r", encoding="utf-8") as doc:

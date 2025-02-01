@@ -85,7 +85,11 @@ class GitHubClient:
         return response
 
     def get_latest_release(self):
+        """https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#get-the-latest-release"""
         return self._get(self.rest_url("releases/latest"))
+
+    def get_latest_release_tag(self) -> str:
+        return self.get_latest_release()["tag_name"]
 
     def open_prs(self, pr_head: str, pr_base_branch: str) -> typing.List:
         return self._get(
@@ -108,6 +112,14 @@ class GitHubClient:
                 "maintainer_can_modify": True,
                 "draft": draft,
             },
+        )
+
+    def update_pr(
+        self, pull_number: int, title: str = None, body: str = None, state: str = None
+    ):
+        return self._post(
+            self.rest_url(f"pulls/{pull_number}"),
+            {"title": title, "body": body, "state": state},
         )
 
     def create_issue_comment(self, issue_number: int, body: str):

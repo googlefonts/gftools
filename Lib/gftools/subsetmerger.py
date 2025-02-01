@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import re
@@ -6,23 +8,27 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 from zipfile import ZipFile
 
 import ufoLib2
 import yaml
 from fontmake.font_project import FontProject
 from fontTools.designspaceLib import DesignSpaceDocument
+from gftools.gfgithub import GitHubClient
 from glyphsets import unicodes_per_glyphset
 from strictyaml import HexInt, Int, Map, Optional, Seq, Str, Enum
 from ufomerge import merge_ufos
 
 from gftools.util.styles import STYLE_NAMES
-from gftools.utils import download_file, open_ufo
+from gftools.utils import download_file, open_ufo, parse_codepoint
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-SUBSET_SOURCES = {
+FALLBACK_BRANCH_NAME = "main"
+
+SUBSET_SOURCES: dict[str, tuple[str, str]] = {
     "Noto Sans": ("notofonts/latin-greek-cyrillic", "sources/NotoSans.glyphspackage"),
     "Noto Serif": ("notofonts/latin-greek-cyrillic", "sources/NotoSerif.glyphspackage"),
     "Noto Sans Devanagari": (
@@ -47,6 +53,10 @@ subsets_schema = Seq(
             ),
             Optional("layoutHandling"): Str(),
             Optional("force"): Str(),
+            Optional("exclude_glyphs"): Str(),
+            Optional("exclude_codepoints"): Str(),
+            Optional("exclude_glyphs_file"): Str(),
+            Optional("exclude_codepoints_file"): Str(),
         }
     )
 )
@@ -57,7 +67,15 @@ def prepare_minimal_subsets(subsets):
     # codepoints with the same "donor" font and options. This allows the
     # user to specify multiple subsets from the same font, and they will
     # be merged into a single merge operation.
-    unicodes_by_donor = defaultdict(set)
+    incl_excl_by_donor: dict[
+        tuple[str, str, str],
+        tuple[
+            # Unicodes to include
+            set[int],
+            # Glyph names to exclude
+            set[str],
+        ],
+    ] = defaultdict(lambda: (set(), set()))
     for subset in subsets:
         # Resolved named subsets to a set of Unicode using glyphsets data
         if "name" in subset:
@@ -69,18 +87,74 @@ def prepare_minimal_subsets(subsets):
             for r in subset["ranges"]:
                 for cp in range(r["start"], r["end"] + 1):
                     unicodes.append(cp)
+
+        # Parse in manual exclusions
+        excluded_codepoints = set()
+        if exclude_inline := subset.get("exclude_codepoints"):
+            for raw_value in exclude_inline.split():
+                raw_value = raw_value.strip()
+                if raw_value == "":
+                    continue
+                excluded_codepoints.add(parse_codepoint(raw_value))
+        if exclude_file := subset.get("exclude_codepoints_file"):
+            for line in Path(exclude_file).read_text().splitlines():
+                line = line.strip()
+                if line != "" and not line.startswith(("#", "//")):
+                    continue
+                # Remove in-line comments
+                line = line.split("#", 1)[0]
+                line = line.split("//", 1)[0]
+                line = line.rstrip()
+                excluded_codepoints.add(parse_codepoint(line))
+
+        # Filter unicodes by excluded_codepoints
+        unicodes = [
+            unicode for unicode in unicodes if unicode not in excluded_codepoints
+        ]
+
+        # Load excluded glyphs by name
+        exclude_glyphs = set()
+        if exclude_inline := subset.get("exclude_glyphs"):
+            for glyph_name in exclude_inline.split():
+                glyph_name = glyph_name.strip()
+                if glyph_name == "":
+                    continue
+                exclude_glyphs.add(glyph_name)
+        if exclude_file := subset.get("exclude_glyphs_file"):
+            for line in Path(exclude_file).read_text().splitlines():
+                line = line.strip()
+                if line != "" and not line.startswith(("#", "//")):
+                    continue
+                # Remove in-line comments
+                line = line.split("#", 1)[0]
+                line = line.split("//", 1)[0]
+                line = line.rstrip()
+                exclude_glyphs.add(line)
+
+        # Update incl_excl_by_donor
         key = (
             yaml.dump(subset["from"]),
             subset.get("layoutHandling"),
             subset.get("force"),
         )
-        unicodes_by_donor[key] |= set(unicodes)
+        unicodes_incl, glyph_names_excl = incl_excl_by_donor[key]
+        unicodes_incl |= set(unicodes)
+        glyph_names_excl |= exclude_glyphs
 
     # Now rebuild the subset dictionary, but this time with the codepoints
     # amalgamated into minimal sets.
     newsubsets = []
-    for (donor, layouthandling, force), unicodes in unicodes_by_donor.items():
-        newsubsets.append({"from": yaml.safe_load(donor), "unicodes": list(unicodes)})
+    for (donor, layouthandling, force), (
+        unicodes_incl,
+        glyph_names_excl,
+    ) in incl_excl_by_donor.items():
+        newsubsets.append(
+            {
+                "from": yaml.safe_load(donor),
+                "unicodes": list(unicodes_incl),
+                "exclude_glyphs": list(glyph_names_excl),
+            }
+        )
         if layouthandling:
             newsubsets[-1]["layoutHandling"] = layouthandling
         if force:
@@ -116,10 +190,10 @@ class SubsetMerger:
         for master in ds.sources:
             newpath = os.path.join(outpath, os.path.basename(master.path))
             target_ufo = open_ufo(master.path)
+            master.path = newpath
+
             if master.layerName is not None:
                 continue
-
-            master.path = newpath
 
             for subset in self.subsets:
                 added_subsets |= self.add_subset(target_ufo, ds, master, subset)
@@ -143,7 +217,7 @@ class SubsetMerger:
 
         ds.write(self.output)
 
-    def add_subset(self, target_ufo, ds, ds_source, subset):
+    def add_subset(self, target_ufo, ds, ds_source, subset) -> bool:
         # First, we find a donor UFO that matches the location of the
         # UFO to merge.
         location = dict(ds_source.location)
@@ -165,13 +239,16 @@ class SubsetMerger:
         merge_ufos(
             target_ufo,
             source_ufo,
+            exclude_glyphs=subset["exclude_glyphs"],
             codepoints=subset["unicodes"],
             existing_handling=existing_handling,
             layout_handling=layout_handling,
         )
         return True
 
-    def obtain_upstream(self, upstream, location):
+    def obtain_upstream(
+        self, upstream: str | dict[str, Any], location
+    ) -> ufoLib2.Font | None:
         # Either the upstream is a string, in which case we try looking
         # it up in the SUBSET_SOURCES table, or it's a dict, in which
         # case it's a repository / path pair.
@@ -179,14 +256,27 @@ class SubsetMerger:
             if upstream not in SUBSET_SOURCES:
                 raise ValueError("Unknown subsetting font %s" % upstream)
             repo, path = SUBSET_SOURCES[upstream]
-            font_name = upstream
+            ref = FALLBACK_BRANCH_NAME
+            font_name = f"{upstream}/{ref}"
         else:
-            repo = upstream["repo"]
+            repo: str = upstream["repo"]
+            parts = repo.split("@", 1)
+            if len(parts) == 1:
+                # Repo was already just the slug, use fallback ref
+                ref = FALLBACK_BRANCH_NAME
+            else:
+                # Guaranteed to be 2 parts
+                repo, ref = parts
+                if ref == "latest":
+                    # Resolve latest release's tag name
+                    ref = GitHubClient.from_url(
+                        f"https://github.com/{repo}"
+                    ).get_latest_release_tag()
             path = upstream["path"]
-            font_name = "%s/%s" % (repo, path)
-        path = os.path.join(self.cache_dir, repo, path)
+            font_name = f"{repo}/{ref}/{path}"
+        path = os.path.join(self.cache_dir, repo, ref, path)
 
-        self.download_for_subsetting(repo)
+        self.download_for_subsetting(repo, ref)
 
         # We're doing a UFO-UFO merge, so Glyphs files will need to be converted
         if path.endswith((".glyphs", ".glyphspackage")):
@@ -206,7 +296,7 @@ class SubsetMerger:
             return open_ufo(source_ufo.path)
         return None
 
-    def glyphs_to_ufo(self, source, directory=None):
+    def glyphs_to_ufo(self, source: str, directory: Path | None = None) -> str:
         source = Path(source)
         if directory is None:
             directory = source.resolve().parent
@@ -310,15 +400,34 @@ class SubsetMerger:
                 os.path.dirname(source_ds.path), instance.filename
             )
 
-    def download_for_subsetting(self, fullrepo):
-        dest = os.path.join(self.cache_dir, fullrepo)
+    def download_for_subsetting(self, fullrepo: str, ref: str) -> None:
+        """Downloads a GitHub repository at a given reference"""
+        dest = os.path.join(self.cache_dir, f"{fullrepo}/{ref}")
         if os.path.exists(dest):
+            # Assume sources exist & are up-to-date (we have no good way of
+            # checking this); do nothing
+            logger.info("Subset files present on disk, skipping download")
             return
-        user, repo = fullrepo.split("/")
-        os.makedirs(os.path.join(self.cache_dir, user), exist_ok=True)
-        repo_zipball = f"https://github.com/{fullrepo}/archive/refs/heads/main.zip"
-        logger.info(f"Downloading {fullrepo}")
+        # Make the parent folder to dest but not dest itself. This means that
+        # the shutil.move at the end of this function won't create
+        # dest/repo-ref, instead having dest contain the contents of repo-ref
+        os.makedirs(os.path.join(self.cache_dir, fullrepo), exist_ok=True)
+
+        # This URL scheme doesn't appear to be 100% official for tags &
+        # branches, but it seems to accept any valid git reference
+        # See https://stackoverflow.com/a/13636954 and
+        # https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
+        repo_zipball = f"https://github.com/{fullrepo}/archive/{ref}.zip"
+        logger.info(f"Downloading {fullrepo} {ref}")
+
         repo_zip = ZipFile(download_file(repo_zipball))
-        with TemporaryDirectory() as d:
-            repo_zip.extractall(d)
-            shutil.move(os.path.join(d, repo + "-main"), dest)
+        _user, repo = fullrepo.split("/", 1)
+        # If the tag name began with a "v" and looked like a version (i.e. has a
+        # digit immediately afterwards), the "v" is stripped by GitHub. We have
+        # to match this behaviour to get the correct name of the top-level
+        # directory within the zip file
+        if re.match(r"^v\d", ref):
+            ref = ref[1:]
+        with TemporaryDirectory() as temp_dir:
+            repo_zip.extractall(temp_dir)
+            shutil.move(os.path.join(temp_dir, f"{repo}-{ref}"), dest)

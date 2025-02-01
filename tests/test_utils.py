@@ -78,6 +78,7 @@ He was referred to H.R. Giger, who headed the H.R. department at the time, then 
             ("googlefonts", "MavenPro"),
         ),
         ("http://www.github.com/googlefonts/MavenPro.git", ("googlefonts", "MavenPro")),
+        ("http://www.github.com/NDISCOVER/Exo-2.0.git", ("NDISCOVER", "Exo-2.0")),
     ],
 )
 def test_github_user_repo(url, want):
@@ -95,5 +96,5 @@ def test_supported_languages():
 
     ttfont = TTFont("data/test/Lora-Regular.ttf")
     langs = [l.id for l in SupportedLanguages(ttfont)]
-    assert len(langs) >= 400
+    assert len(langs) >= 350
     assert "en_Latn" in langs

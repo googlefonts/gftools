@@ -44,7 +44,9 @@ dependencies = [
   'unidecode',
   'opentype-sanitizer',
   'vttlib',
-  'pygit2<1.15.0',
+  # pygit2 1.16.0 only supports 3.10+
+  'pygit2==1.15.0; python_version < "3.13"',
+  'pygit2==1.16.0; python_version >= "3.13"',
   'strictyaml',
   'fontmake[json]>=3.3.0',
   'skia-pathops',
@@ -66,6 +68,10 @@ dependencies = [
   'ninja',
   'networkx',
   'ruamel.yaml',
+  # Used for subset merging, and preferred over the home-grown UFO merge script,
+  # which is deprecated.
+  # Pin avoids bug googlefonts/ufomerge#28.
+  'ufomerge>=1.8.1'
 ]
 
 [project.optional-dependencies]
@@ -75,7 +81,7 @@ qa = [
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
 ]
 test = [
-  "black == 24.4.2",
+  "black ==24.10.0",
   "pytest",  
 ]
 
@@ -128,7 +134,6 @@ gftools-gen-html = "gftools.scripts.gen_html:main"
 gftools-gen-push-lists = "gftools.scripts.gen_push_lists:main"
 gftools-gen-stat = "gftools.scripts.gen_stat:main"
 gftools-lang = "gftools.scripts.lang:main"
-gftools-lang-sample-text = "gftools.scripts.lang_sample_text:main"
 gftools-lang-support = "gftools.scripts.lang_support:main"
 gftools-list-italicangle = "gftools.scripts.list_italicangle:main"
 gftools-list-panose = "gftools.scripts.list_panose:main"

@@ -218,7 +218,7 @@ class PushItem:
         return hash(self.path)
 
     def __eq__(self, other):
-        return self.path == other.path
+        return (self.path, self.url) == (other.path, other.url)
 
     def exists(self) -> bool:
         from gftools.push.utils import google_path_to_repo_path

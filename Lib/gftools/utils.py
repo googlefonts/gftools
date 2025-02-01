@@ -520,10 +520,12 @@ def has_mac_names(ttfont):
     """Check if a font has Mac names. Mac names have the following
     field values:
     platformID: 1, encodingID: 0, LanguageID: 0"""
-    for i in range(255):
-        if ttfont["name"].getName(i, 1, 0, 0):
-            return True
-    return False
+    return any(
+        namerecord.platformID == 1
+        and namerecord.platEncID == 0
+        and namerecord.langID == 0
+        for namerecord in ttfont["name"].names
+    )
 
 
 def font_is_italic(ttfont):
@@ -672,7 +674,9 @@ def shell_quote(s: Union[str, Path]) -> str:
 
 
 def github_user_repo(github_url):
-    pattern = r"https?://w?w?w?\.?github\.com/(?P<user>[^/]+)/(?P<repo>[^/^.]+)"
+    if github_url.endswith(".git"):
+        github_url = github_url[:-4]
+    pattern = r"https?://w?w?w?\.?github\.com/(?P<user>[^/]+)/(?P<repo>[^/]+)"
     match = re.search(pattern, github_url)
     if not match:
         raise ValueError(
@@ -685,3 +689,11 @@ def has_gh_token():
     if "GH_TOKEN" in os.environ:
         return True
     return False
+
+
+def parse_codepoint(codepoint: str) -> int:
+    # https://github.com/googlefonts/ufomerge/blob/2257a1d3807a4eec9b515aa98e059383f7814d9a/Lib/ufomerge/cli.py#L118-L126
+    if codepoint.startswith(("U+", "u+", "0x", "0X")):
+        return int(codepoint[2:], 16)
+    else:
+        return int(codepoint)

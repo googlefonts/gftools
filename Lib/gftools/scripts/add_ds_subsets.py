@@ -74,7 +74,11 @@ Example usage:
 
     parser.add_argument("--yaml", "-y", help="YAML file describing subsets")
 
-    parser.add_argument("--repo", "-r", help="GitHub repository to use for subsetting")
+    parser.add_argument(
+        "--repo",
+        "-r",
+        help="GitHub repository slug to use for subsetting. Use @ after slug to specify branch/tag/commit, e.g. org/repo@v0.1.0; 'latest' is supported for latest release",
+    )
     parser.add_argument("--file", "-f", help="Source file within GitHub repository")
     parser.add_argument("--name", "-n", help="Name of subset to use from glyphset")
     parser.add_argument(
@@ -85,6 +89,22 @@ Example usage:
     parser.add_argument("--codepoints", "-c", help="Range of codepoints to subset")
     parser.add_argument(
         "--json", "-j", action="store_true", help="Use JSON structured UFOs"
+    )
+    parser.add_argument(
+        "--exclude-codepoints", help="Space-delimited unicodes to exclude"
+    )
+    parser.add_argument(
+        "--exclude-codepoints-file",
+        help="Newline delimited file with unicodes to exclude. "
+        "Allows for comments with either # or //",
+    )
+    parser.add_argument(
+        "--exclude-glyphs", help="Space-delimited glyph names to exclude"
+    )
+    parser.add_argument(
+        "--exclude-glyphs-file",
+        help="Newline delimited file with glyph names to exclude. "
+        "Allows for comments with either # or //",
     )
 
     parser.add_argument("--output", "-o", help="Output designspace file")
@@ -107,11 +127,16 @@ Example usage:
             print("Must specify --name or --codepoints")
             sys.exit(1)
         # And then construct the YAML-like object ourselves
+        # See subsets_schema in ..subsetmerger
         subsets = [
             {
                 "from": {
                     "repo": args.repo,
                     "path": args.file,
+                    "exclude_codepoints": args.exclude_codepoints,
+                    "exclude_codepoints_file": args.exclude_codepoints_file,
+                    "exclude_glyphs": args.exclude_glyphs,
+                    "exclude_glyphs_file": args.exclude_glyphs_file,
                 }
             }
         ]

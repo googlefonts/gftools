@@ -48,6 +48,12 @@ class File:
         return self.is_glyphs or self.is_ufo or self.is_designspace
 
     @cached_property
+    def is_variable(self) -> bool:
+        return (self.is_glyphs and len(self.gsfont.masters) > 1) or (
+            self.is_designspace and len(self.designspace.sources) > 1
+        )
+
+    @cached_property
     def gsfont(self):
         if self.is_glyphs:
             import glyphsLib

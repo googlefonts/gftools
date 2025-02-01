@@ -127,4 +127,4 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None, locations=None)
             if filename not in locations:
                 raise ValueError("Filename %s not found in locations" % filename)
             locations = locations[filename]
-        buildStatTable(ttFont, this_stat, locations=locations)
+        buildStatTable(ttFont, this_stat, locations=locations, macNames=False)

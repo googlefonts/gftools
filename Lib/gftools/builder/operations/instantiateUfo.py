@@ -30,7 +30,9 @@ class InstantiateUFO(FontmakeOperationBase):
     def relevant_instance(self):
         desired = self.original["instance_name"]
         relevant_instance = [
-            i for i in self.first_source.instances if i.name == desired
+            i
+            for i in self.first_source.instances
+            if i.name == desired or i.familyName + " " + i.styleName == desired
         ]
         if len(relevant_instance) == 0:
             return None

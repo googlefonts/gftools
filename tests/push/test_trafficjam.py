@@ -35,7 +35,7 @@ TEST_FAMILY_DIR = Path(os.path.join(TEST_DIR, "ofl", "mavenpro"))
             PushItem(
                 Path("ofl/mavenpro"), PushCategory.UPGRADE, PushStatus.IN_DEV, "46"
             ),
-            True,
+            False,
         ),
         (
             PushItem(

@@ -326,6 +326,9 @@ def fix_fvar_instances(ttFont, axis_dflts=None) -> FixResult:
     if "fvar" not in ttFont:
         return False, []
 
+    if "wght" not in [a.axisTag for a in ttFont["fvar"].axes]:
+        return False, []
+
     fvar = ttFont["fvar"]
     old_instances = {
         (
@@ -671,25 +674,23 @@ def drop_superfluous_mac_names(ttfont) -> FixResult:
     such as Word 2011. IDs 1-6 are very common, > 16 are edge cases.
 
     https://www.microsoft.com/typography/otspec/name.htm"""
-    keep_ids = [1, 2, 3, 4, 5, 6, 16, 17, 18, 20, 21, 22, 25]
-    messages = []
-    for n in range(255):
-        if n not in keep_ids:
-            name = ttfont["name"].getName(n, 1, 0, 0)
-            if name:
-                messages.append(f"Removed nameID {n}: {name.toStr()}")
-                ttfont["name"].names.remove(name)
-    return ttfont, messages
+    drop_mac_names(ttfont, keep_ids=[1, 2, 3, 4, 5, 6, 16, 17, 18, 20, 21, 22, 25])
 
 
-def drop_mac_names(ttfont) -> FixResult:
+def drop_mac_names(ttfont, keep_ids=[]) -> FixResult:
     """Drop all mac names"""
     messages = []
-    for n in range(255):
-        name = ttfont["name"].getName(n, 1, 0, 0)
-        if name:
-            ttfont["name"].names.remove(name)
-            messages.append(f"Removed nameID {n}: {name.toStr()}")
+    for namerecord in list(  # list() to avoid removing while iterating
+        ttfont["name"].names
+    ):
+        if namerecord.nameID not in keep_ids:
+            messages.append(f"Removed nameID {namerecord.nameID}: {namerecord.toStr()}")
+            if (
+                namerecord.platformID == 1
+                and namerecord.platEncID == 0
+                and namerecord.langID == 0
+            ):
+                ttfont["name"].names.remove(namerecord)
     return ttfont, messages
 
 

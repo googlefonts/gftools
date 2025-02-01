@@ -66,6 +66,8 @@ stat_format4_schema = Seq(
 GOOGLEFONTS_SCHEMA = Map(
     {
         Optional("recipe"): MapPattern(Str(), Seq(Any())),
+        Optional("postCompile"): Seq(Any()),
+        Optional("filenameSuffix"): Str(),
         Optional("recipeProvider"): Str(),
         "sources": Seq(Str()),
         Optional("vttSources"): MapPattern(Str(), Str()),
@@ -109,5 +111,6 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("extraStaticFontmakeArgs"): Str(),
         Optional("buildSmallCap"): Bool(),
         Optional("splitItalic"): Bool(),
+        Optional("localMetadata"): Any(),
     }
 )

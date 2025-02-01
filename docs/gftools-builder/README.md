@@ -204,6 +204,13 @@ The build can be customized by adding the following keys to the YAML file:
     subspace them into separate roman and italic VF files to comply with
     Google Fonts' specification. Defaults to true.
 
+-   `localMetadata`: A field that's ignored so you can put whatever you like in it.
+
+-   `filenameSuffix`: A suffix appended to the family name part of filenames.
+
+-   `postCompile`: A list of operations to be run after the font compilation step; you can use this (together with the above option) to build variant fonts, rename families, bake in stylistic sets, etc.
+
+
 ## *Really* customizing the build process
 
 If the options above aren't enough for you - let's say you want to run your
@@ -328,6 +335,21 @@ build process by leaving a `graph.png` file in the `sources` directory:
 - *subspace*: Runs `fonttools varLib.instancer` to subspace a variable font according to the values in `axes`. `args` are added to the command line.
 - *hbsubset*: Uses `hb-subset` to slim down a font binary.
 - *addSubset*: Adds a subset from another font using `gftools-add-ds-subsets`
+    - `directory`: the intermediary folder used to store the source(s) the subset(s) is taken from
+    - `subsets`: a list of subset configurations to merge in
+        - `from` (required): can be a pre-configured Noto source ("Noto Sans", "Noto Serif", "Noto Sans Devanagari", "Noto Sans Linear B"), or:
+            - `repo`: the GitHub slug for the repository, e.g. `googlefonts/gftools`. You can specify a git revision by suffixing this with `@v1.0.0`, or use `@latest` for the latest *published* release
+            - `path`: the path within the repo that has the source file
+        - `name`: a named Google Fonts subset, e.g. `GF_Latin_Core`
+        - `ranges`: a list unicode codepoint range to include
+            - `start`: the start of the range (as hex or decimal)
+            - `end`: the end of the range (as hex or decimal)
+        - `layoutHandling`: "subset", "closure" or "ignore" ([further reading](https://github.com/googlefonts/ufomerge/blob/bb9a82ff3039b8aa0cba58372158bd3c0e5cb770/Lib/ufomerge/__init__.py#L512-L521))
+        - `force`: replace existing glyphs in your sources, instead of skipping them
+        - `exclude_glyphs`: whitespace-delimited glyph names to exclude from merging
+        - `exclude_glyphs_file`: path to a file with glyphs names to exclude from merging, one per line (comments using `#` or `//` allowed)
+        - `exclude_codepoints`: whitespace-delimited unicode codepoints to exclude from merging
+        - `exclude_codepoints_file`: path to a file with with unicode codepoints to exclude from merging, one per line (comments using `#` or `//` allowed)
 - *buildVTT*: Uses `gftools-build-vtt` with the configuration file provided in `vttfile` to add VTT hinting to a font binary.
 - *remap*: Uses `gftools-remap-font` to alter a font binary's `cmap` table.
 - *paintcompiler*: Runs paintcompiler on a font to add a COLRv1 table.
