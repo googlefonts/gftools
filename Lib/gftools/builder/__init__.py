@@ -369,8 +369,16 @@ class GFBuilder:
                     if os.path.exists(file):
                         os.remove(file)
 
-                if os.path.exists("instance_ufos"):
-                    shutil.rmtree("instance_ufos")
+                # in the fontc/crater case it's possible that multiple instances of
+                # gftools builder are running at once, in the same directory,
+                # in which case we don't want to delete this out from under another process.
+                # since we should have deleted our own .ninja file above, if any still
+                # exist we will assume another instance of gftools is running.
+                if not any(path.endswith("ninja") for path in os.listdir()):
+                    if os.path.exists("instance_ufos"):
+                        shutil.rmtree("instance_ufos")
+                else:
+                    print("another .ninja file exists, leaving instance_ufos in place")
 
                 print("Done cleaning up temporary files")
         else:
