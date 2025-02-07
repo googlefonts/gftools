@@ -598,6 +598,8 @@ class PushItems(list):
                 cat = PushCategory.OTHER
 
             for f in files:
+                if f.suffix in frozenset([".py"]):
+                    continue
                 results.add(
                     PushItem(
                         Path(f), cat, status, url, push_list, merged, id_, linked_issues
