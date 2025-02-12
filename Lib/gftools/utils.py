@@ -16,6 +16,7 @@
 from __future__ import annotations
 from typing import Union
 import requests
+from urllib.parse import urljoin
 from io import BytesIO
 from zipfile import ZipFile
 import sys
@@ -64,7 +65,7 @@ def download_family_from_Google_Fonts(
     res = []
     for item in data["manifest"]["fileRefs"]:
         filename = item["filename"]
-        dl_url = item["url"]
+        dl_url = urljoin(dl_url, item["url"])
         if "static" in filename and ignore_static:
             continue
         if not filename.endswith(("otf", "ttf")):
