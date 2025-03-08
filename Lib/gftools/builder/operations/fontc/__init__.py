@@ -43,7 +43,7 @@ def rewrite_one_arg(args: List[str]) -> str:
         # this means 'retain filters defined in UFO', which... do we even support
         # that in fontc?
         if filter_ == "...":
-            pass
+            return ""
         elif filter_ == "FlattenComponentsFilter":
             return "--flatten-components"
         elif filter_ == "DecomposeTransformedComponentsFilter":
@@ -58,13 +58,11 @@ def rewrite_one_arg(args: List[str]) -> str:
         return f"--log={log_level}"
     elif next_ == "--drop-implied-oncurves" or next_ == "--keep-overlaps":
         # this is our default behaviour so no worries
-        pass
+        return ""
     elif next_ == "--no-check-compatibility":
         # we don't have an equivalent
-        pass
-    else:
-        raise ValueError(f"unknown fontmake arg '{next_}'")
-    return ""
+        return ""
+    raise ValueError(f"unknown fontmake arg '{next_}'")
 
 
 def python_to_rust_log_level(py_level: str):
