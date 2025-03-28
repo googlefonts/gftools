@@ -82,16 +82,28 @@ subsets: "menu"
 PR_CHECKLIST = """
 ## PR Checklist:
 
-- [ ] `minisite_url` definition in the METADATA.pb file for commissioned projects
-- [ ] `tags` are added for NEW FONTS
-- [ ] `primary_script` definition in the METADATA.pb file for all projects that have a primary non-Latin based language support target
-- [ ] `subsets` definitions in the METADATA.pb reflect the actual subsets and languages present in the font files (in alphabetic order). For **CJK fonts**, only include one of the following subsets `chinese-hongkong`, `chinese-simplified`, `chinese-traditional`, `korean`, `japanese`.
+### PR
+- [ ] The PR is in the Traffic Jam Board (Project > Traffic Jam Board)
+- [ ] It has the correct labels (upgrade, new font, specific language)
+- [ ] Make sure the PR is linked to the corresponding issue
+
+### QA
 - [ ] Fontbakery checks are reviewed and failing checks are resolved in collaboration with the upstream font development team
 - [ ] Diffenator2 regression checks for revisions on all projects that are currently in production
+- [ ] Article has not typos, images are well linked and have the good size.
+- [ ] OFL.txt has the good licence URL (https://openfontlicense.org)
+
+### Specifics
+- [ ] `primary_script` definition in the METADATA.pb file for all projects that have a primary non-Latin based language support target
+- [ ] `subsets` definitions in the METADATA.pb reflect the actual subsets and languages present in the font files (in alphabetic order). For **CJK fonts**, only include one of the following subsets `chinese-hongkong`, `chinese-simplified`, `chinese-traditional`, `korean`, `japanese`.
+
+### Release
 - [ ] Designers bio info have to be present in the designer catalog (at least an issue should be opened for tracking this, if they are not)
 - [ ] Check designers order in metadata.pb, since the first one of the list appears as “principal designer”
 - [ ] Social media formatted visual assets for all new commissioned projects in the Drive directory, communicate with the repository Maintainer so that they can push this content to the Social Media tracker spreadsheet
 - [ ] Social media content draft for all new commissioned projects in the Drive directory and Social Media tracker spreadsheet, communicate with the repository Maintainer so that they can push this content to the Social Media tracker spreadsheet
+- [ ] `minisite_url` definition in the METADATA.pb file for commissioned projects
+- [ ] `tags` are added for NEW FONTS
 """
 
 
