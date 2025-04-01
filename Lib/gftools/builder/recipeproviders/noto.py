@@ -277,7 +277,7 @@ class NotoBuilder(GFBuilder):
                     "instance_name": instance.name,
                     "target": "full-designspace/instance_ufos/"
                     + os.path.basename(instance.filename)
-                    + ".json",
+                    + ("" if self.builder.fontc_args.use_fontc else ".json"),
                 },
                 {
                     "operation": "buildTTF" if output == "ttf" else "buildOTF",
