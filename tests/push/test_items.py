@@ -30,7 +30,7 @@ FONTS_JSON = json.load(open(os.path.join(SERVER_DIR, "fonts.json"), encoding="ut
             ),
             Family(
                 name="Maven Pro",
-                version="Version 2.102",
+                version="Version 2.103",
             ),
         ),
         (
