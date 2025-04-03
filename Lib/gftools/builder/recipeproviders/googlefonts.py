@@ -257,7 +257,7 @@ class GFBuilder(RecipeProviderBase):
             else:
                 self.build_a_variable(source)
         self.build_STAT()
-        if self.avar2file:
+        if "avar2" in self.config:
             self.build_Avar2()
 
     def build_STAT(self):
