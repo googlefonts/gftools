@@ -15,6 +15,7 @@ MavenPro[wght].ttf:
     wght: 900.0
 ```
 """
+
 import argparse
 import os
 from collections import OrderedDict
