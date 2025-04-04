@@ -15,6 +15,7 @@ from gftools.builder.recipeproviders import RecipeProviderBase
 from gftools.builder.schema import (
     GOOGLEFONTS_SCHEMA,
     stat_schema,
+    avar2_schema,
     stat_schema_by_font_name,
 )
 from gftools.utils import open_ufo
@@ -98,6 +99,17 @@ class GFBuilder(RecipeProviderBase):
             yaml.dump(self.config["stat"], self.statfile)
         else:
             self.statfile = None
+
+        if "avar2" in self.config:
+            self.avar2file = NamedTemporaryFile(delete=False, mode="w+")
+            load(yaml.dump(self.config["avar2"]), avar2_schema)
+            for font in list(self.config["avar2"].keys()):
+                scfont = re.sub(r"((?:-Italic)?\[)", r"SC\1", font)
+                self.config["avar2"][scfont] = self.config["avar2"][font]
+            yaml.dump(self.config["avar2"], self.avar2file)
+        else:
+            self.avar2file = None
+
         # Find variable fonts
         self.recipe = {}
         self.build_all_variables()
@@ -245,6 +257,8 @@ class GFBuilder(RecipeProviderBase):
             else:
                 self.build_a_variable(source)
         self.build_STAT()
+        if "avar2" in self.config:
+            self.build_avar2()
 
     def build_STAT(self):
         # Add buildStat to a variable target, it'll do for all of them
@@ -267,6 +281,14 @@ class GFBuilder(RecipeProviderBase):
             if other_variables:
                 build_stat_step["needs"] = other_variables
             self.recipe[last_target].append(build_stat_step)
+
+    def build_avar2(self):
+        vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]
+        if len(vfs) > 0:
+            args = {"args": self.avar2file.name, "postprocess": "buildAvar2"}
+            for vf in vfs:
+                self.recipe[vf].append(args)
+            self.avar2file.close()
 
     def _vtt_steps(self, target: str):
         if os.path.basename(target) in self.config.get("vttSources", {}):

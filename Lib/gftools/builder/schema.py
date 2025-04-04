@@ -53,6 +53,18 @@ stat_schema = Seq(
 
 stat_schema_by_font_name = MapPattern(Str(), stat_schema)
 
+avar2_schema = MapPattern(
+    Str(),
+    Seq(
+        Map(
+            {
+                "in": MapPattern(Str(), Float() | Int()),
+                "out": MapPattern(Str(), Float() | Int()),
+            }
+        )
+    ),
+)
+
 stat_format4_schema = Seq(
     Map(
         {
@@ -76,6 +88,7 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("stat"): stat_schema | stat_schema_by_font_name,
         Optional("statFormat4"): stat_format4_schema
         | MapPattern(Str(), stat_format4_schema),
+        Optional("avar2"): avar2_schema,
         Optional("familyName"): Str(),
         Optional("includeSourceFixes"): Bool(),
         Optional("stylespaceFile"): Str(),
