@@ -138,9 +138,15 @@ def main(args=None):
             "fetching method."
         ),
     )
+    parser.add_argument("--rust", action="store_true", help="Use Rust tooling")
     check_group.add_argument(
         "--extra-fontbakery-args",
-        help="Additional arguments to FontBakery",
+        help="Additional arguments to Fontbakery",
+        action="append",
+    )
+    check_group.add_argument(
+        "--extra-fontspector-args",
+        help="Additional arguments to Fontspector",
         action="append",
     )
 
@@ -253,24 +259,30 @@ def main(args=None):
         qa = FontQA(dfonts, out=args.out, url=url)
 
     if args.auto_qa and family_on_gf:
-        qa.googlefonts_upgrade(args.imgs)
+        qa.googlefonts_upgrade(args.imgs, args.rust)
     elif args.auto_qa and not family_on_gf:
-        qa.googlefonts_new(args.imgs)
+        qa.googlefonts_new(args.imgs, args.rust)
     if args.render:
-        qa.render(args.imgs)
+        qa.render(args.imgs, args.rust)
     if args.fontbakery:
-        qa.fontbakery(extra_args=args.extra_fontbakery_args)
+        if args.rust:
+            qa.fontspector(extra_args=args.extra_fontspector_args)
+        else:
+            qa.fontbakery(extra_args=args.extra_fontbakery_args)
     if args.diffenator:
-        qa.diffenator()
+        if args.rust:
+            qa.diffenator3()
+        else:
+            qa.diffenator()
     if args.diffbrowsers:
-        qa.diffbrowsers(args.imgs)
+        qa.diffbrowsers(args.imgs, rust=args.rust)
     if args.proof:
-        qa.proof()
+        qa.proof(rust=args.rust)
     if args.interpolations:
-        qa.interpolations()
+        qa.interpolations(rust=args.rust)
 
     if qa.has_error:
-        logger.fatal("Fontbakery has raised a fatal error. Please fix!")
+        logger.fatal("QA tools have raised a fatal error. Please fix!")
         sys.exit(1)
 
 
