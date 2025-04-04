@@ -258,7 +258,7 @@ class GFBuilder(RecipeProviderBase):
                 self.build_a_variable(source)
         self.build_STAT()
         if "avar2" in self.config:
-            self.build_Avar2()
+            self.build_avar2()
 
     def build_STAT(self):
         # Add buildStat to a variable target, it'll do for all of them
@@ -282,16 +282,12 @@ class GFBuilder(RecipeProviderBase):
                 build_stat_step["needs"] = other_variables
             self.recipe[last_target].append(build_stat_step)
 
-    def build_Avar2(self):
-        all_variables = [x for x in self.recipe.keys() if x.endswith("ttf")]
-        if len(all_variables) > 0:
-            last_target = all_variables[-1]
-            args = {"args": self.avar2file.name}
-            build_avar2_step = {
-                "postprocess": "buildAvar2",
-                **args,
-            }
-            self.recipe[last_target].append(build_avar2_step)
+    def build_avar2(self):
+        vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]
+        if len(vfs) > 0:
+            args = {"args": self.avar2file.name, "postprocess": "buildAvar2"}
+            for vf in vfs:
+                self.recipe[vf].append(args)
             self.avar2file.close()
 
     def _vtt_steps(self, target: str):
