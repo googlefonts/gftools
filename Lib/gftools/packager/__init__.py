@@ -515,7 +515,14 @@ def push_family(family_path: Path, branch_name: str, head_repo: str):
     if is_ssh:
         repo_url = f"git@github.com:{head_repo}/fonts.git"
     else:
-        repo_url = f"https://github.com/{head_repo}/fonts.git"
+        username = os.environ.get("GH_USERNAME")
+        gh_token = os.environ.get("GH_TOKEN")
+        if not username or not gh_token:
+            raise ValueError(
+                "GH_USERNAME and GH_TOKEN environment variables are required to push "
+                "to the repo."
+            )
+        repo_url = f"https://{username}:{gh_token}@github.com/{head_repo}/fonts.git"
     subprocess.run(
         [
             "git",
