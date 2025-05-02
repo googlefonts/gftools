@@ -1,7 +1,7 @@
 import os
 from tempfile import TemporaryDirectory
 
-from gftools.builder.operations import OperationBase
+from gftools.builder.operations import OperationBase, TOUCH
 
 
 class BuildSTAT(OperationBase):
@@ -47,7 +47,7 @@ class BuildSTAT(OperationBase):
 
     def build(self, writer):
         if self.postprocess:
-            stamp = " && touch " + self.stamppath
+            stamp = f" && {TOUCH} {self.stamppath}"
             writer.comment(
                 "Postprocessing "
                 + ", ".join([t.path for t in self.targets])
