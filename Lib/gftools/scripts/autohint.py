@@ -104,4 +104,4 @@ def main(args=None):
             raise e
 
     if rename:
-        os.rename(args.output, args.input)
+        shutil.move(args.output, args.input)
