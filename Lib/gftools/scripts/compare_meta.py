@@ -15,6 +15,7 @@ from gftools.push.servers import (
     PRODUCTION_VERSIONS_URL,
 )
 import argparse
+import sys
 
 
 def munge_meta(obj):
@@ -113,9 +114,6 @@ def which_server_metadata(string, family):
         json.loads(requests.get(f"{PRODUCTION_META_URL}/{family}").text[4:])
     )
     res = doc_in_server(string, dev_meta, sb_meta, prod_meta)
-    import pdb
-
-    pdb.set_trace()
 
 
 def pr_type(data):
@@ -171,7 +169,7 @@ def main(args=None):
     diff_type.add_argument("--fontv", action="store_true", help="compare font version")
     diff_type.add_argument("--family", help="family to compare")
 
-    parser.add_argument("out", help="output path to html file")
+    parser.add_argument("-o", "--out", help="output path to html file")
     args = parser.parse_args(args)
     # TODO make this a required arg if a pr is given
     if args.gf_path:
@@ -216,7 +214,21 @@ def main(args=None):
             json.dump(sb_meta, f, indent=4)
         with open(prod_file, "w") as f:
             json.dump(prod_meta, f, indent=4)
-        generate_vimdiff_html(dev_file, sb_file, prod_file, args.out)
+        if args.out:
+            generate_vimdiff_html(dev_file, sb_file, prod_file, args.out)
+        else:
+            generate_vimdiff_html(dev_file, sb_file, prod_file, os.path.join(temp_dir, "diff.html"))
+            if sys.platform == "linux":
+                open_cmd = "xdg-open"
+            elif sys.platform == "darwin":
+                open_cmd = "open"
+            elif sys.platform == "win32":
+                open_cmd = "start"
+            else:
+                raise NotImplementedError("Unsupported OS")
+            subprocess.run([open_cmd, os.path.join(temp_dir, "diff.html")])
+            print("Hit any key to exit")
+            input()
 
 
 if __name__ == "__main__":
