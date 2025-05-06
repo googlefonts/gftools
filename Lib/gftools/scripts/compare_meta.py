@@ -217,7 +217,9 @@ def main(args=None):
         if args.out:
             generate_vimdiff_html(dev_file, sb_file, prod_file, args.out)
         else:
-            generate_vimdiff_html(dev_file, sb_file, prod_file, os.path.join(temp_dir, "diff.html"))
+            generate_vimdiff_html(
+                dev_file, sb_file, prod_file, os.path.join(temp_dir, "diff.html")
+            )
             if sys.platform == "linux":
                 open_cmd = "xdg-open"
             elif sys.platform == "darwin":
