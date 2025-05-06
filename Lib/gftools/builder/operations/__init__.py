@@ -5,6 +5,7 @@ import os
 import pkgutil
 import importlib
 import inspect
+import platform
 import sys
 from os.path import dirname
 from tempfile import NamedTemporaryFile
@@ -12,6 +13,11 @@ from typing import Dict
 
 from gftools.builder.file import File
 from gftools.utils import shell_quote
+
+
+TOUCH = "touch"
+if platform.system() == "Windows":
+    TOUCH = "echo. >"
 
 
 @dataclass
@@ -80,7 +86,7 @@ class OperationBase:
     def build(self, writer):
         if self.postprocess:
             # Check this *is* a post-process step
-            stamp = " && touch " + self.stamppath
+            stamp = f" && {TOUCH} {self.stamppath}"
             writer.comment(
                 "Postprocessing "
                 + ", ".join([t.path for t in self.targets])
