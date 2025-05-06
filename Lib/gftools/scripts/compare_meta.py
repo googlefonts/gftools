@@ -12,7 +12,7 @@ from gftools.push.servers import (
     PRODUCTION_META_URL,
     DEV_VERSIONS_URL,
     SANDBOX_VERSIONS_URL,
-    PRODUCTION_VERSIONS_URL
+    PRODUCTION_VERSIONS_URL,
 )
 import argparse
 
@@ -53,6 +53,79 @@ def munge_family(obj):
     return obj
 
 
+def pr_json(number):
+    cmd = ["gh", "pr", "view", number, "--json", "title,labels,number,files"]
+    msg = subprocess.run(cmd, check=True, capture_output=True)
+    data = json.loads(msg.stdout.decode("utf-8"))
+    return data
+
+
+def levenstein(a, b):
+    if len(a) < len(b):
+        return levenstein(b, a)
+
+    if len(b) == 0:
+        return len(a)
+
+    if len(b) == 1:
+        return 1 if a.find(b) != -1 else len(a)
+
+    # let a and b be lists of characters
+    a = list(a)
+    b = list(b)
+    alen = len(a)
+    blen = len(b)
+    current_row = range(alen + 1)
+
+    for i in range(1, blen + 1):
+        previous_row, current_row = current_row, [i] * (alen + 1)
+        for j in range(1, alen + 1):
+            insertions = previous_row[j] + 1
+            deletions = current_row[j - 1] + 1
+            substitutions = previous_row[j - 1] + (a[j - 1] != b[i - 1])
+            current_row[j] = min(insertions, deletions, substitutions)
+
+    return current_row[alen]
+
+
+def doc_in_server(doc, dev_data, sb_data, prod_data):
+    dev_res = levenstein(json.dumps(dev_data), doc)
+    sb_res = levenstein(json.dumps(sb_data), doc)
+    prod_res = levenstein(json.dumps(prod_data), doc)
+
+    import pdb
+
+    pdb.set_trace()
+    best = min(dev_res, sb_res, prod_res)
+    if dev_res == best:
+        return "dev"
+    elif sb_res == best:
+        return "sb"
+    elif prod_res == best:
+        return "prod"
+
+
+def which_server_metadata(string, family):
+    munge = munge_family
+    dev_meta = munge(json.loads(requests.get(f"{DEV_META_URL}/{family}").text[4:]))
+    sb_meta = munge(json.loads(requests.get(f"{SANDBOX_META_URL}/{family}").text[4:]))
+    prod_meta = munge(
+        json.loads(requests.get(f"{PRODUCTION_META_URL}/{family}").text[4:])
+    )
+    res = doc_in_server(string, dev_meta, sb_meta, prod_meta)
+    import pdb
+
+    pdb.set_trace()
+
+
+def pr_type(data):
+    if data["labels"][0]["name"] == "I Metadata/OFL":
+        file_to_check = next(f for f in data["files"] if "METADATA.pb" in f["path"])
+        if file_to_check:
+            with open(file_to_check["path"], "r") as doc:
+                which_server_metadata(doc.read(), "Huninn")
+
+
 def generate_vimdiff_html(dev_file, sb_file, prod_file, output_file):
     """
     Use vimdiff to compare dev_meta, sb_meta, and prod_meta and save the results as an HTML file.
@@ -91,13 +164,26 @@ def main(args=None):
     parser = argparse.ArgumentParser(
         description="Compare metadata from different servers."
     )
+    parser.add_argument("--gf-path", help="path to google/fonts")
     diff_type = parser.add_mutually_exclusive_group()
+    diff_type.add_argument("--pr", help="diff a pr")
     diff_type.add_argument("--meta", action="store_true", help="compare font metadata")
     diff_type.add_argument("--fontv", action="store_true", help="compare font version")
     diff_type.add_argument("--family", help="family to compare")
 
     parser.add_argument("out", help="output path to html file")
     args = parser.parse_args(args)
+    # TODO make this a required arg if a pr is given
+    if args.gf_path:
+        os.chdir(args.gf_path)
+    if args.pr:
+        raise (NotImplementedError("PR diff not implemented yet"))
+        data = pr_json(args.pr)
+        pr_type(data)
+        import pdb
+
+        pdb.set_trace()
+        return
     if args.meta:
         munge = munge_meta
         dev_meta = munge(requests.get(DEV_META_URL).json())
@@ -110,9 +196,15 @@ def main(args=None):
         prod_meta = munge(json.loads(requests.get(PRODUCTION_VERSIONS_URL).text[4:]))
     elif args.family:
         munge = munge_family
-        dev_meta = munge(json.loads(requests.get(f"{DEV_META_URL}/{args.family}").text[4:]))
-        sb_meta = munge(json.loads(requests.get(f"{SANDBOX_META_URL}/{args.family}").text[4:]))
-        prod_meta = munge(json.loads(requests.get(f"{PRODUCTION_META_URL}/{args.family}").text[4:]))
+        dev_meta = munge(
+            json.loads(requests.get(f"{DEV_META_URL}/{args.family}").text[4:])
+        )
+        sb_meta = munge(
+            json.loads(requests.get(f"{SANDBOX_META_URL}/{args.family}").text[4:])
+        )
+        prod_meta = munge(
+            json.loads(requests.get(f"{PRODUCTION_META_URL}/{args.family}").text[4:])
+        )
 
     with tempfile.TemporaryDirectory() as temp_dir:
         dev_file = os.path.join(temp_dir, "dev_meta.json")
