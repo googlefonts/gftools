@@ -54,14 +54,15 @@ class BuildSTAT(OperationBase):
                 + " with "
                 + self.__class__.__name__
             )
+            all_vfs = list(
+                set(self.dependencies) | set([t.path for t in self.implicit])
+            )
             writer.build(
                 self.stamppath,
                 "buildSTAT-postprocess",
-                self.dependencies,
+                all_vfs,
                 variables={"stamp": stamp, **self.variables},
-                implicit=[
-                    t.path for t in self.implicit if t.path not in self.dependencies
-                ],
+                implicit=all_vfs,
             )
         else:
             tempdir = TemporaryDirectory().name
