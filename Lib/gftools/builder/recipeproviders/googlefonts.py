@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 
 from glyphsLib.builder import UFOBuilder
 import yaml
-from fontTools.designspaceLib import DesignSpaceDocument, InstanceDescriptor
+from fontTools.designspaceLib import InstanceDescriptor
 from strictyaml import load, YAMLValidationError
 
 from gftools.builder.file import File
@@ -210,7 +210,7 @@ class GFBuilder(RecipeProviderBase):
         if self.config.get("extraFontmakeArgs") is not None:
             args += " " + str(self.config["extraFontmakeArgs"])
         if variable:
-            if self.config.get("checkCompatibility") == False:
+            if self.config.get("checkCompatibility") is False:
                 args += " --no-check-compatibility"
             if self.config.get("extraVariableFontmakeArgs") is not None:
                 args += " " + str(self.config["extraVariableFontmakeArgs"])
