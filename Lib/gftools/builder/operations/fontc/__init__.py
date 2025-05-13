@@ -53,6 +53,8 @@ def rewrite_one_arg(args: List[str]) -> str:
             next_ = f"{next_} {filter_}"
     elif next_ == "--no-production-names":
         return next_
+    elif next_ == "--keep-direction":
+        return next_
     elif next_ == "--verbose":
         log_level = python_to_rust_log_level(args.pop().strip())
         return f"--log={log_level}"
