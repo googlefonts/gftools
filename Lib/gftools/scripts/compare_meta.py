@@ -162,6 +162,8 @@ def generate_vimdiff_html(dev_file, sb_file, prod_file, output_file):
             sb_file,
             prod_file,
             "-c",
+            "windo set wrap",
+            "-c",
             "TOhtml",
             "-c",
             f"sav! {output_file}",
