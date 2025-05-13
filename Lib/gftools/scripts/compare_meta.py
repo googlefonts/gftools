@@ -44,6 +44,10 @@ def munge_fontv(obj):
     return obj
 
 
+def munge_designer(obj):
+    return obj
+
+
 def munge_family(obj):
     if "family" not in obj:
         return "Not in server yet"
@@ -94,9 +98,6 @@ def doc_in_server(doc, dev_data, sb_data, prod_data):
     sb_res = levenstein(json.dumps(sb_data), doc)
     prod_res = levenstein(json.dumps(prod_data), doc)
 
-    import pdb
-
-    pdb.set_trace()
     best = min(dev_res, sb_res, prod_res)
     if dev_res == best:
         return "dev"
@@ -122,6 +123,21 @@ def pr_type(data):
         if file_to_check:
             with open(file_to_check["path"], "r") as doc:
                 which_server_metadata(doc.read(), "Huninn")
+
+
+def get_designer(url, designer):
+    dev_meta = requests.get(url).json()
+    for family in dev_meta["familyMetadataList"]:
+        for family_designer in family["designers"]:
+            if family_designer == designer:
+                family_to_check = family["family"]
+                data = json.loads(
+                    requests.get(
+                        f"{url}/{family_to_check}"
+                    ).text[4:]
+                )
+                return next(d for d in data["designers"] if d["name"] == designer)
+    return {}
 
 
 def generate_vimdiff_html(dev_file, sb_file, prod_file, output_file):
@@ -168,6 +184,7 @@ def main(args=None):
     diff_type.add_argument("--meta", action="store_true", help="compare font metadata")
     diff_type.add_argument("--fontv", action="store_true", help="compare font version")
     diff_type.add_argument("--family", help="family to compare")
+    diff_type.add_argument("--designer", help="designer to compare")
 
     parser.add_argument("-o", "--out", help="output path to html file")
     args = parser.parse_args(args)
@@ -203,6 +220,11 @@ def main(args=None):
         prod_meta = munge(
             json.loads(requests.get(f"{PRODUCTION_META_URL}/{args.family}").text[4:])
         )
+    elif args.designer:
+        munge = munge_designer
+        dev_meta = get_designer(DEV_META_URL, args.designer)
+        sb_meta = get_designer(SANDBOX_META_URL, args.designer)
+        prod_meta = get_designer(PRODUCTION_META_URL, args.designer)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         dev_file = os.path.join(temp_dir, "dev_meta.json")
