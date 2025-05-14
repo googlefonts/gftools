@@ -418,13 +418,6 @@ def main(args=None):
         type=str,
     )
 
-    parser.add_argument(
-        "--experimental-extra-arg",
-        dest="experimental_extra_args",
-        help="pass extra argument(s) to fontc or fontmake. Can be used multiple times",
-        action="append",
-    )
-
     parser.add_argument("config", help="Path to config file or source file", nargs="+")
     args = parser.parse_args(args)
     fontc_args = FontcArgs(args)
