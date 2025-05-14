@@ -27,7 +27,6 @@ class FontcArgs:
         self.simple_output_path = abspath(args.experimental_simple_output)
         self.fontc_bin_path = abspath(args.experimental_fontc)
         self.single_source = args.experimental_single_source
-        self.extra_args = args.experimental_extra_args or []
         if self.fontc_bin_path:
             if not self.fontc_bin_path.is_file():
                 raise ValueError(f"fontc does not exist at {self.fontc_bin_path}")
@@ -67,7 +66,7 @@ class FontcArgs:
             # disable running ttfautohint, because we had a segfault
             config["autohintTTF"] = False
             extra_args = config.get("extraFontmakeArgs") or ""
-            extra_args += " ".join([" --drop-implied-oncurves"] + self.extra_args)
+            extra_args += " --drop-implied-oncurves"
             config["extraFontmakeArgs"] = extra_args
             # override config to turn not build instances if we're variable
             if self.will_build_variable_font(config):
