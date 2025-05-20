@@ -59,10 +59,13 @@ def fix_image_filesize(fp: Path, img: Image.Image):
 def image_to_mp4(fp: Path):
     if fp.suffix != ".gif":
         return
-    stream = ffmpeg.input(fp)
-    out = fp.with_suffix(".mp4")
-    stream = ffmpeg.output(stream, str(out))
-    ffmpeg.run(stream)
+    try:
+        stream = ffmpeg.input(fp)
+        out = fp.with_suffix(".mp4")
+        stream = ffmpeg.output(stream, str(out))
+        ffmpeg.run(stream)
+    except FileNotFoundError:
+        raise FileNotFoundError("ffmpeg not found. Please install ffmpeg.")
     return out
 
 
