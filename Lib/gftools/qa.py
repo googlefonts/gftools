@@ -218,7 +218,16 @@ class FontQA:
         out = os.path.join(self.out, "Fontspector")
         mkdir(out)
         cmd = (
-            ["fontspector", "--profile", profile, "-l", "info", "--succinct"]
+            [
+                "fontspector",
+                "--profile",
+                profile,
+                "-l",
+                "info",
+                "--succinct",
+                "-e",
+                "error",
+            ]
             + [f.path for f in self.fonts]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
         )
