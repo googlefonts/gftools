@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 
-TEST_DATA = os.path.join("data", "test", "article")
+TEST_DATA = Path(os.path.join("data", "test", "article"))
 
 
 def test_fix_media():
@@ -17,15 +17,20 @@ def test_fix_media():
             out=tmp_dir,
         )
         # width should be 1024
-        img = Image.open(os.path.join(tmp_dir, "img1.jpg"))
+        img_path = tmp_dir / "img1.jpg"
+        img = Image.open(img_path)
         img_width, img_height = img.size
         assert img_width <= MAX_WIDTH
         assert img_height <= MAX_HEIGHT
 
         # Filesize should be less than 800kb
-        img_size = os.stat(tmp_dir / "img1.jpg").st_size
+        img_size = os.stat(img_path).st_size
         assert img_size <= MAXSIZE_RASTER
 
         # Check gif is converted to mp4
-        assert (tmp_dir / "vid1.mp4").exists()
-        assert not (tmp_dir / "vid1.gif").exists()
+        vid_path = tmp_dir / "vid1.mp4"
+        assert (vid_path).exists()
+        # Check olf gif is deleted
+        old_gif = tmp_dir / "vid1.gif"
+        assert not (old_gif).exists()
+        img.close()

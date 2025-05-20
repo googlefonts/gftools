@@ -49,7 +49,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Cairo (Ubuntu)
         if: matrix.platform == 'ubuntu-latest'
-        run: sudo apt-get install libcairo2-dev ffmpeg
+        run: sudo apt-get install libcairo2-dev
+      - name: Install ffmpeg (Ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: sudo apt-get install ffmpeg
+      - name: Install ffmpeg (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: choco install ffmpeg -y
+        shell: pwsh
+
       - name: Install packages
         run: |
           pip install '.[qa]'

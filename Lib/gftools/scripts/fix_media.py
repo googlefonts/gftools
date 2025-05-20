@@ -106,7 +106,8 @@ def remove_unused_media(fp: Path, article: BeautifulSoup):
 
 
 def fix_media(fp: Path, out: Path = None, inplace: bool = False, dry_run: bool = False):
-    shutil.rmtree(out, ignore_errors=True)
+    if out.exists():
+        shutil.rmtree(out)
     os.makedirs(out)
 
     # Work on a copy of every file so we can do a dry run if needed.
