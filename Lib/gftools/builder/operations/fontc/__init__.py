@@ -48,6 +48,11 @@ def rewrite_one_arg(args: List[str]) -> str:
             return "--flatten-components"
         elif filter_ == "DecomposeTransformedComponentsFilter":
             return "--decompose-transformed-components"
+        elif "DecomposeComponentsFilter" in filter_:
+            # this is sometimes spelled with the full qualified path name as
+            # --filter "ufo2ft.filters.decomposeComponents::DecomposeComponentsFilter"
+            # e.g. in Jaquard12.glyphs so we use `in` instead of `filter_ == ...`
+            return "--decompose-components"
         else:
             # glue the filter back together for better reporting below
             next_ = f"{next_} {filter_}"
