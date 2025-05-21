@@ -1,6 +1,7 @@
 """
 Fix images and gifs in google/fonts article directories.
 """
+
 import argparse
 from PIL import Image
 import os
@@ -110,7 +111,9 @@ def remove_unused_media(fp: Path, article: BeautifulSoup):
             os.remove(media_fp)
 
 
-def fix_article(fp: Path, out: Path = None, inplace: bool = False, dry_run: bool = False):
+def fix_article(
+    fp: Path, out: Path = None, inplace: bool = False, dry_run: bool = False
+):
     """Fix article media."""
     if out.exists():
         shutil.rmtree(out)
