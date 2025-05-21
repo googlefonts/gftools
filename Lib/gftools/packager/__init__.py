@@ -42,6 +42,7 @@ from gftools.utils import (
 from gftools.packager.build import build_to_directory
 import sys
 from gftools.push.trafficjam import TRAFFIC_JAM_ID
+from gftools.article import fix_article
 
 
 log = logging.getLogger("gftools.packager")
@@ -704,6 +705,10 @@ def make_package(
         packaged = package_family(
             family_path, metadata, latest_release, build_from_source, **kwargs
         )
+        article_path = family_path / "article"
+        if article_path.exists():
+            log.info(f"Fixing article in '{article_path}'")
+            fix_article(article_path, inplace=True)
         title, msg, branch = commit_family(
             branch, family_path, metadata, repo, head_repo, issue_number
         )
