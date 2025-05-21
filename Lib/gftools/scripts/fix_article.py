@@ -1,7 +1,6 @@
 """
 Fix images and gifs in google/fonts article directories.
 """
-
 import argparse
 from PIL import Image
 import os
@@ -105,7 +104,8 @@ def remove_unused_media(fp: Path, article: BeautifulSoup):
             os.remove(media_fp)
 
 
-def fix_media(fp: Path, out: Path = None, inplace: bool = False, dry_run: bool = False):
+def fix_article(fp: Path, out: Path = None, inplace: bool = False, dry_run: bool = False):
+    """Fix article media."""
     if out.exists():
         shutil.rmtree(out)
     os.makedirs(out)
@@ -126,6 +126,7 @@ def fix_media(fp: Path, out: Path = None, inplace: bool = False, dry_run: bool =
                 if media_fp.suffix in [".gif", ".apng"]:
                     new_fp = image_to_mp4(media_fp)
                     rename_map[media_fp.name] = new_fp.name
+                # TODO fix/warn about vector images
                 else:
                     img = Image.open(media_fp)
                     img = fix_image_dimensions(media_fp, img)
@@ -169,7 +170,11 @@ def main(args=None):
         "--inplace", action="store_true", help="Update the article dir in place."
     )
     args = parser.parse_args(args)
-    fix_media(
+    article_fp = args.family_fp / "article"
+    if not article_fp.exists():
+        raise FileNotFoundError(f"Article directory not found: {article_fp}")
+
+    fix_article(
         args.family_fp / "article",
         out=args.out,
         inplace=args.inplace,
