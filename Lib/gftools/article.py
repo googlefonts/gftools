@@ -28,13 +28,19 @@ def fix_image_dimensions(fp: Path, img: Image.Image):
             f"Resizing image from {img.width}x{img.height} to {MAX_WIDTH}x{int(MAX_WIDTH / img_ratio)}"
         )
         img = img.resize((MAX_WIDTH, int(MAX_WIDTH / img_ratio)), Image.LANCZOS)
-        img.save(fp)
+        if fp.suffix == ".png":
+            img.save(fp, optimize=True, compress_level=9)
+        else:
+            img.save(fp)
     if img.height > MAX_HEIGHT:
         print(
             f"Resizing image from {img.width}x{img.height} to {int(MAX_HEIGHT * img_ratio)}x{MAX_HEIGHT}"
         )
         img = img.resize((int(MAX_HEIGHT * img_ratio), MAX_HEIGHT), Image.LANCZOS)
-        img.save(fp)
+        if fp.suffix == ".png":
+            img.save(fp, optimize=True, compress_level=9)
+        else:
+            img.save(fp)
     return img
 
 
