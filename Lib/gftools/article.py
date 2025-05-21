@@ -159,6 +159,7 @@ def fix_article(
         if out:
             shutil.copytree(tmp_dir, out, dirs_exist_ok=True)
         elif inplace:
+            shutil.rmtree(fp)
             shutil.copytree(tmp_dir, fp, dirs_exist_ok=True)
         elif dry_run:
             print("Dry run complete. No files were written.")
