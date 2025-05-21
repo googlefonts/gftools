@@ -74,7 +74,13 @@ def update_hrefs(article: BeautifulSoup, media_map: list):
             if tag["src"] == media_map[tag["src"]]:
                 continue
             if tag["src"].endswith(".gif"):
-                tag.name = "video"  # loop autoplay muted"
+                tag.name = "video"
+                # We want the following tag:
+                # <video loop autoplay muted src="file.mp4" type="video/mp4">
+                #  Your browser does not support the video tag.
+                # </video>
+                # to get this we add a key for each attribute we want to include
+                # and set the value to None. An empty string or false doesn't work.
                 tag["loop"] = None
                 tag["autoplay"] = None
                 tag["muted"] = None
