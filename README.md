@@ -5,6 +5,8 @@
 
 This project contains tools used for working with the Google Fonts collection, plus **Google Fonts Glyph Set Documentation** in the [/encodings](https://github.com/googlefonts/gftools/tree/main/Lib/gftools/encodings) subdirectory. While these tools are primarily intended for contributors to the Google Fonts project, anyone who works with fonts could find them useful.
 
+Additional documentation in [`/docs`](https://github.com/googlefonts/gftools/blob/main/docs)
+
 The tools and files under this directory are available under the Apache License v2.0, for details see [LICENSE](LICENSE)
 
 ## Google Fonts Official Glyph Sets
@@ -40,12 +42,11 @@ Fix a non hinted font
 
     gftools fix-nonhinting font_in.ttf font_out.ttf
 
-Package and PR a family update to google/fonts. Much more detailed [documentation](./docs/gftools-packager).
+Package and PR a family update to google/fonts. Find much more detailed [documentation in `/docs/gftools-packager`](./docs/gftools-packager).
 
     gftools packager "Family Sans" path/to/local/google/fonts -py
 
 ## Tool Installation
-
 
 **Please note that gftools requires [Python 3.7](http://www.python.org/download/) or later.**
 
