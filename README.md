@@ -60,6 +60,18 @@ If you would like to use `gftools qa`:
     pip install 'gftools[qa]'
 
 
+**Experimental Rust tooling**
+
+Google Fonts is porting all of their font compilation and font qa tooling to Rust. To install the Rust tools to your virtualenv do the following:
+
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/googlefonts/gftools/main/bin/install_rust_binaries.sh)"`
+
+
+To QA fonts using the Rust tools fontspector and diffenator. Append the `--rust` flag to `gftools qa`
+
+To Build fonts using fontc. Append `--experimental-fontc` to `gftools builder`.
+
+
 ### Tool Requirements and Dependencies
 
 `gftools packager` needs the command line `git` program in a version >= Git 2.5 (Q2 2015) in order to perform a shallow clone (`--depth 1`) of the font upstream repository and branch. This is not supported by pygit2/libgit2 yet.
