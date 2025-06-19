@@ -179,6 +179,16 @@ class OperationRegistry:
 
                 return FontcBuildOTF
 
+            if operation_name == "addSubset":
+                from .fontc.fontcAddSubset import FontcAddSubset
+
+                return FontcAddSubset
+
+            if operation_name == "instantiateUfo":
+                from .fontc.fontcInstantiateUfo import FontcInstantiateUFO
+
+                return FontcInstantiateUFO
+
         return self.known_operations.get(operation_name)
 
 
