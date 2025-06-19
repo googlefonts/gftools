@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import traceback
+from typing import List, Sequence
 
 from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
@@ -10,6 +11,7 @@ import sys
 
 try:
     from diffenator2 import ninja_diff, ninja_proof
+    from diffenator2.font import DFont
 except ModuleNotFoundError:
     raise ModuleNotFoundError(
         (
@@ -34,6 +36,27 @@ def report_exceptions(meth):
             self.post_to_github(msg + "\n\n" + "See CI logs for more details")
 
     return safe_call
+
+
+def all_relevant_files(fonts: Sequence[DFont]) -> List[str]:
+    """Returns a list of all relevant files for the given fonts."""
+    files = []
+    relevant_globs = [
+        "METADATA.pb",
+        "OFL.txt",
+        "LICENSE.txt",
+        "DESCRIPTION.en_us.html",
+        "article/*",
+    ]
+
+    for font in fonts:
+        path = Path(font.path)
+        files.append(str(path))
+        for glob in relevant_globs:
+            for file in path.parent.glob(glob):
+                if str(file) not in files:
+                    files.append(str(file))
+    return files
 
 
 class FontQA:
@@ -228,7 +251,7 @@ class FontQA:
                 "-e",
                 "error",
             ]
-            + [f.path for f in self.fonts]
+            + all_relevant_files(self.fonts)
             + ["--ghmarkdown", os.path.join(out, "report.md")]
         )
         if html:
