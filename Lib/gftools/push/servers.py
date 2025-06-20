@@ -2,10 +2,14 @@ from __future__ import annotations
 import json
 import logging
 import os
-from configparser import ConfigParser
+import re
 from datetime import datetime
 from functools import lru_cache
-from pathlib import Path
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 import requests  # type: ignore
 from gftools.push.items import (
@@ -25,30 +29,46 @@ log = logging.getLogger("gftools.push")
 
 
 # This module uses api endpoints which shouldn't be public. Ask
-# Marc Foley for the .gf_push_config.ini file. Place this file in your
+# Marc Foley for the .gf_push_config.toml file. Place this file in your
 # home directory. Environment variables can also be used instead.
-config_fp = os.path.join(os.path.expanduser("~"), ".gf_push_config.ini")
-if os.path.exists(config_fp):
-    config = ConfigParser()
-    config.read(config_fp)
-    DEV_FAMILY_DOWNLOAD = config["urls"]["dev_family_download"]
-    DEV_META_URL = config["urls"]["dev_meta"]
-    DEV_VERSIONS_URL = config["urls"]["dev_versions"]
-    SANDBOX_FAMILY_DOWNLOAD = config["urls"]["sandbox_family_download"]
-    SANDBOX_META_URL = config["urls"]["sandbox_meta"]
-    SANDBOX_VERSIONS_URL = config["urls"]["sandbox_versions"]
-    PRODUCTION_META_URL = config["urls"]["production_meta"]
-    PRODUCTION_VERSIONS_URL = config["urls"]["production_versions"]
+config_ini = os.path.join(os.path.expanduser("~"), ".gf_push_config.ini")
+config_toml = os.path.join(os.path.expanduser("~"), ".gf_push_config.toml")
 
+if os.path.exists(config_ini) and not os.path.exists(config_toml):
+    with open(config_ini, "r") as fr:
+        with open(config_toml, "w") as fw:
+            for line in fr:
+                # convert ini format to toml format
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    fw.write(f'{key.strip()} = "{value.strip()}"\n')
+                else:
+                    fw.write(line)
+
+if os.path.exists(config_toml):
+    with open(config_toml, "rb") as f:
+        config = tomllib.load(f)
 else:
-    DEV_FAMILY_DOWNLOAD = os.environ.get("DEV_FAMILY_DOWNLOAD")
-    DEV_META_URL = os.environ.get("DEV_META_URL")
-    DEV_VERSIONS_URL = os.environ.get("DEV_VERSIONS_URL")
-    SANDBOX_FAMILY_DOWNLOAD = os.environ.get("SANDBOX_FAMILY_DOWNLOAD")
-    SANDBOX_META_URL = os.environ.get("SANDBOX_META_URL")
-    SANDBOX_VERSIONS_URL = os.environ.get("SANDBOX_VERSIONS_URL")
-    PRODUCTION_META_URL = os.environ.get("PRODUCTION_META_URL")
-    PRODUCTION_VERSIONS_URL = os.environ.get("PRODUCTION_VERSIONS_URL")
+    config = {
+        "urls": {
+            "dev_family_download": os.environ.get("DEV_FAMILY_DOWNLOAD"),
+            "dev_meta": os.environ.get("DEV_META_URL"),
+            "dev_versions": os.environ.get("DEV_VERSIONS_URL"),
+            "sandbox_family_download": os.environ.get("SANDBOX_FAMILY_DOWNLOAD"),
+            "sandbox_meta": os.environ.get("SANDBOX_META_URL"),
+            "sandbox_versions": os.environ.get("SANDBOX_VERSIONS_URL"),
+            "production_meta": os.environ.get("PRODUCTION_META_URL"),
+            "production_versions": os.environ.get("PRODUCTION_VERSIONS_URL"),
+        }
+    }
+DEV_FAMILY_DOWNLOAD = config["urls"]["dev_family_download"]
+DEV_META_URL = config["urls"]["dev_meta"]
+DEV_VERSIONS_URL = config["urls"]["dev_versions"]
+SANDBOX_FAMILY_DOWNLOAD = config["urls"]["sandbox_family_download"]
+SANDBOX_META_URL = config["urls"]["sandbox_meta"]
+SANDBOX_VERSIONS_URL = config["urls"]["sandbox_versions"]
+PRODUCTION_META_URL = config["urls"]["production_meta"]
+PRODUCTION_VERSIONS_URL = config["urls"]["production_versions"]
 
 
 @lru_cache
