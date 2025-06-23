@@ -21,6 +21,8 @@ from google.protobuf.json_format import MessageToDict  # type: ignore
 from typing import Optional
 import re
 
+import requests
+
 
 log = logging.getLogger("gftools.push")
 
@@ -73,7 +75,7 @@ class Family(Itemer):
             version = font_version(ttFont)
             name = ttFont["name"].getBestFamilyName()
             return cls(name, version)
-        except (zipfile.BadZipFile, TTLibError):
+        except (zipfile.BadZipFile, TTLibError, requests.exceptions.HTTPError):
             return None
 
 
