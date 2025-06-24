@@ -131,11 +131,7 @@ def get_designer(url, designer):
         for family_designer in family["designers"]:
             if family_designer == designer:
                 family_to_check = family["family"]
-                data = json.loads(
-                    requests.get(
-                        f"{url}/{family_to_check}"
-                    ).text[4:]
-                )
+                data = json.loads(requests.get(f"{url}/{family_to_check}").text[4:])
                 return next(d for d in data["designers"] if d["name"] == designer)
     return {}
 
