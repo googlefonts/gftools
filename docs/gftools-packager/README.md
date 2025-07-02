@@ -27,6 +27,19 @@ options:
 
 ```
 
+## Setup
+
+The packages needs a GitHub Personal Access Token. Please add one to your account, https://github.com/settings/tokens and enable the following scopes:
+
+![alt text](pat.png "PAT scopes")
+
+Finally, Add the key to a new environment variable on your computer called `GH_TOKEN`. On Mac edit the file `~/.bash_profile` and add the following lines:
+
+```
+export GH_TOKEN="your-access-token"
+export GH_USERNAME="your-github-username"
+```
+
 ## Pushing a new family
 
 Let's push [Maven Pro](https://github.com/googlefonts/mavenproFont).
