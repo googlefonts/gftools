@@ -360,8 +360,10 @@ class GFBuilder(RecipeProviderBase):
         steps = [
             {"source": source.path},
         ]
-        # if we're running fontc we skip conversion to UFO
-        if not source.is_ufo and not self.config.get("use_fontc", False):
+        # We skip conversion to UFO if there's only one instance or we're running fontc
+        if not source.is_ufo and (
+            not self.config.get("use_fontc", False) or len(source.instances) > 1
+        ):
             instancename = instance.name
             if instancename is None:
                 if not instance.familyName or not instance.styleName:
