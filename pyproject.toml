@@ -72,7 +72,10 @@ dependencies = [
   # Used for subset merging, and preferred over the home-grown UFO merge script,
   # which is deprecated.
   # Pin avoids bug googlefonts/ufomerge#28.
-  'ufomerge>=1.8.1'
+  'ufomerge>=1.8.1',
+  # We are migrating to tomllib from configparser. For pre-3.11 Python versions,
+  # we need to install tomli.
+  'tomli; python_version < "3.11"',
 ]
 
 [project.optional-dependencies]
