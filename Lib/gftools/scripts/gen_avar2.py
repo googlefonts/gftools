@@ -24,9 +24,41 @@ from fontTools.varLib import _add_avar
 from fontTools.designspaceLib import AxisMappingDescriptor, AxisDescriptor
 import yaml
 from fontTools.varLib.avar import _denormalize
+from fontTools.ttLib.tables._f_v_a_r import Axis
+from fontTools.misc.textTools import Tag
+from gftools.fix import fix_fvar_instances
+
+
+def gen_fvar_axes(font, mapping):
+    """A mapping may declare axes such as wght, wdth etc that may not exist
+    in the font as a set of masters."""
+    axes_to_make = {}
+    nameTable = font["name"]
+    for m in mapping:
+        for axis in m["in"]:
+            if axis not in axes_to_make:
+                axes_to_make[axis] = {"min": m["in"][axis], "max": m["in"][axis]}
+            axes_to_make[axis]["min"] = min(axes_to_make[axis]["min"], m["in"][axis])
+            axes_to_make[axis]["max"] = max(axes_to_make[axis]["max"], m["in"][axis])
+
+    for axis_name, axis_range in axes_to_make.items():
+        if axis_name not in font["fvar"].axes:
+            axis = Axis()
+            axis.axisTag = Tag(axis_name)
+            axis.minValue, axis.defaultValue, axis.maxValue = (
+                axis_range["min"],
+                axis_range["min"],
+                axis_range["max"],
+            )
+            # TODO: get proper name string of axis
+            axis.axisNameID = nameTable.addMultilingualName(
+                {"en": axis.axisTag}, font, minNameID=256, mac=False
+            )
+            font["fvar"].axes.append(axis)
 
 
 def gen_avar2_mapping(font, mapping):
+    gen_fvar_axes(font, mapping)
     axisTags = [axis.axisTag for axis in font["fvar"].axes]
     axis_tag_to_name = {}
     nametable = font["name"]
@@ -34,11 +66,14 @@ def gen_avar2_mapping(font, mapping):
     for axis in font["fvar"].axes:
         axis_name = nametable.getName(axis.axisNameID, 3, 1, 0x409).toUnicode()
         axis_tag_to_name[axis.axisTag] = axis_name
-        axis_map = [
-            (_denormalize(k, axis), _denormalize(v, axis))
-            for k, v in font["avar"].segments[axis.axisTag].items()
-        ]
-        axis_map = list(sorted(set(axis_map)))
+        if "avar" in font:
+            axis_map = [
+                (_denormalize(k, axis), _denormalize(v, axis))
+                for k, v in font["avar"].segments[axis.axisTag].items()
+            ]
+            axis_map = list(sorted(set(axis_map)))
+        else:
+            axis_map = []
         axes[axis_name] = AxisDescriptor(
             tag=axis.axisTag,
             name=axis_name,
@@ -62,6 +97,12 @@ def gen_avar2_mapping(font, mapping):
         del font["avar"]
     _add_avar(font, axes, mapping, axisTags)
 
+    # Add new axes to fvar instances
+    for inst in font["fvar"].instances:
+        for axis in font["fvar"].axes:
+            if axis.axisTag not in inst.coordinates:
+                inst.coordinates[axis.axisTag] = axis.defaultValue
+
 
 def main(args=None):
     parser = argparse.ArgumentParser()
@@ -74,7 +115,7 @@ def main(args=None):
     out_group.add_argument(
         "--inplace", action="store_true", default=False, help="Overwrite input files"
     )
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     fonts = [TTFont(f) for f in args.fonts]
     config = yaml.load(open(args.src), Loader=yaml.SafeLoader)
