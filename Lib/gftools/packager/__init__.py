@@ -89,8 +89,8 @@ PR_CHECKLIST = """
 - [ ] The PR is linked to the corresponding issue
 
 ### QA
-- [ ] Fontbakery checks are reviewed and failing checks are resolved in collaboration with the upstream font development team
-- [ ] Diffenator2 regression checks for revisions on all projects that are currently in production
+- [ ] Fontspector checks are reviewed and failing checks are resolved in collaboration with the upstream font development team
+- [ ] Diffenator2 and 3 regression checks for revisions on all projects that are currently in production
 - [ ] The article has no typos, images are properly linked and correctly sized
 - [ ] OFL.txt contains the correct license URL (https://openfontlicense.org)
 
@@ -101,7 +101,6 @@ PR_CHECKLIST = """
 ### Release
 - [ ] Designers bio info have to be present in the designer catalog (at least an issue should be opened for tracking this, if they are not)
 - [ ] Check designers order in metadata.pb, since the first one of the list appears as “principal designer”
-- [ ] Social media formatted visual assets for all new commissioned projects in the Drive directory, communicate with the repository Maintainer so that they can push this content to the Social Media tracker spreadsheet
 - [ ] Social media content draft for all new commissioned projects in the Drive directory and Social Media tracker spreadsheet, communicate with the repository Maintainer so that they can push this content to the Social Media tracker spreadsheet
 - [ ] `minisite_url` definition in the METADATA.pb file for commissioned projects
 - [ ] `tags` are added for NEW FONTS
