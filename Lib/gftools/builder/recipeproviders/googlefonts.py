@@ -1,3 +1,4 @@
+from tempfile import TemporaryDirectory
 import copy
 import logging
 import os
@@ -313,8 +314,9 @@ class GFBuilder(RecipeProviderBase):
                 source, suffix=suffix, italic_ds=italic_ds, roman=False
             )
         steps = (
-            [
-                {"source": source.path},
+            [{"source": source.path}]
+            + self._subset_steps(source, None)
+            + [
                 {
                     "operation": "buildVariable",
                     "args": self.fontmake_args(source, variable=True),
@@ -343,6 +345,42 @@ class GFBuilder(RecipeProviderBase):
                 self._vf_filename(source, italic_ds=italic_ds, roman=roman, suffix="SC")
             ] = self._smallcap_steps(source, target)
 
+    def _subset_steps(
+        self, source: File, instance: Optional[InstanceDescriptor] = None
+    ):
+        if not self.config.get("includeSubsets"):
+            return []
+        if not hasattr(self, "_subset_tempdir"):
+            self._subset_tempdir = TemporaryDirectory()  # Stow object
+        steps = []
+        if source.is_glyphs:
+            steps.append(
+                {
+                    "operation": "glyphs2ds",  # GlyphData?
+                }
+            )
+        steps += [
+            {
+                "operation": "addSubset",
+                "subsets": self.config["includeSubsets"],
+                "directory": self._subset_tempdir.name,
+                "args": "--allow-sparse",
+            }
+        ]
+        if instance:
+            steps += [
+                {
+                    "operation": "instantiateUfo",
+                    "instance_name": instance.name,
+                    "glyphData": self.config.get("glyphData"),
+                    "target": os.path.join(
+                        self._subset_tempdir.name,
+                        instance.filename + ".json",
+                    ),
+                }
+            ]
+        return steps
+
     def build_all_statics(self):
         if not self.config.get("buildStatic", True):
             return
@@ -359,10 +397,15 @@ class GFBuilder(RecipeProviderBase):
 
         steps = [
             {"source": source.path},
-        ]
+        ] + self._subset_steps(
+            source,
+            instance,
+        )
         # We skip conversion to UFO if there's only one instance or we're running fontc
-        if not source.is_ufo and (
-            not self.config.get("use_fontc", False) or len(source.instances) > 1
+        if (
+            not source.is_ufo
+            and not self.config.get("includeSubsets")
+            and (not self.config.get("use_fontc", False) or len(source.instances) > 1)
         ):
             instancename = instance.name
             if instancename is None:
