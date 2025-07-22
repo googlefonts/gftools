@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 import logging
 import os
 import re
 import shutil
-import sys
 from collections import defaultdict
+from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -14,12 +13,17 @@ from zipfile import ZipFile
 import ufoLib2
 import yaml
 from fontmake.font_project import FontProject
-from fontTools.designspaceLib import DesignSpaceDocument
-from gftools.gfgithub import GitHubClient
+from fontTools.designspaceLib import (
+    DesignSpaceDocument,
+    InstanceDescriptor,
+    SourceDescriptor,
+)
 from glyphsets import unicodes_per_glyphset
-from strictyaml import HexInt, Int, Map, Optional, Seq, Str, Enum
+from glyphsLib.builder.constants import WIDTH_CLASS_TO_VALUE
+from strictyaml import Enum, HexInt, Int, Map, Optional, Seq, Str
 from ufomerge import merge_ufos
 
+from gftools.gfgithub import GitHubClient
 from gftools.util.styles import STYLE_NAMES
 from gftools.utils import download_file, open_ufo, parse_codepoint
 
@@ -162,6 +166,107 @@ def prepare_minimal_subsets(subsets):
     return newsubsets
 
 
+# This is all complete overkill, but it really helps to reason about the
+# source matching code.
+@dataclass
+class BaseDescriptor:
+    ds: DesignSpaceDocument
+    master: SourceDescriptor
+    ufo: ufoLib2.Font
+
+    @property
+    def userspace_location(self) -> dict[str, Any]:
+        """Returns the location of the master in user space"""
+        return {
+            axis.tag: axis.map_backward(self.master.location[axis.name])
+            for axis in self.ds.axes
+        }
+
+    @property
+    def filename(self) -> str:
+        """Returns the filename of the master or UFO"""
+        if self.master.filename:
+            return self.master.filename
+        return os.path.basename(self.master.path)
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the master"""
+        return self.master.name or self.filename
+
+
+@dataclass
+class InputDescriptor(BaseDescriptor):
+    pass
+
+
+@dataclass
+class DonorMasterDescriptor(BaseDescriptor):
+    pass
+
+
+@dataclass
+class DonorInstanceDescriptor:
+    ds: DesignSpaceDocument
+    instance: InstanceDescriptor
+
+    @property
+    def userspace_location(self) -> dict[str, Any]:
+        """Returns the location of the instance in user space"""
+        return {
+            axis.tag: axis.map_backward(self.instance.location[axis.name])
+            for axis in self.ds.axes
+        }
+
+    @property
+    def filename(self) -> str:
+        """Returns the filename of the instance or UFO"""
+        if self.instance.filename:
+            return self.instance.filename
+        return os.path.basename(self.instance.path)
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the instance"""
+        return self.instance.name or self.filename
+
+    @cached_property
+    def ufo(self) -> ufoLib2.Font:
+        logger.info(
+            f"Generate UFO instance for {self.instance.familyName} {self.instance.name}"
+        )
+        self.instance.path = str(
+            Path(self.ds.path).resolve().parent / Path(self.instance.filename).name
+        )
+
+        ufos = FontProject().interpolate_instance_ufos(
+            self.ds, include=self.instance.name
+        )
+        return next(ufos)
+
+
+def is_compatible(
+    descriptor: DonorInstanceDescriptor | DonorMasterDescriptor,
+    input_descriptor: InputDescriptor,
+) -> bool:
+    input_userspace_location = input_descriptor.userspace_location
+    my_userspace_location = descriptor.userspace_location
+    common_axis_tags = set(input_userspace_location.keys()).intersection(
+        set(my_userspace_location.keys())
+    )
+    # Assume a source is good for this location unless proved otherwise.
+    # This is useful for merging single-master donors into a multiple
+    # master font.
+    for axis_tag in common_axis_tags:
+        if input_userspace_location[axis_tag] != my_userspace_location[axis_tag]:
+            logger.debug(
+                f"Master {descriptor.filename} is not compatible with {input_descriptor.filename} on axis {axis_tag}: "
+                f"{input_userspace_location[axis_tag]} != {my_userspace_location[axis_tag]}"
+            )
+            return False
+    return True
+
+
 class SubsetMerger:
     def __init__(
         self,
@@ -175,6 +280,7 @@ class SubsetMerger:
     ):
         self.input = input_ds
         self.output = output_ds
+        Path(output_ds).parent.mkdir(parents=True, exist_ok=True)
         self.subsets = prepare_minimal_subsets(subsets)
         self.googlefonts = googlefonts
         self.json = json
@@ -184,99 +290,114 @@ class SubsetMerger:
 
     def add_subsets(self):
         """Adds the specified subsets to the designspace file and saves it to the output path"""
-        ds = DesignSpaceDocument.fromfile(self.input)
+
+        if self.input.endswith(".ufo"):
+            # Create a dummy designspace file for a single UFO
+            input_ds = ufo_to_ds(self.input)
+        else:
+            input_ds = DesignSpaceDocument.fromfile(self.input)
         outpath = Path(self.output).parent
         added_subsets = False
-        for master in ds.sources:
-            newpath = os.path.join(outpath, os.path.basename(master.path))
-            target_ufo = open_ufo(master.path)
-            master.path = newpath
+        for input_master in input_ds.sources:
+            newpath = os.path.join(outpath, os.path.basename(input_master.path))
+            target_ufo = open_ufo(input_master.path)
+            assert target_ufo is not None, (
+                "Could not open UFO at %s" % input_master.path
+            )
+            input_master.path = newpath
 
-            if master.layerName is not None:
+            if input_master.layerName is not None:
                 continue
 
-            for subset in self.subsets:
-                added_subsets |= self.add_subset(target_ufo, ds, master, subset)
+            input_descriptor = InputDescriptor(input_ds, input_master, target_ufo)
 
-            if self.json or master.path.endswith(".json"):
-                if not master.path.endswith(".json"):
-                    master.path += ".json"
-                    if master.filename:
-                        master.filename += ".json"
-                target_ufo.json_dump(open(master.path, "wb"))
+            for subset in self.subsets:
+                added_subsets |= self.add_subset(input_descriptor, subset)
+
+            if self.json or input_master.path.endswith(".json"):
+                if not input_master.path.endswith(".json"):
+                    input_master.path += ".json"
+                    if input_master.filename:
+                        input_master.filename += ".json"
+                target_ufo.json_dump(open(input_master.path, "wb"))
             else:
-                target_ufo.save(master.path, overwrite=True)
+                target_ufo.save(input_master.path, overwrite=True)
 
         if not added_subsets:
             raise ValueError("Could not match *any* subsets for this font")
 
-        for instance in ds.instances:
+        for instance in input_ds.instances:
             instance.filename = instance.path = os.path.join(
                 outpath, os.path.basename(instance.filename)
             )
 
-        ds.write(self.output)
+        input_ds.write(self.output)
 
-    def add_subset(self, target_ufo, ds, ds_source, subset) -> bool:
+    def add_subset(self, input_descriptor: InputDescriptor, subset) -> bool:
         # First, we find a donor UFO that matches the location of the
         # UFO to merge.
-        location = dict(ds_source.location)
-        newlocation = {}
-        for axis in ds.axes:
-            # We specify our location in terms of axis tags, because the
-            # axes in the donor designspace file may have been renamed.
-            newlocation[axis.tag] = axis.map_backward(location[axis.name])
-        source_ufo = self.obtain_upstream(subset["from"], newlocation)
-        if not source_ufo:
+        donor_ufo = self.obtain_upstream(subset["from"], input_descriptor)
+        if not donor_ufo:
             return False
         existing_handling = "skip"
         if subset.get("force"):
             existing_handling = "replace"
         layout_handling = subset.get("layoutHandling", "subset")
         logger.info(
-            f"Merge {subset['from']} from {source_ufo} into {ds_source.filename} with {existing_handling} and {layout_handling}"
+            f"Merge {subset['from']} from {donor_ufo} into {input_descriptor.filename} with {existing_handling} and {layout_handling}"
         )
         merge_ufos(
-            target_ufo,
-            source_ufo,
+            input_descriptor.ufo,
+            donor_ufo,
             exclude_glyphs=subset["exclude_glyphs"],
             codepoints=subset["unicodes"],
             existing_handling=existing_handling,
             layout_handling=layout_handling,
+            include_dir=Path(donor_ufo.path).parent,
         )
         return True
 
     def obtain_upstream(
-        self, upstream: str | dict[str, Any], location
+        self, upstream: str | dict[str, Any], input_descriptor: InputDescriptor
     ) -> ufoLib2.Font | None:
         # Either the upstream is a string, in which case we try looking
         # it up in the SUBSET_SOURCES table, or it's a dict, in which
         # case it's a repository / path pair.
-        if isinstance(upstream, str):
-            if upstream not in SUBSET_SOURCES:
-                raise ValueError("Unknown subsetting font %s" % upstream)
-            repo, path = SUBSET_SOURCES[upstream]
-            ref = FALLBACK_BRANCH_NAME
-            font_name = f"{upstream}/{ref}"
-        else:
-            repo: str = upstream["repo"]
-            parts = repo.split("@", 1)
-            if len(parts) == 1:
-                # Repo was already just the slug, use fallback ref
-                ref = FALLBACK_BRANCH_NAME
-            else:
-                # Guaranteed to be 2 parts
-                repo, ref = parts
-                if ref == "latest":
-                    # Resolve latest release's tag name
-                    ref = GitHubClient.from_url(
-                        f"https://github.com/{repo}"
-                    ).get_latest_release_tag()
-            path = upstream["path"]
-            font_name = f"{repo}/{ref}/{path}"
-        path = os.path.join(self.cache_dir, repo, ref, path)
 
-        self.download_for_subsetting(repo, ref)
+        if isinstance(upstream, str) and upstream not in SUBSET_SOURCES:
+            # Maybe it's a path to a local DS/Glyphs file?
+            if os.path.exists(upstream):
+                path = upstream
+                font_name = os.path.basename(upstream)
+            else:
+                raise ValueError("Unknown subsetting font %s" % upstream)
+        else:
+            if isinstance(upstream, str):
+                repo, path = SUBSET_SOURCES[upstream]
+                ref = FALLBACK_BRANCH_NAME
+                font_name = f"{upstream}/{ref}"
+            else:
+                repo: str = upstream["repo"]
+                parts = repo.split("@", 1)
+                if len(parts) == 1:
+                    # Repo was already just the slug, use fallback ref
+                    ref = FALLBACK_BRANCH_NAME
+                else:
+                    # Guaranteed to be 2 parts
+                    repo, ref = parts
+                    if ref == "latest":
+                        # Resolve latest release's tag name
+                        ref = GitHubClient.from_url(
+                            f"https://github.com/{repo}"
+                        ).get_latest_release_tag()
+                path = upstream["path"]
+                font_name = f"{repo}/{ref}/{path}"
+            path = os.path.join(self.cache_dir, repo, ref, path)
+
+        if os.path.exists(path):
+            logger.info("Subset files present on disk, skipping download")
+        else:
+            self.download_for_subsetting(repo, ref)
 
         # We're doing a UFO-UFO merge, so Glyphs files will need to be converted
         if path.endswith((".glyphs", ".glyphspackage")):
@@ -290,14 +411,11 @@ class SubsetMerger:
         # Now we have an appropriate designspace containing the subset;
         # find the actual UFO that corresponds to the location we are
         # trying to add to.
-        source_ds = DesignSpaceDocument.fromfile(path)
-        source_ufo = self.find_source_for_location(source_ds, location, font_name)
-        if source_ufo:
-            return open_ufo(source_ufo.path)
-        return None
+        donor_ds = DesignSpaceDocument.fromfile(path)
+        return self.find_source_for_location(donor_ds, input_descriptor, font_name)
 
-    def glyphs_to_ufo(self, source: str, directory: Path | None = None) -> str:
-        source = Path(source)
+    def glyphs_to_ufo(self, source_str: str, directory: Path | None = None) -> str:
+        source = Path(source_str)
         if directory is None:
             directory = source.resolve().parent
         output = str(Path(directory) / source.with_suffix(".designspace").name)
@@ -318,87 +436,39 @@ class SubsetMerger:
 
         return str(output)
 
-    def find_source_for_location(self, source_ds, location, font_name):
-        source_mappings = {ax.name: ax.map_forward for ax in source_ds.axes}
-        target = None
-
-        # Assume a source is good for this location unless proved otherwise.
-        # This is useful for merging single-master donors into a multiple
-        # master font.
-        # Our location is now specified in terms of tags
-        newlocation = {}
-
-        # Fill out the location with default values of axes we don't know about
-        for axis in source_ds.axes:
-            if axis.tag in location:
-                newlocation[axis.name] = location[axis.tag]
-            else:
-                newlocation[axis.name] = axis.default
-        for source in source_ds.sources:
-            match = True
-            for axis, loc in newlocation.items():
-                if (
-                    axis in source.location
-                    and axis in source_mappings
-                    and source.location[axis] != source_mappings[axis](loc)
-                ):
-                    match = False
-            if match:
-                target = source
-                break
-
-        if not target:
-            logger.info(
-                f"Couldn't find a master from {font_name} for location {location}, trying instances"
+    def find_source_for_location(
+        self,
+        donor_ds: DesignSpaceDocument,
+        input_descriptor: InputDescriptor,
+        font_name: str,
+    ) -> ufoLib2.Font | None:
+        for source in donor_ds.sources:
+            donor_descriptor = DonorMasterDescriptor(
+                donor_ds, source, open_ufo(source.path)
             )
-            # We didn't find an exact match in the masters; maybe we will
-            # be able to interpolate an instance which matches.
-            for instance in source_ds.instances:
-                if all(
-                    axis in instance.location
-                    and axis in source_mappings
-                    and instance.location[axis] == source_mappings[axis](loc)
-                    for axis, loc in location.items()
-                ):
-                    self.generate_subset_instances(source_ds, font_name, instance)
-                    target = instance
-                    break
+            if is_compatible(donor_descriptor, input_descriptor):
+                logger.info(
+                    f"Adding master {donor_descriptor.filename or donor_descriptor.name} for location {input_descriptor.userspace_location}"
+                )
+                return donor_descriptor.ufo
 
-        if target:
-            logger.info(
-                f"Adding subset {target.filename or target.name} for location {newlocation}"
-            )
-            return target
+        logger.info(
+            f"Couldn't find a master from {font_name} for location {input_descriptor.userspace_location}, trying instances"
+        )
+        # We didn't find an exact match in the masters; maybe we will
+        # be able to interpolate an instance which matches.
+        for instance in donor_ds.instances:
+            instance_descriptor = DonorInstanceDescriptor(donor_ds, instance)
+            if is_compatible(instance_descriptor, input_descriptor):
+                logger.info(
+                    f"Adding instance {instance_descriptor.filename or input_descriptor.name} for location {input_descriptor.userspace_location}"
+                )
 
-        if (
-            self.allow_sparse
-            and {axis.tag: axis.default for axis in source_ds.axes} != location
-        ):
-            logger.info(
-                f"Could not find exact match for location {newlocation} in {font_name}, but allowing sparse"
-            )
-            return None
+                return instance_descriptor.ufo
 
         raise ValueError(
-            f"Could not find master in {font_name} for location {newlocation}"
+            f"Could not find master in {font_name} for location {input_descriptor.userspace_location}"
         )
-
-    def generate_subset_instances(self, source_ds, font_name, instance):
-        # Instance generation takes ages, cache which ones we've already
-        # done on this run.
-        if source_ds in self.subset_instances:
-            return
-
-        logger.info(f"Generate UFO instances for {font_name}")
-        ufos = FontProject().interpolate_instance_ufos(source_ds, include=instance.name)
-        self.subset_instances[source_ds] = ufos
-
-        # We won't return an individual instance; instead we update the
-        # path in the donor's designspace object so that it can be taken from there
-        for instance, _ufo in zip(source_ds.instances, ufos):
-            instance.path = os.path.join(
-                os.path.dirname(source_ds.path), instance.filename
-            )
 
     def download_for_subsetting(self, fullrepo: str, ref: str) -> None:
         """Downloads a GitHub repository at a given reference"""
@@ -431,3 +501,38 @@ class SubsetMerger:
         with TemporaryDirectory() as temp_dir:
             repo_zip.extractall(temp_dir)
             shutil.move(os.path.join(temp_dir, f"{repo}-{ref}"), dest)
+
+
+def ufo_to_ds(ufo_path: str) -> DesignSpaceDocument:
+    """Converts a UFO to a designspace file"""
+    ds = DesignSpaceDocument()
+    ufo = open_ufo(ufo_path)
+    assert isinstance(ufo, ufoLib2.Font)
+    location = {
+        "Weight": (ufo.info.openTypeOS2WeightClass or 400),
+        "Width": WIDTH_CLASS_TO_VALUE[(ufo.info.openTypeOS2WidthClass or 5)],
+    }
+    ds.addSourceDescriptor(
+        filename=os.path.basename(ufo_path), path=ufo_path, location=location
+    )
+    ds.addAxisDescriptor(
+        tag="wght",
+        name="Weight",
+        minimum=100,
+        maximum=900,
+        default=400,
+    )
+    ds.addAxisDescriptor(
+        tag="wdth",
+        name="Width",
+        minimum=WIDTH_CLASS_TO_VALUE[1],
+        maximum=WIDTH_CLASS_TO_VALUE[9],
+        default=WIDTH_CLASS_TO_VALUE[5],
+    )
+    ds.addInstanceDescriptor(
+        path=ufo_path,
+        name="instance",
+        location=location,
+        filename=os.path.basename(ufo_path),
+    )
+    return ds
