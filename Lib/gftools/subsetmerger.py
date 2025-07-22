@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, Union
 from zipfile import ZipFile
 
 import ufoLib2
@@ -246,7 +246,7 @@ class DonorInstanceDescriptor:
 
 
 def is_compatible(
-    descriptor: DonorInstanceDescriptor | DonorMasterDescriptor,
+    descriptor: Union[DonorInstanceDescriptor, DonorMasterDescriptor],
     input_descriptor: InputDescriptor,
 ) -> bool:
     input_userspace_location = input_descriptor.userspace_location
