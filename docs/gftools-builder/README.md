@@ -210,6 +210,9 @@ The build can be customized by adding the following keys to the YAML file:
 
 -   `postCompile`: A list of operations to be run after the font compilation step; you can use this (together with the above option) to build variant fonts, rename families, bake in stylistic sets, etc.
 
+- `includeSubsets`: A list of subsets to include in the font, using the
+  `gftools-add-ds-subsets` tool. Each subset can be specified by a
+  name, a range, or a source file. See the [gftools-add-ds-subsets documentation](https://github.com/googlefonts/gftools/blob/main/Lib/gftools/scripts/add_ds_subsets.py) for more information.
 
 ## *Really* customizing the build process
 
