@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import shutil
+import typing
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property
@@ -358,8 +359,8 @@ class SubsetMerger:
         return True
 
     def obtain_upstream(
-        self, upstream: str | dict[str, Any], input_descriptor: InputDescriptor
-    ) -> ufoLib2.Font | None:
+        self, upstream: Union[str, dict[str, Any]], input_descriptor: InputDescriptor
+    ) -> typing.Optional[ufoLib2.Font]:
         # Either the upstream is a string, in which case we try looking
         # it up in the SUBSET_SOURCES table, or it's a dict, in which
         # case it's a repository / path pair.
@@ -414,7 +415,9 @@ class SubsetMerger:
         donor_ds = DesignSpaceDocument.fromfile(path)
         return self.find_source_for_location(donor_ds, input_descriptor, font_name)
 
-    def glyphs_to_ufo(self, source_str: str, directory: Path | None = None) -> str:
+    def glyphs_to_ufo(
+        self, source_str: str, directory: typing.Optional[Path] = None
+    ) -> str:
         source = Path(source_str)
         if directory is None:
             directory = source.resolve().parent
@@ -441,7 +444,7 @@ class SubsetMerger:
         donor_ds: DesignSpaceDocument,
         input_descriptor: InputDescriptor,
         font_name: str,
-    ) -> ufoLib2.Font | None:
+    ) -> typing.Optional[ufoLib2.Font]:
         for source in donor_ds.sources:
             donor_descriptor = DonorMasterDescriptor(
                 donor_ds, source, open_ufo(source.path)
