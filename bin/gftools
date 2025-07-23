@@ -16,7 +16,7 @@
 #
 from __future__ import print_function
 from argparse import RawTextHelpFormatter
-from pkg_resources import get_distribution
+from gftools import __version__
 from warnings import warn
 import sys
 import os
@@ -47,7 +47,6 @@ def _get_subcommands():
 
 
 def print_menu():
-    __version__ = get_distribution('gftools').version
     print(" o-o              o     o--o")
     print("o                 |     |            o")
     print("| o-o o-o o-o o-o o o-o o-o o-o o-o -o- o-o")
@@ -64,7 +63,6 @@ def print_menu():
 
 subcommands = _get_subcommands()
 
-__version__ = get_distribution('gftools').version
 
 description = "Run gftools subcommands:{0}".format(''.join(
               ['\n    {0}'.format(sc) for sc in sorted(subcommands.keys())]))
