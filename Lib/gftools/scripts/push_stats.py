@@ -11,7 +11,7 @@ gftools push-stats path/to/google/fonts/repo out.html
 """
 from gftools.push.trafficjam import PushItems
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-import importlib.resources
+from importlib.resources import files, as_file
 from datetime import datetime
 import pygit2
 from github import Github
@@ -76,12 +76,6 @@ def main(args=None):
     parser.add_argument("out")
     args = parser.parse_args(args)
 
-    push_template_dir = importlib.resources.files("gftools.push-templates")
-    env = Environment(
-        loader=FileSystemLoader(str(push_template_dir)),
-        autoescape=select_autoescape(),
-    )
-
     data_out = os.path.join(os.path.dirname(args.out), "gf_repo_data.json")
     if os.path.exists(data_out):
         commit_data = json.load(open(data_out, encoding="utf8"))
@@ -100,22 +94,27 @@ def main(args=None):
     prod_path = os.path.join(args.repo_path, "to_production.txt")
     prod_families = PushItems.from_server_file(prod_path)
 
-    template = env.get_template("index.html")
+    with as_file(files("gftools") / "push-templates") as push_template_dir:
+        env = Environment(
+            loader=FileSystemLoader(str(push_template_dir)),
+            autoescape=select_autoescape(),
+        )
+        template = env.get_template("index.html")
 
-    print("Writing json data")
-    commit_data = {
-        "last_run": datetime.now().strftime("%Y-%m-%d"),
-        "commits": commits,
-        "pushes": {
-            "sandbox": [i.to_json() for i in sb_families],
-            "production": [i.to_json() for i in prod_families],
-        },
-    }
-    json.dump(commit_data, open(data_out, "w", encoding="utf8"), indent=4)
+        print("Writing json data")
+        commit_data = {
+            "last_run": datetime.now().strftime("%Y-%m-%d"),
+            "commits": commits,
+            "pushes": {
+                "sandbox": [i.to_json() for i in sb_families],
+                "production": [i.to_json() for i in prod_families],
+            },
+        }
+        json.dump(commit_data, open(data_out, "w", encoding="utf8"), indent=4)
 
-    print("Writing report")
-    with open(args.out, "w") as doc:
-        doc.write(template.render(commit_data=json.dumps(commit_data)))
+        print("Writing report")
+        with open(args.out, "w") as doc:
+            doc.write(template.render(commit_data=json.dumps(commit_data)))
 
 
 if __name__ == "__main__":
