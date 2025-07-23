@@ -120,7 +120,7 @@ Example usage:
         subsets = load(open(args.yaml).read(), subsets_schema).data
     else:
         # It's a one-shot operation, check repo/file/name/codepoints are all given
-        if not args.repo or not args.file:
+        if args.repo and not args.file:
             print("Must specify --repo and --file")
             sys.exit(1)
         if not args.name and not args.codepoints:
@@ -128,16 +128,20 @@ Example usage:
             sys.exit(1)
         # And then construct the YAML-like object ourselves
         # See subsets_schema in ..subsetmerger
+        if args.file and not args.repo:
+            subset_from = args.file
+        else:
+            subset_from = {
+                "repo": args.repo,
+                "path": args.file,
+            }
         subsets = [
             {
-                "from": {
-                    "repo": args.repo,
-                    "path": args.file,
-                    "exclude_codepoints": args.exclude_codepoints,
-                    "exclude_codepoints_file": args.exclude_codepoints_file,
-                    "exclude_glyphs": args.exclude_glyphs,
-                    "exclude_glyphs_file": args.exclude_glyphs_file,
-                }
+                "from": subset_from,
+                "exclude_codepoints": args.exclude_codepoints,
+                "exclude_codepoints_file": args.exclude_codepoints_file,
+                "exclude_glyphs": args.exclude_glyphs,
+                "exclude_glyphs_file": args.exclude_glyphs_file,
             }
         ]
         if args.name:

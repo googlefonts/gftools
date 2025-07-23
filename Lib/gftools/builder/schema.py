@@ -17,6 +17,8 @@ from strictyaml import (
     MapCombined,
 )
 
+from gftools.subsetmerger import subsets_schema
+
 CATEGORIES = ["DISPLAY", "SERIF", "SANS_SERIF", "HANDWRITING", "MONOSPACE"]
 
 
@@ -125,5 +127,6 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("buildSmallCap"): Bool(),
         Optional("splitItalic"): Bool(),
         Optional("localMetadata"): Any(),
+        Optional("includeSubsets"): subsets_schema,
     }
 )

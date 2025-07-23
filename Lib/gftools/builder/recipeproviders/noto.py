@@ -25,21 +25,7 @@ from gftools.util.styles import STYLE_NAMES
 
 name = "Noto builder"
 
-subsets_schema = Seq(
-    Map(
-        {
-            "from": Str(),
-            Optional("name"): Str(),
-            Optional("ranges"): Seq(
-                Map({"start": Int() | HexInt(), "end": Int() | HexInt()})
-            ),
-            Optional("layoutHandling"): Str(),
-            Optional("force"): Str(),
-        }
-    )
-)
 _newschema = GOOGLEFONTS_SCHEMA._validator
-_newschema[Optional("includeSubsets")] = subsets_schema
 _newschema[Optional("buildUIVF")] = Bool()
 schema = Map(_newschema)
 
