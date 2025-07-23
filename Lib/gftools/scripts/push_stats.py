@@ -11,7 +11,7 @@ gftools push-stats path/to/google/fonts/repo out.html
 """
 from gftools.push.trafficjam import PushItems
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from pkg_resources import resource_filename
+import importlib_resources
 from datetime import datetime
 import pygit2
 from github import Github
@@ -76,9 +76,9 @@ def main(args=None):
     parser.add_argument("out")
     args = parser.parse_args(args)
 
-    push_template_dir = resource_filename("gftools", "push-templates")
+    push_template_dir = importlib_resources.files('gftools.push-templates')
     env = Environment(
-        loader=FileSystemLoader(push_template_dir),
+        loader=FileSystemLoader(str(push_template_dir)),
         autoescape=select_autoescape(),
     )
 

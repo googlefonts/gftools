@@ -28,7 +28,7 @@ from unidecode import unidecode
 from collections import namedtuple
 from gflanguages import LoadLanguages
 from github import Github
-from pkg_resources import resource_filename
+import importlib_resources
 from google.protobuf import text_format
 import json
 from PIL import Image
@@ -540,7 +540,8 @@ def font_sample_text(ttFont):
     that can be formed using the ttFont instance.
 
     UDHR has been chosen due to the many languages it covers"""
-    with open(resource_filename("gftools", "udhr_all.txt"), encoding="utf-8") as doc:
+    ref = importlib_resources.files('gftools') / 'udhr_all.txt'
+    with importlib_resources.as_file(ref) as doc:
         uhdr = doc.read()
 
     cmap = set(ttFont.getBestCmap())

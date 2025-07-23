@@ -58,7 +58,6 @@ from gftools.utils import cmp
 from axisregistry import AxisRegistry
 from gfsubsets import SubsetsInFont
 from google.protobuf import text_format
-from pkg_resources import resource_filename
 from gftools.utils import remove_url_prefix, primary_script
 
 
