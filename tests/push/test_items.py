@@ -17,7 +17,9 @@ TEST_DIR = os.path.join(CWD, "..", "..", "data", "test", "gf_fonts")
 SERVER_DIR = os.path.join(CWD, "..", "..", "data", "test", "servers")
 TEST_FAMILY_DIR = Path(TEST_DIR) / "ofl" / "mavenpro"
 DESIGNER_DIR = Path(TEST_DIR) / "joeprince"
-WEIGHT_AXIS = file_manager.enter_context(importlib.resources.path("axisregistry.data", "weight.textproto"))
+WEIGHT_AXIS = file_manager.enter_context(
+    importlib.resources.path("axisregistry.data", "weight.textproto")
+)
 FAMILY_JSON = json.load(open(os.path.join(SERVER_DIR, "family.json"), encoding="utf8"))
 FONTS_JSON = json.load(open(os.path.join(SERVER_DIR, "fonts.json"), encoding="utf8"))
 
