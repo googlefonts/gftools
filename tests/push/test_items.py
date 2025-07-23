@@ -5,6 +5,11 @@ from pathlib import Path
 from gftools.push.items import Family, FamilyMeta, Designer, Axis, AxisFallback
 import importlib.resources
 import json
+import atexit
+from contextlib import ExitStack
+
+file_manager = ExitStack()
+atexit.register(file_manager.close)
 
 
 CWD = os.path.dirname(__file__)
@@ -12,7 +17,7 @@ TEST_DIR = os.path.join(CWD, "..", "..", "data", "test", "gf_fonts")
 SERVER_DIR = os.path.join(CWD, "..", "..", "data", "test", "servers")
 TEST_FAMILY_DIR = Path(TEST_DIR) / "ofl" / "mavenpro"
 DESIGNER_DIR = Path(TEST_DIR) / "joeprince"
-AXES_DIR = importlib.resources.files("axisregistry.data")
+WEIGHT_AXIS = file_manager.enter_context(importlib.resources.path("axisregistry.data", "weight.textproto"))
 FAMILY_JSON = json.load(open(os.path.join(SERVER_DIR, "family.json"), encoding="utf8"))
 FONTS_JSON = json.load(open(os.path.join(SERVER_DIR, "fonts.json"), encoding="utf8"))
 
@@ -68,7 +73,7 @@ FONTS_JSON = json.load(open(os.path.join(SERVER_DIR, "fonts.json"), encoding="ut
         ),
         (
             Axis,
-            AXES_DIR / "weight.textproto",
+            WEIGHT_AXIS,
             next(a for a in FONTS_JSON["axisRegistry"] if a["tag"] == "wght"),
             Axis(
                 tag="wght",
