@@ -51,7 +51,7 @@ SUBSET_SOURCES: dict[str, tuple[str, str]] = {
 subsets_schema = Seq(
     Map(
         {
-            "from": Enum(SUBSET_SOURCES.keys()) | Map({"repo": Str(), "path": Str()}),
+            "from": Str() | Map({"repo": Str(), "path": Str()}),
             Optional("name"): Str(),
             Optional("ranges"): Seq(
                 Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})
