@@ -540,7 +540,7 @@ def font_sample_text(ttFont):
     that can be formed using the ttFont instance.
 
     UDHR has been chosen due to the many languages it covers"""
-    ref = importlib_resources.files('gftools') / 'udhr_all.txt'
+    ref = importlib_resources.files("gftools") / "udhr_all.txt"
     with importlib_resources.as_file(ref) as doc:
         uhdr = doc.read()
 

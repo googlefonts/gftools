@@ -76,7 +76,7 @@ def main(args=None):
     parser.add_argument("out")
     args = parser.parse_args(args)
 
-    push_template_dir = importlib_resources.files('gftools.push-templates')
+    push_template_dir = importlib_resources.files("gftools.push-templates")
     env = Environment(
         loader=FileSystemLoader(str(push_template_dir)),
         autoescape=select_autoescape(),
