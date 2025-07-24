@@ -82,13 +82,13 @@ def prepare_minimal_subsets(subsets):
         ],
     ] = defaultdict(lambda: (set(), set()))
     for subset in subsets:
+        unicodes = []
         # Resolved named subsets to a set of Unicode using glyphsets data
         if "name" in subset:
             unicodes = unicodes_per_glyphset(subset["name"])
             if not unicodes:
                 raise ValueError("No glyphs found for subset " + subset["name"])
-        else:
-            unicodes = []
+        elif "ranges" in subset:
             for r in subset["ranges"]:
                 for cp in range(r["start"], r["end"] + 1):
                     unicodes.append(cp)
@@ -160,6 +160,8 @@ def prepare_minimal_subsets(subsets):
                 "exclude_glyphs": list(glyph_names_excl),
             }
         )
+        if not unicodes_incl:
+            del newsubsets[-1]["unicodes"]
         if layouthandling:
             newsubsets[-1]["layoutHandling"] = layouthandling
         if force:
@@ -350,8 +352,8 @@ class SubsetMerger:
         merge_ufos(
             input_descriptor.ufo,
             donor_ufo,
-            exclude_glyphs=subset["exclude_glyphs"],
-            codepoints=subset["unicodes"],
+            exclude_glyphs=subset.get("exclude_glyphs", []),
+            codepoints=subset.get("unicodes", None),
             existing_handling=existing_handling,
             layout_handling=layout_handling,
             include_dir=Path(donor_ufo.path).parent,
