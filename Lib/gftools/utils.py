@@ -542,7 +542,7 @@ def font_sample_text(ttFont):
     UDHR has been chosen due to the many languages it covers"""
     ref = importlib.resources.files("gftools") / "udhr_all.txt"
     with importlib.resources.as_file(ref) as doc:
-        uhdr = doc.read()
+        uhdr = doc.read_text()
 
     cmap = set(ttFont.getBestCmap())
     words = []
