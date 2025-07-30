@@ -27,20 +27,27 @@ from fontTools.varLib.avar import _denormalize
 from fontTools.ttLib.tables._f_v_a_r import Axis
 from fontTools.misc.textTools import Tag
 from gftools.fix import fix_fvar_instances
+from fontTools.ttLib.tables import otTables
 
 
 def gen_fvar_axes(font, mapping):
     """A mapping may declare axes such as wght, wdth etc that may not exist
     in the font as a set of masters."""
+    # TODO (M Foley) improve and move this logic to fonttools.
     axes_to_make = {}
     nameTable = font["name"]
+    axis_count = len(font["fvar"].axes)
     for m in mapping:
         for axis in m["in"]:
             if axis not in axes_to_make:
+                axis_count += 1
                 axes_to_make[axis] = {"min": m["in"][axis], "max": m["in"][axis]}
             axes_to_make[axis]["min"] = min(axes_to_make[axis]["min"], m["in"][axis])
             axes_to_make[axis]["max"] = max(axes_to_make[axis]["max"], m["in"][axis])
 
+    # Update the gvar axis count before adding new axes in order to clear an assertion
+    # in fonttools
+    font["gvar"].axisCount = axis_count
     for axis_name, axis_range in axes_to_make.items():
         if axis_name not in font["fvar"].axes:
             axis = Axis()
@@ -55,6 +62,39 @@ def gen_fvar_axes(font, mapping):
                 {"en": axis.axisTag}, font, minNameID=256, mac=False
             )
             font["fvar"].axes.append(axis)
+
+    # Following code from:
+    # https://github.com/googlefonts/generate-avar2/blob/a8625dc6802420d2195c7475477828c50ebc13c0/RobotoFlex-avar2.py#L311-L327
+    # Thanks Behdad!
+    print("Update various VarStores")
+    stores = []
+    if (
+        "GDEF" in font
+        and hasattr(font["GDEF"], "table")
+        and hasattr(font["GDEF"].table, "VarStore")
+    ):
+        stores.append(font["GDEF"].table.VarStore)
+    if (
+        "HVAR" in font
+        and hasattr(font["HVAR"], "table")
+        and hasattr(font["HVAR"].table, "VarStore")
+    ):
+        stores.append(font["HVAR"].table.VarStore)
+    if (
+        "MVAR" in font
+        and hasattr(font["MVAR"], "table")
+        and hasattr(font["MVAR"].table, "VarStore")
+    ):
+        stores.append(font["MVAR"].table.VarStore)
+    nullRegion = otTables.VarRegionAxis()
+    nullRegion.StartCoord = -1
+    nullRegion.PeakCoord = 0
+    nullRegion.EndCoord = 1
+    for store in stores:
+        store.VarRegionList.RegionAxisCount = len(font["fvar"].axes)
+        for region in store.VarRegionList.Region:
+            while len(region.VarRegionAxis) < len(font["fvar"].axes):
+                region.VarRegionAxis.append(nullRegion)
 
 
 def gen_avar2_mapping(font, mapping):
