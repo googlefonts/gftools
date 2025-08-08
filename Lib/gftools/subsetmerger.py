@@ -57,6 +57,7 @@ subsets_schema = Seq(
                 Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})
             ),
             Optional("layoutHandling"): Str(),
+            Optional("kernHandling"): Str(),
             Optional("force"): Str(),
             Optional("exclude_glyphs"): Seq(Str()),
             Optional("exclude_codepoints"): Seq(Str()),
@@ -346,6 +347,7 @@ class SubsetMerger:
         if subset.get("force"):
             existing_handling = "replace"
         layout_handling = subset.get("layoutHandling", "subset")
+        kern_handling = subset.get("kernHandling", "conservative")
         logger.info(
             f"Merge {subset['from']} from {donor_ufo} into {input_descriptor.filename} with {existing_handling} and {layout_handling}"
         )
@@ -356,6 +358,7 @@ class SubsetMerger:
             codepoints=subset.get("unicodes", None),
             existing_handling=existing_handling,
             layout_handling=layout_handling,
+            kern_handling=kern_handling,
             include_dir=Path(donor_ufo.path).parent,
         )
         return True
