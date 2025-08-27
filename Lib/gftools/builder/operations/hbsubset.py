@@ -1,3 +1,4 @@
+from functools import cached_property
 import logging
 import os
 import shutil
@@ -10,9 +11,9 @@ SUBSETTER_ENV_KEY = "GFTOOLS_SUBSETTER"
 
 class HbSubset(OperationBase):
     description = "Run a subsetter to slim down a font"
-    rule = "$subsetter --output-file=$in.subset --notdef-outline --unicodes=* --name-IDs=* --layout-features=* --glyph-names $args $in && mv $in.subset $out"
+    rule = "$subsetter --output-file=$out --notdef-outline --unicodes=* --name-IDs=* --layout-features=* --glyph-names $args $in"
 
-    @property
+    @cached_property
     def subsetter(self):
         subsetter = self.original.get(
             "subsetter", os.environ.get(SUBSETTER_ENV_KEY, "auto")
