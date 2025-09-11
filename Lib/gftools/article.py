@@ -10,6 +10,10 @@ from bs4 import BeautifulSoup, NavigableString
 import tempfile
 import shutil
 import ffmpeg
+import logging
+
+log = logging.getLogger("gftools.article")
+LOG_FORMAT = "%(message)s"
 
 
 # Taken from fontbakery.
@@ -24,7 +28,7 @@ MAXSIZE_RASTER = 800 * 1024  # 800kb
 def fix_image_dimensions(fp: Path, img: Image.Image):
     img_ratio = img.width / img.height
     if img.width > MAX_WIDTH:
-        print(
+        log.info(
             f"Resizing image from {img.width}x{img.height} to {MAX_WIDTH}x{int(MAX_WIDTH / img_ratio)}"
         )
         img = img.resize((MAX_WIDTH, int(MAX_WIDTH / img_ratio)), Image.LANCZOS)
@@ -33,7 +37,7 @@ def fix_image_dimensions(fp: Path, img: Image.Image):
         else:
             img.save(fp)
     if img.height > MAX_HEIGHT:
-        print(
+        log.info(
             f"Resizing image from {img.width}x{img.height} to {int(MAX_HEIGHT * img_ratio)}x{MAX_HEIGHT}"
         )
         img = img.resize((int(MAX_HEIGHT * img_ratio), MAX_HEIGHT), Image.LANCZOS)
@@ -54,7 +58,7 @@ def fix_image_filesize(fp: Path, img: Image.Image):
         raise ValueError(
             f"Image '{fp}' is too large for a jpg: {img_size} > {MAXSIZE_RASTER}."
         )
-    print("Converting '{fp}' to jpg")
+    log.info("Converting '{fp}' to jpg")
     img = img.convert("RGB")
     new_fp = fp.with_suffix(".jpg")
     img.save(new_fp, "JPEG", quality=85)
@@ -143,6 +147,9 @@ def fix_article(
             media = found_media(article_fp.parent, article)
             rename_map = {}
             for media_fp in media:
+                if media_fp.suffix == ".mp4":
+                    log.debug(f'skipping "{media_fp.name}", already mp4')
+                    continue
                 if media_fp.suffix in [".gif", ".apng"]:
                     new_fp = image_to_mp4(media_fp)
                     rename_map[media_fp.name] = new_fp.name
@@ -151,6 +158,9 @@ def fix_article(
                     img = Image.open(media_fp)
                     img = fix_image_dimensions(media_fp, img)
                     new_fp = fix_image_filesize(media_fp, img)
+                    if os.stat(media_fp).st_size == os.stat(new_fp).st_size:
+                        log.debug(f'skipping "{media_fp.name}", already optimized')
+                        continue
                     rename_map[media_fp.name] = new_fp.name
             article = update_hrefs(article, rename_map)
             remove_unused_media(article_fp.parent, article)
@@ -162,6 +172,6 @@ def fix_article(
             shutil.rmtree(fp)
             shutil.copytree(tmp_dir, fp, dirs_exist_ok=True)
         elif dry_run:
-            print("Dry run complete. No files were written.")
+            log.info("Dry run complete. No files were written.")
         else:
             raise ValueError("No output directory, inplace or dry_run flag set.")
