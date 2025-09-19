@@ -232,7 +232,6 @@ def main(args=None):
         choices=(
             None,
             "lists",
-            "in_dev",
             "in_sandbox",
             "upgrade",
             "new",
