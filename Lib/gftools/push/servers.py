@@ -51,9 +51,6 @@ if os.path.exists(config_toml):
 else:
     config = {
         "urls": {
-            "dev_family_download": os.environ.get("DEV_FAMILY_DOWNLOAD"),
-            "dev_meta": os.environ.get("DEV_META_URL"),
-            "dev_versions": os.environ.get("DEV_VERSIONS_URL"),
             "sandbox_family_download": os.environ.get("SANDBOX_FAMILY_DOWNLOAD"),
             "sandbox_meta": os.environ.get("SANDBOX_META_URL"),
             "sandbox_versions": os.environ.get("SANDBOX_VERSIONS_URL"),
@@ -61,9 +58,6 @@ else:
             "production_versions": os.environ.get("PRODUCTION_VERSIONS_URL"),
         }
     }
-DEV_FAMILY_DOWNLOAD = config["urls"]["dev_family_download"]
-DEV_META_URL = config["urls"]["dev_meta"]
-DEV_VERSIONS_URL = config["urls"]["dev_versions"]
 SANDBOX_FAMILY_DOWNLOAD = config["urls"]["sandbox_family_download"]
 SANDBOX_META_URL = config["urls"]["sandbox_meta"]
 SANDBOX_VERSIONS_URL = config["urls"]["sandbox_versions"]
@@ -198,16 +192,12 @@ class GFServer(Itemer):
 
 
 class GFServers(Itemer):
-    DEV = "dev"
     SANDBOX = "sandbox"
     PRODUCTION = "production"
-    SERVERS = (DEV, SANDBOX, PRODUCTION)
+    SERVERS = (SANDBOX, PRODUCTION)
 
     def __init__(self):
         self.last_checked = datetime.fromordinal(1).isoformat().split("T")[0]
-        self.dev = GFServer(
-            GFServers.DEV, DEV_META_URL, DEV_FAMILY_DOWNLOAD, DEV_VERSIONS_URL
-        )
         self.sandbox = GFServer(
             GFServers.SANDBOX,
             SANDBOX_META_URL,
@@ -225,7 +215,6 @@ class GFServers(Itemer):
     def last_pushes(self):
         log.info(
             "Last pushes for each server:\n"
-            f"Dev: {self.dev.last_push}\n"
             f"Sandbox: {self.sandbox.last_push}\n"
             f"Production: {self.production.last_push}\n"
         )
@@ -264,7 +253,7 @@ class GFServers(Itemer):
         cp = deepcopy(self)
         # do not save family_versions data. We want to request this each time
         for attr in ["family_versions", "family_versions_data"]:
-            for server_name in ["dev", "sandbox", "production"]:
+            for server_name in ["sandbox", "production"]:
                 server = getattr(cp, server_name)
                 if hasattr(server, attr):
                     delattr(server, attr)
