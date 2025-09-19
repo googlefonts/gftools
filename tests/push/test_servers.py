@@ -4,7 +4,6 @@ from gftools.push.items import Family, Designer, FamilyMeta
 
 
 DATA = {
-    "dev": {"families": {"Abel": {"name": "Abel", "version": "1.000"}}},
     "sandbox": {"families": {"Abel": {"name": "Abel", "version": "0.999"}}},
     "production": {"families": {"Abel": {"name": "Abel", "version": "0.999"}}},
     "last_checked": "2023-01-01",
@@ -22,7 +21,7 @@ def test_servers_open_and_save(servers):
 
 
 def test_iter(servers):
-    assert ["dev", "sandbox", "production"] == [s.name for s in servers]
+    assert ["sandbox", "production"] == [s.name for s in servers]
 
 
 @pytest.mark.parametrize(
@@ -33,7 +32,6 @@ def test_iter(servers):
             {
                 "name": "Abel",
                 "version": "1.000",
-                "In dev": True,
                 "In sandbox": False,
                 "In production": False,
             },
