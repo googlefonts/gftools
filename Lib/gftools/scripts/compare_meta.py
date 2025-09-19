@@ -136,7 +136,7 @@ def get_designer(url, designer):
     return {}
 
 
-def generate_vimdiff_html(dev_file, sb_file, prod_file, output_file):
+def generate_vimdiff_html(sb_file, prod_file, output_file):
     """
     Use vimdiff to compare dev_meta, sb_meta, and prod_meta and save the results as an HTML file.
     Automatically handle swap files by deleting them if they exist.
@@ -154,7 +154,6 @@ def generate_vimdiff_html(dev_file, sb_file, prod_file, output_file):
             "-n",
             "-N",
             "-d",
-            dev_file,
             sb_file,
             prod_file,
             "-c",
@@ -199,19 +198,14 @@ def main(args=None):
         return
     if args.meta:
         munge = munge_meta
-        dev_meta = munge(requests.get(DEV_META_URL).json())
         sb_meta = munge(requests.get(SANDBOX_META_URL).json())
         prod_meta = munge(requests.get(PRODUCTION_META_URL).json())
     elif args.fontv:
         munge = munge_fontv
-        dev_meta = munge(json.loads(requests.get(DEV_VERSIONS_URL).text[4:]))
         sb_meta = munge(json.loads(requests.get(SANDBOX_VERSIONS_URL).text[4:]))
         prod_meta = munge(json.loads(requests.get(PRODUCTION_VERSIONS_URL).text[4:]))
     elif args.family:
         munge = munge_family
-        dev_meta = munge(
-            json.loads(requests.get(f"{DEV_META_URL}/{args.family}").text[4:])
-        )
         sb_meta = munge(
             json.loads(requests.get(f"{SANDBOX_META_URL}/{args.family}").text[4:])
         )
@@ -220,25 +214,21 @@ def main(args=None):
         )
     elif args.designer:
         munge = munge_designer
-        dev_meta = get_designer(DEV_META_URL, args.designer)
         sb_meta = get_designer(SANDBOX_META_URL, args.designer)
         prod_meta = get_designer(PRODUCTION_META_URL, args.designer)
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        dev_file = os.path.join(temp_dir, "dev_meta.json")
         sb_file = os.path.join(temp_dir, "sb_meta.json")
         prod_file = os.path.join(temp_dir, "prod_meta.json")
-        with open(dev_file, "w") as f:
-            json.dump(dev_meta, f, indent=4)
         with open(sb_file, "w") as f:
             json.dump(sb_meta, f, indent=4)
         with open(prod_file, "w") as f:
             json.dump(prod_meta, f, indent=4)
         if args.out:
-            generate_vimdiff_html(dev_file, sb_file, prod_file, args.out)
+            generate_vimdiff_html(sb_file, prod_file, args.out)
         else:
             generate_vimdiff_html(
-                dev_file, sb_file, prod_file, os.path.join(temp_dir, "diff.html")
+                sb_file, prod_file, os.path.join(temp_dir, "diff.html")
             )
             if sys.platform == "linux":
                 open_cmd = "xdg-open"
