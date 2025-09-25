@@ -7,10 +7,8 @@ from glob import glob
 import tempfile
 import requests
 from gftools.push.servers import (
-    DEV_META_URL,
     SANDBOX_META_URL,
     PRODUCTION_META_URL,
-    DEV_VERSIONS_URL,
     SANDBOX_VERSIONS_URL,
     PRODUCTION_VERSIONS_URL,
 )
@@ -93,15 +91,12 @@ def levenstein(a, b):
     return current_row[alen]
 
 
-def doc_in_server(doc, dev_data, sb_data, prod_data):
-    dev_res = levenstein(json.dumps(dev_data), doc)
+def doc_in_server(doc, sb_data, prod_data):
     sb_res = levenstein(json.dumps(sb_data), doc)
     prod_res = levenstein(json.dumps(prod_data), doc)
 
-    best = min(dev_res, sb_res, prod_res)
-    if dev_res == best:
-        return "dev"
-    elif sb_res == best:
+    best = min(sb_res, prod_res)
+    if sb_res == best:
         return "sb"
     elif prod_res == best:
         return "prod"
@@ -109,12 +104,11 @@ def doc_in_server(doc, dev_data, sb_data, prod_data):
 
 def which_server_metadata(string, family):
     munge = munge_family
-    dev_meta = munge(json.loads(requests.get(f"{DEV_META_URL}/{family}").text[4:]))
     sb_meta = munge(json.loads(requests.get(f"{SANDBOX_META_URL}/{family}").text[4:]))
     prod_meta = munge(
         json.loads(requests.get(f"{PRODUCTION_META_URL}/{family}").text[4:])
     )
-    res = doc_in_server(string, dev_meta, sb_meta, prod_meta)
+    res = doc_in_server(string, sb_meta, prod_meta)
 
 
 def pr_type(data):
@@ -126,8 +120,8 @@ def pr_type(data):
 
 
 def get_designer(url, designer):
-    dev_meta = requests.get(url).json()
-    for family in dev_meta["familyMetadataList"]:
+    meta = requests.get(url).json()
+    for family in meta["familyMetadataList"]:
         for family_designer in family["designers"]:
             if family_designer == designer:
                 family_to_check = family["family"]
@@ -138,7 +132,7 @@ def get_designer(url, designer):
 
 def generate_vimdiff_html(sb_file, prod_file, output_file):
     """
-    Use vimdiff to compare dev_meta, sb_meta, and prod_meta and save the results as an HTML file.
+    Use vimdiff to compare sb_meta and prod_meta and save the results as an HTML file.
     Automatically handle swap files by deleting them if they exist.
     """
     # Check and delete swap files if they exist
