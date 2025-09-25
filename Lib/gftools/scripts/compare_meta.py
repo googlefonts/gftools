@@ -7,10 +7,8 @@ from glob import glob
 import tempfile
 import requests
 from gftools.push.servers import (
-    DEV_META_URL,
     SANDBOX_META_URL,
     PRODUCTION_META_URL,
-    DEV_VERSIONS_URL,
     SANDBOX_VERSIONS_URL,
     PRODUCTION_VERSIONS_URL,
 )
