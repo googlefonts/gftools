@@ -177,8 +177,6 @@ class ItemChecker:
             push_item.set_server(STATUS_OPTION_IDS.LIVE)
         elif item == servers.sandbox.find_item(item):
             push_item.set_server(STATUS_OPTION_IDS.IN_SANDBOX)
-        elif item == servers.dev.find_item(item):
-            push_item.set_server(STATUS_OPTION_IDS.IN_DEV)
 
     def run(self):
         for push_item in self.push_items:
