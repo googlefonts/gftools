@@ -30,7 +30,6 @@ gftools to-avar1 path/to/variable-font.ttf --mapping path/to/mapping.yaml -o pat
 from fontTools.misc.cliTools import makeOutputFileName
 from fontTools.designspaceLib import DesignSpaceDocument, SourceDescriptor, InstanceDescriptor, AxisDescriptor
 from fontTools.ttLib import TTFont
-import sys
 import itertools
 from fontTools.varLib import instancer
 from fontTools.varLib import main as gen_vf
@@ -62,7 +61,6 @@ def avar2_to_avar1(ttfont, avar_mapping, out):
         ds.axes.append(ax)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        masters = []
         for combo in itertools.product(*axes):
             source = SourceDescriptor()
             source.name = "_".join(f"{axis_order[i]}-{v}" for i, v in enumerate(combo))
@@ -74,12 +72,14 @@ def avar2_to_avar1(ttfont, avar_mapping, out):
             partial = instancer.instantiateVariableFont(ttfont, coords)
             partial.save(source.filename)
 
-        inst = InstanceDescriptor()
-        inst.name = "default"
-        inst.familyName = ttfont["name"].getBestFamilyName()
-        inst.styleName = "Regular"
-        inst.location = ds.sources[0].location
-        ds.instances.append(inst)
+        for fvar_inst in ttfont["fvar"].instances:
+            new_inst = InstanceDescriptor()
+            new_inst.name = name.getName(fvar_inst.subfamilyNameID, 3, 1, 0x409).toUnicode()
+            new_inst.familyName = ttfont["name"].getBestFamilyName()
+            new_inst.styleName = new_inst.name
+            new_inst.location = {axis_names[i]: fvar_inst.coordinates[axis_order[i]] for i in range(len(axis_order))}
+            ds.instances.append(new_inst)
+
         ds.write(tmpdir + "/out.designspace")
         gen_vf([tmpdir + "/out.designspace", "-o", out])
 
