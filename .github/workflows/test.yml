@@ -39,7 +39,7 @@ jobs:
         python-version: ["3.9", "3.10", "3.11", "3.13"]
         platform: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
           fetch-depth: 0
