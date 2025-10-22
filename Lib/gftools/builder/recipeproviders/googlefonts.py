@@ -59,6 +59,7 @@ DEFAULTS = {
     "checkCompatibility": True,
     "overlaps": "booleanOperations",
     "splitItalic": True,
+    "expandFeaturesToInstances": True,
 }
 
 
@@ -206,8 +207,6 @@ class GFBuilder(RecipeProviderBase):
             args += " --keep-direction"
         if self.config.get("removeOutlineOverlaps") is False:
             args += " --keep-overlaps"
-        if self.config.get("expandFeaturesToInstances"):
-            args += " --expand-features-to-instances"
         if self.config.get("extraFontmakeArgs") is not None:
             args += " " + str(self.config["extraFontmakeArgs"])
         if variable:
@@ -420,6 +419,9 @@ class GFBuilder(RecipeProviderBase):
                     "operation": "instantiateUfo",
                     "instance_name": instancename,
                     "glyphData": self.config.get("glyphData"),
+                    "expandFeaturesToInstances": self.config.get(
+                        "expandFeaturesToInstances"
+                    ),
                 }
             )
         steps += (
