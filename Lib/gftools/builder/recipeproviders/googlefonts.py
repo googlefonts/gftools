@@ -110,16 +110,17 @@ class GFBuilder(RecipeProviderBase):
             yaml.dump(self.config["avar2"], self.avar2file)
         else:
             self.avar2file = None
-        
+
         if "fvarInstances" in self.config:
             self.fvarInstancesFile = NamedTemporaryFile(delete=False, mode="w+")
             for font in list(self.config["fvarInstances"].keys()):
                 scfont = re.sub(r"((?:-Italic)?\[)", r"SC\1", font)
-                self.config["fvarInstances"][scfont] = self.config["fvarInstances"][font]
+                self.config["fvarInstances"][scfont] = self.config["fvarInstances"][
+                    font
+                ]
             yaml.dump(self.config["fvarInstances"], self.fvarInstancesFile)
         else:
             self.fvarInstancesFile = None
-            
 
         # Find variable fonts
         self.recipe = {}
@@ -302,11 +303,14 @@ class GFBuilder(RecipeProviderBase):
             for vf in vfs:
                 self.recipe[vf].append(args)
             self.avar2file.close()
-    
+
     def build_fvar_instances(self):
         vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]
         if len(vfs) > 0:
-            args = {"args": self.fvarInstancesFile.name, "postprocess": "buildFvarInstances"}
+            args = {
+                "args": self.fvarInstancesFile.name,
+                "postprocess": "buildFvarInstances",
+            }
             for vf in vfs:
                 self.recipe[vf].append(args)
             self.fvarInstancesFile.close()
