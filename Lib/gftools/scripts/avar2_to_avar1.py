@@ -28,7 +28,12 @@ gftools to-avar1 path/to/variable-font.ttf
 gftools to-avar1 path/to/variable-font.ttf --mapping path/to/mapping.yaml -o path/to/avar1-font.ttf
 """
 from fontTools.misc.cliTools import makeOutputFileName
-from fontTools.designspaceLib import DesignSpaceDocument, SourceDescriptor, InstanceDescriptor, AxisDescriptor
+from fontTools.designspaceLib import (
+    DesignSpaceDocument,
+    SourceDescriptor,
+    InstanceDescriptor,
+    AxisDescriptor,
+)
 from fontTools.ttLib import TTFont
 import itertools
 from fontTools.varLib import instancer
@@ -46,7 +51,9 @@ def avar2_to_avar1(ttfont, avar_mapping, out):
     name = ttfont["name"]
     axes = [(a.minValue, a.maxValue) for a in fvar.axes]
     axis_order = [a.axisTag for a in fvar.axes]
-    axis_names = [name.getName(a.axisNameID, 3, 1, 0x409).toUnicode() for a in fvar.axes]
+    axis_names = [
+        name.getName(a.axisNameID, 3, 1, 0x409).toUnicode() for a in fvar.axes
+    ]
 
     ds = DesignSpaceDocument()
     for axis, real_name, tag_name in zip(axes, axis_names, axis_order):
@@ -74,10 +81,15 @@ def avar2_to_avar1(ttfont, avar_mapping, out):
 
         for fvar_inst in ttfont["fvar"].instances:
             new_inst = InstanceDescriptor()
-            new_inst.name = name.getName(fvar_inst.subfamilyNameID, 3, 1, 0x409).toUnicode()
+            new_inst.name = name.getName(
+                fvar_inst.subfamilyNameID, 3, 1, 0x409
+            ).toUnicode()
             new_inst.familyName = ttfont["name"].getBestFamilyName()
             new_inst.styleName = new_inst.name
-            new_inst.location = {axis_names[i]: fvar_inst.coordinates[axis_order[i]] for i in range(len(axis_order))}
+            new_inst.location = {
+                axis_names[i]: fvar_inst.coordinates[axis_order[i]]
+                for i in range(len(axis_order))
+            }
             ds.instances.append(new_inst)
 
         ds.write(tmpdir + "/out.designspace")
@@ -85,17 +97,21 @@ def avar2_to_avar1(ttfont, avar_mapping, out):
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser(description="Generate avar1.ttf from a variable font.")
+    parser = argparse.ArgumentParser(
+        description="Generate avar1.ttf from a variable font."
+    )
     parser.add_argument("font_path", help="Path to the variable font file")
     parser.add_argument("-m", "--mapping", help="Path to avar1 yaml mapping")
     parser.add_argument("-o", "--out")
-    parser.add_argument("--test-output", help="output a html testing doc to compare fonts")
+    parser.add_argument(
+        "--test-output", help="output a html testing doc to compare fonts"
+    )
     args = parser.parse_args(args)
-        
+
     ttfont = TTFont(args.font_path)
 
     if args.mapping:
-        with open(args.mapping, 'r', encoding='utf-8') as f:
+        with open(args.mapping, "r", encoding="utf-8") as f:
             avar_mapping = yaml.safe_load(f)
     else:
         avar_mapping = None
