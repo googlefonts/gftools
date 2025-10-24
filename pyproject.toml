@@ -27,7 +27,7 @@ classifiers = [
 ]
 dependencies = [
   'setuptools',
-  'FontTools[ufo]',
+  'FontTools[ufo]>=4.60.0', # Needed due to api changes in the avar module
   'axisregistry>=0.4.9', # Needed for "aggressive" param to build_name_table
   'absl-py',
   'glyphsLib',
