@@ -23,7 +23,7 @@ from fontTools.ttLib import TTFont
 from fontTools.varLib import _add_avar
 from fontTools.designspaceLib import AxisMappingDescriptor, AxisDescriptor
 import yaml
-from fontTools.varLib.avar import _denormalize
+from fontTools.varLib.avar.unbuild import _denormalize
 from fontTools.ttLib.tables._f_v_a_r import Axis
 from fontTools.misc.textTools import Tag
 from gftools.fix import fix_fvar_instances
