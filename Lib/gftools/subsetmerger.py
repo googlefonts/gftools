@@ -359,7 +359,6 @@ class SubsetMerger:
             existing_handling=existing_handling,
             layout_handling=layout_handling,
             kern_handling=kern_handling,
-            include_dir=Path(donor_ufo.path).parent,
         )
         return True
 
