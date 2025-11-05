@@ -400,6 +400,11 @@ class PushItems(list):
             if str(item.path) == "tags/all/families.csv":
                 bins["tags"].add(item)
                 continue
+            category = item.category
+            if not category:
+                raise ValueError(
+                    f"Item {item.url} missing category. Choose from {PushCategory.values()}"
+                )
             bins[item.category.value].add(item)
 
         res = []
@@ -555,9 +560,13 @@ class PushItems(list):
             if item["content"]["closed"] and not item["content"]["merged"]:
                 continue
 
-            status = item.get("status", {}).get("name", None)
-            if status:
-                status = PushStatus.from_string(status)
+            status = item.get("status", {})
+            if not status:
+                raise ValueError(
+                    f"{item['content']['url']} is missing Fonts Traffic Jam status"
+                )
+            status_name = status.get("name", None)
+            status = PushStatus.from_string(status_name)
 
             push_list = item.get("list", None)
             if push_list:
