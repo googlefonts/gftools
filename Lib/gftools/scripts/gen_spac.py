@@ -29,13 +29,10 @@ def add_space_axis(font, amount):
             continue
         coords = [None] * len(glyph_variations[0].coordinates)
         coords[0] = (amount, 0)
-        coords[-3] = (amount*2, 0)
+        coords[-3] = (amount * 2, 0)
         for idx in glyph.endPtsOfContours[:-1]:
             coords[idx + 1] = (amount, 0)
-        tp = TupleVariation(
-            {"SPAC": (0.0, 1.0, 1.0)},
-            coords
-        )
+        tp = TupleVariation({"SPAC": (0.0, 1.0, 1.0)}, coords)
         gvar.variations[glyph_name].append(tp)
 
     name_table = font["name"]
@@ -55,19 +52,15 @@ def add_space_axis(font, amount):
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser(
-        description="Add a SPAC axis to a variable font."
-    )
+    parser = argparse.ArgumentParser(description="Add a SPAC axis to a variable font.")
     parser.add_argument(
-        "font",
-        type=TTFont,
-        help="Path to the variable font file to modify."
+        "font", type=TTFont, help="Path to the variable font file to modify."
     )
     parser.add_argument(
         "--amount",
         type=int,
         default=100,
-        help="Amount of spacing to add (default: 100)."
+        help="Amount of spacing to add (default: 100).",
     )
     out_group = parser.add_mutually_exclusive_group(required=False)
     out_group.add_argument("--out", "-o", help="Output dir for fonts")
@@ -82,9 +75,7 @@ def main(args=None):
     elif args.out:
         output_path = args.out
     else:
-        output_path = makeOutputFileName(
-            args.font.reader.file.name
-        )
+        output_path = makeOutputFileName(args.font.reader.file.name)
     args.font.save(output_path)
 
 
