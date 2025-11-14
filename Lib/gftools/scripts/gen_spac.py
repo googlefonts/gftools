@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 """
-gftools add-spac
+gftools gen-spac
 
 Add a Spacing axis (SPAC) to a variable font.
 https://fonts.google.com/variablefonts#axis-definitions
 
 Usage:
-gftools add-spac font.ttf --amount 100 --inplace
+gftools gen-spac font.ttf --amount 100 --inplace
 """
 from fontTools.ttLib.tables._f_v_a_r import Axis
 from fontTools.ttLib.tables.TupleVariation import TupleVariation
 from fontTools.ttLib import TTFont
 from fontTools.varLib.hvar import add_HVAR
 from fontTools.misc.cliTools import makeOutputFileName
+from fontTools.ttLib.tables import otTables
 import argparse
 
 
-def add_space_axis(font, amount):
+def add_spacing_axis(font, min_amount, max_amount):
     # Current implementation can only add positive SPAC values
     assert "fvar" in font, "Font must have an 'fvar' table"
     gvar = font["gvar"]
@@ -27,28 +28,47 @@ def add_space_axis(font, amount):
         glyph_variations = gvar.variations.get(glyph_name)
         if not glyph_variations:
             continue
-        coords = [None] * len(glyph_variations[0].coordinates)
-        coords[0] = (amount, 0)
-        coords[-3] = (amount * 2, 0)
-        for idx in glyph.endPtsOfContours[:-1]:
-            coords[idx + 1] = (amount, 0)
-        tp = TupleVariation({"SPAC": (0.0, 1.0, 1.0)}, coords)
-        gvar.variations[glyph_name].append(tp)
+        min_coords = [None] * len(glyph_variations[0].coordinates)
+        min_coords[-3] = (min_amount, 0)
+        min_coords[-4] = (-min_amount, 0)
+        min_tp = TupleVariation({"SPAC": (-1.0, -1.0, 0.0)}, min_coords)
+        gvar.variations[glyph_name].append(min_tp)
+
+        max_coords = [None] * len(glyph_variations[0].coordinates)
+        max_coords[-3] = (max_amount, 0)
+        max_coords[-4] = (-max_amount, 0)
+        max_tp = TupleVariation({"SPAC": (0.0, 1.0, 1.0)}, max_coords)
+        gvar.variations[glyph_name].append(max_tp)
 
     name_table = font["name"]
 
     axis = Axis()
     axis.axisTag = "SPAC"
     axis.axisNameID = name_table.addMultilingualName({"en": "Spacing"})
-    axis.minValue = 0.0
+    axis.minValue = min_amount
     axis.defaultValue = 0.0
-    axis.maxValue = amount
+    axis.maxValue = max_amount
 
     fvar = font["fvar"]
     fvar.axes.append(axis)
     for inst in fvar.instances:
         inst.coordinates["SPAC"] = 0.0
     add_HVAR(font)
+
+    print("Update various VarStores")
+    stores = []
+    for table in ("MVAR", "HVAR", "BASE", "VVAR", "COLR", "GDEF"):
+        if table in font and hasattr(font[table].table, "VarStore"):
+            stores.append(font[table].table.VarStore)
+    nullRegion = otTables.VarRegionAxis()
+    nullRegion.StartCoord = -1
+    nullRegion.PeakCoord = 0
+    nullRegion.EndCoord = 1
+    for store in stores:
+        store.VarRegionList.RegionAxisCount = len(fvar.axes)
+        for region in store.VarRegionList.Region:
+            while len(region.VarRegionAxis) < len(fvar.axes):
+                region.VarRegionAxis.append(nullRegion)
 
 
 def main(args=None):
@@ -57,10 +77,14 @@ def main(args=None):
         "font", type=TTFont, help="Path to the variable font file to modify."
     )
     parser.add_argument(
-        "--amount",
+        "min",
         type=int,
-        default=100,
-        help="Amount of spacing to add (default: 100).",
+        help="Min amount of spacing to add",
+    )
+    parser.add_argument(
+        "max",
+        type=int,
+        help="Max amount of spacing to add",
     )
     out_group = parser.add_mutually_exclusive_group(required=False)
     out_group.add_argument("--out", "-o", help="Output dir for fonts")
@@ -69,7 +93,7 @@ def main(args=None):
     )
     args = parser.parse_args(args)
 
-    add_space_axis(args.font, args.amount)
+    add_spacing_axis(args.font, args.min, args.max)
     if args.inplace:
         output_path = args.font.reader.file.name
     elif args.out:
