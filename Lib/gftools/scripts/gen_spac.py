@@ -59,15 +59,15 @@ def add_spacing_axis(font, min_amount, max_amount):
     for table in ("MVAR", "HVAR", "BASE", "VVAR", "COLR", "GDEF"):
         if table in font and hasattr(font[table].table, "VarStore"):
             stores.append(font[table].table.VarStore)
-    nullRegion = otTables.VarRegionAxis()
-    nullRegion.StartCoord = -1
-    nullRegion.PeakCoord = 0
-    nullRegion.EndCoord = 1
+    spacRegion = otTables.VarRegionAxis()
+    spacRegion.StartCoord = -1
+    spacRegion.PeakCoord = 0
+    spacRegion.EndCoord = 1
     for store in stores:
         store.VarRegionList.RegionAxisCount = len(fvar.axes)
         for region in store.VarRegionList.Region:
             while len(region.VarRegionAxis) < len(fvar.axes):
-                region.VarRegionAxis.append(nullRegion)
+                region.VarRegionAxis.append(spacRegion)
 
 
 def main(args=None):
