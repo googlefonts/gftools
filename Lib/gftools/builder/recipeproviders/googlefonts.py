@@ -168,6 +168,9 @@ class GFBuilder(RecipeProviderBase):
         else:
             raise ValueError("Unknown source type")
 
+        if "spacingAxis" in self.config:
+            tags.append("SPAC")
+
         if italic_ds:
             if not roman:
                 sourcebase += "-Italic"
@@ -232,8 +235,6 @@ class GFBuilder(RecipeProviderBase):
         else:
             if self.config.get("extraStaticFontmakeArgs") is not None:
                 args += " " + str(self.config["extraStaticFontmakeArgs"])
-
-        import pdb; pdb.set_trace()
         return args
 
     def fix_args(self):
@@ -269,9 +270,9 @@ class GFBuilder(RecipeProviderBase):
                     self._italicize_stat_file(source, italic_ds)
             else:
                 self.build_a_variable(source)
-        if "spacingAxisSideBearing" in self.config:
-            self.build_spacing_axis()
         self.build_STAT()
+        if "spacingAxis" in self.config:
+            self.build_spacing_axis()
         if "avar2" in self.config:
             self.build_avar2()
         if "fvarInstances" in self.config:
@@ -281,7 +282,9 @@ class GFBuilder(RecipeProviderBase):
         vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]
         if len(vfs) > 0:
             args = {
-                "args": "--amount " + str(self.config["spacingAxis"]),
+                "args": str(self.config["spacingAxis"]["min"])
+                + " "
+                + str(self.config["spacingAxis"]["max"]),
                 "postprocess": "addSpacingAxis",
             }
             for vf in vfs:
