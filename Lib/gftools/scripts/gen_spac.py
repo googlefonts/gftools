@@ -18,7 +18,6 @@ import argparse
 
 
 def add_spacing_axis(font, min_amount, max_amount):
-    # Current implementation can only add positive SPAC values
     assert "fvar" in font, "Font must have an 'fvar' table"
     gvar = font["gvar"]
     for glyph_name in font.getGlyphOrder():
