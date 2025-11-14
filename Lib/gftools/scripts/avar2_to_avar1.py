@@ -66,7 +66,7 @@ def avar2_to_avar1(ttfont, avar_mapping, out):
         if avar_mapping:
             ax.map = [(k, v) for k, v in avar_mapping.get(tag_name, {}).items()]
         ds.axes.append(ax)
-    
+
     total = len(list(itertools.product(*axes)))
     print("Generating masters...", total)
     with tempfile.TemporaryDirectory() as tmpdir:
