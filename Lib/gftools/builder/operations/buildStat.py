@@ -55,7 +55,8 @@ class BuildSTAT(OperationBase):
                 + self.__class__.__name__
             )
             all_vfs = list(
-                set(self.dependencies) | set([t.path for t in self.implicit])
+                set(self.dependencies)
+                | set([t.path for t in self.implicit if t.path.endswith(".ttf")])
             )
             writer.build(
                 self.stamppath,

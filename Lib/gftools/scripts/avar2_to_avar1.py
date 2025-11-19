@@ -49,7 +49,7 @@ def avar2_to_avar1(ttfont, avar_mapping, out):
 
     fvar = ttfont["fvar"]
     name = ttfont["name"]
-    axes = [(a.minValue, a.maxValue) for a in fvar.axes]
+    axes = [(a.minValue, (a.minValue + a.maxValue) / 2, a.maxValue) for a in fvar.axes]
     axis_order = [a.axisTag for a in fvar.axes]
     axis_names = [
         name.getName(a.axisNameID, 3, 1, 0x409).toUnicode() for a in fvar.axes
@@ -61,14 +61,17 @@ def avar2_to_avar1(ttfont, avar_mapping, out):
         ax.name = real_name
         ax.tag = tag_name
         ax.minimum = axis[0]
-        ax.maximum = axis[1]
+        ax.maximum = axis[2]
         ax.default = axis[0]
         if avar_mapping:
             ax.map = [(k, v) for k, v in avar_mapping.get(tag_name, {}).items()]
         ds.axes.append(ax)
 
+    total = len(list(itertools.product(*axes)))
+    print("Generating masters...", total)
     with tempfile.TemporaryDirectory() as tmpdir:
-        for combo in itertools.product(*axes):
+        for idx, combo in enumerate(itertools.product(*axes)):
+            print(f"  Master {idx+1}/{total}")
             source = SourceDescriptor()
             source.name = "_".join(f"{axis_order[i]}-{v}" for i, v in enumerate(combo))
             source.familyName = ttfont["name"].getBestFamilyName()
