@@ -127,4 +127,10 @@ def gen_stat_tables_from_config(stat, varfonts, has_italic=None, locations=None)
             if filename not in locations:
                 raise ValueError("Filename %s not found in locations" % filename)
             locations = locations[filename]
+        # Climate Crisis' config file specifies AxisValue names as years in integers so
+        # let's convert to string
+        for ax in this_stat:
+            for av in ax.get("values", []):
+                if isinstance(av.get("name"), int):
+                    av["name"] = str(av["name"])
         buildStatTable(ttFont, this_stat, locations=locations, macNames=False)
