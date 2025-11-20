@@ -7,6 +7,7 @@ name = "gftools"
 description = "Google Fonts Tools is a set of command-line tools for testing font projects"
 readme = "README.md"
 dynamic = ["version"]
+requires-python = ">=3.10"
 authors = [
   { name = "Marc Foley", email = "m.foley.88@gmail.com" },
   { name = "Dave Crossland", email = "dave@lab6.com" },
@@ -22,8 +23,12 @@ classifiers = [
   'Topic :: Text Processing :: Fonts',
   'License :: OSI Approved :: Apache Software License',
   'Operating System :: OS Independent',
-  'Programming Language :: Python :: 2',
-  'Programming Language :: Python :: 3'
+  'Programming Language :: Python :: 3',
+  'Programming Language :: Python :: 3.10',
+  'Programming Language :: Python :: 3.11',
+  'Programming Language :: Python :: 3.12',
+  'Programming Language :: Python :: 3.13',
+  'Programming Language :: Python :: 3.14',
 ]
 dependencies = [
   'setuptools',
@@ -38,15 +43,13 @@ dependencies = [
   'pillow',
   # 3.7.0 fixed a bug on parsing some METADATA.pb files.
   # We cannot use v4 because our protobuf files have been compiled with v3.
-  'protobuf>=3.7.0, <4',
+  'protobuf>=3.19.4, <4',
   'requests',
   'tabulate',
   'unidecode',
   'opentype-sanitizer',
   'vttlib',
-  # pygit2 1.16.0 only supports 3.10+
-  'pygit2==1.15.0; python_version < "3.13"',
-  'pygit2==1.16.0; python_version >= "3.13"',
+  'pygit2>=1.16.0',
   'strictyaml',
   'fontmake[json]>=3.3.0',
   'skia-pathops',
