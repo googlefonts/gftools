@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.13"]
+        python-version: ["3.10", "3.12", "3.13", "3.14"]
         platform: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
@@ -58,9 +58,17 @@ jobs:
         run: choco install ffmpeg -y
         shell: pwsh
 
-      - name: Install packages
+      # Temporarily skip QA extra on Python 3.14 until skia-python provides wheels for 3.14.
+      # The qa extra pulls in diffenator2 which depends on blackrenderer[skia] which in turn
+      # depends on skia-python. Building skia-python from source fails on CI.
+      # See: https://github.com/googlefonts/gftools/pull/1160
+      - name: Install packages (with QA)
+        if: matrix.python-version != '3.14'
         run: |
-          pip install '.[qa]'
+          pip install '.[qa,test]'
+      - name: Install packages (without QA)
+        if: matrix.python-version == '3.14'
+        run: |
           pip install '.[test]'
       - name: lint
         run: |
