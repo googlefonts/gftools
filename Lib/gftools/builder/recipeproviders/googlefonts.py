@@ -340,14 +340,17 @@ class GFBuilder(RecipeProviderBase):
             for vf in vfs:
                 self.recipe[vf].append(args)
             self.fvarInstancesFile.close()
-    
+
     def build_fontsetter(self):
         vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]
         for vf in vfs:
             filename = os.path.basename(vf)
             if filename not in self.fontsetterfiles:
                 continue
-            args = {"args": self.fontsetterfiles[filename].name, "postprocess": "fontsetter"}
+            args = {
+                "args": self.fontsetterfiles[filename].name,
+                "postprocess": "fontsetter",
+            }
             self.recipe[vf].append(args)
 
     def _vtt_steps(self, target: str):
