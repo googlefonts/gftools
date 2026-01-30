@@ -452,6 +452,8 @@ class GFBuilder(RecipeProviderBase):
                     self.build_a_static(source, instance, output="ttf")
                 if self.config["buildOTF"]:
                     self.build_a_static(source, instance, output="otf")
+        if "fontsetter" in self.config:
+            self.build_fontsetter()
 
     def build_a_static(self, source: File, instance: InstanceDescriptor, output):
         suffix = self.config.get("filenameSuffix", "")
@@ -495,7 +497,6 @@ class GFBuilder(RecipeProviderBase):
             + self._autohint_steps(target)
             + self._vtt_steps(target)
             + self._fix_step()
-            + self.build_fontsetter(target)
         )
         self.recipe[target] = steps
         self.build_a_webfont(target, self._static_filename(instance, extension="woff2"))
