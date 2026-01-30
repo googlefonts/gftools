@@ -101,6 +101,7 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("logLevel"): Str(),
         Optional("spacingAxis"): MapPattern(Str(), Int()),
         Optional("stat"): stat_schema | stat_schema_by_font_name,
+        Optional("fontsetter"): MapPattern(Str(), Any()),
         Optional("statFormat4"): stat_format4_schema
         | MapPattern(Str(), stat_format4_schema),
         Optional("avar2"): avar2_schema,

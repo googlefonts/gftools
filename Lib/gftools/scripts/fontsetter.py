@@ -130,13 +130,17 @@ def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("font", type=TTFont)
     parser.add_argument("config")
-    parser.add_argument("-o", "--out", default=None)
+    out = parser.add_mutually_exclusive_group()
+    out.add_argument("--inplace", action="store_true", default=False)
+    out.add_argument("--out", "-o", default=None)
     args = parser.parse_args(args)
 
     config = load_config(args.config)
     set_all(args.font, config)
 
-    if not args.out:
+    if args.inplace:
+        args.out = args.font.reader.file.name
+    elif not args.out:
         args.out = makeOutputFileName(args.font.reader.file.name)
     args.font.save(args.out)
 

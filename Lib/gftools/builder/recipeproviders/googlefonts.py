@@ -122,6 +122,14 @@ class GFBuilder(RecipeProviderBase):
         else:
             self.fvarInstancesFile = None
 
+        if "fontsetter" in self.config:
+            self.fontsetterfiles = {}
+            for font in list(self.config["fontsetter"].keys()):
+                tmp_file = NamedTemporaryFile(delete=False, mode="w+")
+                self.config["fontsetter"][font] = self.config["fontsetter"][font]
+                yaml.dump(self.config["fontsetter"][font], tmp_file)
+                self.fontsetterfiles[font] = tmp_file
+
         # Find variable fonts
         self.recipe = {}
         self.build_all_variables()
@@ -277,6 +285,8 @@ class GFBuilder(RecipeProviderBase):
             self.build_avar2()
         if "fvarInstances" in self.config:
             self.build_fvar_instances()
+        if "fontsetter" in self.config:
+            self.build_fontsetter()
 
     def build_spacing_axis(self):
         vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]
@@ -330,6 +340,18 @@ class GFBuilder(RecipeProviderBase):
             for vf in vfs:
                 self.recipe[vf].append(args)
             self.fvarInstancesFile.close()
+
+    def build_fontsetter(self):
+        vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]
+        for vf in vfs:
+            filename = os.path.basename(vf)
+            if filename not in self.fontsetterfiles:
+                continue
+            args = {
+                "args": self.fontsetterfiles[filename].name,
+                "postprocess": "fontsetter",
+            }
+            self.recipe[vf].append(args)
 
     def _vtt_steps(self, target: str):
         if os.path.basename(target) in self.config.get("vttSources", {}):
@@ -430,6 +452,8 @@ class GFBuilder(RecipeProviderBase):
                     self.build_a_static(source, instance, output="ttf")
                 if self.config["buildOTF"]:
                     self.build_a_static(source, instance, output="otf")
+        if "fontsetter" in self.config:
+            self.build_fontsetter()
 
     def build_a_static(self, source: File, instance: InstanceDescriptor, output):
         suffix = self.config.get("filenameSuffix", "")
@@ -561,25 +585,17 @@ class GFBuilder(RecipeProviderBase):
         # "italic enough" to convince gftools-fix-font to apply all its italic
         # font fixes (post.italicAngle etc.) when we call it with
         # --include-source-fixes.
-        configfile = NamedTemporaryFile(delete=False, mode="w+")
         family_name = self.sources[0].family_name.replace(" ", "")
-        # Since this is mad YAML, we can't use the normal YAML library
-        # to write this. We'll just write it out manually.
-        configfile.write(
-            f"""
-OS/2->fsSelection: 129
-head->macStyle: "|= 0x02"
-name->setName: ["{family_name}Italic", 25, 3, 1, 0x409]
-name->setName: ["Italic", 2, 3, 1, 0x409]
-name->setName: ["Italic", 17, 3, 1, 0x409]
-        """
-        )
-        configfile.close()
         return [
             {
-                "operation": "exec",
-                "exe": "gftools-fontsetter",
-                "args": "-o $out $in " + configfile.name,
+                "operation": "fontsetter",
+                "values": [
+                    ["OS/2->fsSelection", 129],
+                    ["head->macStyle", "|= 0x02"],
+                    ["name->setName", [f"{family_name}Italic", 25, 3, 1, 0x409]],
+                    ["name->setName", ["Italic", 2, 3, 1, 0x409]],
+                    ["name->setName", ["Italic", 17, 3, 1, 0x409]],
+                ],
             },
             {
                 "operation": "fix",
