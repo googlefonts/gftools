@@ -19,8 +19,14 @@ fn main() {
 
     let mut info: Vec<(String, f32)> = Vec::new();
     for font in args.fonts.iter() {
-        let font_data = std::fs::read(font).unwrap();
-        let fontref = skrifa::FontRef::new(&font_data).unwrap();
+        let Ok(font_data) = std::fs::read(font) else {
+            log::warn!("{}: Failed to read font file, skipping", font);
+            continue;
+        };
+        let Ok(fontref) = skrifa::FontRef::new(&font_data) else {
+            log::warn!("{}: Failed to parse font file, skipping", font);
+            continue;
+        };
         if let Ok(post_table) = fontref.post() {
             info.push((font.to_string(), post_table.italic_angle().to_f32()));
         } else {
