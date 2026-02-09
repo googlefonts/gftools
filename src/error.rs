@@ -3,7 +3,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum GftoolsError {
     #[error("problem parsing font: {0}")]
-    FontParse(#[from] skrifa::raw::ReadError),
+    FontParse(#[from] fontations::skrifa::raw::ReadError),
     #[error("problem parsing JSON: {0}")]
     JsonParse(#[from] serde_json_path_to_error::Error),
     #[error("problem parsing TOML: {0}")]
