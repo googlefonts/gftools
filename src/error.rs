@@ -4,6 +4,10 @@ use thiserror::Error;
 pub enum GftoolsError {
     #[error("problem parsing font: {0}")]
     FontParse(#[from] fontations::skrifa::raw::ReadError),
+    #[error("problem writing font: {0}")]
+    FontWrite(#[from] fontations::write::error::Error),
+    #[error("problem building font: {0}")]
+    FontBuild(#[from] fontations::write::BuilderError),
     #[error("problem parsing JSON: {0}")]
     JsonParse(#[from] serde_json_path_to_error::Error),
     #[error("problem parsing TOML: {0}")]
