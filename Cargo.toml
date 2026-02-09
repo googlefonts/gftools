@@ -39,6 +39,10 @@ path = "src/bin/check_bbox.rs"
 name = "gftools-what-subsets"
 path = "src/bin/what_subsets.rs"
 
+[[bin]]
+name = "gftools-drop-hints"
+path = "src/bin/drop_hints.rs"
+
 [dependencies]
 reqwest = { version = "0.12.15", features = ["blocking", "json"] }
 serde = { version = "1.0.219", features = ["derive"] }

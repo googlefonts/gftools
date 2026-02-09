@@ -4,7 +4,7 @@ mod utils;
 
 use std::{fmt::Display, path::Path};
 
-use error::GftoolsError;
+pub use error::GftoolsError; // Have to make this pub so our scripts can use it
 #[allow(unused_imports)]
 pub(crate) use gf_metadata::DesignerInfoProto;
 pub(crate) use gf_metadata::{AxisProto, FamilyProto};
