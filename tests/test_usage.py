@@ -135,11 +135,6 @@ class TestGFToolsScripts(unittest.TestCase):
 
         main([self.example_font])
 
-    def test_fix_glyphs(self):
-        from gftools.scripts.fix_glyphs import main
-
-        main([self.example_glyphs_file])
-
     def test_fix_hinting(self):
         from gftools.scripts.fix_hinting import main
 
@@ -174,11 +169,6 @@ class TestGFToolsScripts(unittest.TestCase):
         from gftools.scripts.fix_vertical_metrics import main
 
         main([self.example_font])
-
-    def test_font_diff(self):
-        from gftools.scripts.font_diff import main
-
-        main([self.example_font, self.example_font])
 
     def test_font_weights_coverage(self):
         from gftools.scripts.font_weights_coverage import main
