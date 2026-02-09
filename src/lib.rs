@@ -2,7 +2,7 @@ mod error;
 mod push;
 mod utils;
 
-use std::path::Path;
+use std::{fmt::Display, path::Path};
 
 use error::GftoolsError;
 #[allow(unused_imports)]
@@ -23,7 +23,7 @@ where
     Ok(data)
 }
 
-pub fn list_some_things<T: Into<String>>(
+pub fn list_some_things<T: Display>(
     font_files: &[String],
     lister: impl Fn(&str, &fontations::skrifa::FontRef) -> Option<Vec<T>>,
     headers: &[&str],
@@ -42,7 +42,7 @@ pub fn list_some_things<T: Into<String>>(
         if let Some(result) = lister(font, &fontref) {
             info.push(
                 std::iter::once(font.to_string())
-                    .chain(result.into_iter().map(Into::into))
+                    .chain(result.into_iter().map(|x| x.to_string()))
                     .collect::<Vec<String>>(),
             );
         } // list should do its own error reporting

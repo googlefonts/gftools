@@ -16,6 +16,10 @@ name = "gftools-list-italicangle"
 path = "src/bin/list_italicangle.rs"
 
 [[bin]]
+name = "gftools-list-panose"
+path = "src/bin/list_panose.rs"
+
+[[bin]]
 name = "gftools-list-weightclass"
 path = "src/bin/list_weightclass.rs"
 
