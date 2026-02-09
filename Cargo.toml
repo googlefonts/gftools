@@ -35,6 +35,10 @@ path = "src/bin/rangify.rs"
 name = "gftools-check-bbox"
 path = "src/bin/check_bbox.rs"
 
+[[bin]]
+name = "gftools-what-subsets"
+path = "src/bin/what_subsets.rs"
+
 [dependencies]
 reqwest = { version = "0.12.15", features = ["blocking", "json"] }
 serde = { version = "1.0.219", features = ["derive"] }
@@ -53,6 +57,7 @@ fontspector-hotfix = { version = "0.1.0", path = "../../hacks/typography/fontspe
 env_logger = "0.11.8"
 tabled = "0.20.0"
 unicode_names2 = "2.0.0"
+google-fonts-subsets = "0.202505.7"
 
 
 [dev-dependencies]
