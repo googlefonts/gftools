@@ -17,7 +17,7 @@ fn main() {
         &args.fonts,
         |filename, fontref| {
             if let Ok(os2_table) = fontref.os2() {
-                Some(vec![os2_table.us_weight_class().to_string()])
+                Some(vec![os2_table.us_weight_class()])
             } else {
                 log::warn!("{}: No 'post' table found, skipping", filename);
                 None
