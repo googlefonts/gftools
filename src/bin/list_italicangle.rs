@@ -18,7 +18,7 @@ fn main() {
         &args.fonts,
         |filename, fontref| {
             if let Ok(post_table) = fontref.post() {
-                Some(vec![post_table.italic_angle().to_f32().to_string()])
+                Some(vec![post_table.italic_angle().to_f32()])
             } else {
                 log::warn!("{}: No 'post' table found, skipping", filename);
                 None
