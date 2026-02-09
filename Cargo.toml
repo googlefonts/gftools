@@ -12,6 +12,10 @@ name = "gftools-fix-font"
 path = "src/bin/fix_font.rs"
 
 [[bin]]
+name = "gftools-fix-hinting"
+path = "src/bin/fix_hinting.rs"
+
+[[bin]]
 name = "gftools-fix-weightclass"
 path = "src/bin/fix_weightclass.rs"
 
