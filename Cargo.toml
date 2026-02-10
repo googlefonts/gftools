@@ -69,7 +69,7 @@ clap = { version = "4.5.45", features = ["derive"] }
 fontations = "0.3.0"
 gf-metadata = "0.2.0"
 protobuf = "3.7.2"
-fontspector-hotfix = { version = "0.1.0", path = "../../hacks/typography/fontspector/fontspector-hotfix" }
+fontspector-hotfix = { version = "0.1.0", git = "https://github.com/fonttools/fontspector" }
 env_logger = "0.11.8"
 tabled = "0.20.0"
 unicode_names2 = "2.0.0"

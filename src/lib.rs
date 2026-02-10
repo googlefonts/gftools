@@ -4,7 +4,9 @@ mod utils;
 
 use std::{fmt::Display, path::Path};
 
-pub use error::GftoolsError; // Have to make this pub so our scripts can use it
+pub use error::GftoolsError;
+use fontspector_hotfix::{Testable, apply_hotfixes};
+// Have to make this pub so our scripts can use it
 #[allow(unused_imports)]
 pub(crate) use gf_metadata::DesignerInfoProto;
 pub(crate) use gf_metadata::{AxisProto, FamilyProto};
@@ -62,4 +64,54 @@ pub fn list_some_things<T: Display>(
         table.with(Style::sharp());
         println!("{}", table);
     }
+}
+
+pub fn fix_font(
+    font_path: &str,
+    output_path: &str,
+    include_source_fixes: bool,
+) -> Result<(), GftoolsError> {
+    // Load font and wrap in a Testable
+    let mut font = Testable::new(font_path).expect("Failed to load font");
+    let mut check_ids = vec![
+        // fix license strings
+        // "name/license",
+        // "name/license_url",
+        // Fix hinted font
+        "integer_ppem_if_hinted",
+        // Fix unhinted font
+        "googlefonts/gasp",
+        // Fix no ps anme
+        "googlefonts/metadata/valid_nameid25",
+        // Fix COLR font
+        "googlefonts/color_fonts",
+        "empty_glyph_on_gid1_for_colrv0",
+        // fix_hhea_caret_slope_run
+        "opentype/caret_slope",
+    ];
+    if include_source_fixes {
+        check_ids.extend([
+            // remove tables
+            "unwanted_tables",
+            // fix nametable,
+            "googlefonts/font_names",
+            // fix FS type
+            "googlefonts/fstype",
+            // fix FS selection
+            "googlefonts/use_typo_metrics",
+            "opentype/fsselection",
+            // Fix mac style
+            "opentype/mac_style",
+            // fix weight class
+            "googlefonts/weightclass",
+            // fix italic angle
+            "opentype/italic_angle",
+        ]);
+    }
+    let check_ids: Vec<String> = check_ids.into_iter().map(String::from).collect();
+    apply_hotfixes(&mut font, &check_ids)
+        .map_err(|_| GftoolsError::Misc("Failed to apply hotfixes".to_string()))?;
+    // Save the fixed font
+    std::fs::write(output_path, &font.contents)?;
+    Ok(())
 }
