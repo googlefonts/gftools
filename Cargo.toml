@@ -8,6 +8,10 @@ name = "gftools-add-axis"
 path = "src/bin/add_axis.rs"
 
 [[bin]]
+name = "gftools-fix-fstype"
+path = "src/bin/fix_fstype.rs"
+
+[[bin]]
 name = "gftools-fix-font"
 path = "src/bin/fix_font.rs"
 
