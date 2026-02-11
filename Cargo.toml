@@ -36,6 +36,10 @@ name = "gftools-list-panose"
 path = "src/bin/list_panose.rs"
 
 [[bin]]
+name = "gftools-list-vendorid"
+path = "src/bin/list_vendorid.rs"
+
+[[bin]]
 name = "gftools-list-weightclass"
 path = "src/bin/list_weightclass.rs"
 
@@ -81,7 +85,7 @@ fontspector-hotfix = { version = "0.1.0", git = "https://github.com/fonttools/fo
 env_logger = "0.11.8"
 tabled = "0.20.0"
 unicode_names2 = "2.0.0"
-google-fonts-subsets = "0.202505.7"
+google-fonts-subsets = "0.202602.1"
 
 
 [dev-dependencies]
