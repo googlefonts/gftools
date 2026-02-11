@@ -52,6 +52,10 @@ name = "gftools-check-bbox"
 path = "src/bin/check_bbox.rs"
 
 [[bin]]
+name = "gftools-ttf2cp"
+path = "src/bin/ttf2cp.rs"
+
+[[bin]]
 name = "gftools-what-subsets"
 path = "src/bin/what_subsets.rs"
 
