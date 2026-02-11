@@ -15,6 +15,11 @@ path = "src/bin/fix_fstype.rs"
 name = "gftools-fix-font"
 path = "src/bin/fix_font.rs"
 
+
+[[bin]]
+name = "gftools-fix-gasp"
+path = "src/bin/fix_gasp.rs"
+
 [[bin]]
 name = "gftools-fix-hinting"
 path = "src/bin/fix_hinting.rs"
