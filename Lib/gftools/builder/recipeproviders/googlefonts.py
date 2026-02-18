@@ -376,7 +376,8 @@ class GFBuilder(RecipeProviderBase):
                 source, suffix=suffix, italic_ds=italic_ds, roman=False
             )
         steps = (
-            [{"source": source.path}]
+            self.config.get("preCompile", [])
+            + [{"source": source.path}]
             + self._subset_steps(source, None)
             + [
                 {
@@ -459,11 +460,10 @@ class GFBuilder(RecipeProviderBase):
         suffix = self.config.get("filenameSuffix", "")
         target = self._static_filename(instance, suffix=suffix, extension=output)
 
-        steps = [
-            {"source": source.path},
-        ] + self._subset_steps(
-            source,
-            instance,
+        steps = (
+            self.config.get("preCompile", [])
+            + [{"source": source.path}]
+            + self._subset_steps(source, instance)
         )
         # We skip conversion to UFO if we're running fontc
         use_fontc = self.config.get("use_fontc", False)
