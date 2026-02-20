@@ -1,0 +1,11 @@
+sources:
+  - TestFamily.glyphs
+familyName: Test Family
+buildVariable: true
+splitItalic: true
+buildWebfont: False
+buildOTF: False
+buildTTF: False
+axisOrder:
+  - wght
+  - ital
