@@ -55,6 +55,14 @@ TEST_DIR = os.path.join(CWD, "..", "data", "test", "builder")
                 ),
             ],
         ),
+        # Testing VF split
+        (
+            os.path.join(TEST_DIR, "split_italic"),
+            [
+                os.path.join("variable", "TestFamily[wght].ttf"),
+                os.path.join("variable", "TestFamily-Italic[wght].ttf"),
+            ],
+        ),
     ],
 )
 def test_builder(fp, font_paths):
