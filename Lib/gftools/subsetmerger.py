@@ -255,9 +255,10 @@ def is_compatible(
 ) -> bool:
     input_userspace_location = input_descriptor.userspace_location
     my_userspace_location = descriptor.userspace_location
-    common_axis_tags = set(input_userspace_location.keys()).intersection(
-        set(my_userspace_location.keys())
-    )
+    input_axis_tags = set(input_userspace_location.keys())
+    donor_axis_tags = set(my_userspace_location.keys())
+    common_axis_tags = input_axis_tags.intersection(donor_axis_tags)
+    extraneous_donor_axis_tags = donor_axis_tags - input_axis_tags
     # Assume a source is good for this location unless proved otherwise.
     # This is useful for merging single-master donors into a multiple
     # master font.
@@ -268,7 +269,10 @@ def is_compatible(
                 f"{input_userspace_location[axis_tag]} != {my_userspace_location[axis_tag]}"
             )
             return False
-    return True
+    return all(
+        my_userspace_location[axis_tag] == descriptor.ds.getAxisByTag(axis_tag).default
+        for axis_tag in extraneous_donor_axis_tags
+    )
 
 
 class SubsetMerger:
