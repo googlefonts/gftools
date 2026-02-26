@@ -26,7 +26,7 @@ from ufomerge import merge_ufos
 
 from gftools.gfgithub import GitHubClient
 from gftools.util.styles import STYLE_NAMES
-from gftools.utils import download_file, open_ufo, parse_codepoint
+from gftools.utils import download_file, open_ufo, parse_codepoint, read_glyph_names
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -53,6 +53,8 @@ subsets_schema = Seq(
         {
             "from": Str() | Map({"repo": Str(), "path": Str()}),
             Optional("name"): Str(),
+            Optional("glyphNames"): Seq(Str()),
+            Optional("glyphNamesFile"): Str() | Seq(Str()),
             Optional("ranges"): Seq(
                 Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})
             ),
@@ -68,7 +70,34 @@ subsets_schema = Seq(
 )
 
 
-def prepare_minimal_subsets(subsets):
+def prepare_minimal_subsets(subsets: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    By-unicode subsets and by-name subsets are not reducible/mergeable easily,
+    so instead we look for contiguous runs of by-unicode subsets and minimise
+    them, and leave by-name subsets as-is
+    """
+
+    final = []
+    slice_start = 0
+    for index, subset in enumerate(subsets):
+        if "name" in subset or "ranges" in subset:
+            slice_start = index
+        else:
+            assert "glyphNames" in subset or "glyphNamesFile" in subset, (
+                f"addSubset: glyph set not specified for subset {index + 1}"
+            )
+            final.extend(prepare_minimal_by_unicode_subsets(subsets[slice_start:index]))
+            final.append(subset)
+            slice_start += 1
+    # If the loop ended and the final item wasn't a by-name subset
+    if not slice_start >= len(subsets):
+        final.extend(prepare_minimal_by_unicode_subsets(subsets[slice_start:]))
+    return final
+
+
+def prepare_minimal_by_unicode_subsets(
+    subsets: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     # Turn a list of subsets into a minimal set of merges by gathering all
     # codepoints with the same "donor" font and options. This allows the
     # user to specify multiple subsets from the same font, and they will
@@ -127,15 +156,7 @@ def prepare_minimal_subsets(subsets):
                     continue
                 exclude_glyphs.add(glyph_name)
         if exclude_file := subset.get("exclude_glyphs_file"):
-            for line in Path(exclude_file).read_text().splitlines():
-                line = line.strip()
-                if line != "" and not line.startswith(("#", "//")):
-                    continue
-                # Remove in-line comments
-                line = line.split("#", 1)[0]
-                line = line.split("//", 1)[0]
-                line = line.rstrip()
-                exclude_glyphs.add(line)
+            exclude_glyphs.update(read_glyph_names(Path(exclude_file)))
 
         # Update incl_excl_by_donor
         key = (
@@ -280,7 +301,7 @@ class SubsetMerger:
         self,
         input_ds,
         output_ds,
-        subsets,
+        subsets: list[dict[str, Any]],
         googlefonts=False,
         cache="../subset-files",
         json=False,
@@ -341,7 +362,9 @@ class SubsetMerger:
 
         input_ds.write(self.output)
 
-    def add_subset(self, input_descriptor: InputDescriptor, subset) -> bool:
+    def add_subset(
+        self, input_descriptor: InputDescriptor, subset: dict[str, Any]
+    ) -> bool:
         # First, we find a donor UFO that matches the location of the
         # UFO to merge.
         donor_ufo = self.obtain_upstream(subset["from"], input_descriptor)
@@ -352,12 +375,17 @@ class SubsetMerger:
             existing_handling = "replace"
         layout_handling = subset.get("layoutHandling", "subset")
         kern_handling = subset.get("kernHandling", "conservative")
+        glyphs_by_name = subset.get("glyphNames", [])
+        if (glyph_list_path := subset.get("glyphNamesFile")) is not None:
+            glyphs_by_name.extend(read_glyph_names(Path(glyph_list_path)))
+
         logger.info(
             f"Merge {subset['from']} from {donor_ufo} into {input_descriptor.filename} with {existing_handling} and {layout_handling}"
         )
         merge_ufos(
             input_descriptor.ufo,
             donor_ufo,
+            glyphs=glyphs_by_name,
             exclude_glyphs=subset.get("exclude_glyphs", []),
             codepoints=subset.get("unicodes", None),
             existing_handling=existing_handling,

@@ -699,3 +699,17 @@ def parse_codepoint(codepoint: str) -> int:
         return int(codepoint[2:], 16)
     else:
         return int(codepoint)
+
+
+def read_glyph_names(path: Path) -> list[str]:
+    names = []
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if line == "" or line.startswith(("#", "//")):
+            continue
+        # Remove in-line comments
+        line = line.split("#", 1)[0]
+        line = line.split("//", 1)[0]
+        line = line.rstrip()
+        names.append(line)
+    return names
