@@ -276,6 +276,18 @@ class GFBuilder:
                         parents = list(self.graph.predecessors(current))
                         previous_edge = self.graph[parents[0]][current]
                         step.implicit = [current]
+                        # Check if postprocess args reference other recipe
+                        # targets (cross-target dependencies). E.g. gen-stat
+                        # may need both the upright and italic variants built.
+                        args_str = step.original.get("args", "")
+                        for recipe_target in self.recipe:
+                            if (
+                                recipe_target in args_str
+                                and recipe_target != target.path
+                            ):
+                                dep_file = self.named_files.get(recipe_target)
+                                if dep_file and dep_file not in step.implicit:
+                                    step.implicit.append(dep_file)
                         self.graph.add_edge(current, binary, operation=step)
                     else:
                         step.set_source(previous)
