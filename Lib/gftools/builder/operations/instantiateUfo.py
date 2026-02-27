@@ -7,7 +7,7 @@ import os
 import gftools.builder
 from functools import cached_property
 from glyphsLib.builder import UFOBuilder
-from ninja.ninja_syntax import Writer, escape_path
+from ninja.ninja_syntax import Writer, escape_path, escape
 from fontTools.designspaceLib import InstanceDescriptor
 
 
@@ -65,7 +65,7 @@ class InstantiateUFO(FontmakeOperationBase):
             vars["args"] += f"--instance-dir {escape_path(str(self.instance_dir))}"
         else:
             vars["args"] += f"--output-dir {escape_path(str(self.instance_dir))}"
-        vars["instance_name"] = self.original["instance_name"]
+        vars["instance_name"] = escape(self.original["instance_name"])
         if self.original.get("glyphData") is not None:
             for glyphData in self.original["glyphData"]:
                 vars["args"] += f" --glyph-data {escape_path(glyphData)}"
