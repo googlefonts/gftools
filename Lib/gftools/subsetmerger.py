@@ -3,12 +3,11 @@ import os
 import re
 import shutil
 import typing
-from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Union
+from typing import Any, Literal, NamedTuple, Union
 from zipfile import ZipFile
 
 import ufoLib2
@@ -26,7 +25,7 @@ from ufomerge import merge_ufos
 
 from gftools.gfgithub import GitHubClient
 from gftools.util.styles import STYLE_NAMES
-from gftools.utils import download_file, open_ufo, parse_codepoint
+from gftools.utils import download_file, open_ufo, parse_codepoint, read_glyph_names
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -53,6 +52,8 @@ subsets_schema = Seq(
         {
             "from": Str() | Map({"repo": Str(), "path": Str()}),
             Optional("name"): Str(),
+            Optional("glyphNames"): Seq(Str()),
+            Optional("glyphNamesFile"): Str() | Seq(Str()),
             Optional("ranges"): Seq(
                 Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})
             ),
@@ -68,20 +69,25 @@ subsets_schema = Seq(
 )
 
 
-def prepare_minimal_subsets(subsets):
+def prepare_minimal_subsets(
+    subsets: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    class DonorKey(NamedTuple):
+        source: str
+        layout_handling: Literal["subset", "closure", "ignore"] | None
+        force: bool | None
+
+    @dataclass
+    class MergeSet:
+        unicodes: set[int] = field(default_factory=set)
+        names: set[str] = field(default_factory=set)
+        excluded_names: set[str] = field(default_factory=set)
+
     # Turn a list of subsets into a minimal set of merges by gathering all
     # codepoints with the same "donor" font and options. This allows the
     # user to specify multiple subsets from the same font, and they will
     # be merged into a single merge operation.
-    incl_excl_by_donor: dict[
-        tuple[str, str, str],
-        tuple[
-            # Unicodes to include
-            set[int],
-            # Glyph names to exclude
-            set[str],
-        ],
-    ] = defaultdict(lambda: (set(), set()))
+    incl_excl_by_donor: dict[DonorKey, MergeSet] = {}
     for subset in subsets:
         unicodes = []
         # Resolved named subsets to a set of Unicode using glyphsets data
@@ -93,6 +99,16 @@ def prepare_minimal_subsets(subsets):
             for r in subset["ranges"]:
                 for cp in range(r["start"], r["end"] + 1):
                     unicodes.append(cp)
+
+        include_glyphs = set()
+        if include_inline := subset.get("glyphNames"):
+            for name in include_inline:
+                name = name.strip()
+                if name == "":
+                    continue
+                include_glyphs.add(name)
+        if include_file := subset.get("glyphNamesFile"):
+            include_glyphs.update(read_glyph_names(Path(include_file)))
 
         # Parse in manual exclusions
         excluded_codepoints = set()
@@ -127,47 +143,38 @@ def prepare_minimal_subsets(subsets):
                     continue
                 exclude_glyphs.add(glyph_name)
         if exclude_file := subset.get("exclude_glyphs_file"):
-            for line in Path(exclude_file).read_text().splitlines():
-                line = line.strip()
-                if line != "" and not line.startswith(("#", "//")):
-                    continue
-                # Remove in-line comments
-                line = line.split("#", 1)[0]
-                line = line.split("//", 1)[0]
-                line = line.rstrip()
-                exclude_glyphs.add(line)
+            exclude_glyphs.update(read_glyph_names(Path(exclude_file)))
 
         # Update incl_excl_by_donor
-        key = (
+        key = DonorKey(
             yaml.dump(subset["from"]),
             subset.get("layoutHandling"),
             subset.get("force"),
         )
-        unicodes_incl, glyph_names_excl = incl_excl_by_donor[key]
-        unicodes_incl |= set(unicodes)
-        glyph_names_excl |= exclude_glyphs
+        candidates = incl_excl_by_donor.setdefault(key, MergeSet())
+        candidates.unicodes.update(unicodes)
+        candidates.names.update(include_glyphs)
+        candidates.excluded_names |= exclude_glyphs
+        candidates.names -= candidates.excluded_names
 
     # Now rebuild the subset dictionary, but this time with the codepoints
     # amalgamated into minimal sets.
-    newsubsets = []
-    for (donor, layouthandling, force), (
-        unicodes_incl,
-        glyph_names_excl,
-    ) in incl_excl_by_donor.items():
-        newsubsets.append(
-            {
-                "from": yaml.safe_load(donor),
-                "unicodes": list(unicodes_incl),
-                "exclude_glyphs": list(glyph_names_excl),
-            }
-        )
-        if not unicodes_incl:
-            del newsubsets[-1]["unicodes"]
-        if layouthandling:
-            newsubsets[-1]["layoutHandling"] = layouthandling
+    new_subsets = []
+    for (donor, layout_handling, force), merge_set in incl_excl_by_donor.items():
+        entry = {
+            "from": yaml.safe_load(donor),
+            "exclude_glyphs": list(merge_set.excluded_names),
+        }
+        if merge_set.unicodes:
+            entry["unicodes"] = list(merge_set.unicodes)
+        if merge_set.names:
+            entry["glyphNames"] = list(merge_set.names)
+        if layout_handling:
+            entry["layoutHandling"] = layout_handling
         if force:
-            newsubsets[-1]["force"] = force
-    return newsubsets
+            entry["force"] = force
+        new_subsets.append(entry)
+    return new_subsets
 
 
 # This is all complete overkill, but it really helps to reason about the
@@ -280,7 +287,7 @@ class SubsetMerger:
         self,
         input_ds,
         output_ds,
-        subsets,
+        subsets: list[dict[str, Any]],
         googlefonts=False,
         cache="../subset-files",
         json=False,
@@ -341,7 +348,9 @@ class SubsetMerger:
 
         input_ds.write(self.output)
 
-    def add_subset(self, input_descriptor: InputDescriptor, subset) -> bool:
+    def add_subset(
+        self, input_descriptor: InputDescriptor, subset: dict[str, Any]
+    ) -> bool:
         # First, we find a donor UFO that matches the location of the
         # UFO to merge.
         donor_ufo = self.obtain_upstream(subset["from"], input_descriptor)
@@ -352,12 +361,17 @@ class SubsetMerger:
             existing_handling = "replace"
         layout_handling = subset.get("layoutHandling", "subset")
         kern_handling = subset.get("kernHandling", "conservative")
+
+        # Don't need to handle glyphNamesFile or exclude_{glyphs,codepoints}_file
+        # here as they're already processed by prepare_minimal_subsets
+
         logger.info(
             f"Merge {subset['from']} from {donor_ufo} into {input_descriptor.filename} with {existing_handling} and {layout_handling}"
         )
         merge_ufos(
             input_descriptor.ufo,
             donor_ufo,
+            glyphs=subset.get("glyphNames"),
             exclude_glyphs=subset.get("exclude_glyphs", []),
             codepoints=subset.get("unicodes", None),
             existing_handling=existing_handling,

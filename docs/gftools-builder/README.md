@@ -347,6 +347,8 @@ build process by leaving a `graph.png` file in the `sources` directory:
         - `ranges`: a list unicode codepoint range to include
             - `start`: the start of the range (as hex or decimal)
             - `end`: the end of the range (as hex or decimal)
+        - `glyphNames`: a list of glyph names to include
+        - `glyphNamesFile`: path to a file with glyph names to include, one per line (comments using `#` or `//` allowed)
         - `layoutHandling`: "subset", "closure" or "ignore" ([further reading](https://github.com/googlefonts/ufomerge/blob/bb9a82ff3039b8aa0cba58372158bd3c0e5cb770/Lib/ufomerge/__init__.py#L512-L521))
         - `force`: replace existing glyphs in your sources, instead of skipping them
         - `exclude_glyphs`: whitespace-delimited glyph names to exclude from merging
