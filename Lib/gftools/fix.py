@@ -878,11 +878,12 @@ def fix_no_varpsname(ttFont: TTFont) -> FixResult:
 
 
 def fix_font(
-    font,
-    include_source_fixes=False,
-    new_family_name=None,
-    fvar_instance_axis_dflts=None,
-):
+    font: TTFont,
+    include_source_fixes: bool = False,
+    new_family_name: str | None = None,
+    fvar_instance_axis_dflts: dict[str, float] | None = None,
+    overwrite_fvar_instances: bool = True,
+) -> TTFont:
     fixed_font = deepcopy(font)
     if new_family_name:
         rename_font(fixed_font, new_family_name)
@@ -919,7 +920,8 @@ def fix_font(
         if messages:
             log.info("\n".join(messages))
 
-    fix_fvar_instances(fixed_font, fvar_instance_axis_dflts)
+    if overwrite_fvar_instances:
+        fix_fvar_instances(fixed_font, fvar_instance_axis_dflts)
     return fixed_font
 
 

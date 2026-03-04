@@ -581,7 +581,7 @@ def read_proto(fp, schema):
     return data
 
 
-def parse_axis_dflts(string):
+def parse_axis_dflts(string: str) -> dict[str, float]:
     axes = string.split()
     res = {}
     for axis in axes:

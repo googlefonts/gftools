@@ -39,6 +39,12 @@ def main(args=None):
             "wdth=100 opsz=36"
         ),
     )
+    parser.add_argument(
+        "--skip-fvar-instances",
+        dest="overwrite_fvar_instances",
+        action="store_false",
+        help="don't re-write fvar instances",
+    )
     args = parser.parse_args(args)
 
     font = TTFont(args.font)
@@ -47,7 +53,13 @@ def main(args=None):
         axis_dflts = parse_axis_dflts(args.fvar_instance_axis_dflts)
     else:
         axis_dflts = None
-    font = fix_font(font, args.include_source_fixes, args.rename_family, axis_dflts)
+    font = fix_font(
+        font,
+        args.include_source_fixes,
+        args.rename_family,
+        axis_dflts,
+        args.overwrite_fvar_instances,
+    )
 
     if args.out:
         font.save(args.out)
