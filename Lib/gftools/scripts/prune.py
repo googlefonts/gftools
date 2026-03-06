@@ -4,9 +4,14 @@ gftools prune
 
 Remove unreachable glyphs/features from a font binary
 
-Usage:
+usage: gftools [-h] [-o OUT] font
 
-gftools prune font.ttf
+positional arguments:
+  font               path to font
+
+options:
+  -h, --help         show this help message and exit
+  -o OUT, --out OUT  output path for pruned font
 """
 
 import argparse
@@ -22,12 +27,12 @@ def main(args=None) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "font",
-        help="Path to font",
+        help="path to font",
     )
     parser.add_argument(
         "-o",
         "--out",
-        help="Output path for pruned font",
+        help="output path for pruned font",
     )
 
     args = parser.parse_args(args)
