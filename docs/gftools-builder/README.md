@@ -358,6 +358,7 @@ build process by leaving a `graph.png` file in the `sources` directory:
 - *buildVTT*: Uses `gftools-build-vtt` with the configuration file provided in `vttfile` to add VTT hinting to a font binary.
 - *remap*: Uses `gftools-remap-font` to alter a font binary's `cmap` table.
 - *paintcompiler*: Runs paintcompiler on a font to add a COLRv1 table.
+- *prune*: Uses `gftools-prune` to remove unreachable glyphs/features to reduce binary size.
 
 ### Switching sources
 
