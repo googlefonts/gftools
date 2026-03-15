@@ -143,5 +143,8 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("splitItalic"): Bool(),
         Optional("localMetadata"): Any(),
         Optional("includeSubsets"): subsets_schema,
+        Optional("buildUIVF"): Bool(),
+        Optional("instances"): Any(),
+        Optional("preCompile"): Seq(Any()),
     }
 )

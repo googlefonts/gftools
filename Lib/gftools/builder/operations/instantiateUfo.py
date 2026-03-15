@@ -8,6 +8,7 @@ import gftools.builder
 from functools import cached_property
 from glyphsLib.builder import UFOBuilder
 from ninja.ninja_syntax import Writer, escape_path
+from shlex import quote as shell_quote
 from fontTools.designspaceLib import InstanceDescriptor
 
 
@@ -62,13 +63,13 @@ class InstantiateUFO(FontmakeOperationBase):
         vars = super().variables
         vars["args"] += " --ufo-structure=json "
         if self.first_source.is_glyphs:
-            vars["args"] += f"--instance-dir {escape_path(str(self.instance_dir))}"
+            vars["args"] += f"--instance-dir {shell_quote(str(self.instance_dir))}"
         else:
-            vars["args"] += f"--output-dir {escape_path(str(self.instance_dir))}"
+            vars["args"] += f"--output-dir {shell_quote(str(self.instance_dir))}"
         vars["instance_name"] = self.original["instance_name"]
-        if self.original.get("glyphData") is not None:
+        if self.original.get("glyphData") is not None and self.first_source.is_glyphs:
             for glyphData in self.original["glyphData"]:
-                vars["args"] += f" --glyph-data {escape_path(glyphData)}"
+                vars["args"] += f" --glyph-data {shell_quote(glyphData)}"
         return vars
 
     def set_target(self, target: File):

@@ -237,7 +237,7 @@ class GFBuilder(RecipeProviderBase):
                 args += " --no-check-compatibility"
             if self.config.get("extraVariableFontmakeArgs") is not None:
                 args += " " + str(self.config["extraVariableFontmakeArgs"])
-            if source.is_glyphs:
+            if source.is_glyphs and not self.config.get("includeSubsets"):
                 for gd in self.config.get("glyphData", []):
                     args += " --glyph-data " + gd
         else:
