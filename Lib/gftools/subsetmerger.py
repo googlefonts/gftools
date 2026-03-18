@@ -9,10 +9,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Literal, NamedTuple, Union
 from zipfile import ZipFile
+from filelock import FileLock
 
 import ufoLib2
 import yaml
-from filelock import FileLock
 from fontmake.font_project import FontProject
 from fontTools.designspaceLib import (
     DesignSpaceDocument,
@@ -395,11 +395,6 @@ class SubsetMerger:
                 font_name = os.path.basename(upstream)
             else:
                 raise ValueError("Unknown subsetting font %s" % upstream)
-            lockfile_path = os.path.join(
-                upstream,
-                os.path.pardir,
-                f".gftools_subsetmerger_{upstream.replace('/', '_')}.lock",
-            )
         else:
             if isinstance(upstream, str):
                 repo, path = SUBSET_SOURCES[upstream]
@@ -422,16 +417,16 @@ class SubsetMerger:
                 path = upstream["path"]
                 font_name = f"{repo}/{ref}/{path}"
             path = os.path.join(self.cache_dir, repo, ref, path)
+            
             lockfile_path = os.path.join(
                 self.cache_dir,
                 f".gftools_subsetmerger_{repo.replace('/', '_')}_{ref.replace('/', '_')}.lock",
             )
-
-        with FileLock(lockfile_path):
-            if os.path.exists(path):
-                logger.info("Subset files present on disk, skipping download")
-            else:
-                self.download_for_subsetting(repo, ref)
+            with FileLock(lockfile_path):
+                if os.path.exists(path):
+                    logger.info("Subset files present on disk, skipping download")
+                else:
+                    self.download_for_subsetting(repo, ref)
 
         # We're doing a UFO-UFO merge, so Glyphs files will need to be converted
         if path.endswith((".glyphs", ".glyphspackage")):
