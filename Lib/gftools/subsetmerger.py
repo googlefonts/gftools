@@ -417,7 +417,7 @@ class SubsetMerger:
                 path = upstream["path"]
                 font_name = f"{repo}/{ref}/{path}"
             path = os.path.join(self.cache_dir, repo, ref, path)
-            
+
             lockfile_path = os.path.join(
                 self.cache_dir,
                 f".gftools_subsetmerger_{repo.replace('/', '_')}_{ref.replace('/', '_')}.lock",
