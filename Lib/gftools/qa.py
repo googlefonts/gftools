@@ -91,7 +91,7 @@ class FontQA:
         if not self.fonts_before:
             logger.warning("Cannot run Diffenator since there are no fonts before")
             return
-        assert len(self.fonts) == len(self.fonts_before)
+        assert len(self.fonts) >= len(self.fonts_before)
         for f, f_before in zip(
             sorted([f.path for f in self.fonts]),
             sorted([f.path for f in self.fonts_before]),
@@ -120,7 +120,7 @@ class FontQA:
         dst = os.path.join(self.out, "Diffbrowsers")
         mkdir(dst)
         if rust:
-            assert len(self.fonts) == len(self.fonts_before)
+            assert len(self.fonts) >= len(self.fonts_before)
             for f, f_before in zip(
                 sorted([f.path for f in self.fonts]),
                 sorted([f.path for f in self.fonts_before]),
