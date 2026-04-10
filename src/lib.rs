@@ -1,11 +1,13 @@
 mod error;
 // mod push;
+mod names;
 mod utils;
 
 use std::{fmt::Display, path::Path};
 
 pub use error::GftoolsError;
 use fontspector_hotfix::{Testable, apply_hotfixes};
+pub use names::{AxisLimits, AxisTriple, update_name_table};
 // Have to make this pub so our scripts can use it
 #[allow(unused_imports)]
 pub(crate) use gf_metadata::DesignerInfoProto;

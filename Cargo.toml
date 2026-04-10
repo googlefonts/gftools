@@ -95,7 +95,7 @@ env_logger = "0.11.8"
 tabled = "0.20.0"
 unicode_names2 = "2.0.0"
 google-fonts-subsets = "0.202602.1"
-
+norad = "0.18.0"
 
 [dev-dependencies]
 expanduser = "1.2.2"
