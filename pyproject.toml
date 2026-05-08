@@ -53,6 +53,9 @@ dependencies = [
   'fontmake[json]>=3.3.0',
   'PyYAML',
   'ttfautohint-py',
+  # Not imported directly, but fontTools loads it lazily for woff2 compression
+  # (invoked by gftools-builder via `fonttools ttLib.woff2 compress`).
+  'brotli',
   'jinja2',
   'fontFeatures',
   'vharfbuzz',
