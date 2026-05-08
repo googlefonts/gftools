@@ -51,19 +51,12 @@ dependencies = [
   'pygit2>=1.16.0',
   'strictyaml',
   'fontmake[json]>=3.3.0',
-  'skia-pathops',
-  'statmake',
   'PyYAML',
-  'babelfont',
   'ttfautohint-py',
-  'brotli',
   'jinja2',
   'fontFeatures',
   'vharfbuzz',
-  'bumpfontversion',
   'nanoemoji>=0.15.0',
-  'font-v',
-  'afdko',
   'beautifulsoup4',
   'rich',
   'packaging',
@@ -83,7 +76,7 @@ dependencies = [
 [project.optional-dependencies]
 qa = [
   "fontbakery[googlefonts]",
-  "diffenator2>=0.2.0",
+  "diffenator2>=0.5.0", # earlier versions cap unicodedata2<16 and import pkg_resources
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
 ]
 test = [
