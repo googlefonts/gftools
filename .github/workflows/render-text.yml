@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: |
           gftools render-text \
-            -o inconsolata.png \
+            -o inconsolata-${{ matrix.os }}.png \
             'data/test/Inconsolata[wdth,wght].ttf' \
             "The quick brown fox jumps over the lazy dog"
 
@@ -45,5 +45,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: render-text-output-${{ matrix.os }}
-          path: inconsolata.png
+          path: inconsolata-${{ matrix.os }}.png
           if-no-files-found: error
