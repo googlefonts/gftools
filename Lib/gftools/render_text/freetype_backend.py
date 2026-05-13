@@ -19,15 +19,12 @@ def render_row(
     text: str,
     ppem: int,
     variations: dict[str, float] | None = None,
+    *,
+    target_height: int,
+    baseline_y: int,
 ) -> Image.Image:
     glyph_infos, glyph_positions = _shape(font_path, text, ppem, variations)
     ft_face = _make_ft_face(font_path, ppem, variations)
-
-    metrics = ft_face.size
-    ascender_px = metrics.ascender // 64
-    descender_px = metrics.descender // 64
-    line_height = ascender_px - descender_px
-    baseline_y = ascender_px
 
     pen_x = 0
     glyphs: list[tuple[Image.Image, int, int]] = []
@@ -43,11 +40,10 @@ def render_row(
         pen_x += pos.x_advance // 64
 
     width = max(pen_x, 1) + 4
-    height = max(line_height, 1) + 4
-    canvas = Image.new("L", (width, height), 255)
+    canvas = Image.new("L", (width, target_height), 255)
     for glyph_img, x, y in glyphs:
         ink = Image.new("L", glyph_img.size, 0)
-        canvas.paste(ink, (x + 2, y + 2), mask=glyph_img)
+        canvas.paste(ink, (x + 2, y), mask=glyph_img)
     return canvas.convert("RGB")
 
 

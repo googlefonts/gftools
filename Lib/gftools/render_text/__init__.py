@@ -24,6 +24,9 @@ from PIL import Image, ImageDraw, ImageFont
 DEFAULT_PPEMS: tuple[int, ...] = (8, 10, 12, 14, 16, 20, 24, 36)
 ROW_PADDING = 6
 CANVAS_PADDING = 12
+# Per-row vertical padding above ascender and below descender. Shared by all
+# backends so row heights match exactly across platforms.
+ROW_VPAD = 2
 
 
 def default_backend() -> str:
@@ -124,10 +127,41 @@ def render_waterfall(
     """Render ``text`` from ``font_path`` at each ppem and stack vertically."""
     backend = backend or default_backend()
     render_row = _load_backend(backend)
-    rows = [render_row(font_path, text, ppem, variations) for ppem in ppems]
+    ascent_du, descent_du, upem = _font_line_metrics(font_path)
+    rows = []
+    for ppem in ppems:
+        ascent_px = int(round(ascent_du * ppem / upem))
+        descent_px = int(round(descent_du * ppem / upem))
+        target_h = ascent_px + descent_px + ROW_VPAD * 2
+        baseline_y = ascent_px + ROW_VPAD
+        rows.append(
+            render_row(
+                font_path,
+                text,
+                ppem,
+                variations,
+                target_height=target_h,
+                baseline_y=baseline_y,
+            )
+        )
     canvas = _compose_waterfall(rows)
     _annotate_platform(canvas, backend)
     return canvas
+
+
+def _font_line_metrics(font_path: Path) -> tuple[int, int, int]:
+    """Return ``(ascent_du, descent_du, upem)`` from OS/2 typo metrics.
+
+    All backends use this single source so row heights match across platforms.
+    Falls back to ``hhea`` for fonts without an OS/2 table.
+    """
+    with TTFont(font_path) as font:
+        upem = font["head"].unitsPerEm
+        os2 = font.get("OS/2")
+        if os2 is not None:
+            return os2.sTypoAscender, -os2.sTypoDescender, upem
+        hhea = font["hhea"]
+        return hhea.ascender, -hhea.descender, upem
 
 
 _BACKEND_DISPLAY = {

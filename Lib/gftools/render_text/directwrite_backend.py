@@ -46,6 +46,9 @@ def render_row(
     text: str,
     ppem: int,
     variations: dict[str, float] | None = None,
+    *,
+    target_height: int,
+    baseline_y: int,
 ) -> Image.Image:
     typeface = skia.Typeface.MakeFromFile(str(font_path))
     if typeface is None:
@@ -57,16 +60,10 @@ def render_row(
     font.setSubpixel(True)
 
     blob = skia.TextBlob.MakeFromString(text, font)
-    metrics = font.getMetrics()
-    ascent = -metrics.fAscent
-    descent = metrics.fDescent
     bounds = blob.bounds()
-
     width = max(int(bounds.width()) + PADDING * 2, 1)
-    height = max(int(ascent + descent) + PADDING, 1)
-    baseline_y = int(ascent) + PADDING // 2
 
-    surface = skia.Surface(width, height)
+    surface = skia.Surface(width, target_height)
     with surface as canvas:
         canvas.clear(skia.ColorWHITE)
         paint = skia.Paint()
@@ -75,12 +72,12 @@ def render_row(
         canvas.drawTextBlob(blob, PADDING, baseline_y, paint)
 
     info = skia.ImageInfo.Make(
-        width, height, skia.kRGBA_8888_ColorType, skia.kUnpremul_AlphaType
+        width, target_height, skia.kRGBA_8888_ColorType, skia.kUnpremul_AlphaType
     )
-    buffer = bytearray(width * height * 4)
+    buffer = bytearray(width * target_height * 4)
     if not surface.readPixels(info, buffer, width * 4, 0, 0):
         raise RuntimeError("Skia surface.readPixels failed")
-    return Image.frombytes("RGBA", (width, height), bytes(buffer)).convert("RGB")
+    return Image.frombytes("RGBA", (width, target_height), bytes(buffer)).convert("RGB")
 
 
 def _apply_variations(typeface, variations: dict[str, float]):

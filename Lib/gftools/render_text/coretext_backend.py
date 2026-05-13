@@ -23,24 +23,27 @@ def render_row(
     text: str,
     ppem: int,
     variations: dict[str, float] | None = None,
+    *,
+    target_height: int,
+    baseline_y: int,
 ) -> Image.Image:
     ct_font = _make_ct_font(font_path, ppem, variations)
     line = _make_line(ct_font, text)
 
-    width_d, ascent, descent, _leading = _measure(line)
+    width_d, _ascent, _descent, _leading = _measure(line)
     width = max(int(width_d) + PADDING * 2, 1)
-    height = max(int(ascent + descent) + PADDING * 2, 1)
-    baseline_y = descent + PADDING
+    # CG's drawing coords are bottom-left origin; convert baseline-from-top.
+    baseline_y_cg = target_height - baseline_y
 
-    ctx = _gray_bitmap_context(width, height)
+    ctx = _gray_bitmap_context(width, target_height)
     Quartz.CGContextSetGrayFillColor(ctx, 1.0, 1.0)
-    Quartz.CGContextFillRect(ctx, ((0, 0), (width, height)))
+    Quartz.CGContextFillRect(ctx, ((0, 0), (width, target_height)))
     Quartz.CGContextSetGrayFillColor(ctx, 0.0, 1.0)
-    Quartz.CGContextSetTextPosition(ctx, PADDING, baseline_y)
+    Quartz.CGContextSetTextPosition(ctx, PADDING, baseline_y_cg)
     CoreText.CTLineDraw(line, ctx)
 
-    pixels = Quartz.CGBitmapContextGetData(ctx).as_buffer(width * height)
-    img = Image.frombytes("L", (width, height), bytes(pixels))
+    pixels = Quartz.CGBitmapContextGetData(ctx).as_buffer(width * target_height)
+    img = Image.frombytes("L", (width, target_height), bytes(pixels))
     return img.convert("RGB")
 
 
