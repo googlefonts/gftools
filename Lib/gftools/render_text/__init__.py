@@ -11,13 +11,14 @@ See ``docs/gftools-render-text/spec.md`` for the design spec.
 
 from __future__ import annotations
 
+import platform
 import re
 import sys
 from pathlib import Path
 from typing import Iterable, Iterator
 
 from fontTools.ttLib import TTFont
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 
 DEFAULT_PPEMS: tuple[int, ...] = (8, 10, 12, 14, 16, 20, 24, 36)
@@ -124,7 +125,27 @@ def render_waterfall(
     backend = backend or default_backend()
     render_row = _load_backend(backend)
     rows = [render_row(font_path, text, ppem, variations) for ppem in ppems]
-    return _compose_waterfall(rows)
+    canvas = _compose_waterfall(rows)
+    _annotate_platform(canvas, backend)
+    return canvas
+
+
+_BACKEND_DISPLAY = {
+    "coretext": "CoreText",
+    "directwrite": "DirectWrite",
+    "freetype": "FreeType",
+}
+
+
+def _annotate_platform(canvas: Image.Image, backend: str) -> None:
+    label = f"{platform.system()} / {_BACKEND_DISPLAY.get(backend, backend)}"
+    font = ImageFont.load_default(size=12)
+    draw = ImageDraw.Draw(canvas)
+    bbox = draw.textbbox((0, 0), label, font=font)
+    text_height = bbox[3] - bbox[1]
+    x = CANVAS_PADDING // 2
+    y = canvas.height - text_height - CANVAS_PADDING // 2
+    draw.text((x, y), label, fill=(128, 128, 128), font=font)
 
 
 def _load_backend(name: str):
