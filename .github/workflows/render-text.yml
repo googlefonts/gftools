@@ -1,0 +1,48 @@
+name: Render Text
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Lib/gftools/scripts/render_text.py"
+      - "Lib/gftools/render_text/**"
+      - ".github/workflows/render-text.yml"
+
+jobs:
+  render:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Cairo (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev
+
+      - name: Install gftools
+        run: pip install -e .
+
+      - name: Render Inconsolata waterfall
+        shell: bash
+        run: |
+          gftools render-text \
+            'data/test/Inconsolata[wdth,wght].ttf' \
+            "The quick brown fox jumps over the lazy dog"
+
+      - name: Upload rendered PNG
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-text-output-${{ matrix.os }}
+          path: "data/test/Inconsolata[wdth,wght].png"
+          if-no-files-found: error

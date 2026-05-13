@@ -59,6 +59,10 @@ dependencies = [
   'jinja2',
   'fontFeatures',
   'vharfbuzz',
+  'freetype-py',
+  'pyobjc-framework-CoreText; sys_platform == "darwin"',
+  'pyobjc-framework-Quartz; sys_platform == "darwin"',
+  'skia-python; sys_platform == "win32"',
   'nanoemoji>=0.15.0',
   'beautifulsoup4',
   'rich',
@@ -151,6 +155,7 @@ gftools-push-stats = "gftools.scripts.push_stats:main"
 gftools-push-status = "gftools.scripts.push_status:main"
 gftools-qa = "gftools.scripts.qa:main"
 gftools-rangify = "gftools.scripts.rangify:main"
+gftools-render-text = "gftools.scripts.render_text:main"
 gftools-rename-font = "gftools.scripts.rename_font:main"
 gftools-rename-glyphs = "gftools.scripts.rename_glyphs:main"
 gftools-remap-font = "gftools.scripts.remap_font:main"
