@@ -131,9 +131,29 @@ Output directory. Default: `<after_stem>_diff/` next to the after font.
 
 Variation location applied to **both** fonts (same axis values for before
 and after, so the diff isolates the font change, not the variation change).
-Same format as the `proof` subcommand.
+Same format as the `proof` subcommand. Mutually exclusive with `--all`.
 
-`--all` is **not** supported with `diff` in v1.
+#### `--all`
+
+Produce a diff bundle per fvar instance of the **after** font. The four
+files for each instance land in a subdirectory of the output dir named
+after the sanitised subfamily name:
+
+```
+gftools render-text diff Roboto-old.ttf Roboto-new.ttf "..." --all
+# Produces:
+#   Roboto-new_diff/Regular/{before,after,diff}.png + anim.gif
+#   Roboto-new_diff/Bold/{before,after,diff}.png    + anim.gif
+#   Roboto-new_diff/SemiBoldCondensed/...
+#   ...
+```
+
+The axis location of each after-font instance is applied to **both** fonts
+(so the before font is sampled at the same point in its variation space,
+even if its named-instance set doesn't include that exact name). If the
+after font is **static**, prints a stderr warning ("font is static —
+rendering default style only") and falls back to a single bundle at the
+top level. Mutually exclusive with `--variations`.
 
 ## Shared flags
 
@@ -206,5 +226,4 @@ Without the `[qa]` extra, invoking `gftools render-text` raises a
 - Multi-line text wrapping.
 - PDF or SVG output.
 - A `--shaper` override.
-- `--all` combined with `diff`.
 - Native DirectWrite shaping (uses Skia-Python's default HarfBuzz path).

@@ -38,6 +38,7 @@ from gftools.render_text import (
     output_dir_for_diff,
     output_path_for,
     output_path_for_instance,
+    output_subdir_for_instance,
     pad_to_match,
     parse_variations,
     render_waterfall,
@@ -93,9 +94,15 @@ def main(args=None):
         "--output",
         help="Output directory. Default: <after_stem>_diff/ next to the after font.",
     )
-    diff.add_argument(
+    diff_group = diff.add_mutually_exclusive_group()
+    diff_group.add_argument(
         "--variations",
         help='Variation location applied to both fonts, e.g. "wght=400".',
+    )
+    diff_group.add_argument(
+        "--all",
+        action="store_true",
+        help="Produce a diff bundle per fvar instance of the after font.",
     )
     diff.add_argument(
         "--backend",
@@ -144,19 +151,45 @@ def _render_all(font: Path, text: str, output: str | None, backend: str) -> None
 
 def _run_diff(opts) -> None:
     backend = opts.backend or default_backend()
-    variations = parse_variations(opts.variations) if opts.variations else None
+    out_dir = output_dir_for_diff(opts.after, output_dir=opts.output)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
+    if opts.all and not is_variable(opts.after):
+        print(
+            f"warning: {opts.after} is a static font — rendering default style only.",
+            file=sys.stderr,
+        )
+
+    if opts.all and is_variable(opts.after):
+        for instance_name, location in iter_fvar_instances(opts.after):
+            subdir = output_subdir_for_instance(out_dir, instance_name)
+            subdir.mkdir(parents=True, exist_ok=True)
+            _emit_diff_bundle(
+                opts.before, opts.after, opts.text, location, backend, subdir
+            )
+    else:
+        variations = parse_variations(opts.variations) if opts.variations else None
+        _emit_diff_bundle(
+            opts.before, opts.after, opts.text, variations, backend, out_dir
+        )
+
+
+def _emit_diff_bundle(
+    before_path: Path,
+    after_path: Path,
+    text: str,
+    variations: dict | None,
+    backend: str,
+    out_dir: Path,
+) -> None:
     before_img = render_waterfall(
-        opts.before, opts.text, variations=variations, backend=backend
+        before_path, text, variations=variations, backend=backend
     )
     after_img = render_waterfall(
-        opts.after, opts.text, variations=variations, backend=backend
+        after_path, text, variations=variations, backend=backend
     )
     before_pad, after_pad = pad_to_match([before_img, after_img])
     diff_img = diff_image(before_pad, after_pad)
-
-    out_dir = output_dir_for_diff(opts.after, output_dir=opts.output)
-    out_dir.mkdir(parents=True, exist_ok=True)
 
     before_pad.save(out_dir / "before.png")
     after_pad.save(out_dir / "after.png")

@@ -124,6 +124,11 @@ def output_path_for_instance(
     return output_dir / f"{font_path.stem}-{_filename_safe(instance_name)}.png"
 
 
+def output_subdir_for_instance(out_dir: Path, instance_name: str) -> Path:
+    """Return a per-instance subdirectory inside ``out_dir`` (used by ``diff --all``)."""
+    return out_dir / _filename_safe(instance_name)
+
+
 def render_waterfall(
     font_path: Path,
     text: str,
