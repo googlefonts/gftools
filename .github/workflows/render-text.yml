@@ -2,6 +2,15 @@ name: Render Text
 
 on:
   workflow_dispatch:
+    inputs:
+      font:
+        description: "Path to font file (relative to repo root)"
+        required: false
+        default: "data/test/Inconsolata[wdth,wght].ttf"
+      text:
+        description: "String to render"
+        required: false
+        default: "The quick brown fox jumps over the lazy dog"
   push:
     paths:
       - "Lib/gftools/scripts/render_text.py"
@@ -33,17 +42,20 @@ jobs:
       - name: Install gftools
         run: pip install -e '.[qa]'
 
-      - name: Render Inconsolata waterfall
+      - name: Render waterfall
         shell: bash
+        env:
+          FONT: ${{ github.event.inputs.font || 'data/test/Inconsolata[wdth,wght].ttf' }}
+          TEXT: ${{ github.event.inputs.text || 'The quick brown fox jumps over the lazy dog' }}
         run: |
           gftools render-text \
-            -o inconsolata-${{ matrix.os }}.png \
-            'data/test/Inconsolata[wdth,wght].ttf' \
-            "The quick brown fox jumps over the lazy dog"
+            -o "render-${{ matrix.os }}.png" \
+            "$FONT" \
+            "$TEXT"
 
       - name: Upload rendered PNG
         uses: actions/upload-artifact@v7
         with:
           name: render-text-output-${{ matrix.os }}
-          path: inconsolata-${{ matrix.os }}.png
+          path: render-${{ matrix.os }}.png
           if-no-files-found: error
