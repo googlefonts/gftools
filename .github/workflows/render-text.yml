@@ -51,7 +51,7 @@ jobs:
           FONT: ${{ github.event.inputs.font || 'data/test/Inconsolata[wdth,wght].ttf' }}
           TEXT: ${{ github.event.inputs.text || 'The quick brown fox jumps over the lazy dog' }}
         run: |
-          gftools render-text \
+          gftools render-text proof \
             -o "render-${{ matrix.os }}.png" \
             "$FONT" \
             "$TEXT"

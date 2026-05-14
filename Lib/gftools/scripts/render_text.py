@@ -13,11 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Render a string from a font as a waterfall PNG.
+"""Render strings from a font as a waterfall PNG, or diff two fonts.
 
-The rendering backend is selected from the host platform by default
-(CoreText on macOS, DirectWrite on Windows, FreeType on Linux). Use
-``--backend`` to override.
+Subcommands:
+  proof  Render a single font as a waterfall PNG.
+  diff   Render before+after waterfalls plus difference image and animated GIF.
+
+Backend defaults to the platform-native rasterizer (CoreText on macOS,
+DirectWrite on Windows, FreeType on Linux). Override with ``--backend``.
 """
 
 from __future__ import annotations
@@ -28,21 +31,30 @@ from pathlib import Path
 
 from gftools.render_text import (
     default_backend,
+    diff_image,
     is_variable,
     iter_fvar_instances,
     output_dir_for_all,
     output_path_for,
     output_path_for_instance,
+    pad_to_match,
     parse_variations,
     render_waterfall,
+    save_animation,
 )
+
+
+BACKENDS = ("coretext", "directwrite", "freetype")
 
 
 def main(args=None):
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument("font", type=Path, help="Path to a .ttf/.otf font")
-    parser.add_argument("text", help="String to render")
-    parser.add_argument(
+    subs = parser.add_subparsers(dest="command", required=True)
+
+    proof = subs.add_parser("proof", help="Render a font as a waterfall PNG.")
+    proof.add_argument("font", type=Path, help="Path to a .ttf/.otf font")
+    proof.add_argument("text", help="String to render")
+    proof.add_argument(
         "-o",
         "--output",
         help=(
@@ -50,7 +62,7 @@ def main(args=None):
             "Defaults to <font_stem>.png (or <font_stem>_imgs/ for --all)."
         ),
     )
-    group = parser.add_mutually_exclusive_group()
+    group = proof.add_mutually_exclusive_group()
     group.add_argument(
         "--variations",
         help='Variation location, e.g. "wght=400,wdth=75". Default instance if omitted.',
@@ -60,26 +72,52 @@ def main(args=None):
         action="store_true",
         help="Render one image per fvar instance.",
     )
-    parser.add_argument(
+    proof.add_argument(
         "--backend",
-        choices=("coretext", "directwrite", "freetype"),
+        choices=BACKENDS,
         default=None,
         help="Rendering backend. Defaults to the platform-native backend.",
     )
+    proof.set_defaults(func=_run_proof)
+
+    diff = subs.add_parser(
+        "diff",
+        help="Render before+after waterfalls plus a difference image and animated GIF.",
+    )
+    diff.add_argument("before", type=Path, help="Path to the 'before' font")
+    diff.add_argument("after", type=Path, help="Path to the 'after' font")
+    diff.add_argument("text", help="String to render")
+    diff.add_argument(
+        "-o",
+        "--output",
+        help="Output prefix. Default: <after_stem> next to the after font.",
+    )
+    diff.add_argument(
+        "--variations",
+        help='Variation location applied to both fonts, e.g. "wght=400".',
+    )
+    diff.add_argument(
+        "--backend",
+        choices=BACKENDS,
+        default=None,
+        help="Rendering backend. Defaults to the platform-native backend.",
+    )
+    diff.set_defaults(func=_run_diff)
 
     opts = parser.parse_args(args)
-    backend = opts.backend or default_backend()
+    opts.func(opts)
 
+
+def _run_proof(opts) -> None:
+    backend = opts.backend or default_backend()
     if opts.all:
         _render_all(opts.font, opts.text, opts.output, backend)
-    else:
-        variations = parse_variations(opts.variations) if opts.variations else None
-        out = output_path_for(opts.font, variations=variations, output=opts.output)
-        img = render_waterfall(
-            opts.font, opts.text, variations=variations, backend=backend
-        )
-        img.save(out)
-        print(out)
+        return
+    variations = parse_variations(opts.variations) if opts.variations else None
+    out = output_path_for(opts.font, variations=variations, output=opts.output)
+    img = render_waterfall(opts.font, opts.text, variations=variations, backend=backend)
+    img.save(out)
+    print(out)
 
 
 def _render_all(font: Path, text: str, output: str | None, backend: str) -> None:
@@ -101,6 +139,37 @@ def _render_all(font: Path, text: str, output: str | None, backend: str) -> None
         img = render_waterfall(font, text, variations=location, backend=backend)
         img.save(out)
         print(out)
+
+
+def _run_diff(opts) -> None:
+    backend = opts.backend or default_backend()
+    variations = parse_variations(opts.variations) if opts.variations else None
+
+    before_img = render_waterfall(
+        opts.before, opts.text, variations=variations, backend=backend
+    )
+    after_img = render_waterfall(
+        opts.after, opts.text, variations=variations, backend=backend
+    )
+    before_pad, after_pad = pad_to_match([before_img, after_img])
+    diff_img = diff_image(before_pad, after_pad)
+
+    if opts.output:
+        prefix = Path(opts.output)
+    else:
+        prefix = opts.after.parent / opts.after.stem
+    prefix.parent.mkdir(parents=True, exist_ok=True)
+
+    def _out(suffix: str) -> Path:
+        return prefix.with_name(prefix.name + suffix)
+
+    before_pad.save(_out("-before.png"))
+    after_pad.save(_out("-after.png"))
+    diff_img.save(_out("-diff.png"))
+    save_animation([before_pad, after_pad], _out("-anim.gif"))
+
+    for suffix in ("-before.png", "-after.png", "-diff.png", "-anim.gif"):
+        print(_out(suffix))
 
 
 if __name__ == "__main__":

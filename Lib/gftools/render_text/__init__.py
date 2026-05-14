@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 from fontTools.ttLib import TTFont
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 
 DEFAULT_PPEMS: tuple[int, ...] = (8, 10, 12, 14, 16, 20, 24, 36)
@@ -211,3 +211,48 @@ def _compose_waterfall(rows: list[Image.Image]) -> Image.Image:
         canvas.paste(row, (CANVAS_PADDING, y))
         y += row.height + ROW_PADDING
     return canvas
+
+
+def pad_to_match(images: list[Image.Image]) -> list[Image.Image]:
+    """Pad each image with white to the max (width, height) of the set."""
+    if not images:
+        return []
+    w = max(im.width for im in images)
+    h = max(im.height for im in images)
+    return [_pad_white(im, w, h) for im in images]
+
+
+def _pad_white(im: Image.Image, w: int, h: int) -> Image.Image:
+    if im.size == (w, h):
+        return im
+    canvas = Image.new(im.mode, (w, h), "white")
+    canvas.paste(im, (0, 0))
+    return canvas
+
+
+def diff_image(before: Image.Image, after: Image.Image) -> Image.Image:
+    """Return the absolute per-pixel difference (PIL's 'difference' blend mode).
+
+    The two inputs must be the same size; use :func:`pad_to_match` first.
+    Identical pixels become black; differing pixels become brighter.
+    """
+    if before.size != after.size:
+        raise ValueError(
+            f"diff inputs must match in size; got {before.size} vs {after.size}"
+        )
+    return ImageChops.difference(after, before)
+
+
+def save_animation(
+    frames: list[Image.Image], path: Path, duration_ms: int = 500
+) -> None:
+    """Save an animated GIF cycling through ``frames`` (infinite loop)."""
+    if not frames:
+        raise ValueError("no frames to animate")
+    frames[0].save(
+        path,
+        save_all=True,
+        append_images=frames[1:],
+        duration=duration_ms,
+        loop=0,
+    )
