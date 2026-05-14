@@ -95,37 +95,37 @@ Render one image per fvar instance defined in the font.
 
 Renders `BEFORE` and `AFTER` fonts independently with the existing waterfall
 pipeline, then pads both renders to the maximum of `(width, height)` with
-white and emits four artifacts:
+white and emits four artifacts into an output directory:
 
-- `<prefix>-before.png` — the "before" waterfall, padded.
-- `<prefix>-after.png` — the "after" waterfall, padded.
-- `<prefix>-diff.png` — absolute per-pixel difference (PIL's "difference"
-  blend mode: identical pixels are black, differing pixels are brighter).
-- `<prefix>-anim.gif` — infinite-loop GIF alternating before/after at 500ms.
+- `before.png` — the "before" waterfall, padded.
+- `after.png` — the "after" waterfall, padded.
+- `diff.png` — absolute per-pixel difference (PIL's "difference" blend
+  mode: identical pixels are black, differing pixels are brighter).
+- `anim.gif` — infinite-loop GIF alternating before/after at 500ms.
 
-### Output prefix
+### Output directory
 
-If `-o` is **not** provided, the prefix is `<after_stem>` placed next to the
-`AFTER` font. So:
+If `-o` is **not** provided, the directory is `<after_stem>_diff/` next to
+the `AFTER` font (mirroring the `<font_stem>_imgs/` convention used by
+`proof --all`):
 
 ```
 gftools render-text diff Roboto-old.ttf Roboto-new.ttf "..."
 # Produces (next to Roboto-new.ttf):
-#   Roboto-new-before.png
-#   Roboto-new-after.png
-#   Roboto-new-diff.png
-#   Roboto-new-anim.gif
+#   Roboto-new_diff/before.png
+#   Roboto-new_diff/after.png
+#   Roboto-new_diff/diff.png
+#   Roboto-new_diff/anim.gif
 ```
 
-If `-o PATH` is provided, `PATH` is used verbatim as the prefix (it can
-include a directory; the directory is created if needed).
+If `-o PATH` is provided, `PATH` is used verbatim as the output directory
+(created if needed) and the same four filenames are written inside it.
 
 ### Flags
 
-#### `-o, --output PREFIX`
+#### `-o, --output PATH`
 
-Output prefix. The four suffixes (`-before.png`, `-after.png`, `-diff.png`,
-`-anim.gif`) are appended to it.
+Output directory. Default: `<after_stem>_diff/` next to the after font.
 
 #### `--variations AXES`
 

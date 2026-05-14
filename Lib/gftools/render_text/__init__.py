@@ -110,6 +110,14 @@ def output_dir_for_all(
     return font_path.parent / f"{font_path.stem}_imgs"
 
 
+def output_dir_for_diff(
+    after_font_path: Path, *, output_dir: str | Path | None = None
+) -> Path:
+    if output_dir is not None:
+        return Path(output_dir)
+    return after_font_path.parent / f"{after_font_path.stem}_diff"
+
+
 def output_path_for_instance(
     font_path: Path, instance_name: str, output_dir: Path
 ) -> Path:

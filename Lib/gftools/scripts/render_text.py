@@ -35,6 +35,7 @@ from gftools.render_text import (
     is_variable,
     iter_fvar_instances,
     output_dir_for_all,
+    output_dir_for_diff,
     output_path_for,
     output_path_for_instance,
     pad_to_match,
@@ -90,7 +91,7 @@ def main(args=None):
     diff.add_argument(
         "-o",
         "--output",
-        help="Output prefix. Default: <after_stem> next to the after font.",
+        help="Output directory. Default: <after_stem>_diff/ next to the after font.",
     )
     diff.add_argument(
         "--variations",
@@ -154,22 +155,16 @@ def _run_diff(opts) -> None:
     before_pad, after_pad = pad_to_match([before_img, after_img])
     diff_img = diff_image(before_pad, after_pad)
 
-    if opts.output:
-        prefix = Path(opts.output)
-    else:
-        prefix = opts.after.parent / opts.after.stem
-    prefix.parent.mkdir(parents=True, exist_ok=True)
+    out_dir = output_dir_for_diff(opts.after, output_dir=opts.output)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    def _out(suffix: str) -> Path:
-        return prefix.with_name(prefix.name + suffix)
+    before_pad.save(out_dir / "before.png")
+    after_pad.save(out_dir / "after.png")
+    diff_img.save(out_dir / "diff.png")
+    save_animation([before_pad, after_pad], out_dir / "anim.gif")
 
-    before_pad.save(_out("-before.png"))
-    after_pad.save(_out("-after.png"))
-    diff_img.save(_out("-diff.png"))
-    save_animation([before_pad, after_pad], _out("-anim.gif"))
-
-    for suffix in ("-before.png", "-after.png", "-diff.png", "-anim.gif"):
-        print(_out(suffix))
+    for name in ("before.png", "after.png", "diff.png", "anim.gif"):
+        print(out_dir / name)
 
 
 if __name__ == "__main__":
