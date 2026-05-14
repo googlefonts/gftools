@@ -81,6 +81,11 @@ qa = [
   "fontbakery[googlefonts]",
   "diffenator2>=0.5.0", # earlier versions cap unicodedata2<16 and import pkg_resources
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
+  # gftools-render-text backends
+  "freetype-py",
+  'pyobjc-framework-CoreText; sys_platform == "darwin"',
+  'pyobjc-framework-Quartz; sys_platform == "darwin"',
+  'skia-python; sys_platform == "win32"',
 ]
 test = [
   "black ==24.10.0",
@@ -151,6 +156,7 @@ gftools-push-stats = "gftools.scripts.push_stats:main"
 gftools-push-status = "gftools.scripts.push_status:main"
 gftools-qa = "gftools.scripts.qa:main"
 gftools-rangify = "gftools.scripts.rangify:main"
+gftools-render-text = "gftools.scripts.render_text:main"
 gftools-rename-font = "gftools.scripts.rename_font:main"
 gftools-rename-glyphs = "gftools.scripts.rename_glyphs:main"
 gftools-remap-font = "gftools.scripts.remap_font:main"
