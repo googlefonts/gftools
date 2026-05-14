@@ -257,11 +257,23 @@ def diff_image(before: Image.Image, after: Image.Image) -> Image.Image:
 
 
 def save_animation(
-    frames: list[Image.Image], path: Path, duration_ms: int = 500
+    frames: list[Image.Image],
+    path: Path,
+    duration_ms: int = 500,
+    labels: list[str] | None = None,
 ) -> None:
-    """Save an animated GIF cycling through ``frames`` (infinite loop)."""
+    """Save an animated GIF cycling through ``frames`` (infinite loop).
+
+    If ``labels`` is given (one per frame), each frame is stamped with its
+    label in the top-right corner so the active frame is identifiable
+    while the GIF plays.
+    """
     if not frames:
         raise ValueError("no frames to animate")
+    if labels is not None:
+        if len(labels) != len(frames):
+            raise ValueError("labels must be the same length as frames")
+        frames = [_stamp_top_right(f, label) for f, label in zip(frames, labels)]
     frames[0].save(
         path,
         save_all=True,
@@ -269,3 +281,16 @@ def save_animation(
         duration=duration_ms,
         loop=0,
     )
+
+
+def _stamp_top_right(im: Image.Image, label: str) -> Image.Image:
+    out = im.copy()
+    font = ImageFont.load_default(size=14)
+    draw = ImageDraw.Draw(out)
+    bbox = draw.textbbox((0, 0), label, font=font)
+    text_w = bbox[2] - bbox[0]
+    pad = 8
+    x = out.width - text_w - pad
+    y = pad
+    draw.text((x, y), label, fill=(180, 30, 30), font=font)
+    return out

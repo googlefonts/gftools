@@ -194,7 +194,11 @@ def _emit_diff_bundle(
     before_pad.save(out_dir / "before.png")
     after_pad.save(out_dir / "after.png")
     diff_img.save(out_dir / "diff.png")
-    save_animation([before_pad, after_pad], out_dir / "anim.gif")
+    save_animation(
+        [before_pad, after_pad],
+        out_dir / "anim.gif",
+        labels=["before", "after"],
+    )
 
     for name in ("before.png", "after.png", "diff.png", "anim.gif"):
         print(out_dir / name)
