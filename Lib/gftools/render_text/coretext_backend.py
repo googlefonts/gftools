@@ -11,9 +11,16 @@ from pathlib import Path
 
 from PIL import Image
 
-import CoreText
-import Quartz
-from Foundation import NSData
+try:
+    import CoreText
+    import Quartz
+    from Foundation import NSData
+except ModuleNotFoundError:
+    raise ModuleNotFoundError(
+        "gftools was installed without the QA dependencies. To install the "
+        "dependencies, see the ReadMe, "
+        "https://github.com/googlefonts/gftools#installation"
+    )
 
 PADDING = 2
 

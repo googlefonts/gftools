@@ -32,11 +32,12 @@ from PIL import Image
 
 try:
     import skia
-except ImportError as e:  # pragma: no cover
-    raise ImportError(
-        "DirectWrite backend requires skia-python. "
-        "Install with: pip install skia-python"
-    ) from e
+except ModuleNotFoundError:
+    raise ModuleNotFoundError(
+        "gftools was installed without the QA dependencies. To install the "
+        "dependencies, see the ReadMe, "
+        "https://github.com/googlefonts/gftools#installation"
+    )
 
 PADDING = 4
 

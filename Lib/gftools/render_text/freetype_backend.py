@@ -8,7 +8,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import freetype
+try:
+    import freetype
+except ModuleNotFoundError:
+    raise ModuleNotFoundError(
+        "gftools was installed without the QA dependencies. To install the "
+        "dependencies, see the ReadMe, "
+        "https://github.com/googlefonts/gftools#installation"
+    )
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 from PIL import Image
