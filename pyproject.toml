@@ -59,10 +59,6 @@ dependencies = [
   'jinja2',
   'fontFeatures',
   'vharfbuzz',
-  'freetype-py',
-  'pyobjc-framework-CoreText; sys_platform == "darwin"',
-  'pyobjc-framework-Quartz; sys_platform == "darwin"',
-  'skia-python; sys_platform == "win32"',
   'nanoemoji>=0.15.0',
   'beautifulsoup4',
   'rich',
@@ -85,6 +81,11 @@ qa = [
   "fontbakery[googlefonts]",
   "diffenator2>=0.5.0", # earlier versions cap unicodedata2<16 and import pkg_resources
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
+  # gftools-render-text backends
+  "freetype-py",
+  'pyobjc-framework-CoreText; sys_platform == "darwin"',
+  'pyobjc-framework-Quartz; sys_platform == "darwin"',
+  'skia-python; sys_platform == "win32"',
 ]
 test = [
   "black ==24.10.0",
