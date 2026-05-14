@@ -17,6 +17,9 @@ on:
       - "Lib/gftools/render_text/**"
       - ".github/workflows/render-text.yml"
 
+permissions:
+  contents: read
+
 jobs:
   render:
     runs-on: ${{ matrix.os }}
