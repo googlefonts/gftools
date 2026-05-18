@@ -49,9 +49,15 @@ class File:
 
     @cached_property
     def is_variable(self) -> bool:
-        return (self.is_glyphs and len(self.gsfont.masters) > 1) or (
-            self.is_designspace and len(self.designspace.sources) > 1
-        )
+        if self.is_designspace:
+            return len(self.designspace.sources) > 1
+        if self.is_ufo:
+            return False
+        # Glyphs may have a "virtual master"
+        masters = len(self.gsfont.masters)
+        if any("Virtual Master" == c.name for c in self.gsfont.customParameters):
+            masters += 1
+        return masters > 1
 
     @cached_property
     def gsfont(self):
