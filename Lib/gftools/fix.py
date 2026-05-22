@@ -284,7 +284,7 @@ def fix_fs_selection(ttFont: TTFont) -> FixResult:
     fs_selection = ttFont["OS/2"].fsSelection
 
     # turn off all bits except for bit 7 (USE_TYPO_METRICS)
-    fs_selection &= 1 << 7
+    fs_selection = 1 << 7
 
     if "Italic" in tokens:
         fs_selection |= 1 << 0
