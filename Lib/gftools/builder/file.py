@@ -38,9 +38,7 @@ class File:
     @property
     def is_ufo(self):
         # ".ufoz" is a zipped UFO; ufoLib2 (via open_ufo) reads it like a UFO.
-        return (
-            self.extension in ("ufo", "ufoz") or ".ufo.json" in self.path
-        )
+        return self.extension in ("ufo", "ufoz") or ".ufo.json" in self.path
 
     @property
     def is_designspace(self):
