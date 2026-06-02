@@ -133,3 +133,23 @@ def test_bad_configs():
     config = {"Sources": ["foo.glyphs"]}
     with pytest.raises(ValueError):
         GFBuilder(config)
+
+
+def test_ufoz_is_a_ufo_source(tmp_path):
+    # A ".ufoz" (zipped UFO) must be recognised as a buildable UFO source; before
+    # this it was not is_font_source and File.family_name crashed.
+    import ufoLib2
+
+    from gftools.builder.file import File
+
+    ufoz = tmp_path / "MyFont.ufoz"
+    font = ufoLib2.Font()
+    font.info.familyName = "My Font"
+    font.newGlyph("a")
+    font.save(ufoz, structure="zip")
+
+    f = File(str(ufoz))
+    assert f.is_ufo
+    assert f.is_font_source
+    assert not f.is_variable  # a single zipped UFO is a static master
+    assert f.family_name == "My Font"
