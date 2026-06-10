@@ -1,3 +1,5 @@
+use std::io::IsTerminal;
+
 use clap::{ArgAction, Parser};
 use gftools::fix_font;
 
@@ -12,6 +14,8 @@ struct Args {
     include_source_fixes: bool,
     #[clap(short, long, action = ArgAction::Count)]
     verbosity: u8,
+    #[clap(short, long)]
+    non_interactive: bool,
 }
 
 fn main() {
@@ -27,5 +31,7 @@ fn main() {
     let font_path = &args.font_path;
     let output_path = &args.output_path;
     let include_source_fixes = args.include_source_fixes;
-    fix_font(font_path, output_path, include_source_fixes).expect("Failed to fix font");
+    let interactive = !args.non_interactive && std::io::stdin().is_terminal();
+    fix_font(font_path, output_path, include_source_fixes, interactive)
+        .expect("Failed to fix font");
 }

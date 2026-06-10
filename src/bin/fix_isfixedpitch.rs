@@ -19,6 +19,7 @@ fn main() {
         &args.output_path,
         args.verbosity,
         &["opentype/monospace".to_string()],
+        false,
     )
     .expect("Failed to fix monospace properties");
 }
