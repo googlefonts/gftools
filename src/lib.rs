@@ -72,6 +72,7 @@ pub fn fix_font(
     font_path: &str,
     output_path: &str,
     include_source_fixes: bool,
+    interactive: bool,
 ) -> Result<(), GftoolsError> {
     // Load font and wrap in a Testable
     let mut font = Testable::new(font_path).expect("Failed to load font");
@@ -111,7 +112,7 @@ pub fn fix_font(
         ]);
     }
     let check_ids: Vec<String> = check_ids.into_iter().map(String::from).collect();
-    apply_hotfixes(&mut font, &check_ids)
+    apply_hotfixes(&mut font, &check_ids, interactive)
         .map_err(|_| GftoolsError::Misc("Failed to apply hotfixes".to_string()))?;
     // Save the fixed font
     std::fs::write(output_path, &font.contents)?;
@@ -123,6 +124,7 @@ pub fn fix_runner(
     output_path: &str,
     verbosity: u8,
     check_ids: &[String],
+    interactive: bool,
 ) -> Result<(), GftoolsError> {
     env_logger::Builder::from_env(
         env_logger::Env::default().default_filter_or(match verbosity {
@@ -133,7 +135,7 @@ pub fn fix_runner(
     )
     .init();
     let mut font = Testable::new(font_path)?;
-    apply_hotfixes(&mut font, check_ids)
+    apply_hotfixes(&mut font, check_ids, interactive)
         .map_err(|_| GftoolsError::Misc("Failed to apply hotfixes".to_string()))?;
     // Save the fixed font
     std::fs::write(output_path, &font.contents)?;

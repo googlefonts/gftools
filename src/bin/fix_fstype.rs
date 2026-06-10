@@ -25,6 +25,7 @@ fn main() {
         &args.output_path,
         args.verbosity,
         &["googlefonts/fstype".to_string()],
+        false,
     )
     .expect("Failed to fix fstype");
 }

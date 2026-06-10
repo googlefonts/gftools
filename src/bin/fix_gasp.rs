@@ -38,7 +38,7 @@ fn main() {
     .init();
     if args.autofix {
         let mut font = Testable::new(&args.font_path).expect("Failed to load font");
-        apply_hotfixes(&mut font, &["googlefonts/gasp".to_string()])
+        apply_hotfixes(&mut font, &["googlefonts/gasp".to_string()], false)
             .expect("Failed to apply hotfixes");
         std::fs::write(args.output_path, &font.contents).expect("Failed to save fixed font");
         return;
