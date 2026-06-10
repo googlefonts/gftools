@@ -26,6 +26,7 @@ fn main() {
         &args.output_path,
         args.verbosity,
         &["integer_ppem_if_hinted".to_string()],
+        false,
     )
     .expect("Failed to fix integer ppem if hinted");
 }

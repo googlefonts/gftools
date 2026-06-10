@@ -19,6 +19,7 @@ fn main() {
         &args.output_path,
         args.verbosity,
         &["googlefonts/gasp".to_string()],
+        false,
     )
     .expect("Failed to fix gasp table");
 }

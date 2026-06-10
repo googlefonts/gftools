@@ -21,6 +21,7 @@ fn main() {
         &args.output_path,
         args.verbosity,
         &["googlefonts/weightclass".to_string()],
+        false,
     )
     .expect("Failed to fix weight class");
 }
