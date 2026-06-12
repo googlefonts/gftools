@@ -3,6 +3,7 @@
 Add and replace tags from another tagging spreadsheet.
 """
 import csv
+import math
 import argparse
 from pathlib import Path
 
@@ -23,16 +24,37 @@ def write_csv(filepath, rows):
 
 def sort_rows(rows):
     """
-    Sort rows by displayName (col 0) and category (col 1).
-    Ported from JS code:
+    Sort rows by displayName (col 0) then category (col 2), faithful to the JS:
     if (`${a.displayName},${a.category}` < `${b.displayName},${b.category}`)
+
+    The "displayName,category" string is the primary key (kept comma-joined as in
+    the JS so family/tag ordering stays byte-identical to existing files). The
+    axis column (col 1) is NOT part of the primary key — including it there would
+    reshuffle every variable-font row away from the established (family, tag)
+    order. Instead, within each (family, tag) group VF rows are ordered by the
+    NUMERIC axis value, so e.g. wght@400 precedes wght@800 and wght@900 precedes
+    wght@1000.
     """
 
     data_rows = rows
 
+    def axis_value(axis):
+        # Parse "wght@400" -> ("wght", 400.0) so variable-font rows order by the
+        # NUMERIC axis value (wght@400 before wght@800, wght@900 before wght@1000).
+        # Static rows (empty axis) sort first within a (family, tag) group.
+        if "@" in axis:
+            name, _, value = axis.partition("@")
+            try:
+                return (name, float(value))
+            except ValueError:
+                return (axis, math.inf)
+        return ("", float("-inf"))
+
     def sort_key(row):
-        # Create sort key as "displayName,category"
-        return f"{row[0]},{row[1]},{row[2]}"
+        # Primary key "displayName,category" (col 0, col 2 — NOT the axis col 1),
+        # kept as the original JS string so family/tag order stays byte-identical.
+        # Tiebreak on the axis (col 1) by numeric value within each (family, tag).
+        return (f"{row[0]},{row[2]}", axis_value(row[1]))
 
     sorted_data = sorted(data_rows, key=sort_key)
     return sorted_data
