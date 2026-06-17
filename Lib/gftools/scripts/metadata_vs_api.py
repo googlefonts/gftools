@@ -26,7 +26,7 @@ if int(sys.version[0]) == 2:
     import urlparse
 elif int(sys.version[0]) == 3:
     import urllib.parse as urlparse
-from gftools.fonts_public_pb2 import FamilyProto
+from gfmetadata import FamilyProto
 from google.protobuf import text_format
 
 description = (

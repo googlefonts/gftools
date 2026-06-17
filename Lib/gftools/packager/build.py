@@ -14,7 +14,7 @@ import yaml
 from rich import progress
 from rich.progress import Progress
 
-import gftools.fonts_public_pb2 as fonts_pb2
+from gfmetadata import FamilyProto
 
 # Python <3.11
 if not hasattr(contextlib, "chdir"):
@@ -120,7 +120,7 @@ class SourceBuilder:
         self,
         destination: Path,
         family_path: Path,
-        metadata: fonts_pb2.FamilyProto,
+        metadata: FamilyProto,
         their_venv: bool = False,
     ):
         self.destination = destination
@@ -312,7 +312,7 @@ class SourceBuilder:
 def build_to_directory(
     destination: Path,
     family_path: Path,
-    metadata: fonts_pb2.FamilyProto,
+    metadata: FamilyProto,
     their_venv: bool = False,
 ):
     SourceBuilder(destination, family_path, metadata, their_venv).build()

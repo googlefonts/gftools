@@ -3,7 +3,6 @@ from __future__ import annotations
 import filecmp
 import logging
 import os
-import re
 import shutil
 import subprocess
 import tempfile
@@ -11,13 +10,11 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 import requests
-import sys
 from typing import List, Optional, Tuple
 from zipfile import ZipFile
 
 import yaml
 from fontTools.ttLib import TTFont
-from gflanguages import LoadLanguages
 import pygit2
 from pygit2 import (
     GIT_RESET_HARD,
@@ -29,7 +26,7 @@ from pygit2 import (
 )
 from pygit2.enums import FileStatus
 
-import gftools.fonts_public_pb2 as fonts_pb2
+from gfmetadata import FamilyProto, SourceFileProto
 from gftools.gfgithub import GitHubClient
 from gftools.scripts.add_font import main as add_font
 from gftools.util import google_fonts as fonts
@@ -156,7 +153,7 @@ def expected_source(file: str) -> str:
     return file
 
 
-def append_source_template(metadata_fp: Path, metadata: fonts_pb2.FamilyProto):
+def append_source_template(metadata_fp: Path, metadata: FamilyProto):
     """Add source template to METADATA.pb file if it's missing. It needs
     to be populated by hand."""
     if len(metadata.fonts) > 0:
@@ -167,7 +164,7 @@ def append_source_template(metadata_fp: Path, metadata: fonts_pb2.FamilyProto):
             files.append("LICENSE.txt")
         files.append("DESCRIPTION.en_us.html")
         for file in files:
-            item = fonts_pb2.SourceFileProto()
+            item = SourceFileProto()
             item.source_file = expected_source(file)
             item.dest_file = file
             metadata.source.files.append(item)
@@ -182,14 +179,14 @@ def append_source_template(metadata_fp: Path, metadata: fonts_pb2.FamilyProto):
         doc.write(text)
 
 
-def no_source_metadata(metadata: fonts_pb2.FamilyProto):
+def no_source_metadata(metadata: FamilyProto):
     """Check if a metadata file has source info."""
     if not metadata.source.files or not metadata.source.repository_url:
         return True
     return False
 
 
-def incomplete_source_metadata(metadata: fonts_pb2.FamilyProto):
+def incomplete_source_metadata(metadata: FamilyProto):
     """Check if a metadata file hasn't been completed."""
     if metadata.source.repository_url == "https://www.github.com/user/repo":
         return True
@@ -202,7 +199,7 @@ def load_metadata(fp: "Path | str"):
     # the necceary source fields.
     if isinstance(fp, str):
         fp = Path(fp)
-    metadata = fonts.ReadProto(fonts_pb2.FamilyProto(), fp)
+    metadata = fonts.ReadProto(FamilyProto(), fp)
 
     upstream_yaml_fp = fp.parent / "upstream.yaml"
     if upstream_yaml_fp.exists():
@@ -217,14 +214,14 @@ def load_metadata(fp: "Path | str"):
                 metadata.source.branch = data["branch"]
             if "files" in data:
                 for src, dst in data["files"].items():
-                    item = fonts_pb2.SourceFileProto()
+                    item = SourceFileProto()
                     item.source_file = src
                     item.dest_file = dst
                     metadata.source.files.append(item)
     return metadata
 
 
-def save_metadata(fp: Path, metadata: fonts_pb2.FamilyProto):
+def save_metadata(fp: Path, metadata: FamilyProto):
     """Save METADATA.pb file and delete old upstream.yaml file."""
     github = GitHubClient.from_url(metadata.source.repository_url)
     commit = github.get_commit(metadata.source.branch)
@@ -258,7 +255,7 @@ def find_family_in_repo(family_name: str, repo_path: Path) -> Optional[Path]:
 
 
 def download_assets(
-    metadata: fonts_pb2.FamilyProto, out: Path, latest_release: bool = False
+    metadata: FamilyProto, out: Path, latest_release: bool = False
 ) -> List[str]:
     """Download assets listed in the metadata's source field"""
     upstream = GitHubClient.from_url(metadata.source.repository_url)
@@ -339,7 +336,7 @@ def assets_are_same(src: Path, dst: Path) -> bool:
 
 def package_family(
     family_path: Path,
-    metadata: fonts_pb2.FamilyProto,
+    metadata: FamilyProto,
     latest_release=False,
     build_from_source=False,
     their_venv=False,
@@ -387,7 +384,7 @@ def _git_branch_name(family_name: str, license: str) -> str:
 
 
 def create_git_branch(
-    metadata: fonts_pb2.FamilyProto, repo: Repository, head_repo
+    metadata: FamilyProto, repo: Repository, head_repo
 ) -> Branch:
     branch_name = _git_branch_name(metadata.name, metadata.license)
     # create a branch by from the head main branch
@@ -463,7 +460,7 @@ def git_rm_file(repo: Repository, treebuilder: TreeBuilder, path: str, *args, **
 def commit_family(
     branch,
     family_path: Path,
-    metadata: fonts_pb2.FamilyProto,
+    metadata: FamilyProto,
     repo: Repository,
     head_repo="google",
     issue_number=None,

@@ -7,19 +7,7 @@ from typing import List, Sequence
 
 from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
-import sys
 
-try:
-    from diffenator2 import ninja_diff, ninja_proof
-    from diffenator2.font import DFont
-except ModuleNotFoundError:
-    raise ModuleNotFoundError(
-        (
-            "gftools was installed without the QA "
-            "dependencies. To install the dependencies, see the ReadMe, "
-            "https://github.com/googlefonts/gftools#installation"
-        )
-    )
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -66,24 +54,6 @@ class FontQA:
         self.out = out
         self.url = url
         self.has_error = False
-
-    @report_exceptions
-    def diffenator(self, **kwargs):
-        logger.info("Running Diffenator")
-        if not self.fonts_before:
-            logger.warning("Cannot run Diffenator since there are no fonts before")
-            return
-        dst = os.path.join(self.out, "Diffenator")
-        ninja_diff(
-            self.fonts_before,
-            self.fonts,
-            out=dst,
-            imgs=False,
-            user_wordlist=None,
-            filter_styles=None,
-            diffenator=True,
-            diffbrowsers=False,
-        )
 
     @report_exceptions
     def diffenator3(self, **kwargs):

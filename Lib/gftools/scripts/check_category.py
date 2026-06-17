@@ -21,7 +21,7 @@ import argparse
 import os
 import sys
 import requests
-from gftools.fonts_public_pb2 import FamilyProto
+from gfmetadata import FamilyProto
 from google.protobuf import text_format
 
 description = (

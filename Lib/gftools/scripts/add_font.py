@@ -38,6 +38,7 @@ Generating a METADATA.pb file for an existing family:
 
 1. run the following: gftools add-font /path/to/existing/family
 """
+
 from __future__ import print_function
 from functools import cmp_to_key
 import argparse
@@ -52,14 +53,13 @@ from fontTools import ttLib
 
 
 from gflanguages import LoadLanguages
-import gftools.fonts_public_pb2 as fonts_pb2
+from gfmetadata import FamilyProto
 from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
 from axisregistry import AxisRegistry
 from gfsubsets import SubsetsInFont
 from google.protobuf import text_format
 from gftools.utils import remove_url_prefix, primary_script
-
 
 RELAXED_SUBSETS = ["math", "symbols"]
 
@@ -142,7 +142,7 @@ def _MakeMetadata(args, is_new):
       fontdir: Directory containing font files for which we want metadata.
       is_new: Whether this is an existing or new family.
     Returns:
-      A fonts_pb2.FamilyProto message, the METADATA.pb structure.
+      A FamilyProto message, the METADATA.pb structure.
     Raises:
       RuntimeError: If the variable font axes info differs between font files of
       same family.
@@ -152,7 +152,7 @@ def _MakeMetadata(args, is_new):
     first_file = file_family_style_weights[0].file
     old_metadata_file = os.path.join(args.directory, "METADATA.pb")
 
-    metadata = fonts_pb2.FamilyProto()
+    metadata = FamilyProto()
     metadata.name = file_family_style_weights[0].family
 
     subsets_in_font = [
@@ -171,7 +171,7 @@ def _MakeMetadata(args, is_new):
     subsets_in_font = list(set(subsets_in_font) | relaxed_subsets)
 
     if not is_new:
-        old_metadata = fonts.ReadProto(fonts_pb2.FamilyProto(), old_metadata_file)
+        old_metadata = fonts.ReadProto(FamilyProto(), old_metadata_file)
         metadata.designer = old_metadata.designer
         metadata.category[:] = old_metadata.category
         metadata.date_added = old_metadata.date_added
