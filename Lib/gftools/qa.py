@@ -82,78 +82,58 @@ class FontQA:
                 return
 
     @report_exceptions
-    def diffbrowsers(self, imgs=False, rust=False):
+    def diffbrowsers(self, imgs=False):
         logger.info("Running Diffbrowsers")
         if not self.fonts_before:
             logger.warning("Cannot run diffbrowsers since there are no fonts before")
             return
         dst = os.path.join(self.out, "Diffbrowsers")
         mkdir(dst)
-        if rust:
-            assert len(self.fonts) >= len(self.fonts_before)
-            for f, f_before in zip(
-                sorted([f.path for f in self.fonts]),
-                sorted([f.path for f in self.fonts_before]),
-            ):
-                cmd = [
-                    "diff3proof",
-                    "--output",
-                    dst,
-                    f_before,
-                    f,
-                ]
-                process = subprocess.run(cmd)
-                if process.returncode != 0:
-                    self.has_error = True
-                os.rename(
-                    os.path.join(dst, "diff3proof.html"),
-                    os.path.join(dst, f"diff3proof-{Path(f).stem}.html"),
-                )
-            return
-        ninja_diff(
-            self.fonts_before,
-            self.fonts,
-            out=dst,
-            imgs=imgs,
-            filter_styles=None,
-            user_wordlist=None,
-            diffenator=False,
-            diffbrowsers=True,
-        )
+        assert len(self.fonts) >= len(self.fonts_before)
+        for f, f_before in zip(
+            sorted([f.path for f in self.fonts]),
+            sorted([f.path for f in self.fonts_before]),
+        ):
+            cmd = [
+                "diff3proof",
+                "--output",
+                dst,
+                f_before,
+                f,
+            ]
+            process = subprocess.run(cmd)
+            if process.returncode != 0:
+                self.has_error = True
+            os.rename(
+                os.path.join(dst, "diff3proof.html"),
+                os.path.join(dst, f"diff3proof-{Path(f).stem}.html"),
+            )
+        return
 
     @report_exceptions
-    def proof(self, imgs=False, rust=False):
+    def proof(self, imgs=False):
         logger.info("Running proofing tools")
         dst = os.path.join(self.out, "Proof")
         mkdir(dst)
-        if rust:
-            for font in self.fonts:
-                cmd = [
-                    "diff3proof",
-                    "--output",
-                    dst,
-                    font.path,
-                ]
-                process = subprocess.run(cmd)
-                os.rename(
-                    os.path.join(dst, "diff3proof.html"),
-                    os.path.join(dst, f"diff3proof-{Path(font.path).stem}.html"),
-                )
+        for font in self.fonts:
+            cmd = [
+                "diff3proof",
+                "--output",
+                dst,
+                font.path,
+            ]
+            process = subprocess.run(cmd)
+            os.rename(
+                os.path.join(dst, "diff3proof.html"),
+                os.path.join(dst, f"diff3proof-{Path(font.path).stem}.html"),
+            )
 
-                if process.returncode != 0:
-                    self.has_error = True
-                    return
-            return
-
-        ninja_proof(
-            self.fonts,
-            out=dst,
-            imgs=imgs,
-            filter_styles=None,
-        )
+            if process.returncode != 0:
+                self.has_error = True
+                return
 
     @report_exceptions
-    def interpolations(self, rust=False):
+    def interpolations(self):
         dst = os.path.join(self.out, "Interpolations")
         if not any(f.is_variable() for f in self.fonts):
             return
@@ -243,31 +223,23 @@ class FontQA:
         if process.returncode != 0:
             self.has_error = True
 
-    def googlefonts_upgrade(self, imgs=False, rust=False):
-        if rust:
-            self.fontspector()
-            self.diffenator3()
-        else:
-            self.fontbakery()
-            self.diffenator()
-        self.diffbrowsers(imgs, rust=rust)
-        self.interpolations(rust=rust)
+    def googlefonts_upgrade(self, imgs=False):
+        self.fontspector()
+        self.diffenator3()
+        self.diffbrowsers(imgs)
+        self.interpolations()
 
-    def googlefonts_new(self, imgs=False, rust=False):
-        if rust:
-            self.fontspector()
-            self.diffenator3()
-        else:
-            self.fontbakery()
-            self.diffenator()
-        self.proof(imgs, rust=rust)
-        self.interpolations(rust=rust)
+    def googlefonts_new(self, imgs=False):
+        self.fontspector()
+        self.diffenator3()
+        self.proof(imgs)
+        self.interpolations()
 
-    def render(self, imgs=False, rust=False):
+    def render(self, imgs=False):
         if self.fonts_before:
-            self.diffbrowsers(imgs, rust=rust)
+            self.diffbrowsers(imgs)
         else:
-            self.proof(imgs, rust=rust)
+            self.proof(imgs)
 
     def post_to_github(self, text):
         """Post text as a new issue or as a comment to an open

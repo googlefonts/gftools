@@ -78,7 +78,6 @@ dependencies = [
 [project.optional-dependencies]
 qa = [
   "fontbakery[googlefonts]",
-  "diffenator2>=0.5.0", # earlier versions cap unicodedata2<16 and import pkg_resources
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
   # gftools-render-text backends
   "freetype-py",
