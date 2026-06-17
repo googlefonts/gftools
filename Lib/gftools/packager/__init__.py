@@ -383,9 +383,7 @@ def _git_branch_name(family_name: str, license: str) -> str:
     return f"gftools_packager_{license}_{family_dir_name}"
 
 
-def create_git_branch(
-    metadata: FamilyProto, repo: Repository, head_repo
-) -> Branch:
+def create_git_branch(metadata: FamilyProto, repo: Repository, head_repo) -> Branch:
     branch_name = _git_branch_name(metadata.name, metadata.license)
     # create a branch by from the head main branch
     is_ssh = "git@" in subprocess.check_output(
