@@ -39,7 +39,7 @@ if __name__ == "__main__":
 from gfmetadata import FamilyProto
 from fontTools import ttLib
 from gflanguages import LoadLanguages, parse
-from google.protobuf import text_format
+from gfmetadata import text_format
 
 # See https://www.microsoft.com/typography/otspec/name.htm.
 NAME_COPYRIGHT = 0

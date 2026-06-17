@@ -29,7 +29,7 @@ from collections import namedtuple
 from gflanguages import LoadLanguages
 from github import Github
 import importlib.resources
-from google.protobuf import text_format
+from gfmetadata import text_format
 import json
 from PIL import Image
 import re

@@ -22,7 +22,7 @@ import os
 import sys
 import requests
 from gfmetadata import FamilyProto
-from google.protobuf import text_format
+from gfmetadata import text_format
 
 description = (
     "Comparison of category fields of local METADATA.pb files"

@@ -41,6 +41,7 @@ dependencies = [
   'PyGithub',
   'pillow',
   "gfmetadata",
+  "protobuf>=6.33.0",  # Still needed temporarily unti next gfmetadata release
   'requests',
   'tabulate',
   'unidecode',

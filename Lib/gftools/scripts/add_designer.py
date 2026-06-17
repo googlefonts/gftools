@@ -34,7 +34,7 @@ import os
 from unidecode import unidecode
 from PIL import Image
 from gfmetadata import DesignerInfoProto
-from google.protobuf import text_format
+from gfmetadata import text_format
 from gftools.utils import remove_url_prefix
 
 

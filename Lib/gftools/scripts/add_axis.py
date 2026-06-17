@@ -4,7 +4,7 @@
 import sys
 import argparse
 from gfmetadata import AxisProto, FallbackProto
-from google.protobuf import text_format
+from gfmetadata import text_format
 from fontTools.ttLib import TTFont
 
 parser = argparse.ArgumentParser(

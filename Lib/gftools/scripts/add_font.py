@@ -58,7 +58,7 @@ from gftools.util import google_fonts as fonts
 from gftools.utils import cmp
 from axisregistry import AxisRegistry
 from gfsubsets import SubsetsInFont
-from google.protobuf import text_format
+from gfmetadata import text_format
 from gftools.utils import remove_url_prefix, primary_script
 
 RELAXED_SUBSETS = ["math", "symbols"]
