@@ -104,8 +104,11 @@ def gen_avar2_mapping(font, mapping):
     nametable = font["name"]
     axes = OrderedDict()
     for axis in font["fvar"].axes:
+        if axis.axisTag in axis_tag_to_name:  # Internal axis, ignore
+            continue
         axis_name = nametable.getName(axis.axisNameID, 3, 1, 0x409).toUnicode()
         axis_tag_to_name[axis.axisTag] = axis_name
+
         if "avar" in font:
             axis_map = [
                 (_denormalize(k, axis), _denormalize(v, axis))
@@ -144,12 +147,43 @@ def gen_avar2_mapping(font, mapping):
                 inst.coordinates[axis.axisTag] = axis.defaultValue
 
 
+def load_fontra(f):
+    """Load a Fontra font-data.json file and extract the axis mapping."""
+    import json
+
+    data = json.load(f)
+    if not isinstance(data, dict) or "fontInfo" not in data:
+        raise ValueError("JSON file must be a Fontra font-data.json")
+    axes = data["axes"]["axes"]
+    mapping = data["axes"].get("mappings", [])
+    # We want: list of { 'in' : { tag: val, tag: val}, 'out': { tag: val, tag: val} }
+    # We have: list of { "inputLocation": { name: val, name: val}, "outputLocation": { name: val, name: val} }
+    # Let's first map axis names to tags
+    name_to_tag = {axis["name"]: axis["tag"] for axis in axes}
+    new_map = [
+        {
+            "in": {name_to_tag[k]: v for k, v in m["inputLocation"].items()},
+            "out": {name_to_tag[k]: v for k, v in m["outputLocation"].items()},
+        }
+        for m in mapping
+    ]
+    # Check all input locations are unique
+    seen_locations = set()
+    for m in new_map:
+        if tuple(m["in"].items()) in seen_locations:
+            raise ValueError(
+                f"Duplicate input location in mapping: {m['in']}. Input locations must be unique."
+            )
+        seen_locations.add(tuple(m["in"].items()))
+    return new_map
+
+
 def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "fonts", nargs="+", help="Variable TTF files which make up a family"
     )
-    parser.add_argument("src", help="use yaml file to build STAT", default=None)
+    parser.add_argument("src", help="use yaml/json file to build STAT", default=None)
     out_group = parser.add_mutually_exclusive_group(required=True)
     out_group.add_argument("--out", "-o", help="Output dir for fonts")
     out_group.add_argument(
@@ -158,10 +192,15 @@ def main(args=None):
     args = parser.parse_args(args)
 
     fonts = [TTFont(f) for f in args.fonts]
-    config = yaml.load(open(args.src), Loader=yaml.SafeLoader)
-    for font in fonts:
-        filename = os.path.basename(font.reader.file.name)
-        gen_avar2_mapping(font, config[filename])
+    if args.src.endswith(".json"):
+        config = load_fontra(open(args.src))
+        for font in fonts:
+            gen_avar2_mapping(font, config)
+    else:
+        config = yaml.load(open(args.src), Loader=yaml.SafeLoader)
+        for font in fonts:
+            filename = os.path.basename(font.reader.file.name)
+            gen_avar2_mapping(font, config[filename])
 
     if args.inplace:
         for font in fonts:
