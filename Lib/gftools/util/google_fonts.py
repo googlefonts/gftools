@@ -36,11 +36,10 @@ if __name__ == "__main__":
     # some of the imports here wouldn't work otherwise
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import gftools.fonts_public_pb2 as fonts_pb2
+from gfmetadata import FamilyProto
 from fontTools import ttLib
 from gflanguages import LoadLanguages, parse
-from google.protobuf import text_format
-
+from gfmetadata import text_format
 
 # See https://www.microsoft.com/typography/otspec/name.htm.
 NAME_COPYRIGHT = 0
@@ -198,7 +197,7 @@ def Metadata(file_or_dir):
     else:
         raise ValueError("%s is neither METADATA.pb file or a directory" % file_or_dir)
 
-    msg = fonts_pb2.FamilyProto()
+    msg = FamilyProto()
     with codecs.open(metadata_file, encoding="utf-8") as f:
         text_format.Merge(f.read(), msg)
 
@@ -524,7 +523,7 @@ def ReadProto(proto, path):
         return proto
 
 
-def WriteProto(proto: fonts_pb2.FamilyProto, path: str, comments=None):
+def WriteProto(proto: FamilyProto, path: str, comments=None):
     with open(path, "w", newline="") as f:
         textproto = text_format.MessageToString(proto, as_utf8=True)
         if comments is not None:
@@ -536,9 +535,7 @@ def WriteProto(proto: fonts_pb2.FamilyProto, path: str, comments=None):
         f.write(textproto)
 
 
-def WriteMetadata(
-    proto: fonts_pb2.FamilyProto, path: str = "METADATA.pb", comments=True
-):
+def WriteMetadata(proto: FamilyProto, path: str = "METADATA.pb", comments=True):
     if comments is None:
         comment_proto = None
     elif comments is True:

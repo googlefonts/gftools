@@ -27,13 +27,14 @@ $ gftools add-designer path/to/local/clone/fonts/catalog/designers "Theo Salvado
 # Add or update a designer entry using the spreadsheet.
 $ gftools add-designer path/to/local/clone/fonts/catalog/designers "Theo Salvador" --img_path path/to/img.png --spreadsheet ./GFDesigners.xlsx
 """
+
 import argparse
 from glob import glob
 import os
 from unidecode import unidecode
 from PIL import Image
-from gftools.designers_pb2 import DesignerInfoProto
-from google.protobuf import text_format
+from gfmetadata import DesignerInfoProto
+from gfmetadata import text_format
 from gftools.utils import remove_url_prefix
 
 

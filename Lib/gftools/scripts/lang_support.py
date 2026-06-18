@@ -17,9 +17,8 @@ gftools lang-support -l ./lang/ -r ./ofl/noto*/METADATA.pb
 import argparse
 from fontTools.ttLib import TTFont
 from gflanguages import LoadLanguages, LoadScripts
-from gftools import fonts_public_pb2
+from gfmetadata import FamilyProto
 from gftools.util import google_fonts as fonts
-from google.protobuf import text_format
 import csv
 import os
 
@@ -87,7 +86,7 @@ def _WriteReport(metadata_paths, out_dir, languages):
     without_sample_text = []
     supported_without_sample_text = {}
     for metadata_path in metadata_paths:
-        family = fonts.ReadProto(fonts_public_pb2.FamilyProto(), metadata_path)
+        family = fonts.ReadProto(FamilyProto(), metadata_path)
         if len(family.languages) == 0:
             without_lang.append(family.name)
         else:
@@ -210,7 +209,7 @@ def main(args=None):
         seen_scripts = set()
         unused_scripts = set()
         for path in argv[1:]:
-            family = fonts.ReadProto(fonts_public_pb2.FamilyProto(), path)
+            family = fonts.ReadProto(FamilyProto(), path)
             for l in family.languages:
                 seen_scripts.add(languages[l].script)
         for s in scripts:
@@ -219,7 +218,7 @@ def main(args=None):
         _SampleTextAudit(args.out, languages, scripts, unused_scripts)
     else:
         for path in args.metadata_files:
-            family_metadata = fonts.ReadProto(fonts_public_pb2.FamilyProto(), path)
+            family_metadata = fonts.ReadProto(FamilyProto(), path)
             if len(family_metadata.languages) > 0:
                 continue
             exemplar_font_fp = os.path.join(

@@ -32,17 +32,16 @@ classifiers = [
 ]
 dependencies = [
   'FontTools[ufo]>=4.60.0', # Needed due to api changes in the avar module
-  'axisregistry>=0.4.9', # Needed for "aggressive" param to build_name_table
+  'axisregistry>=0.4.19',
   'absl-py',
   'glyphsLib',
-  'gflanguages>=0.6.0',
+  'gflanguages>=0.7.8',
   'gfsubsets>=2024.02.05',
   'glyphsets>=0.6.13',
   'PyGithub',
   'pillow',
-  # 3.7.0 fixed a bug on parsing some METADATA.pb files.
-  # We cannot use v4 because our protobuf files have been compiled with v3.
-  'protobuf>=3.19.4, <4',
+  "gfmetadata",
+  "protobuf>=6.33.0",  # Still needed temporarily unti next gfmetadata release
   'requests',
   'tabulate',
   'unidecode',
@@ -79,7 +78,6 @@ dependencies = [
 [project.optional-dependencies]
 qa = [
   "fontbakery[googlefonts]",
-  "diffenator2>=0.5.0", # earlier versions cap unicodedata2<16 and import pkg_resources
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
   # gftools-render-text backends
   "freetype-py",

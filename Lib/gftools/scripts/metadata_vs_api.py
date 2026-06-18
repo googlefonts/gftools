@@ -26,8 +26,8 @@ if int(sys.version[0]) == 2:
     import urlparse
 elif int(sys.version[0]) == 3:
     import urllib.parse as urlparse
-from gftools.fonts_public_pb2 import FamilyProto
-from google.protobuf import text_format
+from gfmetadata import FamilyProto
+from gfmetadata import text_format
 
 description = (
     "This script compares the info on local METADATA.pb files"

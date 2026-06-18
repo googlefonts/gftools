@@ -4,8 +4,7 @@ from abc import ABC
 from dataclasses import dataclass
 
 from fontTools.ttLib import TTFont, TTLibError  # type: ignore
-from gftools.designers_pb2 import DesignerInfoProto
-from gftools.fonts_public_pb2 import FamilyProto
+from gfmetadata import DesignerInfoProto, FamilyProto, AxisProto
 from gftools.push.utils import google_path_to_repo_path
 from gftools.util.google_fonts import ReadProto
 from gftools.utils import (
@@ -16,13 +15,11 @@ from gftools.utils import (
 import zipfile
 from bs4 import BeautifulSoup  # type: ignore
 from pathlib import Path
-from axisregistry.axes_pb2 import AxisProto
 from google.protobuf.json_format import MessageToDict  # type: ignore
 from typing import Optional
 import re
 
 import requests
-
 
 log = logging.getLogger("gftools.push")
 
