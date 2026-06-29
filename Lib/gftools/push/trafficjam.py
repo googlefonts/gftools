@@ -532,6 +532,11 @@ class PushItems(list):
 
             # get files for prs which have more than 100 changed files
             for item in board_items:
+                # Closed-but-not-merged PRs are skipped further down anyway, and
+                # GitHub returns ``files: null`` for them, which makes the
+                # ``totalCount`` lookup below raise. Skip them here as well.
+                if item["content"]["closed"] and not item["content"]["merged"]:
+                    continue
                 changed_files = item["content"]["files"]["totalCount"]
                 if changed_files <= 100:
                     continue
