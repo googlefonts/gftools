@@ -1,8 +1,9 @@
 import os
 from dataclasses import dataclass
 from functools import cached_property
+from pathlib import Path
 
-import ufoLib2
+import openstep_plist
 from fontTools.designspaceLib import InstanceDescriptor
 from glyphsLib.builder import UFOBuilder
 
@@ -33,7 +34,7 @@ class File:
 
     @property
     def is_glyphs(self):
-        return self.extension == "glyphs" or self.extension == "glyphspackage"
+        return self.is_glyphs_file or self.is_glyphspackage
 
     @property
     def is_ufo(self):
@@ -48,12 +49,31 @@ class File:
     def is_font_source(self):
         return self.is_glyphs or self.is_ufo or self.is_designspace
 
+    @property
+    def is_glyphs_file(self):
+        return self.extension == "glyphs"
+
+    @property
+    def is_glyphspackage(self):
+        return self.extension == "glyphspackage"
+
     @cached_property
     def is_variable(self) -> bool:
         if self.is_designspace:
             return len(self.designspace.sources) > 1
         if self.is_ufo:
             return False
+        if self.is_glyphspackage:
+            # Optimisation opportunity: avoid loading the full GSFont by
+            # accessing self.gsfont, instead just reach into the fontinfo.plist
+            # directly.
+            # Conditions match the ordinary Glyphs ones below.
+            fontinfo_path = Path(self.path) / "fontinfo.plist"
+            fontinfo = openstep_plist.load(fontinfo_path.open(encoding="utf-8"))
+            return len(fontinfo["fontMaster"]) > 1 or any(
+                custom_parameter["name"] == "Virtual Master"
+                for custom_parameter in fontinfo["customParameters"]
+            )
         # Glyphs may have a "virtual master"
         masters = len(self.gsfont.masters)
         if any("Virtual Master" == c.name for c in self.gsfont.customParameters):
