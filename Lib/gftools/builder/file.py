@@ -65,7 +65,9 @@ class File:
         elif self.is_glyphspackage:
             return self.glyphspackage_fontinfo.get(".formatVersion", 2)
         else:
-            raise ValueError("File.glyphs_format should not be accessed on non-Glyphs sources")
+            raise ValueError(
+                "File.glyphs_format should not be accessed on non-Glyphs sources"
+            )
 
     @cached_property
     def is_variable(self) -> bool:
@@ -99,12 +101,12 @@ class File:
     def glyphs_plist(self) -> dict[str, Any]:
         """Grants raw dictly-typed access to a Glyphs to avoid parsing the full
         font with glyphsLib.
-        
+
         Note that this could be either Glyphs format v2 or v3."""
 
-        assert self.is_glyphs_file, (
-            "File.glyphs_plist should not be accessed on non-glyphs single file sources"
-        )
+        assert (
+            self.is_glyphs_file
+        ), "File.glyphs_plist should not be accessed on non-glyphs single file sources"
         return openstep_plist.load(open(self.path, encoding="utf-8"))
 
     @cached_property
@@ -112,9 +114,9 @@ class File:
         """Grants raw dictly-typed access to a Glyphspackage's fontinfo.plist to
         avoid parsing the full font with glyphsLib"""
 
-        assert self.is_glyphspackage, (
-            "File.glyphspackage_fontinfo should not be accessed on non-glyphspackage sources"
-        )
+        assert (
+            self.is_glyphspackage
+        ), "File.glyphspackage_fontinfo should not be accessed on non-glyphspackage sources"
         fontinfo_path = Path(self.path) / "fontinfo.plist"
         return openstep_plist.load(fontinfo_path.open(encoding="utf-8"))
 
