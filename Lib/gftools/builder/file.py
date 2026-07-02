@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
+from typing import Any
 
 import openstep_plist
 from fontTools.designspaceLib import InstanceDescriptor
@@ -68,11 +69,9 @@ class File:
             # accessing self.gsfont, instead just reach into the fontinfo.plist
             # directly.
             # Conditions match the ordinary Glyphs ones below.
-            fontinfo_path = Path(self.path) / "fontinfo.plist"
-            fontinfo = openstep_plist.load(fontinfo_path.open(encoding="utf-8"))
-            return len(fontinfo["fontMaster"]) > 1 or any(
+            return len(self.glyphspackage_fontinfo["fontMaster"]) > 1 or any(
                 custom_parameter["name"] == "Virtual Master"
-                for custom_parameter in fontinfo["customParameters"]
+                for custom_parameter in self.glyphspackage_fontinfo["customParameters"]
             )
         # Glyphs may have a "virtual master"
         masters = len(self.gsfont.masters)
@@ -87,6 +86,17 @@ class File:
 
             return glyphsLib.load(self.path)
         return None
+
+    @cached_property
+    def glyphspackage_fontinfo(self) -> dict[str, Any]:
+        """Grants raw dictly-typed access to a Glyphspackage's fontinfo.plist to
+        avoid loading the full font through glyphsLib"""
+
+        assert self.is_glyphspackage, (
+            "File.glyphspackage_fontinfo should not be accessed on non-glyphspackage sources"
+        )
+        fontinfo_path = Path(self.path) / "fontinfo.plist"
+        return openstep_plist.load(fontinfo_path.open(encoding="utf-8"))
 
     @cached_property
     def designspace(self):
