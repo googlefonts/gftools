@@ -161,8 +161,21 @@ class GFBuilder(RecipeProviderBase):
     ):
         """Determine the file name for a variable font."""
         sourcebase = os.path.splitext(source.basename)[0]
-        if source.is_glyphs:
-            tags = [ax.axisTag for ax in source.gsfont.axes]
+        if source.is_glyphs_file:
+            # Optimisation: avoid parsing the full GSFont here
+            if source.glyphs_format >= 3:
+                tags = [ax["tag"] for ax in source.glyphs_plist["axes"]]
+            else:
+                axes = next(
+                    param["value"]
+                    for param in source.glyphs_plist["customParameters"]
+                    if param["name"] == "Axes"
+                )
+                tags = [axis["Tag"] for axis in axes]
+        elif source.is_glyphspackage:
+            # Optimisation: avoid parsing the full GSFont here when what we need
+            # is within the fontinfo.plist
+            tags = [ax["tag"] for ax in source.glyphspackage_fontinfo["axes"]]
         elif source.is_designspace:
             tags = [ax.tag for ax in source.designspace.axes]
         else:
