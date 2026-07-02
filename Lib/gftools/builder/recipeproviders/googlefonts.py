@@ -163,7 +163,15 @@ class GFBuilder(RecipeProviderBase):
         sourcebase = os.path.splitext(source.basename)[0]
         if source.is_glyphs_file:
             # Optimisation: avoid parsing the full GSFont here
-            tags = [ax["tag"] for ax in source.glyphs_plist["axes"]]
+            if source.glyphs_format >= 3:
+                tags = [ax["tag"] for ax in source.glyphs_plist["axes"]]
+            else:
+                axes = next(
+                    param["value"]
+                    for param in source.glyphs_plist["customParameters"]
+                    if param["name"] == "Axes"
+                )
+                tags = [axis["Tag"] for axis in axes]
         elif source.is_glyphspackage:
             # Optimisation: avoid parsing the full GSFont here when what we need
             # is within the fontinfo.plist

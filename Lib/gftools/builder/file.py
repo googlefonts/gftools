@@ -58,6 +58,15 @@ class File:
     def is_glyphspackage(self):
         return self.extension == "glyphspackage"
 
+    @property
+    def glyphs_format(self) -> int:
+        if self.is_glyphs_file:
+            return self.glyphs_plist.get(".formatVersion", 2)
+        elif self.is_glyphspackage:
+            return self.glyphspackage_fontinfo.get(".formatVersion", 2)
+        else:
+            raise ValueError("File.glyphs_format should not be accessed on non-Glyphs sources")
+
     @cached_property
     def is_variable(self) -> bool:
         if self.is_designspace:
@@ -72,6 +81,7 @@ class File:
             glyphs_fontinfo = self.glyphspackage_fontinfo
         else:
             raise ValueError(f"unsure how to determine if {self.path} is variable")
+        # Fine for Glyphs v2 & v3
         return len(glyphs_fontinfo["fontMaster"]) > 1 or any(
             custom_parameter["name"] == "Virtual Master"
             for custom_parameter in glyphs_fontinfo["customParameters"]
@@ -88,7 +98,9 @@ class File:
     @cached_property
     def glyphs_plist(self) -> dict[str, Any]:
         """Grants raw dictly-typed access to a Glyphs to avoid parsing the full
-        font with glyphsLib"""
+        font with glyphsLib.
+        
+        Note that this could be either Glyphs format v2 or v3."""
 
         assert self.is_glyphs_file, (
             "File.glyphs_plist should not be accessed on non-glyphs single file sources"
@@ -132,6 +144,7 @@ class File:
         if self.is_glyphs_file:
             # Optimisation: pull directly from source instead of parsing with
             # glyphsLib
+            # Fine for Glyphs v2 & v3
             name = self.glyphs_plist["familyName"]
         elif self.is_glyphspackage:
             # Optimisation: pull this directly from the fontinfo.plist instead
