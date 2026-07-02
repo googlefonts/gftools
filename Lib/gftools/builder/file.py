@@ -64,20 +64,18 @@ class File:
             return len(self.designspace.sources) > 1
         if self.is_ufo:
             return False
-        if self.is_glyphspackage:
-            # Optimisation opportunity: avoid loading the full GSFont by
-            # accessing self.gsfont, instead just reach into the fontinfo.plist
-            # directly.
-            # Conditions match the ordinary Glyphs ones below.
-            return len(self.glyphspackage_fontinfo["fontMaster"]) > 1 or any(
-                custom_parameter["name"] == "Virtual Master"
-                for custom_parameter in self.glyphspackage_fontinfo["customParameters"]
-            )
-        # Glyphs may have a "virtual master"
-        masters = len(self.gsfont.masters)
-        if any("Virtual Master" == c.name for c in self.gsfont.customParameters):
-            masters += 1
-        return masters > 1
+        # Deal with Glyphs sources in their raw plist form to save parsing with
+        # glyphsLib, which is far slower
+        if self.is_glyphs_file:
+            glyphs_fontinfo = self.glyphs_plist
+        elif self.is_glyphspackage:
+            glyphs_fontinfo = self.glyphspackage_fontinfo
+        else:
+            raise ValueError(f"unsure how to determine if {self.path} is variable")
+        return len(glyphs_fontinfo["fontMaster"]) > 1 or any(
+            custom_parameter["name"] == "Virtual Master"
+            for custom_parameter in glyphs_fontinfo["customParameters"]
+        )
 
     @cached_property
     def gsfont(self):
@@ -88,9 +86,19 @@ class File:
         return None
 
     @cached_property
+    def glyphs_plist(self) -> dict[str, Any]:
+        """Grants raw dictly-typed access to a Glyphs to avoid parsing the full
+        font with glyphsLib"""
+
+        assert self.is_glyphs_file, (
+            "File.glyphs_plist should not be accessed on non-glyphs single file sources"
+        )
+        return openstep_plist.load(open(self.path, encoding="utf-8"))
+
+    @cached_property
     def glyphspackage_fontinfo(self) -> dict[str, Any]:
         """Grants raw dictly-typed access to a Glyphspackage's fontinfo.plist to
-        avoid loading the full font through glyphsLib"""
+        avoid parsing the full font with glyphsLib"""
 
         assert self.is_glyphspackage, (
             "File.glyphspackage_fontinfo should not be accessed on non-glyphspackage sources"
@@ -122,10 +130,12 @@ class File:
     def family_name(self):
         # Figure out target name
         if self.is_glyphs_file:
-            name = self.gsfont.familyName
+            # Optimisation: pull directly from source instead of parsing with
+            # glyphsLib
+            name = self.glyphs_plist["familyName"]
         elif self.is_glyphspackage:
             # Optimisation: pull this directly from the fontinfo.plist instead
-            # of potentially loading the whole font with glyphsLib
+            # of parsing with glyphsLib
             name = self.glyphspackage_fontinfo["familyName"]
         elif self.is_ufo:
             ufo = open_ufo(self.path)
