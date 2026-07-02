@@ -121,8 +121,12 @@ class File:
     @cached_property
     def family_name(self):
         # Figure out target name
-        if self.is_glyphs:
+        if self.is_glyphs_file:
             name = self.gsfont.familyName
+        elif self.is_glyphspackage:
+            # Optimisation: pull this directly from the fontinfo.plist instead
+            # of potentially loading the whole font with glyphsLib
+            name = self.glyphspackage_fontinfo["familyName"]
         elif self.is_ufo:
             ufo = open_ufo(self.path)
             name = ufo.info.familyName
