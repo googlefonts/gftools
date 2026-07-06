@@ -61,9 +61,9 @@ class File:
     @property
     def glyphs_format(self) -> int:
         if self.is_glyphs_file:
-            return self.glyphs_plist.get(".formatVersion", 2)
+            return int(self.glyphs_plist.get(".formatVersion", 2))
         elif self.is_glyphspackage:
-            return self.glyphspackage_fontinfo.get(".formatVersion", 2)
+            return int(self.glyphspackage_fontinfo.get(".formatVersion", 2))
         else:
             raise ValueError(
                 "File.glyphs_format should not be accessed on non-Glyphs sources"
