@@ -86,7 +86,7 @@ qa = [
   'skia-python; sys_platform == "win32"',
 ]
 test = [
-  "black ==24.10.0",
+  "black ==25.1.0",
   "pytest",  
 ]
 
