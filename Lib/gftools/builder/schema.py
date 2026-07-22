@@ -67,6 +67,22 @@ avar2_schema = MapPattern(
     ),
 )
 
+avar1_settings_schema = Map(
+    {
+        Optional("axes"): Str(),
+        Optional("grid"): Str(),
+        Optional("gridCuts"): Int(),
+        Optional("tolerance"): Float() | Int(),
+        Optional("maxMasters"): Int(),
+        Optional("args"): Str(),
+    }
+)
+
+# Each variable font may produce one or several avar1 flattenings
+avar1_schema = MapPattern(
+    Str(), avar1_settings_schema | Seq(avar1_settings_schema)
+)
+
 fvar_instances_schema = MapPattern(
     Str(),
     Seq(
@@ -105,6 +121,7 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("statFormat4"): stat_format4_schema
         | MapPattern(Str(), stat_format4_schema),
         Optional("avar2"): avar2_schema,
+        Optional("avar1"): avar1_schema,
         Optional("fvarInstances"): fvar_instances_schema,
         Optional("familyName"): Str(),
         Optional("includeSourceFixes"): Bool(),

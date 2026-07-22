@@ -210,6 +210,24 @@ The build can be customized by adding the following keys to the YAML file:
 
 -   `postCompile`: A list of operations to be run after the font compilation step; you can use this (together with the above option) to build variant fonts, rename families, bake in stylistic sets, etc.
 
+-   `avar1`: For families with an avar2 table, generate additional avar1-only
+    variable fonts by flattening the avar2 mapping, using
+    `gftools-avar2-to-avar1`. The flattened fonts are placed in an `avar1/`
+    subdirectory next to the variable font they are made from. The value is a
+    map keyed by variable font filename; each entry may contain `axes` (a
+    comma-separated list of axes to keep in the output, others are pinned at
+    their defaults), `grid` (axes to sample at every knot combination),
+    `gridCuts` (number of extra samples between knots), `tolerance` (verify
+    the output and refine until the worst outline error is below this many
+    font units; slow), `maxMasters` and `args`. For example:
+
+    ```yaml
+    avar1:
+      "MyFamily[GRAD,ROND,XTSP,opsz,wdth,wght].ttf":
+        axes: opsz,wdth,wght,GRAD,ROND,XTSP
+        grid: opsz,wdth,wght,ROND
+    ```
+
 - `includeSubsets`: A list of subsets to include in the font, using the
   `gftools-add-ds-subsets` tool. Each subset can be specified by a
   name, a range, or a source file. See the [gftools-add-ds-subsets documentation](https://github.com/googlefonts/gftools/blob/main/Lib/gftools/scripts/add_ds_subsets.py) for more information.
@@ -336,6 +354,7 @@ build process by leaving a `graph.png` file in the `sources` directory:
 - *copy*: Copies a file. Used internally when generating multiple variants from the same intermediate file.
 - *featureFreeze*: Runs `pyftfeaturefreeze` with the arguments provided in `args`.
 - *subspace*: Runs `fonttools varLib.instancer` to subspace a variable font according to the values in `axes`. `args` are added to the command line.
+- *avar2ToAvar1*: Runs `gftools-avar2-to-avar1` to flatten an avar2 variable font into an avar1 variable font by resampling the designspace at the locations implied by the font's avar2 and gvar tables. `args` are added to the command line.
 - *hbsubset*: Uses `hb-subset` to slim down a font binary.
 - *addSubset*: Adds a subset from another font using `gftools-add-ds-subsets`
     - `directory`: the intermediary folder used to store the source(s) the subset(s) is taken from

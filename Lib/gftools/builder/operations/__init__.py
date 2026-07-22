@@ -109,6 +109,10 @@ class OperationBase:
                 self.opname,
                 self.dependencies,
                 variables=self.variables,
+                implicit=[
+                    t.path for t in self.implicit if t.path not in self.dependencies
+                ]
+                or None,
             )
 
     def __hash__(self):

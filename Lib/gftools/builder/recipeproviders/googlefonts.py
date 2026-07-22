@@ -16,6 +16,7 @@ from gftools.builder.recipeproviders import RecipeProviderBase
 from gftools.builder.schema import (
     GOOGLEFONTS_SCHEMA,
     stat_schema,
+    avar1_schema,
     avar2_schema,
     stat_schema_by_font_name,
 )
@@ -110,6 +111,9 @@ class GFBuilder(RecipeProviderBase):
             yaml.dump(self.config["avar2"], self.avar2file)
         else:
             self.avar2file = None
+
+        if "avar1" in self.config:
+            load(yaml.dump(self.config["avar1"]), avar1_schema)
 
         if "fvarInstances" in self.config:
             self.fvarInstancesFile = NamedTemporaryFile(delete=False, mode="w+")
@@ -290,6 +294,8 @@ class GFBuilder(RecipeProviderBase):
             self.build_avar2()
         if "fvarInstances" in self.config:
             self.build_fvar_instances()
+        if "avar1" in self.config:
+            self.build_avar1()
 
     def build_spacing_axis(self):
         vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]
@@ -332,6 +338,51 @@ class GFBuilder(RecipeProviderBase):
             for vf in vfs:
                 self.recipe[vf].append(args)
             self.avar2file.close()
+
+    def build_avar1(self):
+        # Flatten avar2 variable fonts into avar1-only variable fonts,
+        # placed in an avar1/ subdirectory next to the avar2 original.
+        for fontfile, all_settings in self.config["avar1"].items():
+            vf = next(
+                (t for t in self.recipe if os.path.basename(t) == fontfile), None
+            )
+            if vf is None:
+                raise ValueError(
+                    f"avar1: no variable font target named '{fontfile}'"
+                )
+            if not isinstance(all_settings, list):
+                all_settings = [all_settings]
+            for settings in all_settings:
+                self._build_an_avar1(vf, fontfile, settings or {})
+
+    def _build_an_avar1(self, vf, fontfile, settings):
+        if "tolerance" in settings:
+            args = ["--tolerance", str(settings["tolerance"])]
+        else:
+            args = ["--no-verify"]
+        newname = fontfile
+        if "axes" in settings:
+            axes = settings["axes"].replace(" ", "")
+            args += ["--axes", axes]
+            # Redo the [axes] part of the filename for the kept axes
+            newname = re.sub(
+                r"\[[^]]*\]",
+                "[%s]" % ",".join(sorted(axes.split(","))),
+                fontfile,
+            )
+        if "grid" in settings:
+            args += ["--grid", settings["grid"].replace(" ", "")]
+        if "gridCuts" in settings:
+            args += ["--grid-cuts", str(settings["gridCuts"])]
+        if "maxMasters" in settings:
+            args += ["--max-masters", str(settings["maxMasters"])]
+        if "args" in settings:
+            args.append(settings["args"])
+        target = os.path.join(os.path.dirname(vf), "avar1", newname)
+        self.recipe[target] = [
+            {"source": vf},
+            {"operation": "avar2ToAvar1", "args": " ".join(args)},
+        ]
 
     def build_fvar_instances(self):
         vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]

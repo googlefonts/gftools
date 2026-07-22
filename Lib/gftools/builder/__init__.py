@@ -328,6 +328,24 @@ class GFBuilder:
     # Finally we walk the graph. We do another validation pass to make
     # sure that the operations make sense, and then we emit the ninja rules.
     def walk_graph(self):
+        # A step which consumes a file that other steps postprocess in
+        # place must wait for those postprocesses to finish: their stamp
+        # files become implicit dependencies of the consuming step.
+        for node in self.graph.nodes:
+            stamps, consumers = [], []
+            for successor in self.graph.successors(node):
+                operation = self.graph[node][successor].get("operation")
+                if operation is None:
+                    continue
+                if operation.postprocess:
+                    stamps.append(successor)
+                else:
+                    consumers.append(operation)
+            for operation in consumers:
+                for stamp in stamps:
+                    if stamp not in operation.implicit:
+                        operation.implicit.add(stamp)
+
         actions = defaultdict(list)
         final_targets = []
         for source, target in nx.algorithms.traversal.edge_bfs(self.graph):
