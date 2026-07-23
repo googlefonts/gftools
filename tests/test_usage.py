@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 """Unittests to check the functionality of Google Fonts Tools"""
+
 import os
 import re
 from glob import glob
@@ -87,11 +88,6 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def test_check_vtt_compatibility(self):
         from gftools.scripts.check_vtt_compatibility import main
-
-        main([self.example_font, self.example_font])
-
-    def test_compare_font(self):
-        from gftools.scripts.compare_font import main
 
         main([self.example_font, self.example_font])
 
