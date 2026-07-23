@@ -55,13 +55,13 @@ PROD_FAMILY_DOWNLOAD = "https://fonts.google.com/download?family={}"
 
 
 def download_family_from_Google_Fonts(
-    family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True
+    family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True, auth=None
 ):
     """Download a font family from Google Fonts"""
     # TODO (M Foley) update all dl_urls in .ini files.
     dl_url = dl_url.replace("download?family=", "download/list?family=")
     url = dl_url.format(family.replace(" ", "%20"))
-    data = json.loads(requests.get(url).text[5:])
+    data = json.loads(requests.get(url, auth=auth).text[5:])
     res = []
     for item in data["manifest"]["fileRefs"]:
         filename = item["filename"]
@@ -72,10 +72,10 @@ def download_family_from_Google_Fonts(
             continue
         if dst:
             target = os.path.join(dst, filename)
-            download_file(dl_url, target)
+            download_file(dl_url, target, auth=auth)
             res.append(target)
         else:
-            res.append(download_file(dl_url))
+            res.append(download_file(dl_url, auth=auth))
     return res
 
 
@@ -232,7 +232,7 @@ def download_files_from_archive(url, dst):
         return fonts_from_zip(zip_file, dst)
 
 
-def download_file(url, dst_path=None):
+def download_file(url, dst_path=None, auth=None):
     """Download a file from a url. If no dst_path is specified, store the file
     as a BytesIO object"""
     if os.environ.get("GH_TOKEN") and re.match(r"^https://(\w+\.)?github.com", url):
@@ -240,7 +240,7 @@ def download_file(url, dst_path=None):
     else:
         headers = {}
 
-    request = requests.get(url, stream=True, headers=headers)
+    request = requests.get(url, stream=True, headers=headers, auth=auth)
     request.raise_for_status()
     if not dst_path:
         return BytesIO(request.content)

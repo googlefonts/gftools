@@ -11,9 +11,13 @@ from gftools.push.servers import (
     PRODUCTION_META_URL,
     SANDBOX_VERSIONS_URL,
     PRODUCTION_VERSIONS_URL,
+    server_auth,
 )
 import argparse
 import sys
+
+SANDBOX_AUTH = server_auth("sandbox")
+PRODUCTION_AUTH = server_auth("production")
 
 
 def munge_meta(obj):
@@ -104,9 +108,17 @@ def doc_in_server(doc, sb_data, prod_data):
 
 def which_server_metadata(string, family):
     munge = munge_family
-    sb_meta = munge(json.loads(requests.get(f"{SANDBOX_META_URL}/{family}").text[4:]))
+    sb_meta = munge(
+        json.loads(
+            requests.get(f"{SANDBOX_META_URL}/{family}", auth=SANDBOX_AUTH).text[4:]
+        )
+    )
     prod_meta = munge(
-        json.loads(requests.get(f"{PRODUCTION_META_URL}/{family}").text[4:])
+        json.loads(
+            requests.get(f"{PRODUCTION_META_URL}/{family}", auth=PRODUCTION_AUTH).text[
+                4:
+            ]
+        )
     )
     res = doc_in_server(string, sb_meta, prod_meta)
 
@@ -119,13 +131,15 @@ def pr_type(data):
                 which_server_metadata(doc.read(), "Huninn")
 
 
-def get_designer(url, designer):
-    meta = requests.get(url).json()
+def get_designer(url, designer, auth=None):
+    meta = requests.get(url, auth=auth).json()
     for family in meta["familyMetadataList"]:
         for family_designer in family["designers"]:
             if family_designer == designer:
                 family_to_check = family["family"]
-                data = json.loads(requests.get(f"{url}/{family_to_check}").text[4:])
+                data = json.loads(
+                    requests.get(f"{url}/{family_to_check}", auth=auth).text[4:]
+                )
                 return next(d for d in data["designers"] if d["name"] == designer)
     return {}
 
@@ -192,24 +206,42 @@ def main(args=None):
         return
     if args.meta:
         munge = munge_meta
-        sb_meta = munge(requests.get(SANDBOX_META_URL).json())
-        prod_meta = munge(requests.get(PRODUCTION_META_URL).json())
+        sb_meta = munge(requests.get(SANDBOX_META_URL, auth=SANDBOX_AUTH).json())
+        prod_meta = munge(
+            requests.get(PRODUCTION_META_URL, auth=PRODUCTION_AUTH).json()
+        )
     elif args.fontv:
         munge = munge_fontv
-        sb_meta = munge(json.loads(requests.get(SANDBOX_VERSIONS_URL).text[4:]))
-        prod_meta = munge(json.loads(requests.get(PRODUCTION_VERSIONS_URL).text[4:]))
+        sb_meta = munge(
+            json.loads(requests.get(SANDBOX_VERSIONS_URL, auth=SANDBOX_AUTH).text[4:])
+        )
+        prod_meta = munge(
+            json.loads(
+                requests.get(PRODUCTION_VERSIONS_URL, auth=PRODUCTION_AUTH).text[4:]
+            )
+        )
     elif args.family:
         munge = munge_family
         sb_meta = munge(
-            json.loads(requests.get(f"{SANDBOX_META_URL}/{args.family}").text[4:])
+            json.loads(
+                requests.get(
+                    f"{SANDBOX_META_URL}/{args.family}", auth=SANDBOX_AUTH
+                ).text[4:]
+            )
         )
         prod_meta = munge(
-            json.loads(requests.get(f"{PRODUCTION_META_URL}/{args.family}").text[4:])
+            json.loads(
+                requests.get(
+                    f"{PRODUCTION_META_URL}/{args.family}", auth=PRODUCTION_AUTH
+                ).text[4:]
+            )
         )
     elif args.designer:
         munge = munge_designer
-        sb_meta = get_designer(SANDBOX_META_URL, args.designer)
-        prod_meta = get_designer(PRODUCTION_META_URL, args.designer)
+        sb_meta = get_designer(SANDBOX_META_URL, args.designer, auth=SANDBOX_AUTH)
+        prod_meta = get_designer(
+            PRODUCTION_META_URL, args.designer, auth=PRODUCTION_AUTH
+        )
 
     with tempfile.TemporaryDirectory() as temp_dir:
         sb_file = os.path.join(temp_dir, "sb_meta.json")

@@ -31,6 +31,14 @@ log = logging.getLogger("gftools.push")
 # This module uses api endpoints which shouldn't be public. Ask
 # Marc Foley for the .gf_push_config.toml file. Place this file in your
 # home directory. Environment variables can also be used instead.
+#
+# Some servers require basic authentication. Credentials can be provided
+# with the SANDBOX_USER/SANDBOX_PASSWORD (and equivalent) environment
+# variables, or with a [credentials] table in the push config file:
+#
+# [credentials]
+# sandbox_user = "..."
+# sandbox_password = "..."
 config_ini = os.path.join(os.path.expanduser("~"), ".gf_push_config.ini")
 config_toml = os.path.join(os.path.expanduser("~"), ".gf_push_config.toml")
 
@@ -65,20 +73,38 @@ PRODUCTION_META_URL = config["urls"]["production_meta"]
 PRODUCTION_VERSIONS_URL = config["urls"]["production_versions"]
 
 
+def server_auth(server_name: str) -> "tuple[str, str] | None":
+    """Basic auth credentials for a server, taken from the push config's
+    [credentials] table or the <SERVER>_USER/<SERVER>_PASSWORD environment
+    variables e.g SANDBOX_USER, SANDBOX_PASSWORD."""
+    creds = config.get("credentials", {})
+    user = creds.get(f"{server_name}_user") or os.environ.get(
+        f"{server_name.upper()}_USER"
+    )
+    password = creds.get(f"{server_name}_password") or os.environ.get(
+        f"{server_name.upper()}_PASSWORD"
+    )
+    if user and password:
+        return (user, password)
+    return None
+
+
 @lru_cache
-def gf_server_metadata(url: str):
+def gf_server_metadata(url: str, auth: "tuple[str, str] | None" = None):
     """Get family json data from a Google Fonts metadata url"""
     # can't do requests.get("url").json() since request text starts with ")]}'"
-    info = requests.get(url).json()
+    info = requests.get(url, auth=auth).json()
     return {i["family"]: i for i in info["familyMetadataList"]}
 
 
 @lru_cache
-def gf_server_family_metadata(url: str, family: str):
+def gf_server_family_metadata(
+    url: str, family: str, auth: "tuple[str, str] | None" = None
+):
     """Get metadata for family on a server"""
     # can't do requests.get("url").json() since request text starts with ")]}'"
     url = url + f"/{family.replace(' ', '%20')}"
-    r = requests.get(url)
+    r = requests.get(url, auth=auth)
     if r.status_code != 200:
         return None
     text = r.text
@@ -93,23 +119,37 @@ class GFServer(Itemer):
         url: str = PRODUCTION_META_URL,
         dl_url: str = PROD_FAMILY_DOWNLOAD,
         version_url: str = PRODUCTION_VERSIONS_URL,
+        auth: "tuple[str, str] | None" = None,
     ):
         self.name = name
         self.url = url
         self.dl_url = dl_url
         self.version_url = version_url
+        # underscore attribs are skipped by Itemer.to_json so credentials
+        # never end up in saved server data
+        self._auth = auth
         self.families: dict[str, Family] = {}
         self.designers: dict[str, Designer] = {}
         self.metadata: dict[str, FamilyMeta] = {}
         self.axisregistry: dict[str, Axis] = {}
-        self.family_versions_data = json.loads(requests.get(self.version_url).text[5:])
+        resp = requests.get(self.version_url, auth=self._auth)
+        if resp.status_code != 200:
+            raise ValueError(
+                f"Failed to get font family versions from the {self.name} "
+                f"server (HTTP {resp.status_code}). The server may require "
+                "basic authentication. Provide credentials with the "
+                f"{self.name.upper()}_USER and {self.name.upper()}_PASSWORD "
+                "environment variables or a [credentials] table in the "
+                "push config file."
+            )
+        self.family_versions_data = json.loads(resp.text[5:])
         self.family_versions = {
             i["name"]: i["fontVersions"][0]["version"]
             for i in self.family_versions_data["familyVersions"]
         }
 
     def is_online(self):
-        req = requests.head(self.url)
+        req = requests.head(self.url, auth=self._auth)
         if req.status_code == 200:
             return True
         return False
@@ -147,23 +187,25 @@ class GFServer(Itemer):
             self.families[name] = Family(name, family_version)
             return True
         else:
-            family = Family.from_gf(name, dl_url=self.dl_url)
+            family = Family.from_gf(name, dl_url=self.dl_url, auth=self._auth)
             if family:
                 self.families[name] = family
                 return True
         return False
 
     def update_family_designers(self, name: str):
-        meta = gf_server_family_metadata(self.url, name)
+        meta = gf_server_family_metadata(self.url, name, auth=self._auth)
         for designer in meta["designers"]:
             self.designers[designer["name"]] = Designer.from_gf_json(designer)
 
     def update_metadata(self, name: str):
-        meta = gf_server_family_metadata(self.url, name)
+        meta = gf_server_family_metadata(self.url, name, auth=self._auth)
         self.metadata[meta["family"]] = FamilyMeta.from_gf_json(meta)
 
     def update_all(self, last_checked: str):
-        meta = requests.get(self.url).json()
+        resp = requests.get(self.url, auth=self._auth)
+        resp.raise_for_status()
+        meta = resp.json()
         self.update_axis_registry(meta["axisRegistry"])
 
         families_data = meta["familyMetadataList"]
@@ -203,12 +245,14 @@ class GFServers(Itemer):
             SANDBOX_META_URL,
             SANDBOX_FAMILY_DOWNLOAD,
             SANDBOX_VERSIONS_URL,
+            auth=server_auth(GFServers.SANDBOX),
         )
         self.production = GFServer(
             GFServers.PRODUCTION,
             PRODUCTION_META_URL,
             PROD_FAMILY_DOWNLOAD,
             PRODUCTION_VERSIONS_URL,
+            auth=server_auth(GFServers.PRODUCTION),
         )
         self.fp = None
 
