@@ -126,11 +126,6 @@ class TestGFToolsScripts(unittest.TestCase):
 
         main([self.example_font])
 
-    def test_fix_glyph_private_encoding(self):
-        from gftools.scripts.fix_glyph_private_encoding import main
-
-        main([self.example_font])
-
     def test_fix_hinting(self):
         from gftools.scripts.fix_hinting import main
 

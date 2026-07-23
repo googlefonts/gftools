@@ -7,7 +7,6 @@ target_modules = [
     "gftools-fix-familymetadata",
     "gftools-fix-fsselection",
     "gftools-fix-gasp",
-    "gftools-fix-glyph-private-encoding",
     "gftools-fix-glyphs",
     "gftools-fix-nameids",
     # "gftools-fix-nonhinting", #this one do not even use argparse module
