@@ -17,7 +17,7 @@ Compare a github folder of fonts against the same family hosted on Google
 Fonts:
 `gftools qa -gh www.github.com/user/repo/tree/fonts/ttf -gfb -a -o qa`
 """
-from fontTools.ttLib import TTFont
+
 import argparse
 import os
 import sys
@@ -33,19 +33,27 @@ from gftools.utils import (
 )
 import re
 from gftools.qa import FontQA
-from diffenator2.font import DFont
-
 
 __version__ = "3.1.0"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def family_name_from_fonts(fonts):
-    results = set(f.family_name for f in fonts)
-    if len(results) > 1:
-        raise Exception("Multiple family names found: [{}]".format(", ".join(results)))
-    return list(results)[0]
+def family_name_from_fonts(fonts: list[str]) -> str:
+    family_names = set()
+    for f in fonts:
+        try:
+            from fontTools.ttLib import TTFont
+
+            with TTFont(f) as font:
+                family_names.add(font["name"].getName(1, 3, 1).toUnicode())
+        except Exception as e:
+            logger.warning(f"Failed to read family name from {f}: {e}")
+    if len(family_names) > 1:
+        raise ValueError(
+            "Multiple family names found: [{}]".format(", ".join(family_names))
+        )
+    return list(family_names)[0]
 
 
 def main(args=None):
@@ -154,7 +162,7 @@ def main(args=None):
     parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args(args)
     if args.out_github and not any([args.pull_request, args.github_dir]):
-        raise Exception(
+        raise ValueError(
             "Cannot upload results to a github issue or pr. "
             "Font input must either a github dir or a pull request"
         )
@@ -169,7 +177,7 @@ def main(args=None):
             args.interpolations,
         ]
     ):
-        raise Exception(
+        raise ValueError(
             "Terminating. No checks selected. Run gftools qa "
             "--help to see all possible commands."
         )
@@ -179,7 +187,8 @@ def main(args=None):
     fonts_dir = os.path.join(args.out, "fonts")
     mkdir(fonts_dir)
     if args.fonts:
-        [shutil.copy(f, fonts_dir) for f in args.fonts]
+        for f in args.fonts:
+            shutil.copy(f, fonts_dir)
         fonts = args.fonts
     elif args.pull_request:
         fonts = download_files_in_github_pr(
@@ -199,19 +208,20 @@ def main(args=None):
         fonts = download_files_from_archive(args.archive, fonts_dir)
     elif args.googlefonts:
         fonts = download_family_from_Google_Fonts(args.googlefonts, fonts_dir)
+    else:
+        raise ValueError("No fonts found. Please provide a font input method")
 
     if args.filter_fonts:
         re_filter = re.compile(args.filter_fonts)
         fonts = [f for f in fonts if re_filter.search(f)]
 
-    dfonts = [
-        DFont(f) for f in fonts if f.endswith((".ttf", ".otf")) and "static" not in f
-    ]
+    dfonts = [f for f in fonts if f.endswith((".ttf", ".otf")) and "static" not in f]
     family_name = family_name_from_fonts(dfonts)
     family_on_gf = Google_Fonts_has_family(family_name)
 
     # Retrieve fonts_before and store in out dir
-    fonts_before = None
+    fonts_before: list[str] = []
+    fonts_before_dir = os.path.join(args.out, "fonts_before")
     if any(
         [
             args.fonts_before,
@@ -220,10 +230,10 @@ def main(args=None):
             args.archive_before,
         ]
     ) or (args.googlefonts_before and family_on_gf):
-        fonts_before_dir = os.path.join(args.out, "fonts_before")
         mkdir(fonts_before_dir, overwrite=False)
     if args.fonts_before:
-        [shutil.copy(f, fonts_before_dir) for f in args.fonts_before]
+        for f in args.fonts_before:
+            shutil.copy(f, fonts_before_dir)
         fonts_before = args.fonts_before
     elif args.pull_request_before:
         fonts_before = download_files_in_github_pr(
@@ -239,6 +249,8 @@ def main(args=None):
         )
     elif args.googlefonts_before and family_on_gf:
         fonts_before = download_family_from_Google_Fonts(family_name, fonts_before_dir)
+    else:
+        fonts_before = []
 
     url = None
     if args.out_url:
@@ -250,7 +262,7 @@ def main(args=None):
 
     if fonts_before:
         dfonts_before = [
-            DFont(f)
+            f
             for f in fonts_before
             if f.endswith((".ttf", ".otf")) and "static" not in f
         ]
@@ -259,27 +271,21 @@ def main(args=None):
         qa = FontQA(dfonts, out=args.out, url=url)
 
     if args.auto_qa and family_on_gf:
-        qa.googlefonts_upgrade(args.imgs, args.rust)
+        qa.googlefonts_upgrade(args.imgs)
     elif args.auto_qa and not family_on_gf:
-        qa.googlefonts_new(args.imgs, args.rust)
+        qa.googlefonts_new(args.imgs)
     if args.render:
-        qa.render(args.imgs, args.rust)
+        qa.render(args.imgs)
     if args.fontbakery:
-        if args.rust:
-            qa.fontspector(extra_args=args.extra_fontspector_args)
-        else:
-            qa.fontbakery(extra_args=args.extra_fontbakery_args)
+        qa.fontbakery(extra_args=args.extra_fontbakery_args)
     if args.diffenator:
-        if args.rust:
-            qa.diffenator3()
-        else:
-            qa.diffenator()
+        qa.diffenator3()
     if args.diffbrowsers:
-        qa.diffbrowsers(args.imgs, rust=args.rust)
+        qa.diffbrowsers(args.imgs)
     if args.proof:
-        qa.proof(rust=args.rust)
+        qa.proof()
     if args.interpolations:
-        qa.interpolations(rust=args.rust)
+        qa.interpolations()
 
     if qa.has_error:
         logger.fatal("QA tools have raised a fatal error. Please fix!")
