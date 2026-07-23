@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 from __future__ import annotations
-from typing import Union
+from typing import Optional, Union
 import requests
 from urllib.parse import urljoin
 from io import BytesIO
@@ -31,7 +31,6 @@ from github import Github
 import importlib.resources
 from gfmetadata import text_format
 import json
-from PIL import Image
 import re
 import shlex
 import subprocess
@@ -55,8 +54,8 @@ PROD_FAMILY_DOWNLOAD = "https://fonts.google.com/download?family={}"
 
 
 def download_family_from_Google_Fonts(
-    family, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True, auth=None
-):
+    family: str, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True, auth=None
+) -> list[str]:
     """Download a font family from Google Fonts"""
     # TODO (M Foley) update all dl_urls in .ini files.
     dl_url = dl_url.replace("download?family=", "download/list?family=")
@@ -79,7 +78,7 @@ def download_family_from_Google_Fonts(
     return res
 
 
-def Google_Fonts_has_family(name):
+def Google_Fonts_has_family(name: str) -> bool:
     """Check if Google Fonts has the specified font family"""
     # This endpoint is private and may change at some point
     # TODO (MF) if another function needs this data, refactor it into a
@@ -119,12 +118,12 @@ def parse_github_dir_url(url):
 
 
 def download_files_in_github_pr(
-    url,
-    dst,
+    url: str,
+    dst: str,
     filter_files=[],
     ignore_static_dir=True,
     overwrite=True,
-):
+) -> list[str]:
     """Download files in a github pr e.g
     https://github.com/google/fonts/pull/2072
 
@@ -143,11 +142,11 @@ def download_files_in_github_pr(
     list of paths to downloaded files
     """
     gh = Github(os.environ["GH_TOKEN"])
-    url = parse_github_pr_url(url)
-    repo_slug = "{}/{}".format(url.user, url.repo)
+    parsed_url = parse_github_pr_url(url)
+    repo_slug = "{}/{}".format(parsed_url.user, parsed_url.repo)
     repo = gh.get_repo(repo_slug)
-    pull = repo.get_pull(url.pull)
-    files = [f for f in pull.get_files()]
+    pull = repo.get_pull(parsed_url.pull)
+    files = list(pull.get_files())
 
     mkdir(dst, overwrite=overwrite)
     # if the pr is from google/fonts or a fork of it, download all the
@@ -226,13 +225,15 @@ def download_files_in_github_dir(orig_url, dst, filter_files=[], overwrite=True)
     return results
 
 
-def download_files_from_archive(url, dst):
+def download_files_from_archive(url: str, dst: str) -> list[str]:
     zip_io = download_file(url)
     with ZipFile(zip_io) as zip_file:
         return fonts_from_zip(zip_file, dst)
 
 
-def download_file(url, dst_path=None, auth=None):
+def download_file(
+    url: str, dst_path: Optional[str] = None, auth=None
+) -> BytesIO | None:
     """Download a file from a url. If no dst_path is specified, store the file
     as a BytesIO object"""
     if os.environ.get("GH_TOKEN") and re.match(r"^https://(\w+\.)?github.com", url):
