@@ -51,8 +51,8 @@ def print_menu():
     print("                | Tools - Version", __version__)
     print("              o-o")
     print("\nBasic command examples:\n")
-    print("    gftools compare-font font1.ttf font2.ttf")
-    print("    gftools compare-font --help")
+    print("    gftools fix-family font1.ttf font2.ttf")
+    print("    gftools fix-family --help")
     print("    gftools --version")
     print("    gftools --help\n")
 

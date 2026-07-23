@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 """Unittests to check the functionality of Google Fonts Tools"""
+
 import os
 import re
 from glob import glob
@@ -90,11 +91,6 @@ class TestGFToolsScripts(unittest.TestCase):
 
         main([self.example_font, self.example_font])
 
-    def test_compare_font(self):
-        from gftools.scripts.compare_font import main
-
-        main([self.example_font, self.example_font])
-
     def test_find_features(self):
         from gftools.scripts.find_features import main
 
@@ -127,11 +123,6 @@ class TestGFToolsScripts(unittest.TestCase):
 
     def test_fix_gasp(self):
         from gftools.scripts.fix_gasp import main
-
-        main([self.example_font])
-
-    def test_fix_glyph_private_encoding(self):
-        from gftools.scripts.fix_glyph_private_encoding import main
 
         main([self.example_font])
 
@@ -169,11 +160,6 @@ class TestGFToolsScripts(unittest.TestCase):
         from gftools.scripts.fix_vertical_metrics import main
 
         main([self.example_font])
-
-    def test_font_weights_coverage(self):
-        from gftools.scripts.font_weights_coverage import main
-
-        main([self.example_dir])
 
     def test_fix_font(self):
         from gftools.scripts.fix_font import main
@@ -232,11 +218,6 @@ class TestGFToolsScripts(unittest.TestCase):
         from gftools.scripts.unicode_names import main
 
         main(["--nam_file", self.nam_file])
-
-    def test_update_families(self):
-        from gftools.scripts.update_families import main
-
-        main([self.example_font])
 
     def test_update_version(self):
         from gftools.scripts.update_version import main
