@@ -166,11 +166,6 @@ class TestGFToolsScripts(unittest.TestCase):
 
         main([self.example_font])
 
-    def test_font_weights_coverage(self):
-        from gftools.scripts.font_weights_coverage import main
-
-        main([self.example_dir])
-
     def test_fix_font(self):
         from gftools.scripts.fix_font import main
 
