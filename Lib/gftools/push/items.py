@@ -40,7 +40,11 @@ def jsonify(item):
 
 class Itemer(ABC):
     def to_json(self):
-        return jsonify(self.__dict__)
+        # underscore attribs are private and may hold credentials so they
+        # must never be serialized
+        return jsonify(
+            {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        )
 
 
 @dataclass
@@ -65,9 +69,14 @@ class Family(Itemer):
         return cls.from_gf(data["family"], dl_url)
 
     @classmethod
-    def from_gf(cls, name: str, dl_url: str = PROD_FAMILY_DOWNLOAD):
+    def from_gf(
+        cls,
+        name: str,
+        dl_url: str = PROD_FAMILY_DOWNLOAD,
+        auth: "tuple[str, str] | None" = None,
+    ):
         try:
-            fonts = download_family_from_Google_Fonts(name, dl_url=dl_url)
+            fonts = download_family_from_Google_Fonts(name, dl_url=dl_url, auth=auth)
             ttFont = TTFont(fonts[0])
             version = font_version(ttFont)
             name = ttFont["name"].getBestFamilyName()
