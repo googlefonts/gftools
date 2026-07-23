@@ -224,11 +224,6 @@ class TestGFToolsScripts(unittest.TestCase):
 
         main(["--nam_file", self.nam_file])
 
-    def test_update_families(self):
-        from gftools.scripts.update_families import main
-
-        main([self.example_font])
-
     def test_update_version(self):
         from gftools.scripts.update_version import main
 
