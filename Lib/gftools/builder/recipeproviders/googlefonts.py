@@ -343,13 +343,9 @@ class GFBuilder(RecipeProviderBase):
         # Flatten avar2 variable fonts into avar1-only variable fonts,
         # placed in an avar1/ subdirectory next to the avar2 original.
         for fontfile, all_settings in self.config["avar1"].items():
-            vf = next(
-                (t for t in self.recipe if os.path.basename(t) == fontfile), None
-            )
+            vf = next((t for t in self.recipe if os.path.basename(t) == fontfile), None)
             if vf is None:
-                raise ValueError(
-                    f"avar1: no variable font target named '{fontfile}'"
-                )
+                raise ValueError(f"avar1: no variable font target named '{fontfile}'")
             if not isinstance(all_settings, list):
                 all_settings = [all_settings]
             for settings in all_settings:

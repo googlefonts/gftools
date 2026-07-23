@@ -79,9 +79,7 @@ avar1_settings_schema = Map(
 )
 
 # Each variable font may produce one or several avar1 flattenings
-avar1_schema = MapPattern(
-    Str(), avar1_settings_schema | Seq(avar1_settings_schema)
-)
+avar1_schema = MapPattern(Str(), avar1_settings_schema | Seq(avar1_settings_schema))
 
 fvar_instances_schema = MapPattern(
     Str(),
