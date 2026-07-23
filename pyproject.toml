@@ -73,6 +73,7 @@ dependencies = [
   # We are migrating to tomllib from configparser. For pre-3.11 Python versions,
   # we need to install tomli.
   'tomli; python_version < "3.11"',
+  "filelock>=3.20.3",
 ]
 
 [project.optional-dependencies]
