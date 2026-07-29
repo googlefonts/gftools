@@ -102,10 +102,36 @@ The build can be customized by adding the following keys to the YAML file:
     `gftools.stat`. The Flags key's values are explained in the [OpenType
     spec](https://learn.microsoft.com/en-us/typography/opentype/spec/stat#flags).
 
--   `instances`: A list of static font TTF instances to generate from
-    each variable font as demonstrated above. If this argument isn\'t
-    provided, static TTFs will be generated for each instance that is
-    specified in the source files.
+-   `instances`: A list of static font TTF instances to cut from the
+    variable font using `gftools-gen-static`. When this argument is
+    provided, it replaces the default behaviour of building a static
+    TTF/OTF with fontmake for each instance specified in the source
+    files. Each instance must have a `familyName` and `styleName`,
+    which are used to build a RIBBI compliant name table. The style
+    name must match a named fvar instance in the variable font, unless
+    axis positions are provided with `coordinates`. `out` is an
+    optional output path relative to the parent of the config file's
+    directory (i.e. the repository root when the config lives in a
+    `sources` directory); it defaults to
+    `$ttDir/FamilyName-StyleName.ttf`. Instances whose style name
+    contains "Italic" are cut from the italic variable font if the
+    family is split into roman and italic. If the build produces
+    several variable fonts, use `in` to name the variable font (by
+    filename) an instance should be cut from:
+
+    ```yaml
+    instances:
+      - out: fonts/ttf/Family-Regular.ttf
+        coordinates:
+          wght: 400
+        familyName: Family
+        styleName: Regular
+      - familyName: Family
+        styleName: Bold
+      - familyName: Family
+        styleName: Bold Italic
+        in: Family-Italic[wght].ttf
+    ```
 
 -   `buildVariable`: Build variable fonts. Defaults to true.
 
@@ -354,6 +380,7 @@ build process by leaving a `graph.png` file in the `sources` directory:
 - *copy*: Copies a file. Used internally when generating multiple variants from the same intermediate file.
 - *featureFreeze*: Runs `pyftfeaturefreeze` with the arguments provided in `args`.
 - *subspace*: Runs `fonttools varLib.instancer` to subspace a variable font according to the values in `axes`. `args` are added to the command line.
+- *genStatic*: Runs `gftools-gen-static` to generate a static font from a variable font. The font is named using the required `family` and `style` arguments and complies with Microsoft's RIBBI naming convention. The style must match a named fvar instance in the variable font, unless axis positions are provided with e.g `args: "--coordinates wght=450"`.
 - *avar2ToAvar1*: Runs `gftools-avar2-to-avar1` to flatten an avar2 variable font into an avar1 variable font by resampling the designspace at the locations implied by the font's avar2 and gvar tables. `args` are added to the command line.
 - *hbsubset*: Uses `hb-subset` to slim down a font binary.
 - *addSubset*: Adds a subset from another font using `gftools-add-ds-subsets`
