@@ -74,10 +74,6 @@ class GFBuilder(RecipeProviderBase):
             raise ValueError("Invalid configuration file") from e
 
     def write_recipe(self):
-        if "instances" in self.config:
-            logger.warning(
-                "'instances' no longer supported; generate a config with --generate and select the instances you want"
-            )
         self.revalidate()
         self.config = {**DEFAULTS, **self.config}
         for field in ["vfDir", "ttDir", "otDir", "woffDir"]:
@@ -129,6 +125,7 @@ class GFBuilder(RecipeProviderBase):
         # Find variable fonts
         self.recipe = {}
         self.build_all_variables()
+        self.build_gen_static_instances()
         self.build_all_statics()
         return self.recipe
 
@@ -481,7 +478,82 @@ class GFBuilder(RecipeProviderBase):
             ]
         return steps
 
+    def build_gen_static_instances(self):
+        """Generate declared static instances from the variable fonts.
+
+        When a config declares an 'instances' list, each instance is cut
+        from the variable font with gftools-gen-static instead of being
+        built from the sources with fontmake."""
+        if "instances" not in self.config:
+            return
+        vfs = [
+            t
+            for t in self.recipe.keys()
+            if t.endswith(".ttf") and "SC[" not in os.path.basename(t)
+        ]
+        romans = [t for t in vfs if "-Italic[" not in os.path.basename(t)]
+        italics = [t for t in vfs if "-Italic[" in os.path.basename(t)]
+        for instance in self.config["instances"]:
+            if "in" in instance:
+                vf = next(
+                    (t for t in vfs if os.path.basename(t) == instance["in"]), None
+                )
+                if vf is None:
+                    raise ValueError(
+                        f"instances: no variable font target named "
+                        f"'{instance['in']}'. Built variable fonts: "
+                        f"{', '.join(os.path.basename(t) for t in vfs)}"
+                    )
+                self._build_a_gen_static_instance(vf, instance)
+                continue
+            italic = "Italic" in instance["styleName"].split()
+            candidates = italics if italic and italics else romans
+            if not candidates:
+                raise ValueError(
+                    "instances: there is no variable font to generate static "
+                    "instances from; enable buildVariable"
+                )
+            if len(candidates) > 1:
+                raise ValueError(
+                    "instances: cannot determine which variable font to cut "
+                    f"'{instance['styleName']}' from since multiple variable "
+                    f"fonts are built: {', '.join(candidates)}. Specify one "
+                    "with the instance's 'vf' key."
+                )
+            self._build_a_gen_static_instance(candidates[0], instance)
+
+    def _build_a_gen_static_instance(self, vf: str, instance: dict):
+        if "out" in instance:
+            # The builder runs in the config file's directory (usually
+            # sources/), so the repo root is one level up
+            target = os.path.join("..", instance["out"])
+            filename = os.path.basename(instance["out"])
+        else:
+            filename = "{}-{}.ttf".format(
+                instance["familyName"].replace(" ", ""),
+                instance["styleName"].replace(" ", ""),
+            )
+            target = os.path.join(self.config["ttDir"], filename)
+        step = {
+            "operation": "genStatic",
+            "family": instance["familyName"],
+            "style": instance["styleName"],
+        }
+        if "coordinates" in instance:
+            step["args"] = "--coordinates " + " ".join(
+                f"{axis}={value}" for axis, value in instance["coordinates"].items()
+            )
+        self.recipe[target] = (
+            [{"source": vf}, step] + self._autohint_steps(target) + self._fix_step()
+        )
+        wf_filename = os.path.splitext(filename)[0] + ".woff2"
+        self.build_a_webfont(target, os.path.join(self.config["woffDir"], wf_filename))
+
     def build_all_statics(self):
+        if "instances" in self.config:
+            # Statics are generated from the variable fonts instead,
+            # see build_gen_static_instances.
+            return
         if not self.config.get("buildStatic", True):
             return
         for source in self.sources:

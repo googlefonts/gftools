@@ -93,6 +93,18 @@ fvar_instances_schema = MapPattern(
     ),
 )
 
+instances_schema = Seq(
+    Map(
+        {
+            "familyName": Str(),
+            "styleName": Str(),
+            Optional("out"): Str(),
+            Optional("coordinates"): MapPattern(Str(), Float() | Int()),
+            Optional("in"): Str(),
+        }
+    )
+)
+
 stat_format4_schema = Seq(
     Map(
         {
@@ -121,6 +133,7 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("avar2"): avar2_schema,
         Optional("avar1"): avar1_schema,
         Optional("fvarInstances"): fvar_instances_schema,
+        Optional("instances"): instances_schema,
         Optional("familyName"): Str(),
         Optional("includeSourceFixes"): Bool(),
         Optional("stylespaceFile"): Str(),

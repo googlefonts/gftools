@@ -1,0 +1,12 @@
+sources:
+  - TestFamily.glyphs
+familyName: Test Family
+autohintTTF: false
+instances:
+  - out: fonts/custom/TestFamily-Regular.ttf
+    coordinates:
+      wght: 400
+    familyName: Test Family
+    styleName: Regular
+  - familyName: Test Family
+    styleName: Black

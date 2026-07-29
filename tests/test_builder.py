@@ -63,6 +63,19 @@ TEST_DIR = os.path.join(CWD, "..", "data", "test", "builder")
                 os.path.join("variable", "TestFamily-Italic[wght].ttf"),
             ],
         ),
+        # Statics declared with the 'instances' key are cut from the
+        # variable font instead of being built from the sources. The
+        # 'out' key places the static relative to the repo root.
+        (
+            os.path.join(TEST_DIR, "gen_static_instances"),
+            [
+                os.path.join("variable", "TestFamily[wght].ttf"),
+                os.path.join("custom", "TestFamily-Regular.ttf"),
+                os.path.join("ttf", "TestFamily-Black.ttf"),
+                os.path.join("webfonts", "TestFamily-Regular.woff2"),
+                os.path.join("webfonts", "TestFamily-Black.woff2"),
+            ],
+        ),
     ],
 )
 def test_builder(fp, font_paths):
@@ -140,6 +153,48 @@ def test_builder_glyphData(fp, font_paths):
 def test_bad_configs():
     config = {"Sources": ["foo.glyphs"]}
     with pytest.raises(ValueError):
+        GFBuilder(config)
+
+
+def test_instances_vf_selection(tmp_path, monkeypatch):
+    # Instances are cut from the roman VF by default, from the italic VF
+    # if their style name contains Italic, and from the VF named by the
+    # 'in' key if given.
+    shutil.copyfile(
+        os.path.join(TEST_DIR, "split_italic", "TestFamily.glyphs"),
+        tmp_path / "TestFamily.glyphs",
+    )
+    monkeypatch.chdir(tmp_path)
+    config = {
+        "sources": ["TestFamily.glyphs"],
+        "buildWebfont": False,
+        "instances": [
+            {"familyName": "Test Family", "styleName": "Regular"},
+            {"familyName": "Test Family", "styleName": "Italic"},
+            {
+                "familyName": "Test Family",
+                "styleName": "Bold Italic",
+                "coordinates": {"wght": 700},
+                "in": "TestFamily[wght].ttf",
+            },
+        ],
+    }
+    recipe = GFBuilder(config).recipe
+    sources = {
+        os.path.basename(target): os.path.basename(steps[0]["source"])
+        for target, steps in recipe.items()
+        if target.endswith(".ttf") and "variable" not in target
+    }
+    assert sources == {
+        "TestFamily-Regular.ttf": "TestFamily[wght].ttf",
+        "TestFamily-Italic.ttf": "TestFamily-Italic[wght].ttf",
+        "TestFamily-BoldItalic.ttf": "TestFamily[wght].ttf",
+    }
+
+    config["instances"] = [
+        {"familyName": "Test Family", "styleName": "Regular", "in": "Missing.ttf"}
+    ]
+    with pytest.raises(ValueError, match="no variable font target named"):
         GFBuilder(config)
 
 
