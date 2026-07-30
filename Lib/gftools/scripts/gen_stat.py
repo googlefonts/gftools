@@ -63,7 +63,6 @@ def main(args=None):
     )
     args = parser.parse_args(args)
 
-    print(args.fonts)
     fonts = [TTFont(f) for f in args.fonts]
 
     if args.src:
