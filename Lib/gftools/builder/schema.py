@@ -7,6 +7,7 @@ from strictyaml import (
     MapPattern,
     Str,
     Int,
+    HexInt,
     Float,
     Seq,
     Optional,
@@ -45,7 +46,7 @@ stat_schema = Seq(
                         Optional("linkedValue"): Int() | Float(),
                         Optional("rangeMinValue"): Int() | Float(),
                         Optional("rangeMaxValue"): Int() | Float(),
-                        Optional("flags"): Int(),
+                        Optional("flags"): Int() | HexInt(),
                     }
                 )
             ),
