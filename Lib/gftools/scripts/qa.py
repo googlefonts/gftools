@@ -271,9 +271,9 @@ def main(args=None):
         qa = FontQA(dfonts, out=args.out, url=url)
 
     if args.auto_qa and family_on_gf:
-        qa.googlefonts_upgrade(args.imgs)
+        qa.googlefonts_upgrade()
     elif args.auto_qa and not family_on_gf:
-        qa.googlefonts_new(args.imgs)
+        qa.googlefonts_new()
     if args.render:
         qa.render(args.imgs)
     if args.fontbakery:
