@@ -3,13 +3,36 @@ import os
 from pathlib import Path
 import subprocess
 import traceback
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 
 from gftools.gfgithub import GitHubClient
 from gftools.utils import mkdir
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def has_interpolatable() -> bool:
+    """Check if the interpolatable tool is available."""
+    try:
+        subprocess.run(
+            ["interpolatable", "--version"], check=True, stdout=subprocess.PIPE
+        )
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def is_variable(font_path: str) -> bool:
+    """Check if the font is a variable font."""
+    try:
+        from fontTools.ttLib import TTFont
+
+        with TTFont(font_path) as font:
+            return "fvar" in font
+    except Exception as e:
+        logger.warning(f"Failed to check if {font_path} is a variable font: {e}")
+        return False
 
 
 def report_exceptions(meth):
@@ -26,7 +49,7 @@ def report_exceptions(meth):
     return safe_call
 
 
-def all_relevant_files(fonts: Sequence[DFont]) -> List[str]:
+def all_relevant_files(fonts: Sequence[str]) -> List[str]:
     """Returns a list of all relevant files for the given fonts."""
     files = []
     relevant_globs = [
@@ -38,7 +61,7 @@ def all_relevant_files(fonts: Sequence[DFont]) -> List[str]:
     ]
 
     for font in fonts:
-        path = Path(font.path)
+        path = Path(font)
         files.append(str(path))
         for glob in relevant_globs:
             for file in path.parent.glob(glob):
@@ -48,7 +71,15 @@ def all_relevant_files(fonts: Sequence[DFont]) -> List[str]:
 
 
 class FontQA:
-    def __init__(self, fonts, fonts_before=None, out="out", url=None):
+    def __init__(
+        self,
+        fonts: List[str],
+        fonts_before: Optional[List[str]] = None,
+        out="out",
+        url=None,
+    ):
+        if fonts_before is None:
+            fonts_before = []
         self.fonts = fonts
         self.fonts_before = fonts_before
         self.out = out
@@ -56,15 +87,15 @@ class FontQA:
         self.has_error = False
 
     @report_exceptions
-    def diffenator3(self, **kwargs):
+    def diffenator3(self):
         logger.info("Running Diffenator3")
         if not self.fonts_before:
             logger.warning("Cannot run Diffenator since there are no fonts before")
             return
         assert len(self.fonts) >= len(self.fonts_before)
         for f, f_before in zip(
-            sorted([f.path for f in self.fonts]),
-            sorted([f.path for f in self.fonts_before]),
+            sorted(self.fonts),
+            sorted(self.fonts_before),
         ):
             cmd = [
                 "diffenator3",
@@ -76,13 +107,13 @@ class FontQA:
                 f_before,
                 f,
             ]
-            process = subprocess.run(cmd)
+            process = subprocess.run(cmd, check=False)
             if process.returncode != 0:
                 self.has_error = True
                 return
 
     @report_exceptions
-    def diffbrowsers(self, imgs=False):
+    def diffbrowsers(self):
         logger.info("Running Diffbrowsers")
         if not self.fonts_before:
             logger.warning("Cannot run diffbrowsers since there are no fonts before")
@@ -91,8 +122,8 @@ class FontQA:
         mkdir(dst)
         assert len(self.fonts) >= len(self.fonts_before)
         for f, f_before in zip(
-            sorted([f.path for f in self.fonts]),
-            sorted([f.path for f in self.fonts_before]),
+            sorted(self.fonts),
+            sorted(self.fonts_before),
         ):
             cmd = [
                 "diff3proof",
@@ -101,7 +132,7 @@ class FontQA:
                 f_before,
                 f,
             ]
-            process = subprocess.run(cmd)
+            process = subprocess.run(cmd, check=False)
             if process.returncode != 0:
                 self.has_error = True
             os.rename(
@@ -111,7 +142,7 @@ class FontQA:
         return
 
     @report_exceptions
-    def proof(self, imgs=False):
+    def proof(self):
         logger.info("Running proofing tools")
         dst = os.path.join(self.out, "Proof")
         mkdir(dst)
@@ -120,12 +151,12 @@ class FontQA:
                 "diff3proof",
                 "--output",
                 dst,
-                font.path,
+                font,
             ]
-            process = subprocess.run(cmd)
+            process = subprocess.run(cmd, check=False)
             os.rename(
                 os.path.join(dst, "diff3proof.html"),
-                os.path.join(dst, f"diff3proof-{Path(font.path).stem}.html"),
+                os.path.join(dst, f"diff3proof-{Path(font).stem}.html"),
             )
 
             if process.returncode != 0:
@@ -135,20 +166,20 @@ class FontQA:
     @report_exceptions
     def interpolations(self):
         dst = os.path.join(self.out, "Interpolations")
-        if not any(f.is_variable() for f in self.fonts):
+        if not any(is_variable(f) for f in self.fonts):
             return
         mkdir(dst)
         for font in self.fonts:
-            font_dst = os.path.join(dst, f"{os.path.basename(font.path[:-4])}.pdf")
-            if not font.is_variable():
+            font_dst = os.path.join(dst, f"{os.path.basename(font[:-4])}.pdf")
+            if not is_variable(font):
                 continue
-            if rust:
-                cmd = ["interpolatable", font.path, "--pdf", font_dst]
+            if has_interpolatable():
+                cmd = ["interpolatable", font, "--pdf", font_dst]
             else:
                 cmd = [
                     "fonttools",
                     "varLib.interpolatable",
-                    font.path,
+                    self.fonts,
                     "--pdf",
                     font_dst,
                 ]
@@ -161,7 +192,7 @@ class FontQA:
         mkdir(out)
         cmd = (
             ["fontbakery", "check-" + profile, "-l", "INFO", "--succinct"]
-            + [f.path for f in self.fonts]
+            + [f for f in self.fonts]
             + ["-C"]
             + ["--ghmarkdown", os.path.join(out, "report.md")]
             + ["-e", "FATAL"]
@@ -170,7 +201,7 @@ class FontQA:
             cmd.extend(["--html", os.path.join(out, "report.html")])
         if extra_args:
             cmd.extend(extra_args)
-        process = subprocess.run(cmd)
+        process = subprocess.run(cmd, check=False)
 
         fontbakery_report = os.path.join(self.out, "Fontbakery", "report.md")
         if not os.path.isfile(fontbakery_report):
@@ -178,7 +209,7 @@ class FontQA:
                 "Cannot Post Github message because no Fontbakery report exists"
             )
             return
-        with open(fontbakery_report) as doc:
+        with open(fontbakery_report, encoding="utf8") as doc:
             msg = doc.read()
             self.post_to_github(msg)
 
@@ -208,7 +239,7 @@ class FontQA:
             cmd.extend(["--html", os.path.join(out, "report.html")])
         if extra_args:
             cmd.extend(extra_args)
-        process = subprocess.run(cmd)
+        process = subprocess.run(cmd, check=False)
 
         fontspector_report = os.path.join(self.out, "Fontspector", "report.md")
         if not os.path.isfile(fontspector_report):
@@ -216,30 +247,30 @@ class FontQA:
                 "Cannot Post Github message because no Fontspector report exists"
             )
             return
-        with open(fontspector_report) as doc:
+        with open(fontspector_report, encoding="utf8") as doc:
             msg = doc.read()
             self.post_to_github(msg)
 
         if process.returncode != 0:
             self.has_error = True
 
-    def googlefonts_upgrade(self, imgs=False):
+    def googlefonts_upgrade(self):
         self.fontspector()
         self.diffenator3()
-        self.diffbrowsers(imgs)
+        self.diffbrowsers()
         self.interpolations()
 
-    def googlefonts_new(self, imgs=False):
+    def googlefonts_new(self):
         self.fontspector()
         self.diffenator3()
-        self.proof(imgs)
+        self.proof()
         self.interpolations()
 
-    def render(self, imgs=False):
+    def render(self):
         if self.fonts_before:
-            self.diffbrowsers(imgs)
+            self.diffbrowsers()
         else:
-            self.proof(imgs)
+            self.proof()
 
     def post_to_github(self, text):
         """Post text as a new issue or as a comment to an open
@@ -260,7 +291,7 @@ class FontQA:
             else:
                 client.create_issue("Google Font QA report", text)
         except Exception as e:
-            logger.warn(
+            logger.warning(
                 "Cannot post QA report!\n"
                 "Most likely, the repository may lack a GH_TOKEN secret, or "
                 "the pull request has come from a forked repo which "
