@@ -37,14 +37,6 @@ def in_google_fonts_repo(gf_path):
     finally:
         os.chdir(cwd)
 
-
-# "tags/all/families.csv" and the axisregistry/lang directories are not
-# PushCategory members (see gftools.push.trafficjam.PushItems.to_server_file),
-# and axisregistry/lang releases usually land without a Traffic Jam PR at
-# all, so they never show up in PushItems.from_traffic_jam() either. Instead
-# of a static reminder on every run, we look at what actually changed in git
-# between the last time these two files were generated (and committed) and
-# now, and only surface a section when there's something to report.
 TAGS_PATH = "tags/all/families.csv"
 AXIS_LANG_DIRS = ("lang", "axisregistry")
 SERVER_FILENAMES = ("to_sandbox.txt", "to_production.txt")
