@@ -24,7 +24,6 @@ from gftools.push.utils import branch_matches_google_fonts_main
 from pathlib import Path
 from gftools.utils import is_google_fonts_repo
 from contextlib import contextmanager
-import pygit2
 
 
 @contextmanager
@@ -35,6 +34,29 @@ def in_google_fonts_repo(gf_path):
         yield True
     finally:
         os.chdir(cwd)
+
+
+STATIC_FOOTER = (
+    "\n# Tags\n"
+    "tags/all/families.csv\n"
+    "\n"
+    "# Axis registry / Lang\n"
+    "# To complete if there is a new release\n"
+    "# axisregistry/contrast.textproto # No PR / Process automated\n"
+)
+
+
+def _append_static_footer(fp):
+    with open(fp, "r", encoding="utf-8") as doc:
+        content = doc.read()
+    # Drop a previously-appended footer first, so re-running the script
+    # doesn't keep piling up duplicate sections.
+    marker = "\n# Tags\n"
+    if marker in content:
+        content = content.split(marker)[0]
+    content = content.rstrip("\n") + "\n" + STATIC_FOOTER
+    with open(fp, "w", encoding="utf-8") as doc:
+        doc.write(content)
 
 
 def main(args=None):
@@ -70,13 +92,8 @@ def main(args=None):
         to_sandbox.to_server_file(to_sandbox_fp)
         to_production.to_server_file(to_production_fp)
 
-    repo = pygit2.Repository(str(gf_path))
-    if any("tags/all/families.csv" in d.delta.new_file.path for d in repo.diff()):
-        with open(to_sandbox_fp, "r", encoding="utf-8") as doc:
-            string = doc.read()
-        string += "\n# Tags\ntags/all/families.csv\n"
-        with open(to_sandbox_fp, "w", encoding="utf-8") as doc:
-            doc.write(string)
+        _append_static_footer(to_sandbox_fp)
+        _append_static_footer(to_production_fp)
 
 
 if __name__ == "__main__":
