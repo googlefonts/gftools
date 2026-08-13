@@ -339,7 +339,7 @@ class Avar2Flattener:
         if "GSUB" not in self.font:
             return rules
         gsub = self.font["GSUB"].table
-        if gsub.FeatureVariations is None:
+        if not hasattr(gsub, "FeatureVariations") or gsub.FeatureVariations is None:
             return rules
         for record in gsub.FeatureVariations.FeatureVariationRecord:
             conditions = [
