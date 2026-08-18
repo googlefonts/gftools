@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 
 class AddSpacingAxis(OperationBase):
     description = "Add spacing axis side bearings"
-    rule = "gftools-gen-spac --inplace $in $min $max $args"
+    rule = "gftools-gen-spac --inplace $in $min $max --user-min $userMin --user-max $userMax $args"
 
     def validate(self):
         if "min" not in self.original and "max" not in self.original:
@@ -25,8 +25,12 @@ class AddSpacingAxis(OperationBase):
 
     @property
     def variables(self):
+        design_min = int(self.original.get("min", 0))
+        design_max = int(self.original.get("max", 0))
         return {
-            "min": int(self.original.get("min", 0)),
-            "max": int(self.original.get("max", 0)),
+            "min": design_min,
+            "max": design_max,
+            "userMin": int(self.original.get("userMin", design_min)),
+            "userMax": int(self.original.get("userMax", design_max)),
             **super().variables,
         }
