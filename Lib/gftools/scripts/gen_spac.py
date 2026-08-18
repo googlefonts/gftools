@@ -19,7 +19,14 @@ from fontTools.ttLib.tables.TupleVariation import TupleVariation
 from fontTools.varLib.hvar import add_HVAR
 
 
-def add_spacing_axis(font: TTFont, min_amount: int, max_amount: int) -> None:
+def add_spacing_axis(
+    font: TTFont,
+    min_amount: int,
+    max_amount: int,
+    *,
+    min_user: int | None = None,
+    max_user: int | None = None,
+) -> None:
     assert "fvar" in font, "Font must have an 'fvar' table"
     gvar = font["gvar"]
     for glyph_name in font.getGlyphOrder():
@@ -50,9 +57,9 @@ def add_spacing_axis(font: TTFont, min_amount: int, max_amount: int) -> None:
     axis = Axis()
     axis.axisTag = "SPAC"
     axis.axisNameID = name_table.addMultilingualName({"en": "Spacing"})
-    axis.minValue = min_amount
+    axis.minValue = min_user if min_user is not None else min_amount
     axis.defaultValue = 0.0
-    axis.maxValue = max_amount
+    axis.maxValue = max_user if max_user is not None else max_amount
 
     fvar = font["fvar"]
     fvar.axes.append(axis)
@@ -91,6 +98,16 @@ def main(args=None):
         type=int,
         help="Max amount of spacing to add",
     )
+    parser.add_argument(
+        "--user-min",
+        type=int,
+        help="The user-exposed axis minimum (default: same as min)",
+    )
+    parser.add_argument(
+        "--user-max",
+        type=int,
+        help="The user-exposed axis maximum (default: same as max)",
+    )
     out_group = parser.add_mutually_exclusive_group(required=False)
     out_group.add_argument("--out", "-o", help="Output dir for fonts")
     out_group.add_argument(
@@ -98,7 +115,9 @@ def main(args=None):
     )
     args = parser.parse_args(args)
 
-    add_spacing_axis(args.font, args.min, args.max)
+    add_spacing_axis(
+        args.font, args.min, args.max, min_user=args.user_min, max_user=args.user_max
+    )
     if args.inplace:
         output_path = args.font.reader.file.name
     elif args.out:
