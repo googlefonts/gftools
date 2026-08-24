@@ -1,19 +1,13 @@
+from fontTools.designspaceLib import DiscreteAxisDescriptor
 import copy
 import os
 import sys
 from collections import defaultdict
 
-import yaml
 from strictyaml import (
     Bool,
-    HexInt,
-    Int,
     Map,
     Optional,
-    Seq,
-    Str,
-    YAMLValidationError,
-    load,
 )
 
 from gftools.builder.recipeproviders.googlefonts import (
@@ -57,7 +51,11 @@ class NotoBuilder(GFBuilder):
         familyname_path = source.family_name.replace(" ", "")
         sourcebase = os.path.splitext(source.basename)[0]
         if source.is_designspace:
-            tags = [ax.tag for ax in source.designspace.axes]
+            tags = [
+                ax.tag
+                for ax in source.designspace.axes
+                if not isinstance(ax, DiscreteAxisDescriptor)
+            ]
         else:
             raise ValueError("Unknown source type " + source.path)
         axis_tags = ",".join(sorted(tags))

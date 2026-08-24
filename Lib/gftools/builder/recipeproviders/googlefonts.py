@@ -180,7 +180,11 @@ class GFBuilder(RecipeProviderBase):
             # is within the fontinfo.plist
             tags = [ax["tag"] for ax in source.glyphspackage_fontinfo["axes"]]
         elif source.is_designspace:
-            tags = [ax.tag for ax in source.designspace.axes]
+            tags = [
+                ax.tag
+                for ax in source.designspace.axes
+                if not isinstance(ax, DiscreteAxisDescriptor)
+            ]
         else:
             raise ValueError("Unknown source type")
 
