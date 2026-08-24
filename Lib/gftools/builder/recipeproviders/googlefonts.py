@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 
 from glyphsLib.builder import UFOBuilder
 import yaml
-from fontTools.designspaceLib import InstanceDescriptor
+from fontTools.designspaceLib import InstanceDescriptor, DiscreteAxisDescriptor
 from strictyaml import load, YAMLValidationError
 
 from gftools.builder.file import File
@@ -151,6 +151,8 @@ class GFBuilder(RecipeProviderBase):
             axes = source.designspace.axes
         wanted = [axis for axis in axes if axis.tag == slanty_axis]
         if slanty_axis == "ital":
+            if isinstance(wanted[0], DiscreteAxisDescriptor):
+                return (slanty_axis, wanted[0].values[0], wanted[0].values[-1])
             return (slanty_axis, wanted[0].minimum, wanted[0].maximum)
         else:
             # We expect the italic value to have negative slant, so it
