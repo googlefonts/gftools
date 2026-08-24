@@ -699,15 +699,13 @@ class GFBuilder(RecipeProviderBase):
         family_name = self.sources[0].family_name.replace(" ", "")
         # Since this is mad YAML, we can't use the normal YAML library
         # to write this. We'll just write it out manually.
-        configfile.write(
-            f"""
+        configfile.write(f"""
 OS/2->fsSelection: 129
 head->macStyle: "|= 0x02"
 name->setName: ["{family_name}Italic", 25, 3, 1, 0x409]
 name->setName: ["Italic", 2, 3, 1, 0x409]
 name->setName: ["Italic", 17, 3, 1, 0x409]
-        """
-        )
+        """)
         configfile.close()
         return [
             {
