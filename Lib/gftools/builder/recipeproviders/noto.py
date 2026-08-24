@@ -40,6 +40,7 @@ class NotoBuilder(GFBuilder):
         # Convert any glyphs sources to DS
         newsources = []
         self.config["original_sources"] = self.config["sources"]
+        self.config["splitItalic"] = False  # Never do this
         for source in self.config["sources"]:
             if source.endswith((".glyphs", ".glyphspackage")):
                 source = self.builder.glyphs_to_ufo(source)
@@ -52,7 +53,7 @@ class NotoBuilder(GFBuilder):
         self.build_all_statics()
         return self.recipe
 
-    def build_a_variable(self, source):
+    def build_a_variable(self, source, italic_ds=None, roman=None):
         familyname_path = source.family_name.replace(" ", "")
         sourcebase = os.path.splitext(source.basename)[0]
         if source.is_designspace:
