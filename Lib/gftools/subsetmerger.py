@@ -1,3 +1,4 @@
+from fontTools.designspaceLib import DiscreteAxisDescriptor
 import logging
 import os
 import re
@@ -192,6 +193,7 @@ class BaseDescriptor:
         return {
             axis.tag: axis.map_backward(self.master.location[axis.name])
             for axis in self.ds.axes
+            if not isinstance(axis, DiscreteAxisDescriptor)
         }
 
     @property
