@@ -8,16 +8,25 @@ https://fonts.google.com/variablefonts#axis-definitions
 Usage:
 gftools gen-spac font.ttf --amount 100 --inplace
 """
-from fontTools.ttLib.tables._f_v_a_r import Axis
-from fontTools.ttLib.tables.TupleVariation import TupleVariation
-from fontTools.ttLib import TTFont
-from fontTools.varLib.hvar import add_HVAR
-from fontTools.misc.cliTools import makeOutputFileName
-from fontTools.ttLib.tables import otTables
+
 import argparse
 
+from fontTools.misc.cliTools import makeOutputFileName
+from fontTools.ttLib import TTFont
+from fontTools.ttLib.tables import otTables
+from fontTools.ttLib.tables._f_v_a_r import Axis
+from fontTools.ttLib.tables.TupleVariation import TupleVariation
+from fontTools.varLib.hvar import add_HVAR
 
-def add_spacing_axis(font, min_amount, max_amount):
+
+def add_spacing_axis(
+    font: TTFont,
+    min_amount: int,
+    max_amount: int,
+    *,
+    min_user: int | None = None,
+    max_user: int | None = None,
+) -> None:
     assert "fvar" in font, "Font must have an 'fvar' table"
     gvar = font["gvar"]
     for glyph_name in font.getGlyphOrder():
@@ -27,13 +36,17 @@ def add_spacing_axis(font, min_amount, max_amount):
         glyph_variations = gvar.variations.get(glyph_name)
         if not glyph_variations:
             continue
-        min_coords = [None] * len(glyph_variations[0].coordinates)
+        min_coords: list[tuple[int, int] | None] = [None] * len(
+            glyph_variations[0].coordinates
+        )
         min_coords[-3] = (min_amount, 0)
         min_coords[-4] = (-min_amount, 0)
         min_tp = TupleVariation({"SPAC": (-1.0, -1.0, 0.0)}, min_coords)
         gvar.variations[glyph_name].append(min_tp)
 
-        max_coords = [None] * len(glyph_variations[0].coordinates)
+        max_coords: list[tuple[int, int] | None] = [None] * len(
+            glyph_variations[0].coordinates
+        )
         max_coords[-3] = (max_amount, 0)
         max_coords[-4] = (-max_amount, 0)
         max_tp = TupleVariation({"SPAC": (0.0, 1.0, 1.0)}, max_coords)
@@ -44,9 +57,9 @@ def add_spacing_axis(font, min_amount, max_amount):
     axis = Axis()
     axis.axisTag = "SPAC"
     axis.axisNameID = name_table.addMultilingualName({"en": "Spacing"})
-    axis.minValue = min_amount
+    axis.minValue = min_user if min_user is not None else min_amount
     axis.defaultValue = 0.0
-    axis.maxValue = max_amount
+    axis.maxValue = max_user if max_user is not None else max_amount
 
     fvar = font["fvar"]
     fvar.axes.append(axis)
@@ -85,6 +98,16 @@ def main(args=None):
         type=int,
         help="Max amount of spacing to add",
     )
+    parser.add_argument(
+        "--user-min",
+        type=int,
+        help="The user-exposed axis minimum (default: same as min)",
+    )
+    parser.add_argument(
+        "--user-max",
+        type=int,
+        help="The user-exposed axis maximum (default: same as max)",
+    )
     out_group = parser.add_mutually_exclusive_group(required=False)
     out_group.add_argument("--out", "-o", help="Output dir for fonts")
     out_group.add_argument(
@@ -92,7 +115,9 @@ def main(args=None):
     )
     args = parser.parse_args(args)
 
-    add_spacing_axis(args.font, args.min, args.max)
+    add_spacing_axis(
+        args.font, args.min, args.max, min_user=args.user_min, max_user=args.user_max
+    )
     if args.inplace:
         output_path = args.font.reader.file.name
     elif args.out:
