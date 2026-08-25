@@ -404,6 +404,11 @@ build process by leaving a `graph.png` file in the `sources` directory:
 - *buildVTT*: Uses `gftools-build-vtt` with the configuration file provided in `vttfile` to add VTT hinting to a font binary.
 - *remap*: Uses `gftools-remap-font` to alter a font binary's `cmap` table.
 - *paintcompiler*: Runs paintcompiler on a font to add a COLRv1 table.
+- *addSpacingAxis*: Adds a Spacing (SPAC) axis using `gftools gen-spac`. Must be used as a `postprocess` step.
+    - `min`: Min amount of spacing to add (at least one of `min`/`max` must be specified)
+    - `max`: Max amount of spacing to add (at least one of `min`/`max` must be specified)
+    - `userMin`: The user-exposed axis minimum (default: same as min)
+    - `userMax`: The user-exposed axis maximum (default: same as max)
 
 ### Switching sources
 

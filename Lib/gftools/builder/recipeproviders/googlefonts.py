@@ -303,12 +303,12 @@ class GFBuilder(RecipeProviderBase):
     def build_spacing_axis(self):
         vfs = [x for x in self.recipe.keys() if x.endswith("ttf")]
         if len(vfs) > 0:
-            args = {
-                "args": str(self.config["spacingAxis"]["min"])
-                + " "
-                + str(self.config["spacingAxis"]["max"]),
-                "postprocess": "addSpacingAxis",
-            }
+            args = {"postprocess": "addSpacingAxis"}
+            config = self.config["spacingAxis"]
+            if min_spac := config.get("min"):
+                args["min"] = min_spac
+            if max_spac := config.get("max"):
+                args["max"] = max_spac
             for vf in vfs:
                 self.recipe[vf].append(args)
 
