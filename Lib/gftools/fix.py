@@ -12,6 +12,7 @@ from fontTools.ttLib import TTFont, newTable, getTableModule
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
 from fontTools.ttLib.tables._f_v_a_r import NamedInstance
+from ufo2ft.postProcessor import PostProcessor
 from gftools.util.google_fonts import _KNOWN_WEIGHTS
 from gftools.utils import (
     download_family_from_Google_Fonts,
@@ -34,6 +35,7 @@ from axisregistry import (
 )
 from gftools.stat import gen_stat_tables
 
+from collections import namedtuple
 from os.path import basename, splitext
 from copy import deepcopy
 import logging
@@ -692,6 +694,29 @@ def drop_mac_names(ttfont, keep_ids=[]) -> FixResult:
             ):
                 ttfont["name"].names.remove(namerecord)
     return ttfont, messages
+
+def fix_glyph_names(ttFont):
+    """Renames the font's glyphs to production names."""
+    # Piggy-back ufo2ft's implementation of production names
+    # This wants a glyphSet which maps names to objects which
+    # contain .name and .unicode attributes
+    fake_layer = namedtuple("fake_layer", ["name", "unicode"])
+    cmap = ttFont["cmap"].buildReversed()
+    glyphset = {}
+    old_names = ttFont.getGlyphOrder()
+    for glyph in old_names:
+        if glyph in cmap:
+            codepoint = list(cmap.get(glyph))[0]
+        else:
+            codepoint = None
+        glyphset[glyph] = fake_layer(glyph, codepoint)
+    # We have no UFO, so we have to fake up the object
+    pp = PostProcessor.__new__(PostProcessor)
+    pp.otf = ttFont
+    pp.glyphSet = glyphset
+    pp._postscriptNames = None
+    pp.process_glyph_names(useProductionNames=True)
+    return old_names != ttFont.getGlyphOrder()
 
 
 @fixes("com.google.fonts/check/empty_glyph_on_gid1_for_colrv0")
