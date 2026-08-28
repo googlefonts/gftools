@@ -71,7 +71,8 @@ def rewrite_one_arg(args: List[str]) -> str:
     elif next_ == "--no-check-compatibility":
         # we don't have an equivalent
         return ""
-    raise ValueError(f"unknown fontmake arg '{next_}'")
+    log.warning(f"unknown fontmake arg '{next_}', passing to fontc verbatim")
+    return next_
 
 
 def python_to_rust_log_level(py_level: str):
