@@ -537,6 +537,88 @@ class Avar2Flattener:
         coords = self.source_user_location(self.full_norm_location(norm_loc))
         return ", ".join(f"{tag}={coords[tag]:g}" for tag in norm_loc)
 
+    def _build_stat(self, vf):
+        """Rebuild STAT for the kept axes, carrying over the original
+        table's AxisValues (names resolved to strings, axis indices
+        remapped). AxisValues that reference a dropped axis are dropped.
+
+        This is done even when every axis is kept: instancer prunes the
+        masters' name tables, so the varLib-built font is missing most of
+        the name records the original STAT points at. Rebuilding with
+        buildStatTable re-adds the records from the resolved strings."""
+        orig = self.font["STAT"].table if "STAT" in self.font else None
+        names = self.font["name"]
+        kept = [a for a in self.fvar.axes if a.axisTag in self.keep_tags]
+        elided_fallback = "Regular"
+        values_by_tag, locations, stat_axis_names = {}, [], {}
+        if orig:
+            orig_axes = orig.DesignAxisRecord.Axis
+            ordering = {a.AxisTag: a.AxisOrdering for a in orig_axes}
+            kept.sort(key=lambda a: ordering.get(a.axisTag, 0))
+            # The STAT DesignAxisRecord often carries better display names
+            # than the fvar axis records (e.g. Crispy: 'Counter Width' vs
+            # 'X-Transparency'), so prefer them.
+            stat_axis_names = {
+                a.AxisTag: names.getDebugName(a.AxisNameID) for a in orig_axes
+            }
+            elided_fallback = names.getDebugName(orig.ElidedFallbackNameID) or "Regular"
+            for av in orig.AxisValueArray.AxisValue if orig.AxisValueArray else []:
+                name = names.getDebugName(av.ValueNameID)
+                if name is None:
+                    log.warning(
+                        "Dropping STAT AxisValue with unresolvable nameID %d",
+                        av.ValueNameID,
+                    )
+                    continue
+                if av.Format == 4:
+                    refs = [
+                        (orig_axes[r.AxisIndex].AxisTag, r.Value)
+                        for r in av.AxisValueRecord
+                    ]
+                    if all(tag in self.keep_tags for tag, _ in refs):
+                        locations.append(
+                            {
+                                "name": name,
+                                "flags": av.Flags,
+                                "location": dict(refs),
+                            }
+                        )
+                    continue
+                tag = orig_axes[av.AxisIndex].AxisTag
+                if tag not in self.keep_tags:
+                    continue
+                value = {
+                    "name": name,
+                    "flags": av.Flags,
+                }
+                if av.Format == 1:
+                    value["value"] = av.Value
+                elif av.Format == 2:
+                    value["nominalValue"] = av.NominalValue
+                    value["rangeMinValue"] = av.RangeMinValue
+                    value["rangeMaxValue"] = av.RangeMaxValue
+                elif av.Format == 3:
+                    value["value"] = av.Value
+                    value["linkedValue"] = av.LinkedValue
+                values_by_tag.setdefault(tag, []).append(value)
+        stat_axes = []
+        for i, axis in enumerate(kept):
+            entry = {
+                "tag": axis.axisTag,
+                "name": stat_axis_names.get(axis.axisTag)
+                or self.axis_names[axis.axisTag],
+                "ordering": i,
+            }
+            if axis.axisTag in values_by_tag:
+                entry["values"] = values_by_tag[axis.axisTag]
+            stat_axes.append(entry)
+        buildStatTable(
+            vf,
+            stat_axes,
+            locations=locations or None,
+            elidedFallbackName=elided_fallback,
+        )
+
     def run(self):
         rng = random.Random(0)
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -555,25 +637,11 @@ class Avar2Flattener:
                 ds_path = os.path.join(tmpdir, "avar1.designspace")
                 ds.write(ds_path)
                 vf, _, _ = varlib_build(ds_path)
-                # The original STAT covers every fvar axis, so it is only
-                # valid when no axes were dropped; otherwise replace the
-                # (equally invalid) copy inherited from the default master
-                # with a minimal axis-records-only STAT for the kept axes.
-                if len(self.keep_tags) == len(self.axis_tags):
-                    if "STAT" in self.font:
-                        vf["STAT"] = self.font["STAT"]
-                else:
-                    stat_axes = [
-                        {
-                            "tag": axis.axisTag,
-                            "name": self.axis_names[axis.axisTag],
-                            "ordering": ordering,
-                        }
-                        for ordering, axis in enumerate(
-                            a for a in self.fvar.axes if a.axisTag in self.keep_tags
-                        )
-                    ]
-                    buildStatTable(vf, stat_axes, elidedFallbackName="Regular")
+                # Always rebuild STAT, even when no axes were dropped:
+                # copying the original table verbatim leaves its AxisValues
+                # pointing at name records that instancer pruned from the
+                # masters, so they would resolve to nothing.
+                self._build_stat(vf)
                 vf.save(self.out)
                 log.info("Saved %s", self.out)
 
