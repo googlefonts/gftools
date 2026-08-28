@@ -1,6 +1,10 @@
+import logging
 from pathlib import Path
 from typing import List
+
 from gftools.builder.operations import OperationBase
+
+log = logging.getLogger(__name__)
 
 _FONTC_PATH = None
 
@@ -54,8 +58,8 @@ def rewrite_one_arg(args: List[str]) -> str:
             # e.g. in Jaquard12.glyphs so we use `in` instead of `filter_ == ...`
             return "--decompose-components"
         else:
-            # glue the filter back together for better reporting below
-            next_ = f"{next_} {filter_}"
+            log.warning(f"unknown filter: '{filter_}', dropping")
+            return ""
     elif next_ == "--no-production-names":
         return next_
     elif next_ == "--verbose":
