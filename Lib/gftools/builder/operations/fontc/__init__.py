@@ -1,6 +1,10 @@
+import logging
 from pathlib import Path
 from typing import List
+
 from gftools.builder.operations import OperationBase
+
+log = logging.getLogger(__name__)
 
 _FONTC_PATH = None
 
@@ -40,8 +44,11 @@ def rewrite_one_arg(args: List[str]) -> str:
     next_ = args.pop()
     if next_ == "--filter":
         filter_ = args.pop()
-        # this means 'retain filters defined in UFO', which... do we even support
-        # that in fontc?
+        # this means 'retain filters defined in UFO'. fontc automatically merges
+        # the lib of the default master (for DS+UFOs) into the designspace lib,
+        # effectively handling this by default.
+        # https://github.com/googlefonts/fontc/blob/7a5c619c236727b1f0aaa6a2aed56ce5ef889eaf/ufo2fontir/src/source.rs#L292-L296
+        # https://github.com/googlefonts/fontc/blob/7a5c619c236727b1f0aaa6a2aed56ce5ef889eaf/ufo2fontir/src/source.rs#L398-L401
         if filter_ == "...":
             return ""
         elif filter_ == "FlattenComponentsFilter":
@@ -54,8 +61,8 @@ def rewrite_one_arg(args: List[str]) -> str:
             # e.g. in Jaquard12.glyphs so we use `in` instead of `filter_ == ...`
             return "--decompose-components"
         else:
-            # glue the filter back together for better reporting below
-            next_ = f"{next_} {filter_}"
+            log.warning(f"unknown filter: '{filter_}', dropping")
+            return ""
     elif next_ == "--no-production-names":
         return next_
     elif next_ == "--verbose":
@@ -67,7 +74,8 @@ def rewrite_one_arg(args: List[str]) -> str:
     elif next_ == "--no-check-compatibility":
         # we don't have an equivalent
         return ""
-    raise ValueError(f"unknown fontmake arg '{next_}'")
+    log.warning(f"unknown fontmake arg '{next_}', passing to fontc verbatim")
+    return next_
 
 
 def python_to_rust_log_level(py_level: str):
