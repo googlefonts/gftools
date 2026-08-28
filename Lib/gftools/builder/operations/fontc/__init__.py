@@ -44,8 +44,11 @@ def rewrite_one_arg(args: List[str]) -> str:
     next_ = args.pop()
     if next_ == "--filter":
         filter_ = args.pop()
-        # this means 'retain filters defined in UFO', which... do we even support
-        # that in fontc?
+        # this means 'retain filters defined in UFO'. fontc automatically merges
+        # the lib of the default master (for DS+UFOs) into the designspace lib,
+        # effectively handling this by default.
+        # https://github.com/googlefonts/fontc/blob/7a5c619c236727b1f0aaa6a2aed56ce5ef889eaf/ufo2fontir/src/source.rs#L292-L296
+        # https://github.com/googlefonts/fontc/blob/7a5c619c236727b1f0aaa6a2aed56ce5ef889eaf/ufo2fontir/src/source.rs#L398-L401
         if filter_ == "...":
             return ""
         elif filter_ == "FlattenComponentsFilter":
