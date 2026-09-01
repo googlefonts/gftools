@@ -118,7 +118,9 @@ def main(args=None):
         action="store_true",
         help="Run diffbrowsers if fonts_before exist, otherwise run proof",
     )
-    check_group.add_argument("--fontbakery", action="store_true", help="Run FontBakery")
+    check_group.add_argument(
+        "--fontspector", action="store_true", help="Run FontBakery"
+    )
     check_group.add_argument(
         "--diffbrowsers", action="store_true", help="Run Diffbrowsers"
     )
@@ -148,11 +150,6 @@ def main(args=None):
     )
     parser.add_argument("--rust", action="store_true", help="Use Rust tooling")
     check_group.add_argument(
-        "--extra-fontbakery-args",
-        help="Additional arguments to Fontbakery",
-        action="append",
-    )
-    check_group.add_argument(
         "--extra-fontspector-args",
         help="Additional arguments to Fontspector",
         action="append",
@@ -169,7 +166,7 @@ def main(args=None):
     if not any(
         [
             args.auto_qa,
-            args.fontbakery,
+            args.fontspector,
             args.proof,
             args.diffbrowsers,
             args.diffenator,
@@ -276,8 +273,8 @@ def main(args=None):
         qa.googlefonts_new()
     if args.render:
         qa.render(args.imgs)
-    if args.fontbakery:
-        qa.fontbakery(extra_args=args.extra_fontbakery_args)
+    if args.fontspector:
+        qa.fontspector(extra_args=args.extra_fontspector_args)
     if args.diffenator:
         qa.diffenator3()
     if args.diffbrowsers:
