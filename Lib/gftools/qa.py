@@ -186,37 +186,6 @@ class FontQA:
             subprocess.call(cmd)
 
     @report_exceptions
-    def fontbakery(self, profile="googlefonts", html=False, extra_args=None):
-        logger.info("Running Fontbakery")
-        out = os.path.join(self.out, "Fontbakery")
-        mkdir(out)
-        cmd = (
-            ["fontbakery", "check-" + profile, "-l", "INFO", "--succinct"]
-            + [f for f in self.fonts]
-            + ["-C"]
-            + ["--ghmarkdown", os.path.join(out, "report.md")]
-            + ["-e", "FATAL"]
-        )
-        if html:
-            cmd.extend(["--html", os.path.join(out, "report.html")])
-        if extra_args:
-            cmd.extend(extra_args)
-        process = subprocess.run(cmd, check=False)
-
-        fontbakery_report = os.path.join(self.out, "Fontbakery", "report.md")
-        if not os.path.isfile(fontbakery_report):
-            logger.warning(
-                "Cannot Post Github message because no Fontbakery report exists"
-            )
-            return
-        with open(fontbakery_report, encoding="utf8") as doc:
-            msg = doc.read()
-            self.post_to_github(msg)
-
-        if process.returncode != 0:
-            self.has_error = True
-
-    @report_exceptions
     def fontspector(self, profile="googlefonts", html=False, extra_args=None):
         logger.info("Running Fontspector")
         out = os.path.join(self.out, "Fontspector")
