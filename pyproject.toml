@@ -79,7 +79,6 @@ dependencies = [
 
 [project.optional-dependencies]
 qa = [
-  "fontbakery[googlefonts]",
   "pycairo", # needed for fontTools varLib.interpolatable --pdf
   # gftools-render-text backends
   "freetype-py",
