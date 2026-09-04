@@ -551,10 +551,21 @@ class Avar2Flattener:
         kept = [a for a in self.fvar.axes if a.axisTag in self.keep_tags]
         elided_fallback = "Regular"
         values_by_tag, locations, stat_axis_names = {}, [], {}
+        stat_only_tags, value_tags = [], set(self.keep_tags)
         if orig:
             orig_axes = orig.DesignAxisRecord.Axis
             ordering = {a.AxisTag: a.AxisOrdering for a in orig_axes}
             kept.sort(key=lambda a: ordering.get(a.axisTag, 0))
+            # STAT-only axes (e.g. ital on a roman font) have no fvar axis
+            # to be dropped with, so they and their AxisValues are always
+            # carried over.
+            fvar_tags = set(self.axis_tags)
+            stat_only_tags = [
+                a.AxisTag
+                for a in sorted(orig_axes, key=lambda a: a.AxisOrdering)
+                if a.AxisTag not in fvar_tags
+            ]
+            value_tags.update(stat_only_tags)
             # The STAT DesignAxisRecord often carries better display names
             # than the fvar axis records (e.g. Crispy: 'Counter Width' vs
             # 'X-Transparency'), so prefer them.
@@ -575,7 +586,7 @@ class Avar2Flattener:
                         (orig_axes[r.AxisIndex].AxisTag, r.Value)
                         for r in av.AxisValueRecord
                     ]
-                    if all(tag in self.keep_tags for tag, _ in refs):
+                    if all(tag in value_tags for tag, _ in refs):
                         locations.append(
                             {
                                 "name": name,
@@ -585,7 +596,7 @@ class Avar2Flattener:
                         )
                     continue
                 tag = orig_axes[av.AxisIndex].AxisTag
-                if tag not in self.keep_tags:
+                if tag not in value_tags:
                     continue
                 value = {
                     "name": name,
@@ -611,6 +622,15 @@ class Avar2Flattener:
             }
             if axis.axisTag in values_by_tag:
                 entry["values"] = values_by_tag[axis.axisTag]
+            stat_axes.append(entry)
+        for tag in stat_only_tags:
+            entry = {
+                "tag": tag,
+                "name": stat_axis_names.get(tag) or tag,
+                "ordering": len(stat_axes),
+            }
+            if tag in values_by_tag:
+                entry["values"] = values_by_tag[tag]
             stat_axes.append(entry)
         buildStatTable(
             vf,
