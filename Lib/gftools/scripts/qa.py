@@ -46,7 +46,7 @@ def family_name_from_fonts(fonts: list[str]) -> str:
             from fontTools.ttLib import TTFont
 
             with TTFont(f) as font:
-                family_names.add(font["name"].getName(1, 3, 1).toUnicode())
+                family_names.add(font["name"].getBestFamilyName())
         except Exception as e:
             logger.warning(f"Failed to read family name from {f}: {e}")
     if len(family_names) > 1:
