@@ -94,6 +94,7 @@ class File:
         if self.is_glyphs:
             import glyphsLib
 
+            self._ensure_path_exists()
             return glyphsLib.load(self.path)
         return None
 
@@ -107,6 +108,7 @@ class File:
         assert (
             self.is_glyphs_file
         ), "File.glyphs_plist should not be accessed on non-glyphs single file sources"
+        self._ensure_path_exists()
         return openstep_plist.load(open(self.path, encoding="utf-8"))
 
     @cached_property
@@ -117,6 +119,7 @@ class File:
         assert (
             self.is_glyphspackage
         ), "File.glyphspackage_fontinfo should not be accessed on non-glyphspackage sources"
+        self._ensure_path_exists()
         fontinfo_path = Path(self.path) / "fontinfo.plist"
         return openstep_plist.load(fontinfo_path.open(encoding="utf-8"))
 
@@ -125,6 +128,7 @@ class File:
         if self.is_designspace:
             from fontTools.designspaceLib import DesignSpaceDocument
 
+            self._ensure_path_exists()
             return DesignSpaceDocument.fromfile(self.path)
         return None
 
@@ -161,3 +165,9 @@ class File:
             self.designspace.loadSourceFonts(open_ufo)
             return self.designspace.sources[0].font.info.familyName
         return name
+
+    def _ensure_path_exists(self) -> None:
+        if not self.exists():
+            raise FileNotFoundError(
+                f"No such file or directory: '{self.path}'. If this is not a typo, and you're switching sources (https://github.com/googlefonts/gftools/blob/main/docs/gftools-builder/README.md#switching-sources), the subsequent operation may need to be modified to deal with deferred source generation."
+            )
