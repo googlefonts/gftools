@@ -12,6 +12,8 @@ struct Args {
     output_path: String,
     #[clap(long)]
     include_source_fixes: bool,
+    #[clap(long)]
+    dont_fix_fvar_table: bool,
     #[clap(short, long, action = ArgAction::Count)]
     verbosity: u8,
     #[clap(short, long)]
@@ -32,6 +34,24 @@ fn main() {
     let output_path = &args.output_path;
     let include_source_fixes = args.include_source_fixes;
     let interactive = !args.non_interactive && std::io::stdin().is_terminal();
-    fix_font(font_path, output_path, include_source_fixes, interactive)
-        .expect("Failed to fix font");
+    fix_font(
+        font_path,
+        output_path,
+        if include_source_fixes {
+            gftools::IncludeSourceFixes::Yes
+        } else {
+            gftools::IncludeSourceFixes::No
+        },
+        if interactive {
+            gftools::Interactive::Yes
+        } else {
+            gftools::Interactive::No
+        },
+        if args.dont_fix_fvar_table {
+            gftools::FixFvarTable::No
+        } else {
+            gftools::FixFvarTable::Yes
+        },
+    )
+    .expect("Failed to fix font");
 }
