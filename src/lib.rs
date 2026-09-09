@@ -6,8 +6,8 @@ mod utils;
 use std::{fmt::Display, path::Path};
 
 pub use error::GftoolsError;
-use fontspector_hotfix::{Testable, apply_hotfixes};
-pub use names::{AxisLimits, AxisTriple, update_name_table};
+use fontspector_hotfix::{apply_hotfixes, Testable};
+pub use names::{update_name_table, AxisLimits, AxisTriple};
 // Have to make this pub so our scripts can use it
 #[allow(unused_imports)]
 pub(crate) use gf_metadata::DesignerInfoProto;
@@ -68,11 +68,33 @@ pub fn list_some_things<T: Display>(
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IncludeSourceFixes {
+    Yes,
+    #[default]
+    No,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Interactive {
+    Yes,
+    #[default]
+    No,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FixFvarTable {
+    #[default]
+    Yes,
+    No,
+}
+
 pub fn fix_font(
     font_path: &str,
     output_path: &str,
-    include_source_fixes: bool,
-    interactive: bool,
+    include_source_fixes: IncludeSourceFixes,
+    interactive: Interactive,
+    fix_fvar_table: FixFvarTable,
 ) -> Result<(), GftoolsError> {
     // Load font and wrap in a Testable
     let mut font = Testable::new(font_path).expect("Failed to load font");
@@ -92,7 +114,7 @@ pub fn fix_font(
         // fix_hhea_caret_slope_run
         "opentype/caret_slope",
     ];
-    if include_source_fixes {
+    if let IncludeSourceFixes::Yes = include_source_fixes {
         check_ids.extend([
             // remove tables
             "unwanted_tables",
@@ -111,9 +133,16 @@ pub fn fix_font(
             "opentype/italic_angle",
         ]);
     }
+    if let FixFvarTable::Yes = fix_fvar_table {
+        check_ids.push("googlefonts/fvar_instances");
+    }
     let check_ids: Vec<String> = check_ids.into_iter().map(String::from).collect();
-    apply_hotfixes(&mut font, &check_ids, interactive)
-        .map_err(|_| GftoolsError::Misc("Failed to apply hotfixes".to_string()))?;
+    apply_hotfixes(
+        &mut font,
+        &check_ids,
+        matches!(interactive, Interactive::Yes),
+    )
+    .map_err(|_| GftoolsError::Misc("Failed to apply hotfixes".to_string()))?;
     // Save the fixed font
     std::fs::write(output_path, &font.contents)?;
     Ok(())
