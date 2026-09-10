@@ -61,6 +61,10 @@ name = "gftools-rangify"
 path = "src/bin/rangify.rs"
 
 [[bin]]
+name = "gftools-remove-overlaps"
+path = "src/bin/remove_overlaps.rs"
+
+[[bin]]
 name = "gftools-check-bbox"
 path = "src/bin/check_bbox.rs"
 
