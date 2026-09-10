@@ -1,8 +1,7 @@
 use clap::{Arg, Command};
-use fontations::skrifa::{Axis, AxisCollection, FontRef, MetadataProvider};
-use gf_metadata::AxisProto;
+use skrifa::{Axis, AxisCollection, FontRef, MetadataProvider};
 
-fn choose_axis(axes: &AxisCollection, font: &FontRef) -> fontations::skrifa::Axis {
+fn choose_axis(axes: &AxisCollection, font: &FontRef) -> skrifa::Axis {
     loop {
         for (index, axis) in axes.iter().enumerate() {
             println!(

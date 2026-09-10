@@ -1,12 +1,24 @@
 mod error;
 // mod push;
+mod fix;
 mod names;
 mod utils;
 
+pub use fix::{fix_font, fix_runner, FixFvarTable, IncludeSourceFixes, Interactive};
+use kurbo::{BezPath, Point};
+use linesweeper::{binary_op, BinaryOp, FillRule};
+use skrifa::{
+    raw::{tables::glyf::CurvePoint, TableProvider},
+    GlyphId,
+};
 use std::{fmt::Display, path::Path};
+use write_fonts::{
+    from_obj::FromTableRef,
+    tables::glyf::{Contour, GlyfLocaBuilder, Glyph, SimpleGlyph},
+    FontBuilder,
+};
 
 pub use error::GftoolsError;
-use fontspector_hotfix::{apply_hotfixes, Testable};
 pub use names::{update_name_table, AxisLimits, AxisTriple};
 // Have to make this pub so our scripts can use it
 #[allow(unused_imports)]
@@ -29,7 +41,7 @@ where
 
 pub fn list_some_things<T: Display>(
     font_files: &[String],
-    lister: impl Fn(&str, &fontations::skrifa::FontRef) -> Option<Vec<T>>,
+    lister: impl Fn(&str, &skrifa::FontRef) -> Option<Vec<T>>,
     headers: &[&str],
     csv: bool,
 ) {
@@ -39,7 +51,7 @@ pub fn list_some_things<T: Display>(
             log::warn!("{}: Failed to read font file, skipping", font);
             continue;
         };
-        let Ok(fontref) = fontations::skrifa::FontRef::new(&font_data) else {
+        let Ok(fontref) = skrifa::FontRef::new(&font_data) else {
             log::warn!("{}: Failed to parse font file, skipping", font);
             continue;
         };
@@ -68,105 +80,122 @@ pub fn list_some_things<T: Display>(
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum IncludeSourceFixes {
-    Yes,
-    #[default]
-    No,
-}
+// layer.shapes = contours
+//     .contours()
+//     .map(|x| crate::Shape::Path(x.path.clone().into()))
+//     .collect();
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Interactive {
-    Yes,
-    #[default]
-    No,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum FixFvarTable {
-    #[default]
-    Yes,
-    No,
-}
-
-pub fn fix_font(
-    font_path: &str,
-    output_path: &str,
-    include_source_fixes: IncludeSourceFixes,
-    interactive: Interactive,
-    fix_fvar_table: FixFvarTable,
-) -> Result<(), GftoolsError> {
-    // Load font and wrap in a Testable
-    let mut font = Testable::new(font_path).expect("Failed to load font");
-    let mut check_ids = vec![
-        // fix license strings
-        // "name/license",
-        // "name/license_url",
-        // Fix hinted font
-        "integer_ppem_if_hinted",
-        // Fix unhinted font
-        "googlefonts/gasp",
-        // Fix no ps name
-        "googlefonts/metadata/valid_nameid25",
-        // Fix COLR font
-        "googlefonts/color_fonts",
-        "empty_glyph_on_gid1_for_colrv0",
-        // fix_hhea_caret_slope_run
-        "opentype/caret_slope",
-    ];
-    if let IncludeSourceFixes::Yes = include_source_fixes {
-        check_ids.extend([
-            // remove tables
-            "unwanted_tables",
-            // fix nametable,
-            "googlefonts/font_names",
-            // fix FS type
-            "googlefonts/fstype",
-            // fix FS selection
-            "googlefonts/use_typo_metrics",
-            "opentype/fsselection",
-            // Fix mac style
-            "opentype/mac_style",
-            // fix weight class
-            "googlefonts/weightclass",
-            // fix italic angle
-            "opentype/italic_angle",
-        ]);
+pub fn remove_overlaps(font_in: &[u8]) -> Result<Vec<u8>, GftoolsError> {
+    let fontref = skrifa::FontRef::new(font_in)
+        .map_err(|_| GftoolsError::Misc("Failed to parse font".to_string()))?;
+    // Assert this is a static font
+    if fontref.fvar().is_ok() {
+        return Err(GftoolsError::Misc(
+            "Can only remove overlaps in static fonts".to_string(),
+        ));
     }
-    if let FixFvarTable::Yes = fix_fvar_table {
-        check_ids.push("googlefonts/fvar_instances");
+    let loca = fontref.loca(None)?;
+    let glyf = fontref.glyf()?;
+    let glyph_count: u32 = fontref.maxp()?.num_glyphs().into();
+    let mut builder = GlyfLocaBuilder::new();
+    for i in 0..glyph_count {
+        let gid = GlyphId::from(i);
+        if let Ok(Some(g)) = loca.get_glyf(gid, &glyf) {
+            let mut glyph = Glyph::from_table_ref(&g);
+            remove_overlap_glyph(&mut glyph)?;
+            builder
+                .add_glyph(&glyph)
+                .map_err(|e| GftoolsError::Misc(format!("Failed to add glyph: {}", e)))?;
+        }
     }
-    let check_ids: Vec<String> = check_ids.into_iter().map(String::from).collect();
-    apply_hotfixes(
-        &mut font,
-        &check_ids,
-        matches!(interactive, Interactive::Yes),
-    )
-    .map_err(|_| GftoolsError::Misc("Failed to apply hotfixes".to_string()))?;
-    // Save the fixed font
-    std::fs::write(output_path, &font.contents)?;
+    let (glyf, loca, _loca_format) = builder.build();
+    let mut new_font = FontBuilder::new();
+    new_font.add_table(&glyf)?;
+    new_font.add_table(&loca)?;
+    new_font.copy_missing_tables(fontref);
+    Ok(new_font.build())
+}
+
+fn remove_overlap_glyph(glyph: &mut Glyph) -> Result<(), GftoolsError> {
+    if let Glyph::Simple(simple_glyph) = glyph {
+        let mut bezpath_before: BezPath = BezPath::new();
+        for contour in &simple_glyph.contours {
+            bezpath_before.extend(contour_to_bez(contour));
+        }
+
+        let contours = binary_op(
+            &bezpath_before,
+            &BezPath::new(),
+            FillRule::NonZero,
+            BinaryOp::Union,
+        )
+        .map_err(|e| crate::GftoolsError::Misc(format!("Failed to remove overlaps: {}", e)))?;
+        let mut bezpath: BezPath = BezPath::new();
+        for c in contours.contours() {
+            bezpath.extend(to_quadratic(&c.path));
+        }
+        *glyph = Glyph::Simple(SimpleGlyph::from_bezpath(&bezpath).map_err(|e| {
+            GftoolsError::Misc("Failed to create simple glyph: malformed path".to_string())
+        })?);
+    }
     Ok(())
 }
 
-pub fn fix_runner(
-    font_path: &str,
-    output_path: &str,
-    verbosity: u8,
-    check_ids: &[String],
-    interactive: bool,
-) -> Result<(), GftoolsError> {
-    env_logger::Builder::from_env(
-        env_logger::Env::default().default_filter_or(match verbosity {
-            0 => "warn",
-            1 => "info",
-            _ => "debug",
-        }),
-    )
-    .init();
-    let mut font = Testable::new(font_path)?;
-    apply_hotfixes(&mut font, check_ids, interactive)
-        .map_err(|_| GftoolsError::Misc("Failed to apply hotfixes".to_string()))?;
-    // Save the fixed font
-    std::fs::write(output_path, &font.contents)?;
-    Ok(())
+fn contour_to_bez(contour: &Contour) -> BezPath {
+    let mut bezpath = BezPath::new();
+    let mut control_point: Option<Point> = None;
+    let mut iter = contour.iter();
+    let first = iter.next();
+    let pt = |p: &CurvePoint| Point::new(p.x as f64, p.y as f64);
+    if let Some(first_point) = first {
+        if first_point.on_curve {
+            bezpath.move_to(pt(first_point));
+        } else {
+            control_point = Some(pt(first_point));
+        }
+    }
+    for c in contour.iter() {
+        // The curve is in quadspline format, i.e. two successive off-curve points
+        // have an implied on-curve point between them.
+        if c.on_curve {
+            if let Some(cp) = control_point {
+                bezpath.quad_to(cp, pt(&c));
+                control_point = None;
+            } else {
+                bezpath.line_to(pt(&c));
+            }
+        } else {
+            if let Some(last_cp) = control_point {
+                let implied_on = Point {
+                    x: (last_cp.x + pt(&c).x) / 2.0,
+                    y: (last_cp.y + pt(&c).y) / 2.0,
+                };
+                bezpath.quad_to(last_cp, implied_on);
+            }
+            control_point = Some(pt(&c));
+        }
+    }
+    // Except we need it as a cubic
+    BezPath::from_path_segments(bezpath.segments().map(|s| match s {
+        kurbo::PathSeg::Line(_) => s,
+        kurbo::PathSeg::Quad(quad_bez) => kurbo::PathSeg::Cubic(quad_bez.raise()),
+        kurbo::PathSeg::Cubic(_) => unreachable!(),
+    }))
+}
+
+fn to_quadratic(cubic: &BezPath) -> BezPath {
+    let mut new_path_seg = Vec::new();
+    for seg in cubic.segments() {
+        match seg {
+            kurbo::PathSeg::Line(_) => new_path_seg.push(seg),
+            kurbo::PathSeg::Quad(_) => unreachable!(),
+            kurbo::PathSeg::Cubic(cubic_bez) => {
+                for (_, _, quad) in cubic_bez.to_quads(1.0) {
+                    new_path_seg.push(kurbo::PathSeg::Quad(quad));
+                }
+            }
+        }
+    }
+
+    BezPath::from_path_segments(new_path_seg.into_iter())
 }

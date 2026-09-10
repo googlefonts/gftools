@@ -1,18 +1,18 @@
 use std::collections::{HashMap, HashSet};
 
 /// Port of fontTools.varLib.names module for updating instantiated fonts
-use fontations::{
-    read::{
+use skrifa::{
+    raw::{
         TableProvider,
         tables::stat::{AxisValue, AxisValueTableFlags, Stat},
     },
-    skrifa::{FontRef, MetadataProvider, string::LocalizedStrings},
+    FontRef, MetadataProvider, string::LocalizedStrings,
+};
+use write_fonts::{
     types::{NameId, Tag},
-    write::{
         FontBuilder,
         from_obj::ToOwnedTable,
         tables::name::{Name, NameRecord},
-    },
 };
 
 use crate::GftoolsError;

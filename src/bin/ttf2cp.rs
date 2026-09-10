@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use clap::Parser;
-use fontations::{read::FontRef, skrifa::MetadataProvider};
+use skrifa::{raw::FontRef, MetadataProvider};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]

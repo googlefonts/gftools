@@ -1,6 +1,6 @@
 use clap::{Args, Parser};
-use fontations::skrifa::{FontRef, MetadataProvider, prelude::*};
-use tabled::{Table, Tabled, settings::Style};
+use skrifa::{prelude::*, FontRef, MetadataProvider};
+use tabled::{settings::Style, Table, Tabled};
 
 #[derive(Args)]
 #[group(required = true, multiple = false)]

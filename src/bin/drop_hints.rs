@@ -1,14 +1,12 @@
 use clap::Parser;
-use fontations::{
-    read::{FontRef, ReadError, TableProvider, tables::glyf::Glyf},
-    types::{GlyphId, Tag},
-    write::{
-        FontBuilder,
-        from_obj::FromTableRef,
-        tables::glyf::{GlyfLocaBuilder, Glyph},
-    },
-};
 use gftools::GftoolsError;
+use skrifa::raw::{tables::glyf::Glyf, FontRef, ReadError, TableProvider};
+use write_fonts::{
+    from_obj::FromTableRef,
+    tables::glyf::{GlyfLocaBuilder, Glyph},
+    types::{GlyphId, Tag},
+    FontBuilder,
+};
 
 #[derive(Parser)]
 #[command(version, about)]
@@ -69,9 +67,7 @@ fn any_glyphs_have_instructions(font: &FontRef<'_>) -> Result<bool, ReadError> {
         .flatten()
         .take(100) // Limit to 100 glyphs to avoid performance issues
         .any(|g| match g {
-            fontations::read::tables::glyf::Glyph::Simple(simple) => {
-                !simple.instructions().is_empty()
-            }
+            skrifa::raw::tables::glyf::Glyph::Simple(simple) => !simple.instructions().is_empty(),
             _ => false,
         }))
 }

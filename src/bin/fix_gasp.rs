@@ -1,10 +1,7 @@
 use clap::{ArgAction, Parser};
-use fontations::{
-    read::tables::gasp::GaspRangeBehavior,
-    skrifa::{FontRef, raw::TableProvider},
-    write::FontBuilder,
-};
-use fontspector_hotfix::{Testable, apply_hotfixes};
+use fontspector_hotfix::{apply_hotfixes, Testable};
+use skrifa::{raw::tables::gasp::GaspRangeBehavior, raw::TableProvider, FontRef};
+use write_fonts::FontBuilder;
 
 #[derive(Debug, Parser)]
 #[command(version, about)]
@@ -52,9 +49,9 @@ fn main() {
         return;
     };
     if let Some(new_value) = args.set {
-        let new_gasp = fontations::write::tables::gasp::Gasp {
+        let new_gasp = write_fonts::tables::gasp::Gasp {
             version: 0,
-            gasp_ranges: vec![fontations::write::tables::gasp::GaspRange {
+            gasp_ranges: vec![write_fonts::tables::gasp::GaspRange {
                 range_max_ppem: 0xFFFF,
                 range_gasp_behavior: GaspRangeBehavior::from_bits(new_value).unwrap_or_else(|| {
                     eprintln!("Invalid GASP behavior value: {}. It should be a valid combination of GaspRangeBehavior flags.", new_value);
