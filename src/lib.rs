@@ -14,9 +14,11 @@ pub use names::{AxisLimits, AxisTriple, update_name_table};
 // Have to make this pub so our scripts can use it
 #[allow(unused_imports)]
 pub(crate) use gf_metadata::DesignerInfoProto;
+#[allow(unused_imports)] // We'll use it one day
 pub(crate) use gf_metadata::{AxisProto, FamilyProto};
 use tabled::settings::Style;
 
+#[allow(dead_code)] // We'll use it one day
 fn parse_metadatapb<T>(path: &Path) -> Result<T, GftoolsError>
 where
     T: protobuf::MessageFull,
