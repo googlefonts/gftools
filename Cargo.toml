@@ -77,6 +77,7 @@ name = "gftools-drop-hints"
 path = "src/bin/drop_hints.rs"
 
 [dependencies]
+skrifa = { version = "0.46.2" }
 reqwest = { version = "0.12.15", features = ["blocking", "json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
@@ -87,15 +88,19 @@ log = "0.4.27"
 toml = "0.8.20"
 serde_json_path_to_error = "0.1.4"
 clap = { version = "4.5.45", features = ["derive"] }
-fontations = "0.3.0"
+write-fonts = { version = "0.52.0", features = ["tables"] }
+linesweeper = "0.4.0"
 gf-metadata = "0.2.0"
 protobuf = "3.7.2"
-fontspector-hotfix = { git = "https://github.com/fonttools/fontspector", default-features = false, features=["profiles"] }
+fontspector-hotfix = { git = "https://github.com/fonttools/fontspector", default-features = false, features = [
+    "profiles",
+] }
 env_logger = "0.11.8"
 tabled = "0.20.0"
 unicode_names2 = "2.0.0"
 google-fonts-subsets = "0.202602.1"
 norad = "0.18.0"
+kurbo = "0.13"
 
 [dev-dependencies]
 expanduser = "1.2.2"

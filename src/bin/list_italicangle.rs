@@ -1,6 +1,6 @@
 use clap::Parser;
-use fontations::read::TableProvider;
 use gftools::list_some_things;
+use skrifa::raw::TableProvider;
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
