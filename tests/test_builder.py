@@ -76,6 +76,17 @@ TEST_DIR = os.path.join(CWD, "..", "data", "test", "builder")
                 os.path.join("webfonts", "TestFamily-Black.woff2"),
             ],
         ),
+        (
+            # Test source switching and glyphs2ds being able to deal with
+            # sources to be generated. The source file contains a single style,
+            # which would usually prompt fontmake to special case the output
+            # Designspace file name. This tests that gftools retains control
+            # over the output file name by testing that the pipeline finishes.
+            os.path.join(TEST_DIR, "switch_sources"),
+            [
+                "test_family.ttf",
+            ],
+        ),
     ],
 )
 def test_builder(fp, font_paths):

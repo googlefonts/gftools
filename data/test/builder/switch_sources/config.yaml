@@ -1,0 +1,12 @@
+familyName: Test Family
+sources:
+  - test_family.glyphs
+recipe:
+  ../fonts/test_family.ttf:
+    - source: test_family.glyphs
+    - operation: exec
+      exe: python3 frobnicate-sources.py
+      args: test_family.glyphs frobnicated.glyphs
+    - source: frobnicated.glyphs
+    - operation: glyphs2ds
+    - operation: buildVariable
