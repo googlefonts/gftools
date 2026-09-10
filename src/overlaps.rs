@@ -2,7 +2,7 @@ use crate::GftoolsError;
 use kurbo::{BezPath, Point, Shape};
 use linesweeper::{BinaryOp, FillRule, binary_op};
 use skrifa::{
-    GlyphId, MetadataProvider,
+    GlyphId,
     raw::{TableProvider, tables::glyf::CurvePoint},
 };
 use write_fonts::{
@@ -23,18 +23,9 @@ pub fn remove_overlaps(font_in: &[u8]) -> Result<Vec<u8>, GftoolsError> {
     let loca = fontref.loca(None)?;
     let glyf = fontref.glyf()?;
     let glyph_count: u32 = fontref.maxp()?.num_glyphs().into();
-    let glyph_names = fontref.glyph_names();
     let mut builder = GlyfLocaBuilder::new();
     for i in 0..glyph_count {
         let gid = GlyphId::from(i);
-        println!(
-            "Processing glyph {} ({})",
-            i,
-            glyph_names
-                .get(gid)
-                .map(|s| s.to_string())
-                .unwrap_or("".to_string())
-        );
         if let Ok(Some(g)) = loca.get_glyf(gid, &glyf) {
             let mut glyph = Glyph::from_table_ref(&g);
             remove_overlap_glyph(&mut glyph)?;

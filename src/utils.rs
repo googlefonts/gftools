@@ -1,5 +1,6 @@
 use crate::error::GftoolsError;
 
+#[allow(dead_code)] // We'll use it one day
 pub(crate) fn download_family_from_google_fonts(
     family: &str,
 ) -> Result<Vec<Vec<u8>>, GftoolsError> {
