@@ -27,6 +27,7 @@ from pygit2 import (
 from pygit2.enums import FileStatus
 
 from gfmetadata import FamilyProto, SourceFileProto
+from gftools.packager._pathsafe import safe_join
 from gftools.gfgithub import GitHubClient
 from gftools.scripts.add_font import main as add_font
 from gftools.util import google_fonts as fonts
@@ -270,7 +271,7 @@ def download_assets(
 
         zf = ZipFile(z)
         for item in metadata.source.files:
-            out_fp = Path(out / item.dest_file)
+            out_fp = safe_join(out, item.dest_file)
             if not out_fp.parent.exists():
                 os.makedirs(out_fp.parent, exist_ok=True)
             found = False
@@ -303,7 +304,7 @@ def download_assets(
                 f"'{metadata.source.branch}' branch.\n\nPlease check the file "
                 "is in the repo and the branch name is correct."
             )
-        out_fp = Path(out / item.dest_file)
+        out_fp = safe_join(out, item.dest_file)
         if not out_fp.parent.exists():
             os.makedirs(out_fp.parent, exist_ok=True)
         with open(out_fp, "wb") as item:

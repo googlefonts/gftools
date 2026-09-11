@@ -15,6 +15,7 @@ from rich import progress
 from rich.progress import Progress
 
 from gfmetadata import FamilyProto
+from gftools.packager._pathsafe import safe_join
 
 # Python <3.11
 if not hasattr(contextlib, "chdir"):
@@ -303,7 +304,7 @@ class SourceBuilder:
                 raise ValueError(
                     f"Expected to copy {item.source_file} but it was not found after build"
                 )
-            out_fp = Path(self.destination / item.dest_file)
+            out_fp = safe_join(self.destination, item.dest_file)
             if not out_fp.parent.exists():
                 os.makedirs(out_fp.parent, exist_ok=True)
             shutil.copy(in_fp, out_fp)
