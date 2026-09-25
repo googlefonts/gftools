@@ -63,11 +63,13 @@ def main(args=None):
     )
     args = parser.parse_args(args)
 
-    print(args.fonts)
     fonts = [TTFont(f) for f in args.fonts]
 
     if args.src:
         config = yaml.load(open(args.src), Loader=yaml.SafeLoader)
+        # If there's a top-level item called stat in the config (which there may
+        # be if we're injesting a full builder config.yaml), use that
+        config = config.get("stat", config)
         gen_stat_tables_from_config(config, fonts)
     else:
         gen_stat_tables(fonts)
