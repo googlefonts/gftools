@@ -175,7 +175,7 @@ class GFBuilder(RecipeProviderBase):
             else:
                 axes = next(
                     param["value"]
-                    for param in info.get("customParameters",[])
+                    for param in info.get("customParameters", [])
                     if param["name"] == "Axes"
                 )
                 tags = [axis["Tag"] for axis in axes]
