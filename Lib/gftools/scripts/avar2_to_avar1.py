@@ -523,7 +523,9 @@ class Avar2Flattener:
                             continue
                         for bp in self.all_knots.get(out_tag, [0.0]):
                             for t in _crossings(m0[out_tag], m1[out_tag], [bp]):
-                                strength = min(abs(m0[out_tag] - bp), abs(m1[out_tag] - bp))
+                                strength = min(
+                                    abs(m0[out_tag] - bp), abs(m1[out_tag] - bp)
+                                )
                                 if strength < min_excursion:
                                     continue
                                 v = k0 + t * (k1 - k0)
