@@ -382,6 +382,7 @@ build process by leaving a `graph.png` file in the `sources` directory:
 - *subspace*: Runs `fonttools varLib.instancer` to subspace a variable font according to the values in `axes`. `args` are added to the command line.
 - *genStatic*: Runs `gftools-gen-static` to generate a static font from a variable font. The font is named using the required `family` and `style` arguments and complies with Microsoft's RIBBI naming convention. The style must match a named fvar instance in the variable font, unless axis positions are provided with e.g `args: "--coordinates wght=450"`.
 - *avar2ToAvar1*: Runs `gftools-avar2-to-avar1` to flatten an avar2 variable font into an avar1 variable font by resampling the designspace at the locations implied by the font's avar2 and gvar tables. `args` are added to the command line.
+    - `grid`: optional. Also add masters at the tensor product of these axes, to sample the interior between them. A mapping of axis tag to master count, e.g. `grid: {opsz: 3, wdth: 5, wght: 9}` gives 135 grid masters; a null count uses every knot the font has on that axis. A list of tags, or a string in the `--grid` syntax, also works.
 - *hbsubset*: Uses `hb-subset` to slim down a font binary.
 - *addSubset*: Adds a subset from another font using `gftools-add-ds-subsets`
     - `directory`: the intermediary folder used to store the source(s) the subset(s) is taken from
