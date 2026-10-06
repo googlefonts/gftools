@@ -44,12 +44,28 @@ wdth:
   ...
 `
 
+Between knots there is one more source of error that --grid-cuts cannot
+target: the mapping is additive, so an *output* axis can cross its own
+default (or one of its intermediate masters) part-way between two input
+knots. gvar switches to a different master there, so the outline's slope
+changes at a point no input knot marks. With --grid, every grid edge is
+checked for such crossings (cheap: the mapping is linear along an edge)
+and a master is added at each one that matters, i.e. where the output
+axis travels at least --crossing-min (normalized) on both sides of the
+crossing. These are local masters on their edge, not new knots, so the
+grid does not grow. This is opt-in (--crossing-masters): in a parametric
+font nearly every edge has such a crossing, so it can add hundreds of
+masters, and an off-grid master's tent reaches the neighbouring cells.
+
 Usage:
 # default
 gftools avar2-to-avar1 path/to/variable-font.ttf
 
 # refine until the worst in-group error is below 2 font units
 gftools avar2-to-avar1 path/to/variable-font.ttf --tolerance 2
+
+# also sample the opsz x wdth x wght interior with 3 x 5 x 9 grid masters
+gftools avar2-to-avar1 path/to/variable-font.ttf --grid opsz:3,wdth:5,wght:9
 
 # with custom avar1 mapping and outpath
 gftools avar2-to-avar1 font.ttf --mapping mapping.yaml -o avar1-font.ttf
@@ -177,6 +193,81 @@ def _peak_vectors(avar, axis_tags, tuple_vars):
     return vectors
 
 
+def _parse_grid_spec(spec):
+    """Parse ``opsz:3,wdth:5,wght`` into ``{"opsz": 3, "wdth": 5, "wght": None}``.
+    A bare tag means: use every knot the font has on that axis."""
+    counts = {}
+    for token in spec.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        tag, sep, count = token.partition(":")
+        tag = tag.strip()
+        if not sep:
+            counts[tag] = None
+            continue
+        try:
+            counts[tag] = int(count)
+        except ValueError:
+            raise ValueError(f"--grid: bad master count in {token!r}")
+    return counts
+
+
+def _grid_knots(knots, count, cuts=0):
+    """Choose the knots an axis contributes to the --grid tensor product.
+
+    knots is the axis's sorted normalized knot list (always containing
+    the default and the reachable extremes). With count None, every
+    knot is used and each interval is subdivided ``cuts`` times. With a
+    count, exactly that many knots are returned: the default and the
+    extremes always, then
+
+    - fewer than the font's knots: a subset of the font's own knots,
+      spread as evenly as possible (farthest-point selection), because
+      the font is exact at its knots;
+    - more than the font's knots: all of them, bisecting the largest
+      interval until the count is reached.
+    """
+    if count is None:
+        values = set(knots)
+        for lo, hi in zip(knots[:-1], knots[1:]):
+            for i in range(1, cuts + 1):
+                values.add(lo + (hi - lo) * i / (cuts + 1))
+        return sorted(values)
+
+    required = sorted({knots[0], 0.0, knots[-1]})
+    if count < len(required):
+        raise ValueError(
+            f"--grid: count {count} is below the {len(required)} knots "
+            f"(default and extremes) the axis needs"
+        )
+    if count <= len(knots):
+        chosen = list(required)
+        candidates = [k for k in knots if k not in chosen]
+        while len(chosen) < count:
+            best = max(candidates, key=lambda c: min(abs(c - s) for s in chosen))
+            chosen.append(best)
+            candidates.remove(best)
+        return sorted(chosen)
+
+    chosen = list(knots)
+    while len(chosen) < count:
+        gaps = [(hi - lo, lo, hi) for lo, hi in zip(chosen[:-1], chosen[1:])]
+        _, lo, hi = max(gaps)
+        chosen.append((lo + hi) / 2)
+        chosen.sort()
+    return chosen
+
+
+def _crossings(v0, v1, breakpoints):
+    """Parameters t in (0, 1) at which the straight path from v0 to v1
+    passes a breakpoint strictly between them."""
+    if v0 == v1:
+        return []
+    lo, hi = min(v0, v1), max(v0, v1)
+    return [(b - v0) / (v1 - v0) for b in breakpoints if lo < b < hi]
+
+
 def _outline_diff(font_a, font_b):
     """Worst per-point coordinate difference between two static fonts."""
     glyf_a, glyf_b = font_a["glyf"], font_b["glyf"]
@@ -227,6 +318,9 @@ class Avar2Flattener:
         for tag, vals in gvar_knots.items():
             raw_knots.setdefault(tag, set()).update(vals)
         self.knots = _clean_knots(raw_knots, self.fvar.axes)
+        # Knots of every axis, output (parametric) ones included: where a
+        # mapped coordinate crosses one of these, gvar changes master.
+        self.all_knots = dict(self.knots)
         # --axes: restrict the output font to a subset of the fvar axes.
         # Masters are cut with the dropped axes pinned at their defaults,
         # and knots (hence sampling, groups, and the output designspace)
@@ -269,36 +363,56 @@ class Avar2Flattener:
         # --grid: masters at the full tensor product of the given axes' knots
         # (other axes at default), so interpolation between knots of the
         # primary design axes is sampled instead of approximated additively.
+        # Each entry is ``tag`` (all of the font's knots on that axis) or
+        # ``tag:N`` (exactly N knots, see _grid_knots), so the product size
+        # can be traded per axis: --grid opsz:3,wdth:5,wght:9.
         if getattr(options, "grid", None):
-            grid_tags = [t.strip() for t in options.grid.split(",")]
+            grid_counts = _parse_grid_spec(options.grid)
+            grid_tags = list(grid_counts)
             unknown = [t for t in grid_tags if t not in self.knots]
             if unknown:
                 raise ValueError(f"--grid axes not varying in font: {unknown}")
-            # --grid-cuts: subdivide each knot interval so the grid also
-            # samples cell interiors; the composite avar2 mapping is not
-            # multilinear within cells, so corner masters alone leave a
-            # quadratic cross-axis residual.
+            # --grid-cuts: subdivide each knot interval of the axes given
+            # without a count, so the grid also samples cell interiors; the
+            # composite avar2 mapping is not multilinear within cells, so
+            # corner masters alone leave a quadratic cross-axis residual.
             cuts = getattr(options, "grid_cuts", 0) or 0
-            grid_knots = {}
-            for tag in grid_tags:
-                knots = self.knots[tag]
-                values = set(knots)
-                for lo, hi in zip(knots[:-1], knots[1:]):
-                    for i in range(1, cuts + 1):
-                        values.add(lo + (hi - lo) * i / (cuts + 1))
-                grid_knots[tag] = sorted(values)
+            grid_knots = {
+                tag: _grid_knots(self.knots[tag], count, cuts)
+                for tag, count in grid_counts.items()
+            }
             before = len(self.base_locations)
-            for combo in itertools.product(*(grid_knots[t] for t in grid_tags)):
+            grid = list(itertools.product(*(grid_knots[t] for t in grid_tags)))
+            for combo in grid:
                 loc = list(default)
                 for tag, value in zip(grid_tags, combo):
                     loc[index[tag]] = value
                 self.base_locations.add(tuple(loc))
             log.info(
-                "--grid %s (cuts %d): %d extra grid masters",
-                options.grid,
-                cuts,
+                "--grid %s = %d grid masters (%d new)",
+                " x ".join(f"{t}:{len(grid_knots[t])}" for t in grid_tags),
+                len(grid),
                 len(self.base_locations) - before,
             )
+            if getattr(options, "crossing_masters", False):
+                found = self.crossing_masters(
+                    grid_knots, grid_tags, getattr(options, "crossing_min", 0.1)
+                )
+                before = len(self.base_locations)
+                for loc, strength, why in found:
+                    vec = list(default)
+                    for tag, value in loc.items():
+                        vec[index[tag]] = value
+                    self.base_locations.add(tuple(vec))
+                if found:
+                    strongest = found[0]
+                    log.info(
+                        "%d crossing masters added (%d new); strongest: %s, where %s",
+                        len(found),
+                        len(self.base_locations) - before,
+                        self.describe(strongest[0]),
+                        strongest[2],
+                    )
 
     def clamp_vector(self, vec):
         """Clamp a normalized location to what the fvar ranges can reach."""
@@ -368,6 +482,65 @@ class Avar2Flattener:
         gsub.FeatureVariations = None
         log.info("Recovered %d substitution rules from FeatureVariations", len(rules))
         return rules
+
+    def mapped_location(self, norm_loc):
+        """Post-avar2 normalized coordinates of every axis for a post-avar1
+        normalized input location (sparse: missing axes are at default)."""
+        pre = {}
+        for tag in self.axis_tags:
+            n = norm_loc.get(tag, 0.0)
+            if tag in self.inv_segments:
+                n = piecewiseLinearMap(n, self.inv_segments[tag])
+            pre[tag] = n
+        out = self.font["avar"].renormalizeLocation(pre, self.font, dropZeroes=False)
+        return {t: out.get(t, 0.0) for t in self.axis_tags}
+
+    def crossing_masters(self, axis_knots, grid_tags, min_excursion=0.1, merge=0.02):
+        """Local masters on grid edges where an output axis crosses one of
+        its own knots (its default or an intermediate master) part-way
+        between two input knots. gvar changes master there, so the outline
+        has a kink that the edge's end masters cannot express.
+
+        The mapping is linear along an edge, so each crossing is found
+        exactly from the two endpoints. A crossing counts only if the
+        output axis travels at least ``min_excursion`` (normalized) on both
+        sides of it; tiny wobbles across a default are not worth a master.
+        Crossings within ``merge`` of each other on the same edge are
+        merged. Returns [(sparse location, strength, description), ...]
+        strongest first."""
+        found = []
+        for tag in grid_tags:
+            knots = axis_knots[tag]
+            others = [t for t in grid_tags if t != tag]
+            for ctx in itertools.product(*(axis_knots[t] for t in others)):
+                base = dict(zip(others, ctx))
+                for k0, k1 in zip(knots[:-1], knots[1:]):
+                    m0 = self.mapped_location({**base, tag: k0})
+                    m1 = self.mapped_location({**base, tag: k1})
+                    edge = []
+                    for out_tag in self.axis_tags:
+                        if out_tag == tag:
+                            continue
+                        for bp in self.all_knots.get(out_tag, [0.0]):
+                            for t in _crossings(m0[out_tag], m1[out_tag], [bp]):
+                                strength = min(abs(m0[out_tag] - bp), abs(m1[out_tag] - bp))
+                                if strength < min_excursion:
+                                    continue
+                                v = k0 + t * (k1 - k0)
+                                if any(abs(v - k) <= merge for k in knots):
+                                    continue
+                                edge.append((strength, v, out_tag, bp))
+                    edge.sort(reverse=True)
+                    kept = []
+                    for strength, v, out_tag, bp in edge:
+                        if any(abs(v - w) <= merge for _, w, _, _ in kept):
+                            continue
+                        kept.append((strength, v, out_tag, bp))
+                        loc = {**base, tag: v}
+                        why = f"{out_tag} crosses {bp:g} moving {tag} between {self.describe({tag: k0})} and {self.describe({tag: k1})}"
+                        found.append((loc, strength, why))
+        found.sort(key=lambda x: -x[1])
+        return found
 
     def source_user_location(self, norm_loc):
         """User coords in the *input* font whose post-avar1 normalized
@@ -799,15 +972,34 @@ def main(args=None):
     parser.add_argument(
         "--grid",
         help="Comma-separated axis tags; add masters at the full tensor "
-        "product of these axes' knots for better accuracy between them "
-        "(e.g. --grid opsz,wdth,wght)",
+        "product of these axes' knots for better accuracy between them. "
+        "A tag may carry a master count, tag:N, to use exactly N knots on "
+        "that axis (always the default and extremes; fewer than the font "
+        "has picks evenly from its knots, more bisects the largest gaps). "
+        "E.g. --grid opsz:3,wdth:5,wght:9 gives 135 grid masters",
     )
     parser.add_argument(
         "--grid-cuts",
         type=int,
         default=0,
         help="With --grid: also insert this many evenly spaced masters "
-        "between adjacent knots on each grid axis (default: 0)",
+        "between adjacent knots on each grid axis given without a count "
+        "(default: 0)",
+    )
+    parser.add_argument(
+        "--crossing-masters",
+        action="store_true",
+        help="With --grid: add a local master wherever an output axis "
+        "crosses its default or an intermediate master between two input "
+        "knots, since gvar changes slope there. Exact at those points but "
+        "costly in a parametric font (hundreds of masters); off by default",
+    )
+    parser.add_argument(
+        "--crossing-min",
+        type=float,
+        default=0.1,
+        help="Minimum normalized travel of the output axis on both sides of "
+        "a crossing for it to get a master (default: 0.1)",
     )
     parser.add_argument(
         "--no-verify",
