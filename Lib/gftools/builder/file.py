@@ -86,7 +86,7 @@ class File:
         # Fine for Glyphs v2 & v3
         return len(glyphs_fontinfo["fontMaster"]) > 1 or any(
             custom_parameter["name"] == "Virtual Master"
-            for custom_parameter in glyphs_fontinfo["customParameters"]
+            for custom_parameter in glyphs_fontinfo.get("customParameters", [])
         )
 
     @cached_property
