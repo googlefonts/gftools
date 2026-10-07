@@ -240,7 +240,7 @@ class GFBuilder(RecipeProviderBase):
             args += " --keep-direction"
         if self.config.get("removeOutlineOverlaps") is False:
             args += " --keep-overlaps"
-        if self.config.get("noProductionNames"):
+        if self.config.get("productionNames", True) is False:
             args += " --no-production-names"
         if self.config.get("expandFeaturesToInstances"):
             args += " --expand-features-to-instances"

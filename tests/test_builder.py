@@ -241,3 +241,18 @@ def test_glyphs_without_custom_parameters_is_static(tmp_path):
         "glyphs = (\n);\nunitsPerEm = 1000;\nversionMajor = 1;\nversionMinor = 0;\n}\n"
     )
     assert not File(str(glyphs)).is_variable
+
+
+def test_production_names_key():
+    # productionNames (default true) replaced the negative noProductionNames key
+    import strictyaml
+
+    from gftools.builder.schema import GOOGLEFONTS_SCHEMA
+
+    strictyaml.load(
+        "sources:\n  - A.glyphs\nproductionNames: false\n", GOOGLEFONTS_SCHEMA
+    )
+    with pytest.raises(strictyaml.YAMLValidationError):
+        strictyaml.load(
+            "sources:\n  - A.glyphs\nnoProductionNames: true\n", GOOGLEFONTS_SCHEMA
+        )
