@@ -160,6 +160,7 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("interpolate"): Bool(),
         Optional("checkCompatibility"): Bool(),
         Optional("removeOutlineOverlaps"): Bool(),
+        Optional("noProductionNames"): Bool(),
         Optional("expandFeaturesToInstances"): Bool(),
         Optional("version"): Str(),
         Optional("addGftoolsVersion"): Bool(),

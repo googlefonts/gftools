@@ -204,6 +204,10 @@ The build can be customized by adding the following keys to the YAML file:
 -   `removeOutlineOverlaps`: Remove overlaps when compiling fonts.
     Defaults to fontmake\'s default.
 
+-   `noProductionNames`: Keep the source's glyph names in the compiled
+    fonts instead of renaming glyphs to their production names (fontmake's
+    `--no-production-names`). Defaults to `false`.
+
 -   `glyphData`: An array of custom GlyphData XML files for with glyph
     info (production name, script, category, subCategory, etc.).
     Used only for Glyphs sources.
