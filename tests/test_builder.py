@@ -227,3 +227,17 @@ def test_ufoz_is_a_ufo_source(tmp_path):
     assert f.is_font_source
     assert not f.is_variable  # a single zipped UFO is a static master
     assert f.family_name == "My Font"
+
+
+def test_glyphs_without_custom_parameters_is_static(tmp_path):
+    # A single-master .glyphs file need not have a font-level customParameters list;
+    # is_variable must not require one.
+    from gftools.builder.file import File
+
+    glyphs = tmp_path / "MyFont.glyphs"
+    glyphs.write_text(
+        '{\n.formatVersion = 3;\nfamilyName = "My Font";\n'
+        "fontMaster = (\n{\nid = m01;\nname = Regular;\n}\n);\n"
+        "glyphs = (\n);\nunitsPerEm = 1000;\nversionMajor = 1;\nversionMinor = 0;\n}\n"
+    )
+    assert not File(str(glyphs)).is_variable
