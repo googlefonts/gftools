@@ -243,6 +243,23 @@ def test_glyphs_without_custom_parameters_is_static(tmp_path):
     assert not File(str(glyphs)).is_variable
 
 
+def test_glyphs2_without_axes_parameter(tmp_path, monkeypatch):
+    # A Glyphs 2 file need not have an "Axes" custom parameter; glyphsLib then
+    # gives it the default Weight and Width axes, and the VF is named after those.
+    glyphs = tmp_path / "MyFont.glyphs"
+    glyphs.write_text(
+        '{\nfamilyName = "My Font";\n'
+        "fontMaster = (\n{\nid = m01;\nweightValue = 100;\n},\n"
+        "{\nid = m02;\nweightValue = 900;\n}\n);\n"
+        "glyphs = (\n);\nunitsPerEm = 1000;\nversionMajor = 1;\nversionMinor = 0;\n}\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    config = {"sources": ["MyFont.glyphs"], "buildStatic": False, "buildWebfont": False}
+    recipe = GFBuilder(config).recipe
+    vfs = [os.path.basename(target) for target in recipe if "variable" in target]
+    assert vfs == ["MyFont[wdth,wght].ttf"]
+
+
 def test_production_names_key():
     # productionNames (default true) replaced the negative noProductionNames key
     import strictyaml
