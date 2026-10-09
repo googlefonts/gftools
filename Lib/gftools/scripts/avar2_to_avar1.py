@@ -48,14 +48,26 @@ Between knots there is one more source of error that --grid-cuts cannot
 target: the mapping is additive, so an *output* axis can cross its own
 default (or one of its intermediate masters) part-way between two input
 knots. gvar switches to a different master there, so the outline's slope
-changes at a point no input knot marks. With --grid, every grid edge is
-checked for such crossings (cheap: the mapping is linear along an edge)
-and a master is added at each one that matters, i.e. where the output
-axis travels at least --crossing-min (normalized) on both sides of the
-crossing. These are local masters on their edge, not new knots, so the
-grid does not grow. This is opt-in (--crossing-masters): in a parametric
-font nearly every edge has such a crossing, so it can add hundreds of
-masters, and an off-grid master's tent reaches the neighbouring cells.
+changes at a point no input knot marks. Adding such a point as a regular
+master does not help: varLib has to invent a tent for it, and for an
+off-grid location the tent reaches to the axis defaults, so the correction
+leaks into neighbouring cells.
+
+Refinement escapes the grid instead. After the font is built, each
+refinement location is instanced in both fonts, and the per-glyph residual
+is appended to gvar as a tuple with an explicit tent: on every axis where
+the location is off its default the tent runs from the previous knot
+through the location to the next knot, so it touches only the cells
+around it. HVAR is rebuilt from the final gvar. The result is exact at
+the refinement locations and unchanged outside their cells. Locations
+come from --refine-at (user coordinates of the output font, repeatable)
+and from --refine-crossings, which checks every grid edge for crossings
+(cheap: the mapping is linear along an edge) and refines at each one
+where the output axis travels at least --crossing-min (normalized) on
+both sides; --max-refine keeps only the strongest N. A tent cannot be
+localized around an axis default, so for every axis a location sits at
+the default of, a "guard" master at the neighbouring knots cancels the
+leak along that axis (--no-refine-guards to skip them).
 
 Usage:
 # default
@@ -66,6 +78,13 @@ gftools avar2-to-avar1 path/to/variable-font.ttf --tolerance 2
 
 # also sample the opsz x wdth x wght interior with 3 x 5 x 9 grid masters
 gftools avar2-to-avar1 path/to/variable-font.ttf --grid opsz:3,wdth:5,wght:9
+# masters at exactly the positions the product uses (default and extremes
+# are always added); unchanged by later edits to the font's mappings
+gftools avar2-to-avar1 path/to/variable-font.ttf --grid wght:300/400/700,opsz:14/21
+
+# refine at the kinks the grid cannot express, plus a chosen location
+gftools avar2-to-avar1 font.ttf --grid wght:300/400/700,wdth:75/100/124,opsz:9/14/21 \\
+    --refine-crossings --refine-at wght=352,wdth=25,opsz=9
 
 # with custom avar1 mapping and outpath
 gftools avar2-to-avar1 font.ttf --mapping mapping.yaml -o avar1-font.ttf
@@ -91,7 +110,13 @@ from fontTools.otlLib.builder import buildStatTable
 from fontTools.ttLib import TTFont
 from fontTools.varLib import build as varlib_build
 from fontTools.varLib import instancer
-from fontTools.varLib.models import piecewiseLinearMap
+from fontTools.misc.roundTools import otRound
+from fontTools.ttLib import newTable
+from fontTools.ttLib.tables import otTables as ot
+from fontTools.ttLib.tables.TupleVariation import TupleVariation
+from fontTools.varLib.iup import iup_delta_optimize
+from fontTools.varLib.models import piecewiseLinearMap, normalizeValue
+from fontTools.varLib.varStore import OnlineVarStoreBuilder
 
 log = logging.getLogger("gftools.avar2_to_avar1")
 
@@ -195,7 +220,9 @@ def _peak_vectors(avar, axis_tags, tuple_vars):
 
 def _parse_grid_spec(spec):
     """Parse ``opsz:3,wdth:5,wght`` into ``{"opsz": 3, "wdth": 5, "wght": None}``.
-    A bare tag means: use every knot the font has on that axis."""
+    A bare tag means: use every knot the font has on that axis. A slash
+    list, ``wght:300/400/700``, means: masters at exactly those user
+    positions (``{"wght": [300.0, 400.0, 700.0]}``)."""
     counts = {}
     for token in spec.split(","):
         token = token.strip()
@@ -205,6 +232,12 @@ def _parse_grid_spec(spec):
         tag = tag.strip()
         if not sep:
             counts[tag] = None
+            continue
+        if "/" in count:
+            try:
+                counts[tag] = [float(v) for v in count.split("/") if v.strip()]
+            except ValueError:
+                raise ValueError(f"--grid: bad position list in {token!r}")
             continue
         try:
             counts[tag] = int(count)
@@ -282,6 +315,183 @@ def _outline_diff(font_a, font_b):
             if d > worst:
                 worst, worst_glyph = d, gname
     return worst, worst_glyph
+
+
+# ---------------------------------------------------------------- refinement
+#
+# Local masters appended to the built font's gvar with explicit tents, so a
+# correction at an off-grid location stays inside the cells around it.
+# Locations here are normalized coordinates of the *output* font, keyed by
+# its fvar axes; axes at 0 are at their default.
+
+
+def _parse_location(text):
+    """'wght=352,opsz=9' -> {'wght': 352.0, 'opsz': 9.0}"""
+    loc = {}
+    for token in text.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        tag, sep, value = token.partition("=")
+        if not sep:
+            raise ValueError(f"bad location {text!r}: expected tag=value")
+        try:
+            loc[tag.strip()] = float(value)
+        except ValueError:
+            raise ValueError(f"bad location {text!r}: {value!r} is not a number")
+    return loc
+
+
+def _axis_knots(font):
+    """Per axis of `font`, the sorted normalized positions it has masters
+    at: gvar tuple peaks plus the default and the reachable extremes."""
+    knots = {}
+    for axis in font["fvar"].axes:
+        lo = -1.0 if axis.minValue < axis.defaultValue else 0.0
+        hi = 1.0 if axis.maxValue > axis.defaultValue else 0.0
+        knots[axis.axisTag] = {lo, 0.0, hi}
+    for variations in font["gvar"].variations.values():
+        for tv in variations:
+            for tag, (_, peak, _) in tv.axes.items():
+                knots[tag].add(peak)
+    return {tag: sorted(vals) for tag, vals in knots.items()}
+
+
+def _tent(knots, v):
+    """Support (start, peak, end) that keeps a master at `v` inside its
+    cells: from the previous knot to the next, never crossing the default."""
+    below = [k for k in knots if k < v]
+    above = [k for k in knots if k > v]
+    start = max(below) if below else v
+    end = min(above) if above else v
+    if v > 0:
+        start = max(start, 0.0)
+    else:
+        end = min(end, 0.0)
+    return (start, v, end)
+
+
+def _region_for(knots, norm_loc, placed=()):
+    """gvar axes dict for a master at norm_loc; axes at default are absent.
+    `placed` are the locations of masters already appended: one that
+    differs from norm_loc on a single axis is a knot on that axis for this
+    master, so the two tents do not overlap."""
+    local = {tag: set(ks) for tag, ks in knots.items()}
+    for other in placed:
+        diff = [t for t in norm_loc if other.get(t, 0.0) != norm_loc[t]]
+        if len(diff) == 1:
+            local[diff[0]].add(other[diff[0]])
+    return {tag: _tent(sorted(local[tag]), v) for tag, v in norm_loc.items() if v != 0}
+
+
+def _guard_locations(knots, norm_loc, tags):
+    """Locations at the neighbouring knots of every axis in `tags` where
+    norm_loc sits at the default, so the leak along that axis can be
+    cancelled: each such axis moved alone, then every combination.
+    Closest first: one axis moved before two, and so on."""
+    choices, moved = [], []
+    for tag in tags:
+        if norm_loc.get(tag, 0.0) != 0:
+            continue
+        ks = knots[tag]
+        neighbours = [
+            k
+            for k in (
+                max([k for k in ks if k < 0], default=None),
+                min([k for k in ks if k > 0], default=None),
+            )
+            if k is not None
+        ]
+        if neighbours:
+            moved.append(tag)
+            choices.append([0.0] + neighbours)
+    guards = []
+    for combo in itertools.product(*choices):
+        if not any(combo):
+            continue
+        loc = dict(norm_loc)
+        loc.update(zip(moved, combo))
+        guards.append(loc)
+    guards.sort(key=lambda loc: sum(1 for t in moved if loc[t] != 0))
+    return guards
+
+
+def _glyph_coords(font):
+    """Per-glyph (coordinates incl. phantom points, controls) of a static
+    font, or of a variable font's default outlines."""
+    glyf, hmtx = font["glyf"], font["hmtx"].metrics
+    return {
+        name: glyf._getCoordinatesAndControls(name, hmtx)
+        for name in font.getGlyphOrder()
+    }
+
+
+def _append_local_master(font, target, current, region, defaults, iup_tolerance=0.5):
+    """Append to `font`'s gvar, per glyph, a tuple with support `region`
+    whose deltas take `current` to `target` (both from _glyph_coords).
+    Returns the number of glyphs given a tuple and the largest residual."""
+    gvar = font["gvar"].variations
+    added, worst = 0, 0.0
+    for name, (c2, controls) in target.items():
+        c1 = current[name][0]
+        if len(c1) != len(c2):
+            log.warning(
+                "%s: point count differs (%d vs %d); not refined",
+                name,
+                len(c1),
+                len(c2),
+            )
+            continue
+        residual = c2 - c1
+        deltas = [(otRound(x), otRound(y)) for x, y in residual]
+        if not any(x or y for x, y in deltas):
+            continue
+        worst = max(worst, max(max(abs(x), abs(y)) for x, y in residual))
+        if controls.numberOfContours > 0 and iup_tolerance > 0:
+            # drop deltas IUP can infer from their contour neighbours; the
+            # renderer infers them against the default outline
+            deltas = iup_delta_optimize(
+                deltas, defaults[name][0], controls.endPts, tolerance=iup_tolerance
+            )
+        gvar.setdefault(name, []).append(TupleVariation(dict(region), deltas))
+        added += 1
+    return added, worst
+
+
+def _rebuild_hvar(font):
+    """HVAR advance variations recomputed from the gvar phantom points, so
+    they agree with the outlines after tuples were appended."""
+    axis_tags = [a.axisTag for a in font["fvar"].axes]
+    glyf = font["glyf"]
+    builder = OnlineVarStoreBuilder(axis_tags)
+    mapping = {}
+    for name in font.getGlyphOrder():
+        glyph = glyf[name]
+        if glyph.isComposite():
+            n = len(glyph.components)
+        else:
+            n = len(glyph.coordinates) if hasattr(glyph, "coordinates") else 0
+        supports, deltas = [], []
+        for tv in font["gvar"].variations.get(name, []):
+            left = tv.coordinates[n] if n < len(tv.coordinates) else None
+            right = tv.coordinates[n + 1] if n + 1 < len(tv.coordinates) else None
+            adv = (right[0] if right else 0) - (left[0] if left else 0)
+            if adv:
+                supports.append(tv.axes)
+                deltas.append(adv)
+        builder.setSupports(supports)
+        mapping[name] = builder.storeDeltas(deltas)
+    store = builder.finish()
+    optimized = store.optimize()
+    hvar = ot.HVAR()
+    hvar.Version = 0x00010000
+    hvar.VarStore = store
+    hvar.AdvWidthMap = ot.VarIdxMap()
+    hvar.AdvWidthMap.mapping = {name: optimized[idx] for name, idx in mapping.items()}
+    hvar.LsbMap = hvar.RsbMap = None
+    table = newTable("HVAR")
+    table.table = hvar
+    font["HVAR"] = table
 
 
 class Avar2Flattener:
@@ -366,6 +576,7 @@ class Avar2Flattener:
         # Each entry is ``tag`` (all of the font's knots on that axis) or
         # ``tag:N`` (exactly N knots, see _grid_knots), so the product size
         # can be traded per axis: --grid opsz:3,wdth:5,wght:9.
+        self.grid_tags, self.grid_knots = None, None
         if getattr(options, "grid", None):
             grid_counts = _parse_grid_spec(options.grid)
             grid_tags = list(grid_counts)
@@ -377,10 +588,13 @@ class Avar2Flattener:
             # composite avar2 mapping is not multilinear within cells, so
             # corner masters alone leave a quadratic cross-axis residual.
             cuts = getattr(options, "grid_cuts", 0) or 0
-            grid_knots = {
-                tag: _grid_knots(self.knots[tag], count, cuts)
-                for tag, count in grid_counts.items()
-            }
+            grid_knots = {}
+            for tag, count in grid_counts.items():
+                if isinstance(count, list):
+                    grid_knots[tag] = self.position_knots(tag, count)
+                else:
+                    grid_knots[tag] = _grid_knots(self.knots[tag], count, cuts)
+            self.grid_tags, self.grid_knots = grid_tags, grid_knots
             before = len(self.base_locations)
             grid = list(itertools.product(*(grid_knots[t] for t in grid_tags)))
             for combo in grid:
@@ -394,25 +608,47 @@ class Avar2Flattener:
                 len(grid),
                 len(self.base_locations) - before,
             )
-            if getattr(options, "crossing_masters", False):
-                found = self.crossing_masters(
-                    grid_knots, grid_tags, getattr(options, "crossing_min", 0.1)
+        # Refinement: local masters appended to the built font (_refine),
+        # as sparse post-avar1 normalized locations with a reason each.
+        self.refine_locations = []
+        for text in getattr(options, "refine_at", None) or []:
+            user = _parse_location(text)
+            unknown = [t for t in user if t not in self.knots]
+            if unknown:
+                raise ValueError(
+                    f"--refine-at axes not varying in the output font: {unknown}"
                 )
-                before = len(self.base_locations)
-                for loc, strength, why in found:
-                    vec = list(default)
-                    for tag, value in loc.items():
-                        vec[index[tag]] = value
-                    self.base_locations.add(tuple(vec))
-                if found:
-                    strongest = found[0]
-                    log.info(
-                        "%d crossing masters added (%d new); strongest: %s, where %s",
-                        len(found),
-                        len(self.base_locations) - before,
-                        self.describe(strongest[0]),
-                        strongest[2],
-                    )
+            loc = {}
+            for tag, value in user.items():
+                lo, hi = self.knots[tag][0], self.knots[tag][-1]
+                loc[tag] = min(max(self.output_user_to_knot(tag, value), lo), hi)
+            self.refine_locations.append((loc, "--refine-at"))
+        if getattr(options, "refine_crossings", False):
+            if self.grid_tags is None:
+                raise ValueError("--refine-crossings needs --grid")
+            found = self.crossing_masters(
+                self.grid_knots, self.grid_tags, getattr(options, "crossing_min", 0.1)
+            )
+            for loc, strength, why in found:
+                self.refine_locations.append((loc, why))
+            if found:
+                log.info(
+                    "%d crossings to refine; strongest: %s, where %s",
+                    len(found),
+                    self.describe(found[0][0]),
+                    found[0][2],
+                )
+            else:
+                log.info("No crossings to refine")
+        limit = getattr(options, "max_refine", 0) or 0
+        if limit and len(self.refine_locations) > limit:
+            log.info(
+                "--max-refine %d: refining at the %d strongest of %d locations",
+                limit,
+                limit,
+                len(self.refine_locations),
+            )
+            self.refine_locations = self.refine_locations[:limit]
 
     def clamp_vector(self, vec):
         """Clamp a normalized location to what the fvar ranges can reach."""
@@ -483,6 +719,46 @@ class Avar2Flattener:
         log.info("Recovered %d substitution rules from FeatureVariations", len(rules))
         return rules
 
+    def user_to_knot(self, tag, value):
+        """Post-avar1 normalized coordinate of a user value on an axis."""
+        n = normalizeValue(value, self.fvar_triples[tag])
+        segments = self.font["avar"].segments.get(tag)
+        if segments:
+            n = piecewiseLinearMap(n, segments)
+        return n
+
+    def output_user_to_knot(self, tag, value):
+        """Post-avar1 normalized coordinate of a user value on an axis of
+        the *output* font, i.e. through its avar1 mapping if it has one."""
+        if tag in self.maps:
+            mapping = dict(self.maps[tag])
+            design = piecewiseLinearMap(value, mapping)
+            triple = tuple(
+                piecewiseLinearMap(v, mapping) for v in self.fvar_triples[tag]
+            )
+            return normalizeValue(design, triple)
+        return normalizeValue(value, self.fvar_triples[tag])
+
+    def position_knots(self, tag, positions):
+        """Knots for ``tag:a/b/c``: masters at exactly those user positions.
+        The default and the reachable extremes are always included, since
+        the variation model needs them; anything out of range is clamped."""
+        knots = self.knots[tag]
+        lo, hi = knots[0], knots[-1]
+        wanted = {min(max(self.user_to_knot(tag, v), lo), hi) for v in positions}
+        required = {lo, 0.0, hi}
+        missing = required - wanted
+        if missing:
+            log.info(
+                "--grid %s: adding %s (default and extremes are always masters)",
+                tag,
+                ", ".join(
+                    f"{self.source_user_location({tag: k})[tag]:g}"
+                    for k in sorted(missing)
+                ),
+            )
+        return sorted(wanted | required)
+
     def mapped_location(self, norm_loc):
         """Post-avar2 normalized coordinates of every axis for a post-avar1
         normalized input location (sparse: missing axes are at default)."""
@@ -496,10 +772,11 @@ class Avar2Flattener:
         return {t: out.get(t, 0.0) for t in self.axis_tags}
 
     def crossing_masters(self, axis_knots, grid_tags, min_excursion=0.1, merge=0.02):
-        """Local masters on grid edges where an output axis crosses one of
+        """Locations on grid edges where an output axis crosses one of
         its own knots (its default or an intermediate master) part-way
         between two input knots. gvar changes master there, so the outline
-        has a kink that the edge's end masters cannot express.
+        has a kink that the edge's end masters cannot express; these are
+        the places --refine-crossings refines at.
 
         The mapping is linear along an edge, so each crossing is found
         exactly from the two endpoints. A crossing counts only if the
@@ -691,22 +968,98 @@ class Avar2Flattener:
                 )
         return cells, cross
 
-    def compare_at(self, new_font, norm_loc):
-        """Worst outline diff between input and output font at a normalized
-        (post-avar1) location."""
+    def output_user_location(self, norm_loc):
+        """User coords in the *output* font of a normalized (post-avar1)
+        location: every kept axis, through the output avar1 mapping."""
         full = self.full_norm_location(norm_loc)
-        orig_coords = self.source_user_location(full)
-        new_coords = {}
+        coords = {}
         for tag, n in full.items():
             if tag not in self.ds_axes:  # dropped by --axes
                 continue
             design = _denormalize(n, self.design_triples[tag])
             u = self.ds_axes[tag].map_backward(design)
             minimum, _, maximum = self.fvar_triples[tag]
-            new_coords[tag] = min(max(u, minimum), maximum)
+            coords[tag] = min(max(u, minimum), maximum)
+        return coords
+
+    def compare_at(self, new_font, norm_loc):
+        """Worst outline diff between input and output font at a normalized
+        (post-avar1) location."""
+        orig_coords = self.source_user_location(self.full_norm_location(norm_loc))
         orig = instancer.instantiateVariableFont(self.font, orig_coords)
-        new = instancer.instantiateVariableFont(new_font, new_coords)
+        new = instancer.instantiateVariableFont(
+            new_font, self.output_user_location(norm_loc)
+        )
         return _outline_diff(orig, new)
+
+    def _refine(self, font):
+        """Append a local master at every refinement location: the residual
+        between the original and `font` there, as gvar tuples whose tents
+        span only the neighbouring knots. Guards (see module docstring)
+        follow each location. Returns [(norm loc, kind, residual)]."""
+        out_tags = [a.axisTag for a in font["fvar"].axes]
+        knots = _axis_knots(font)
+        guards = getattr(self.options, "refine_guards", True)
+        guard_tags = self.grid_tags or [t for t in out_tags if t in self.knots]
+        plan = []
+        for sparse, why in self.refine_locations:
+            full = {t: sparse.get(t, 0.0) for t in out_tags}
+            plan.append((full, "master"))
+            if not guards:
+                continue
+            found = _guard_locations(knots, full, guard_tags)
+            if len(found) > 64:
+                log.warning(
+                    "%s: %d guard masters would be needed; skipping guards "
+                    "there (the correction leaks along %s)",
+                    self.describe(sparse),
+                    len(found),
+                    " ".join(t for t in guard_tags if full[t] == 0),
+                )
+                continue
+            plan.extend((g, "guard") for g in found)
+        log.info(
+            "Refining at %d locations (%d guards)",
+            len(self.refine_locations),
+            sum(1 for _, kind in plan if kind == "guard"),
+        )
+        defaults = _glyph_coords(font)
+        placed, report = [], []
+        for full, kind in plan:
+            region = _region_for(knots, full, placed)
+            placed.append(full)
+            if not region:
+                log.warning("%s is the default location; nothing to refine", kind)
+                continue
+            # every input axis pinned, or instancer keeps the avar2 mapping
+            # and leaves the parametric axes at their raw defaults
+            target = _glyph_coords(
+                instancer.instantiateVariableFont(
+                    self.font,
+                    self.source_user_location(self.full_norm_location(full)),
+                    inplace=False,
+                )
+            )
+            current = _glyph_coords(
+                instancer.instantiateVariableFont(
+                    font, self.output_user_location(full), inplace=False
+                )
+            )
+            added, worst = _append_local_master(font, target, current, region, defaults)
+            log.info(
+                "  %s at %s: residual %.1f units, %d glyphs given a tuple; tent %s",
+                kind,
+                self.describe({t: v for t, v in full.items() if v != 0}),
+                worst,
+                added,
+                " ".join(
+                    f"{t}:{s:.2f}/{p:.2f}/{e:.2f}" for t, (s, p, e) in region.items()
+                ),
+            )
+            report.append((full, kind, worst))
+        if "HVAR" in font:
+            _rebuild_hvar(font)
+        return report
 
     def describe(self, norm_loc):
         coords = self.source_user_location(self.full_norm_location(norm_loc))
@@ -838,65 +1191,19 @@ class Avar2Flattener:
                 # masters, so they would resolve to nothing.
                 self._build_stat(vf)
                 vf.save(self.out)
-                log.info("Saved %s", self.out)
-
-                if not self.options.verify:
-                    return
-
                 new_font = TTFont(self.out)
-                cells, cross = self.verification_samples(rng)
-                log.info(
-                    "Verifying against original: %d cell midpoints, %d cross-group samples",
-                    len(cells),
-                    len(cross),
-                )
-                worst_cell, worst_err = None, 0.0
-                worst_per_group = {}
-                for gi, intervals in cells:
-                    midpoint = {t: (lo + hi) / 2 for t, (lo, hi) in intervals.items()}
-                    err, glyph = self.compare_at(new_font, midpoint)
-                    log.debug("  %s: %.1f (%s)", self.describe(midpoint), err, glyph)
-                    if gi not in worst_per_group or err > worst_per_group[gi][0]:
-                        worst_per_group[gi] = (err, glyph, midpoint)
-                    if err > worst_err:
-                        worst_cell, worst_err = (gi, intervals), err
-                for gi, (err, glyph, midpoint) in sorted(worst_per_group.items()):
-                    log.info(
-                        "Worst error in group [%s]: %.1f font units "
-                        "(glyph '%s' at %s)",
-                        " ".join(self.groups[gi]),
-                        err,
-                        glyph,
-                        self.describe(midpoint),
-                    )
-                cross_errs = []
-                for norm_loc in cross:
-                    err, glyph = self.compare_at(new_font, norm_loc)
-                    cross_errs.append((err, glyph, norm_loc))
-                    log.debug(
-                        "  cross %s: %.1f (%s)", self.describe(norm_loc), err, glyph
-                    )
-                if cross_errs:
-                    cross_errs.sort(reverse=True, key=lambda rec: rec[0])
-                    err, glyph, norm_loc = cross_errs[0]
-                    median = cross_errs[len(cross_errs) // 2][0]
-                    log.info(
-                        "Cross-group residual over %d random locations: "
-                        "median %.1f, worst %.1f font units (glyph '%s' at %s) "
-                        "-- additive approximation, not reduced by --tolerance",
-                        len(cross_errs),
-                        median,
-                        err,
-                        glyph,
-                        self.describe(norm_loc),
-                    )
 
-                if (
-                    self.options.tolerance is None
+                worst_cell, worst_err = None, 0.0
+                if self.options.verify:
+                    worst_cell, worst_err = self._verify(new_font, rng)
+                done = (
+                    not self.options.verify
+                    or self.options.tolerance is None
                     or worst_cell is None
                     or worst_err <= self.options.tolerance
                     or rounds >= self.options.max_rounds
-                ):
+                )
+                if done:
                     if self.options.tolerance is not None and worst_err > (
                         self.options.tolerance or 0
                     ):
@@ -905,6 +1212,24 @@ class Avar2Flattener:
                             rounds,
                             worst_err,
                         )
+                    if self.refine_locations:
+                        report = self._refine(new_font)
+                        new_font.save(self.out)
+                        if self.options.verify:
+                            final = TTFont(self.out)
+                            for full, kind, before in report:
+                                after, glyph = self.compare_at(final, full)
+                                log.info(
+                                    "  %s at %s: worst error %.1f -> %.1f units (%s)",
+                                    kind,
+                                    self.describe(
+                                        {t: v for t, v in full.items() if v != 0}
+                                    ),
+                                    before,
+                                    after,
+                                    glyph,
+                                )
+                    log.info("Saved %s", self.out)
                     return
                 # Add a master at the worst midpoint and split the cell so the
                 # next verification round samples either side of it.
@@ -922,6 +1247,54 @@ class Avar2Flattener:
                     rounds,
                     self.describe(midpoint),
                 )
+
+    def _verify(self, new_font, rng):
+        """Compare the built font against the original at cell midpoints and
+        random cross-group locations. Returns the worst cell and its error."""
+        cells, cross = self.verification_samples(rng)
+        log.info(
+            "Verifying against original: %d cell midpoints, %d cross-group samples",
+            len(cells),
+            len(cross),
+        )
+        worst_cell, worst_err = None, 0.0
+        worst_per_group = {}
+        for gi, intervals in cells:
+            midpoint = {t: (lo + hi) / 2 for t, (lo, hi) in intervals.items()}
+            err, glyph = self.compare_at(new_font, midpoint)
+            log.debug("  %s: %.1f (%s)", self.describe(midpoint), err, glyph)
+            if gi not in worst_per_group or err > worst_per_group[gi][0]:
+                worst_per_group[gi] = (err, glyph, midpoint)
+            if err > worst_err:
+                worst_cell, worst_err = (gi, intervals), err
+        for gi, (err, glyph, midpoint) in sorted(worst_per_group.items()):
+            log.info(
+                "Worst error in group [%s]: %.1f font units " "(glyph '%s' at %s)",
+                " ".join(self.groups[gi]),
+                err,
+                glyph,
+                self.describe(midpoint),
+            )
+        cross_errs = []
+        for norm_loc in cross:
+            err, glyph = self.compare_at(new_font, norm_loc)
+            cross_errs.append((err, glyph, norm_loc))
+            log.debug("  cross %s: %.1f (%s)", self.describe(norm_loc), err, glyph)
+        if cross_errs:
+            cross_errs.sort(reverse=True, key=lambda rec: rec[0])
+            err, glyph, norm_loc = cross_errs[0]
+            median = cross_errs[len(cross_errs) // 2][0]
+            log.info(
+                "Cross-group residual over %d random locations: "
+                "median %.1f, worst %.1f font units (glyph '%s' at %s) "
+                "-- additive approximation, not reduced by --tolerance",
+                len(cross_errs),
+                median,
+                err,
+                glyph,
+                self.describe(norm_loc),
+            )
+        return worst_cell, worst_err
 
 
 def avar2_to_avar1(ttfont, avar_mapping, out, options):
@@ -977,7 +1350,9 @@ def main(args=None):
         "product of these axes' knots for better accuracy between them. "
         "A tag may carry a master count, tag:N, to use exactly N knots on "
         "that axis (always the default and extremes; fewer than the font "
-        "has picks evenly from its knots, more bisects the largest gaps). "
+        "has picks evenly from its knots, more bisects the largest gaps), "
+        "or a slash list of user positions, tag:300/400/700, to put masters "
+        "exactly there (default and extremes are added if missing). "
         "E.g. --grid opsz:3,wdth:5,wght:9 gives 135 grid masters",
     )
     parser.add_argument(
@@ -989,19 +1364,44 @@ def main(args=None):
         "(default: 0)",
     )
     parser.add_argument(
-        "--crossing-masters",
+        "--refine-at",
+        action="append",
+        default=[],
+        metavar="LOC",
+        help="Refine the built font at this location, given in user "
+        "coordinates of the output font, e.g. wght=352,wdth=25,opsz=9 "
+        "(repeatable). A local master with an explicit tent is appended, "
+        "exact there and unchanged outside the surrounding cells",
+    )
+    parser.add_argument(
+        "--refine-crossings",
         action="store_true",
-        help="With --grid: add a local master wherever an output axis "
-        "crosses its default or an intermediate master between two input "
-        "knots, since gvar changes slope there. Exact at those points but "
-        "costly in a parametric font (hundreds of masters); off by default",
+        help="With --grid: refine wherever an output axis crosses its "
+        "default or an intermediate master between two grid knots, since "
+        "gvar changes slope there. A parametric font can have hundreds; "
+        "see --max-refine",
     )
     parser.add_argument(
         "--crossing-min",
         type=float,
         default=0.1,
         help="Minimum normalized travel of the output axis on both sides of "
-        "a crossing for it to get a master (default: 0.1)",
+        "a crossing for it to be refined (default: 0.1)",
+    )
+    parser.add_argument(
+        "--max-refine",
+        type=int,
+        default=0,
+        help="Refine at most this many locations, strongest crossings first "
+        "(default: no limit)",
+    )
+    parser.add_argument(
+        "--no-refine-guards",
+        dest="refine_guards",
+        action="store_false",
+        help="Do not add guard masters at the neighbouring knots of axes a "
+        "refinement location sits at the default of; the correction then "
+        "applies along the whole of those axes",
     )
     parser.add_argument(
         "--no-verify",
