@@ -173,10 +173,14 @@ class GFBuilder(RecipeProviderBase):
             if source.glyphs_format >= 3:
                 tags = [ax["tag"] for ax in info.get("axes", [])]
             else:
+                # Without an "Axes" parameter, glyphsLib defaults to Weight and Width
                 axes = next(
-                    param["value"]
-                    for param in info.get("customParameters", [])
-                    if param["name"] == "Axes"
+                    (
+                        param["value"]
+                        for param in info.get("customParameters", [])
+                        if param["name"] == "Axes"
+                    ),
+                    [{"Tag": "wght"}, {"Tag": "wdth"}],
                 )
                 tags = [axis["Tag"] for axis in axes]
         elif source.is_designspace:
