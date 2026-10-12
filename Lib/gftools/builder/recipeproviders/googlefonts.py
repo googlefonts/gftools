@@ -585,13 +585,7 @@ class GFBuilder(RecipeProviderBase):
             source,
             instance,
         )
-        # We skip conversion to UFO if we're running fontc
-        use_fontc = self.config.get("use_fontc", False)
-        if (
-            not source.is_ufo
-            and not self.config.get("includeSubsets")
-            and not use_fontc
-        ):
+        if not source.is_ufo and not self.config.get("includeSubsets"):
             instancename = instance.name
             if instancename is None:
                 if not instance.familyName or not instance.styleName:
