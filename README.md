@@ -88,3 +88,11 @@ key = your-newly-generated-googlefonts-api-key
 0. Commit and push your final changes for the new version.
 1. Create an annotated Git tag of the version number, with a prepended "v", like so: `git tag -a v3.1.1`
 2. Write the release notes into the tag message. They will show up as release notes on the release page in GitHub.
+
+## Related Tools and Apps
+
+Google Fonts onboarding also develop and use a number of other tools and apps, including:
+
+* <https://fonttools.github.io/fontspector>
+* <https://googlefonts.github.io/diffenator3>
+* <https://github.com/daltonmaag/overlay-font-tester>
