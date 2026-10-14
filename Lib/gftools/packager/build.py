@@ -98,7 +98,7 @@ def find_config_yaml(source_dir: Path):
     for path in source_dir.glob("sources/*.y*l"):
         if not (str(path).endswith(".yaml") or str(path).endswith(".yml")):
             continue
-        content = yaml.load(path.read_text(), Loader=yaml.Loader)
+        content = yaml.safe_load(path.read_text())
         if "sources" not in content:
             continue
         configs.append(path)
