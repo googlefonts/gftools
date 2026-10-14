@@ -54,7 +54,7 @@ class GFBuilder:
             # validate the input, but just treat it as a regular Python dict.
             try:
                 # False positive: strictyaml is type-safe and does not execute arbitrary code
-                strictyaml.load(config, BASE_SCHEMA) # noqa
+                strictyaml.load(config, BASE_SCHEMA)  # noqa
             except Exception as e:
                 raise ValueError("Could not validate configuration") from e
             self.config = yaml.safe_load(config)
