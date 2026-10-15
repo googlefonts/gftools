@@ -20,7 +20,7 @@ from gftools.builder.schema import (
     avar2_schema,
     stat_schema_by_font_name,
 )
-from gftools.utils import open_ufo
+from gftools.utils import open_ufo, shell_quote
 
 logger = logging.getLogger("GFBuilder")
 
@@ -257,7 +257,7 @@ class GFBuilder(RecipeProviderBase):
                 args += " " + str(self.config["extraVariableFontmakeArgs"])
             if source.is_glyphs:
                 for gd in self.config.get("glyphData", []):
-                    args += " --glyph-data " + gd
+                    args += " --glyph-data " + shell_quote(gd)
         else:
             if self.config.get("extraStaticFontmakeArgs") is not None:
                 args += " " + str(self.config["extraStaticFontmakeArgs"])

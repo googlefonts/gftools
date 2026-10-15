@@ -161,6 +161,31 @@ def test_builder_glyphData(fp, font_paths):
             assert GDEF.GlyphClassDef.classDefs["foo"] == 3
 
 
+def test_source_dir_with_space(tmp_path):
+    # Instance UFOs are written next to the source, so a space in the source's
+    # directory must survive fontmake's --instance-dir argument.
+    src_dir = tmp_path / "Source Files"
+    src_dir.mkdir()
+    shutil.copyfile(
+        os.path.join(TEST_DIR, "basic_family_glyphs_0", "TestFamily.glyphs"),
+        src_dir / "TestFamily.glyphs",
+    )
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        "sources:\n"
+        "  - Source Files/TestFamily.glyphs\n"
+        "outputDir: fonts\n"
+        "buildVariable: false\n"
+        "buildOTF: false\n"
+        "buildWebfont: false\n"
+        "autohintTTF: false\n"
+    )
+    subprocess.run(["gftools", "builder", str(config)], check=True)
+    for style in ["Black", "Regular", "Thin"]:
+        font_path = tmp_path / "fonts" / "ttf" / f"TestFamily-{style}.ttf"
+        assert font_path.exists(), f"{font_path} is missing"
+
+
 def test_bad_configs():
     config = {"Sources": ["foo.glyphs"]}
     with pytest.raises(ValueError):
