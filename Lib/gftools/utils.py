@@ -15,19 +15,15 @@
 #
 from __future__ import annotations
 from typing import Optional, Union
-import requests
 from urllib.parse import urljoin
 from io import BytesIO
 from zipfile import ZipFile
 import sys
 import os
 import shutil
-import ufoLib2
 import unicodedata
 from unidecode import unidecode
 from collections import namedtuple
-from gflanguages import LoadLanguages
-from github import Github
 import importlib.resources
 from gfmetadata import text_format
 import json
@@ -36,7 +32,6 @@ import shlex
 import subprocess
 from fontTools import unicodedata as ftunicodedata
 from fontTools.ttLib import TTFont
-from ufo2ft.util import classifyGlyphs
 from collections import Counter
 from collections import defaultdict
 from pathlib import Path
@@ -45,7 +40,6 @@ if sys.version_info[0] == 3:
     from configparser import ConfigParser
 else:
     from ConfigParser import ConfigParser
-from bs4 import BeautifulSoup
 
 # =====================================
 # HELPER FUNCTIONS
@@ -57,6 +51,8 @@ def download_family_from_Google_Fonts(
     family: str, dst=None, dl_url=PROD_FAMILY_DOWNLOAD, ignore_static=True, auth=None
 ) -> list[str]:
     """Download a font family from Google Fonts"""
+    import requests
+
     # TODO (M Foley) update all dl_urls in .ini files.
     dl_url = dl_url.replace("download?family=", "download/list?family=")
     url = dl_url.format(family.replace(" ", "%20"))
@@ -80,6 +76,8 @@ def download_family_from_Google_Fonts(
 
 def Google_Fonts_has_family(name: str) -> bool:
     """Check if Google Fonts has the specified font family"""
+    import requests
+
     # This endpoint is private and may change at some point
     # TODO (MF) if another function needs this data, refactor it into a
     # function and use a lru cache
@@ -141,6 +139,8 @@ def download_files_in_github_pr(
     -------
     list of paths to downloaded files
     """
+    from github import Github
+
     gh = Github(os.environ["GH_TOKEN"])
     parsed_url = parse_github_pr_url(url)
     repo_slug = "{}/{}".format(parsed_url.user, parsed_url.repo)
@@ -197,6 +197,8 @@ def download_files_in_github_dir(orig_url, dst, filter_files=[], overwrite=True)
     -------
     list of paths to downloaded files
     """
+    from github import Github
+
     gh = Github(os.environ["GH_TOKEN"])
     url = parse_github_dir_url(orig_url)
     repo_slug = "{}/{}".format(url.user, url.repo)
@@ -236,6 +238,8 @@ def download_file(
 ) -> BytesIO | None:
     """Download a file from a url. If no dst_path is specified, store the file
     as a BytesIO object"""
+    import requests
+
     if os.environ.get("GH_TOKEN") and re.match(r"^https://(\w+\.)?github.com", url):
         headers = {"Authorization": f"token {os.environ['GH_TOKEN']}"}
     else:
@@ -327,6 +331,8 @@ def _html_custom_formatter(string):
 
 
 def format_html(html):
+    from bs4 import BeautifulSoup
+
     return BeautifulSoup(html, "html.parser").prettify(formatter=_html_custom_formatter)
 
 
@@ -562,6 +568,8 @@ def font_sample_text(ttFont):
     _add_words(words, uhdr, seen_chars)
 
     if len(seen_chars) < len(cmap):
+        from gflanguages import LoadLanguages
+
         languages = LoadLanguages()
         for file, proto in languages.items():
             if hasattr(proto, "sample_text"):
@@ -599,6 +607,8 @@ def remove_url_prefix(url):
 
 
 def primary_script(ttFont, ignore_latin=True):
+    from ufo2ft.util import classifyGlyphs
+
     g = classifyGlyphs(
         lambda uv: list(ftunicodedata.script_extension(chr(uv))),
         ttFont.getBestCmap(),
@@ -654,6 +664,8 @@ def is_google_fonts_repo(fp: "Path | str"):
 
 
 def open_ufo(path):
+    import ufoLib2
+
     if os.path.isdir(path):
         return ufoLib2.Font.open(path)
     elif path.endswith(".json"):

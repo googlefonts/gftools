@@ -465,12 +465,15 @@ def LicenseFromPath(path):
     return _EntryForEndOfPath(path, _KNOWN_LICENSE_DIRS)
 
 
-def SupportedLanguages(ttFont, languages=LoadLanguages()):
+def SupportedLanguages(ttFont, languages=None):
     """Get languages supported by given ttFont.
 
-    Languages are pulled from the given set. Based on whether exemplar character
-    sets are present in the given font.
+    Languages are pulled from the given set (by default, all languages known to
+    gflanguages). Based on whether exemplar character sets are present in the
+    given font.
     """
+    if languages is None:
+        languages = LoadLanguages()
     chars = [chr(c) for c in ttFont["cmap"].getBestCmap()]
     supported = []
     for lang in languages.values():
