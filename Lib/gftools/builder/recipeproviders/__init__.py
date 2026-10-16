@@ -4,14 +4,6 @@ import inspect
 from typing import List
 from gftools.builder.file import File
 
-filecache = {}
-
-
-def get_file(path):
-    if path not in filecache:
-        filecache[path] = File(path)
-    return filecache[path]
-
 
 @dataclass
 class RecipeProviderBase:
@@ -23,7 +15,10 @@ class RecipeProviderBase:
 
     @property
     def sources(self) -> List[File]:
-        return [get_file(str(p)) for p in self.config["sources"]]
+        return [
+            self.builder._ensure_named_file(str(p), type="source")
+            for p in self.config["sources"]
+        ]
 
 
 def get_provider(provider: str):
