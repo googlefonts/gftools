@@ -186,7 +186,8 @@ def test_source_dir_with_space(tmp_path):
         assert font_path.exists(), f"{font_path} is missing"
 
 
-def test_bad_configs():
+def test_bad_configs(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     config = {"Sources": ["foo.glyphs"]}
     with pytest.raises(ValueError):
         GFBuilder(config)
