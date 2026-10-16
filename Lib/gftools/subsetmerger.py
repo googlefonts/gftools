@@ -22,10 +22,10 @@ from fontTools.designspaceLib import (
 )
 from glyphsets import unicodes_per_glyphset
 from glyphsLib.builder.constants import WIDTH_CLASS_TO_VALUE
-from strictyaml import Enum, HexInt, Int, Map, Optional, Seq, Str
 from ufomerge import merge_ufos
 
 from gftools.gfgithub import GitHubClient
+from gftools.subsets_schema import subsets_schema
 from gftools.util.styles import STYLE_NAMES
 from gftools.utils import download_file, open_ufo, parse_codepoint, read_glyph_names
 
@@ -47,28 +47,6 @@ SUBSET_SOURCES: dict[str, tuple[str, str]] = {
     ),
     "Noto Sans Linear B": ("notofonts/linear-b", "sources/NotoSansLinearB.designspace"),
 }
-
-
-subsets_schema = Seq(
-    Map(
-        {
-            "from": Str() | Map({"repo": Str(), "path": Str()}),
-            Optional("name"): Str(),
-            Optional("glyphNames"): Seq(Str()),
-            Optional("glyphNamesFile"): Str() | Seq(Str()),
-            Optional("ranges"): Seq(
-                Map({"start": (HexInt() | Int()), "end": (HexInt() | Int())})
-            ),
-            Optional("layoutHandling"): Str(),
-            Optional("kernHandling"): Str(),
-            Optional("force"): Str(),
-            Optional("exclude_glyphs"): Seq(Str()),
-            Optional("exclude_codepoints"): Seq(Str()),
-            Optional("exclude_glyphs_file"): Str(),
-            Optional("exclude_codepoints_file"): Str(),
-        }
-    )
-)
 
 
 def prepare_minimal_subsets(
