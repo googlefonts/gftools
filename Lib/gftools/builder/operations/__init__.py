@@ -60,7 +60,7 @@ class OperationBase:
             cmd = cls.rule + " $stamp"
         writer.rule(
             name,
-            f"{shell_quote(sys.executable)} -m gftools.builder.jobrunner {cmd}",
+            f"{shell_quote(sys.executable)} -m gftools.jobrunner {cmd}",
             description=name,
         )
         writer.newline()
