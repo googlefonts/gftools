@@ -406,8 +406,16 @@ class GFBuilder:
                 # since we should have deleted our own .ninja file above, if any still
                 # exist we will assume another instance of gftools is running.
                 if not any(path.endswith("ninja") for path in os.listdir()):
-                    if os.path.exists("instance_ufos"):
-                        shutil.rmtree("instance_ufos")
+                    # instance UFOs are written next to their source, which
+                    # need not be in this directory.
+                    instance_dirs = {
+                        op.instance_dir
+                        for _, _, op in self.graph.edges(data="operation")
+                        if op is not None and op.opname == "instantiateUfo"
+                    }
+                    for instance_dir in instance_dirs:
+                        if os.path.exists(instance_dir):
+                            shutil.rmtree(instance_dir)
                 else:
                     print("another .ninja file exists, leaving instance_ufos in place")
 

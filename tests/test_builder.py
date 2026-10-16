@@ -234,6 +234,40 @@ def test_instances_vf_selection(tmp_path, monkeypatch):
         GFBuilder(config)
 
 
+def test_clean_removes_instance_ufos_next_to_source(tmp_path, monkeypatch):
+    # Instance UFOs are written next to the source, not into the config's
+    # directory, so cleanUp must remove them there; but not while another
+    # builder's .ninja file says it may still be using them.
+    src_dir = tmp_path / "Source"
+    src_dir.mkdir()
+    shutil.copyfile(
+        os.path.join(TEST_DIR, "basic_family_glyphs_0", "TestFamily.glyphs"),
+        src_dir / "TestFamily.glyphs",
+    )
+    monkeypatch.chdir(tmp_path)
+    config = {
+        "sources": ["Source/TestFamily.glyphs"],
+        "buildVariable": False,
+        "buildWebfont": False,
+        "cleanUp": True,
+    }
+    builder = GFBuilder(config)
+    builder.config_to_objects()
+    builder.build_graph()
+    builder.walk_graph()
+    instance_dir = src_dir / "instance_ufos"
+    instance_dir.mkdir()
+
+    other_ninja = tmp_path / "build-other.ninja"
+    other_ninja.touch()
+    builder.clean()
+    assert instance_dir.exists()
+
+    other_ninja.unlink()
+    builder.clean()
+    assert not instance_dir.exists()
+
+
 def test_ufoz_is_a_ufo_source(tmp_path):
     # A ".ufoz" (zipped UFO) must be recognised as a buildable UFO source; before
     # this it was not is_font_source and File.family_name crashed.
