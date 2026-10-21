@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import tempfile
@@ -13,7 +14,6 @@ from gftools.builder.fontc import FontcArgs
 import networkx as nx
 import strictyaml
 import yaml
-from fontmake.font_project import FontProject
 from ninja import _program
 from ninja.ninja_syntax import Writer, escape_path
 from typing import Union
@@ -145,6 +145,8 @@ class GFBuilder:
         return self._ensure_named_file(source, type="source")
 
     def glyphs_to_ufo(self, source):
+        from fontmake.font_project import FontProject
+
         source = Path(source)
         directory = source.resolve().parent
         output = str(Path(directory) / source.with_suffix(".designspace").name)
@@ -428,6 +430,8 @@ def main(args=None):
     import argparse
 
     import yaml
+
+    logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
     parser.add_argument(

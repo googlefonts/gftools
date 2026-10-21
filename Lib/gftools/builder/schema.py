@@ -17,7 +17,7 @@ from strictyaml import (
     MapCombined,
 )
 
-from gftools.subsetmerger import subsets_schema
+from gftools.subsets_schema import subsets_schema
 
 CATEGORIES = ["DISPLAY", "SERIF", "SANS_SERIF", "HANDWRITING", "MONOSPACE"]
 
