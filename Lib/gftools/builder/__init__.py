@@ -450,6 +450,13 @@ def main(args=None):
     )
 
     parser.add_argument(
+        "--experimental-fontc-strict",
+        help="Build every static instance with fontc, failing on those it can't "
+        "build, instead of cutting them with fontmake first",
+        action="store_true",
+    )
+
+    parser.add_argument(
         "--experimental-simple-output",
         help="generate a reduced set of targets, and copy them to the provided directory",
         type=Path,

@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import List
 
 from gftools.builder.operations import OperationBase
+from gftools.utils import shell_quote
+from ninja.ninja_syntax import escape
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +27,11 @@ class FontcOperationBase(OperationBase):
         args = vars.get("args")
         if args:
             vars["args"] = rewrite_fontmake_args_for_fontc(args)
+        # The instance name has its own field, rather than going in args which
+        # is split on whitespace, because it is a single argument.
+        instance = vars.pop("instance", None)
+        if instance is not None:
+            vars["instance_args"] = "--export " + escape(shell_quote(instance))
 
         return vars
 
