@@ -24,6 +24,7 @@ class FontcArgs:
             self.fontc_bin_path = None
             self.single_source = None
             self.strict = False
+            self.single_instance = None
             return
         self.simple_output_path = abspath(args.experimental_simple_output)
         self.fontc_bin_path = abspath(args.experimental_fontc)
@@ -33,6 +34,7 @@ class FontcArgs:
             raise ValueError(
                 "--experimental-fontc-strict requires --experimental-fontc"
             )
+        self.single_instance = args.experimental_single_instance
         if self.fontc_bin_path:
             if not self.fontc_bin_path.is_file():
                 raise ValueError(f"fontc does not exist at {self.fontc_bin_path}")
@@ -61,6 +63,17 @@ class FontcArgs:
                     f"--exerimental-single-source {self.single_source} must match exactly one of {config['sources']} (matched {n_sources}) "
                 )
             config["sources"] = filtered_sources
+
+        if self.single_instance:
+            if "instances" in config:
+                raise ValueError(
+                    "--experimental-single-instance doesn't support statics "
+                    "generated from variable fonts ('instances' in the config)"
+                )
+            # just the static font of that instance
+            config["single_instance"] = self.single_instance
+            config["buildVariable"] = False
+            config["buildStatic"] = True
 
         if self.fontc_bin_path or self.simple_output_path:
             # we stash this flag here to pass it down to the recipe provider

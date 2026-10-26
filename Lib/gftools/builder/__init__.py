@@ -468,6 +468,12 @@ def main(args=None):
         type=str,
     )
 
+    parser.add_argument(
+        "--experimental-single-instance",
+        help="only compile the static font of the named instance",
+        type=str,
+    )
+
     parser.add_argument("config", help="Path to config file or source file", nargs="+")
     args = parser.parse_args(args)
     fontc_args = FontcArgs(args)

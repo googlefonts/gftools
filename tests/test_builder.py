@@ -338,7 +338,14 @@ def test_production_names_key():
 
 
 def _static_recipe(
-    tmp_path, monkeypatch, source, text, fontc=True, strict=False, **config
+    tmp_path,
+    monkeypatch,
+    source,
+    text,
+    fontc=True,
+    strict=False,
+    single_instance=None,
+    **config,
 ):
     monkeypatch.chdir(tmp_path)
     (tmp_path / source).write_text(text)
@@ -352,6 +359,7 @@ def _static_recipe(
     }
     fontc_args = FontcArgs(None)
     fontc_args.strict = strict
+    fontc_args.single_instance = single_instance
     if fontc:
         # as --experimental-fontc does, without registering the path globally
         fontc_args.fontc_bin_path = Path("fontc")
@@ -465,3 +473,35 @@ def test_fontc_export_name_is_one_quoted_argument():
     # quoted as one argument for the platform's shell, with the $ doubled for
     # ninja, which undoes it before the shell sees the command
     assert variables["instance_args"] == "--export " + shell_quote("My Font's $$Bold")
+
+
+@pytest.mark.parametrize("fontc", [True, False])
+def test_single_instance(tmp_path, monkeypatch, fontc):
+    text = open(
+        os.path.join(TEST_DIR, "basic_family_glyphs_0", "TestFamily.glyphs")
+    ).read()
+    recipe = _static_recipe(
+        tmp_path,
+        monkeypatch,
+        "TestFamily.glyphs",
+        text,
+        fontc=fontc,
+        single_instance="Test Family Black",
+        # statics are built even if the config asks for a variable font
+        buildVariable=True,
+        buildStatic=False,
+    )
+    assert _how_instances_are_built(recipe) == {
+        "TestFamily-Black.ttf": (
+            "--export Test Family Black" if fontc else "instantiateUfo"
+        )
+    }
+    with pytest.raises(ValueError, match='No instance named "Test Family Bold"'):
+        _static_recipe(
+            tmp_path,
+            monkeypatch,
+            "TestFamily.glyphs",
+            text,
+            fontc=fontc,
+            single_instance="Test Family Bold",
+        )

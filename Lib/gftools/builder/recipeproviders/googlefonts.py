@@ -568,12 +568,24 @@ class GFBuilder(RecipeProviderBase):
             return
         if not self.config.get("buildStatic", True):
             return
+        single_instance = self.config.get("single_instance")
+        names = []
         for source in self.sources:
             for instance in source.instances:
+                if single_instance is not None:
+                    name = None if source.is_ufo else self._instance_name(instance)
+                    names.append(name)
+                    if name != single_instance:
+                        continue
                 if self.config["buildTTF"]:
                     self.build_a_static(source, instance, output="ttf")
                 if self.config["buildOTF"]:
                     self.build_a_static(source, instance, output="otf")
+        if single_instance is not None and single_instance not in names:
+            available = ", ".join(f'"{name}"' for name in names if name)
+            raise ValueError(
+                f'No instance named "{single_instance}"; available: {available}'
+            )
 
     def build_a_static(self, source: File, instance: InstanceDescriptor, output):
         suffix = self.config.get("filenameSuffix", "")
@@ -590,13 +602,7 @@ class GFBuilder(RecipeProviderBase):
             "args": self.fontmake_args(source, variable=False),
         }
         if not source.is_ufo and not self.config.get("includeSubsets"):
-            instancename = instance.name
-            if instancename is None:
-                if not instance.familyName or not instance.styleName:
-                    raise ValueError(
-                        f"Instance {instance.filename} must have a name, or familyName and styleName"
-                    )
-                instancename = instance.familyName + " " + instance.styleName
+            instancename = self._instance_name(instance)
             if self.config.get("use_fontc") and (
                 self.config.get("fontc_strict")
                 or _fontc_can_build_instance(source, instance, instancename)
@@ -628,6 +634,16 @@ class GFBuilder(RecipeProviderBase):
             self.recipe[
                 self._static_filename(instance, extension=output, suffix="SC")
             ] = self._smallcap_steps(source, target)
+
+    @staticmethod
+    def _instance_name(instance: InstanceDescriptor) -> str:
+        if instance.name is not None:
+            return instance.name
+        if not instance.familyName or not instance.styleName:
+            raise ValueError(
+                f"Instance {instance.filename} must have a name, or familyName and styleName"
+            )
+        return instance.familyName + " " + instance.styleName
 
     def build_a_webfont(self, original_target, wf_filename):
         if not self.config["buildWebfont"]:
