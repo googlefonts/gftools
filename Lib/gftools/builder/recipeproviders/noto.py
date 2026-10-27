@@ -54,7 +54,7 @@ class NotoBuilder(GFBuilder):
             tags = [
                 ax.tag
                 for ax in source.designspace.axes
-                if not isinstance(ax, DiscreteAxisDescriptor)
+                if not isinstance(ax, DiscreteAxisDescriptor) and not ax.hidden
             ]
         else:
             raise ValueError("Unknown source type " + source.path)

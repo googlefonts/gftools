@@ -322,6 +322,75 @@ def test_glyphs2_without_axes_parameter(tmp_path, monkeypatch):
     assert vfs == ["MyFont[wdth,wght].ttf"]
 
 
+def _vf_names(recipe):
+    return sorted(os.path.basename(target) for target in recipe if "variable" in target)
+
+
+def test_glyphs3_hidden_axis_not_in_vf_filename(tmp_path, monkeypatch):
+    # A hidden axis is left out of the axis tags in the VF file name.
+    glyphs = tmp_path / "MyFont.glyphs"
+    glyphs.write_text(
+        '{\n.formatVersion = 3;\nfamilyName = "My Font";\n'
+        "axes = (\n{\nname = Weight;\ntag = wght;\n},\n"
+        "{\nhidden = 1;\nname = Grade;\ntag = GRAD;\n}\n);\n"
+        "fontMaster = (\n{\naxesValues = (\n100,\n0\n);\nid = m01;\nname = Thin;\n},\n"
+        "{\naxesValues = (\n900,\n0\n);\nid = m02;\nname = Black;\n}\n);\n"
+        "glyphs = (\n);\nunitsPerEm = 1000;\nversionMajor = 1;\nversionMinor = 0;\n}\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    config = {"sources": ["MyFont.glyphs"], "buildStatic": False, "buildWebfont": False}
+    assert _vf_names(GFBuilder(config).recipe) == ["MyFont[wght].ttf"]
+
+
+def test_glyphs2_hidden_axis_not_in_vf_filename(tmp_path, monkeypatch):
+    glyphs = tmp_path / "MyFont.glyphs"
+    glyphs.write_text(
+        "{\ncustomParameters = (\n{\nname = Axes;\nvalue = (\n"
+        "{\nName = Weight;\nTag = wght;\n},\n"
+        "{\nHidden = 1;\nName = Grade;\nTag = GRAD;\n}\n);\n}\n);\n"
+        'familyName = "My Font";\n'
+        "fontMaster = (\n{\nid = m01;\nweightValue = 100;\n},\n"
+        "{\nid = m02;\nweightValue = 900;\n}\n);\n"
+        "glyphs = (\n);\nunitsPerEm = 1000;\nversionMajor = 1;\nversionMinor = 0;\n}\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    config = {"sources": ["MyFont.glyphs"], "buildStatic": False, "buildWebfont": False}
+    assert _vf_names(GFBuilder(config).recipe) == ["MyFont[wght].ttf"]
+
+
+def test_designspace_hidden_axis_not_in_vf_filename(tmp_path, monkeypatch):
+    import ufoLib2
+    from fontTools.designspaceLib import DesignSpaceDocument, SourceDescriptor
+
+    doc = DesignSpaceDocument()
+    doc.addAxisDescriptor(
+        name="Weight", tag="wght", minimum=100, default=400, maximum=900
+    )
+    doc.addAxisDescriptor(
+        name="Grade", tag="GRAD", minimum=-200, default=0, maximum=150, hidden=True
+    )
+    for name, wght in (("Thin", 100), ("Regular", 400), ("Black", 900)):
+        ufo = ufoLib2.Font()
+        ufo.info.familyName = "My Font"
+        ufo.info.styleName = name
+        ufo.info.unitsPerEm = 1000
+        ufo.save(tmp_path / f"MyFont-{name}.ufo")
+        src = SourceDescriptor()
+        src.filename = f"MyFont-{name}.ufo"
+        src.familyName = "My Font"
+        src.styleName = name
+        src.location = {"Weight": wght, "Grade": 0}
+        doc.addSource(src)
+    doc.write(tmp_path / "MyFont.designspace")
+    monkeypatch.chdir(tmp_path)
+    config = {
+        "sources": ["MyFont.designspace"],
+        "buildStatic": False,
+        "buildWebfont": False,
+    }
+    assert _vf_names(GFBuilder(config).recipe) == ["MyFont[wght].ttf"]
+
+
 def test_production_names_key():
     # productionNames (default true) replaced the negative noProductionNames key
     import strictyaml
