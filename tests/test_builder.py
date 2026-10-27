@@ -3,8 +3,10 @@ import pytest
 import shutil
 import os
 import subprocess
+from pathlib import Path
 
 from gftools.builder import GFBuilder
+from gftools.builder.fontc import FontcArgs
 
 
 CWD = os.path.dirname(__file__)
@@ -332,4 +334,174 @@ def test_production_names_key():
     with pytest.raises(strictyaml.YAMLValidationError):
         strictyaml.load(
             "sources:\n  - A.glyphs\nnoProductionNames: true\n", GOOGLEFONTS_SCHEMA
+        )
+
+
+def _static_recipe(
+    tmp_path,
+    monkeypatch,
+    source,
+    text,
+    fontc=True,
+    strict=False,
+    single_instance=None,
+    **config,
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / source).write_text(text)
+    config = {
+        "sources": [source],
+        "buildVariable": False,
+        "buildOTF": False,
+        "buildWebfont": False,
+        "buildSmallCap": False,
+        **config,
+    }
+    fontc_args = FontcArgs(None)
+    fontc_args.strict = strict
+    fontc_args.single_instance = single_instance
+    if fontc:
+        # as --experimental-fontc does, without registering the path globally
+        fontc_args.fontc_bin_path = Path("fontc")
+    recipe = GFBuilder(config, fontc_args=fontc_args).recipe
+    return {
+        os.path.basename(target): steps[1:]
+        for target, steps in recipe.items()
+        if target.endswith(".ttf")
+    }
+
+
+def _how_instances_are_built(recipe):
+    """For each static target, how its instance is taken from the source:
+    "--export <name>" when fontc builds it, or "instantiateUfo" when fontmake
+    cuts it first."""
+    built = {}
+    for target, steps in recipe.items():
+        build = next(s for s in steps if s["operation"] == "buildTTF")
+        cut = any(s["operation"] == "instantiateUfo" for s in steps)
+        assert cut != ("instance" in build), steps
+        built[target] = "instantiateUfo" if cut else f"--export {build['instance']}"
+    return built
+
+
+def test_fontc_builds_static_instances_with_export(tmp_path, monkeypatch):
+    text = open(
+        os.path.join(TEST_DIR, "basic_family_glyphs_0", "TestFamily.glyphs")
+    ).read()
+    recipe = _static_recipe(
+        tmp_path,
+        monkeypatch,
+        "TestFamily.glyphs",
+        text,
+        glyphData=["GlyphData.xml"],
+    )
+    # fontc doesn't interpolate, so fontmake cuts Regular, between the masters
+    assert _how_instances_are_built(recipe) == {
+        "TestFamily-Thin.ttf": "--export Test Family Thin",
+        "TestFamily-Regular.ttf": "instantiateUfo",
+        "TestFamily-Black.ttf": "--export Test Family Black",
+    }
+    assert "--glyph-data GlyphData.xml" in recipe["TestFamily-Thin.ttf"][0]["args"]
+    # unless strict, so that fontc fails on it
+    recipe = _static_recipe(
+        tmp_path, monkeypatch, "TestFamily.glyphs", text, strict=True
+    )
+    assert _how_instances_are_built(recipe)["TestFamily-Regular.ttf"] == (
+        "--export Test Family Regular"
+    )
+    # without fontc, fontmake cuts the instances as before
+    recipe = _static_recipe(
+        tmp_path, monkeypatch, "TestFamily.glyphs", text, fontc=False
+    )
+    assert set(_how_instances_are_built(recipe).values()) == {"instantiateUfo"}
+
+
+@pytest.mark.parametrize(
+    "black_glyphs, black",
+    [
+        (["a", "b"], "--export My Font Black"),
+        # fontc doesn't interpolate the glyphs the instance's source lacks
+        (["a"], "instantiateUfo"),
+    ],
+)
+def test_fontc_builds_designspace_instances_on_a_source(
+    tmp_path, monkeypatch, black_glyphs, black
+):
+    import ufoLib2
+
+    for name, glyphs in [("Thin", ["a", "b"]), ("Black", black_glyphs)]:
+        font = ufoLib2.Font()
+        for glyph in glyphs:
+            font.newGlyph(glyph)
+        font.save(tmp_path / f"{name}.ufo", overwrite=True)
+    sources = "".join(
+        f'<source filename="{name}.ufo" familyname="My Font" stylename="{name}">'
+        f'<location><dimension name="Weight" xvalue="{weight}"/></location></source>'
+        for name, weight in [("Thin", 100), ("Black", 900)]
+    )
+    instances = "".join(
+        f'<instance filename="instance_ufos/MyFont-{name}.ufo" familyname="My Font" '
+        f'stylename="{name}"><location><dimension name="Weight" xvalue="{weight}"/>'
+        "</location></instance>"
+        for name, weight in [("Thin", 100), ("Regular", 400), ("Black", 900)]
+    )
+    text = f"""<?xml version='1.0' encoding='UTF-8'?>
+<designspace format="5.0">
+  <axes><axis tag="wght" name="Weight" minimum="100" maximum="900" default="100"/></axes>
+  <sources>{sources}</sources>
+  <instances>{instances}</instances>
+</designspace>
+"""
+    recipe = _static_recipe(tmp_path, monkeypatch, "MyFont.designspace", text)
+    assert _how_instances_are_built(recipe) == {
+        "MyFont-Thin.ttf": "--export My Font Thin",
+        "MyFont-Regular.ttf": "instantiateUfo",
+        "MyFont-Black.ttf": black,
+    }
+
+
+def test_fontc_export_name_is_one_quoted_argument():
+    from gftools.builder.operations.fontc.fontcBuildTTF import FontcBuildTTF
+    from gftools.utils import shell_quote
+
+    op = FontcBuildTTF(
+        original={"args": "--no-production-names", "instance": "My Font's $Bold"}
+    )
+    variables = op.variables
+    assert "instance" not in variables
+    assert variables["args"] == "--no-production-names"
+    # quoted as one argument for the platform's shell, with the $ doubled for
+    # ninja, which undoes it before the shell sees the command
+    assert variables["instance_args"] == "--export " + shell_quote("My Font's $$Bold")
+
+
+@pytest.mark.parametrize("fontc", [True, False])
+def test_single_instance(tmp_path, monkeypatch, fontc):
+    text = open(
+        os.path.join(TEST_DIR, "basic_family_glyphs_0", "TestFamily.glyphs")
+    ).read()
+    recipe = _static_recipe(
+        tmp_path,
+        monkeypatch,
+        "TestFamily.glyphs",
+        text,
+        fontc=fontc,
+        single_instance="Test Family Black",
+        # statics are built even if the config asks for a variable font
+        buildVariable=True,
+        buildStatic=False,
+    )
+    assert _how_instances_are_built(recipe) == {
+        "TestFamily-Black.ttf": (
+            "--export Test Family Black" if fontc else "instantiateUfo"
+        )
+    }
+    with pytest.raises(ValueError, match='No instance named "Test Family Bold"'):
+        _static_recipe(
+            tmp_path,
+            monkeypatch,
+            "TestFamily.glyphs",
+            text,
+            fontc=fontc,
+            single_instance="Test Family Bold",
         )

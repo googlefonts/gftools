@@ -23,10 +23,18 @@ class FontcArgs:
             self.simple_output_path = None
             self.fontc_bin_path = None
             self.single_source = None
+            self.strict = False
+            self.single_instance = None
             return
         self.simple_output_path = abspath(args.experimental_simple_output)
         self.fontc_bin_path = abspath(args.experimental_fontc)
         self.single_source = args.experimental_single_source
+        self.strict = args.experimental_fontc_strict
+        if self.strict and not self.fontc_bin_path:
+            raise ValueError(
+                "--experimental-fontc-strict requires --experimental-fontc"
+            )
+        self.single_instance = args.experimental_single_instance
         if self.fontc_bin_path:
             if not self.fontc_bin_path.is_file():
                 raise ValueError(f"fontc does not exist at {self.fontc_bin_path}")
@@ -56,9 +64,21 @@ class FontcArgs:
                 )
             config["sources"] = filtered_sources
 
+        if self.single_instance:
+            if "instances" in config:
+                raise ValueError(
+                    "--experimental-single-instance doesn't support statics "
+                    "generated from variable fonts ('instances' in the config)"
+                )
+            # just the static font of that instance
+            config["single_instance"] = self.single_instance
+            config["buildVariable"] = False
+            config["buildStatic"] = True
+
         if self.fontc_bin_path or self.simple_output_path:
             # we stash this flag here to pass it down to the recipe provider
             config["use_fontc"] = self.fontc_bin_path
+            config["fontc_strict"] = self.strict
             config["buildWebfont"] = False
             config["buildSmallCap"] = False
             config["splitItalic"] = False

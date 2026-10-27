@@ -568,12 +568,24 @@ class GFBuilder(RecipeProviderBase):
             return
         if not self.config.get("buildStatic", True):
             return
+        single_instance = self.config.get("single_instance")
+        names = []
         for source in self.sources:
             for instance in source.instances:
+                if single_instance is not None:
+                    name = None if source.is_ufo else self._instance_name(instance)
+                    names.append(name)
+                    if name != single_instance:
+                        continue
                 if self.config["buildTTF"]:
                     self.build_a_static(source, instance, output="ttf")
                 if self.config["buildOTF"]:
                     self.build_a_static(source, instance, output="otf")
+        if single_instance is not None and single_instance not in names:
+            available = ", ".join(f'"{name}"' for name in names if name)
+            raise ValueError(
+                f'No instance named "{single_instance}"; available: {available}'
+            )
 
     def build_a_static(self, source: File, instance: InstanceDescriptor, output):
         suffix = self.config.get("filenameSuffix", "")
@@ -585,28 +597,32 @@ class GFBuilder(RecipeProviderBase):
             source,
             instance,
         )
+        build_step = {
+            "operation": "buildTTF" if output == "ttf" else "buildOTF",
+            "args": self.fontmake_args(source, variable=False),
+        }
         if not source.is_ufo and not self.config.get("includeSubsets"):
-            instancename = instance.name
-            if instancename is None:
-                if not instance.familyName or not instance.styleName:
-                    raise ValueError(
-                        f"Instance {instance.filename} must have a name, or familyName and styleName"
-                    )
-                instancename = instance.familyName + " " + instance.styleName
-            steps.append(
-                {
-                    "operation": "instantiateUfo",
-                    "instance_name": instancename,
-                    "glyphData": self.config.get("glyphData"),
-                }
-            )
+            instancename = self._instance_name(instance)
+            if self.config.get("use_fontc") and (
+                self.config.get("fontc_strict")
+                or _fontc_can_build_instance(source, instance, instancename)
+            ):
+                # fontc builds the instance itself; it doesn't interpolate, so
+                # unless strict, fontmake still cuts one between masters first
+                build_step["instance"] = instancename
+                if source.is_glyphs:
+                    for gd in self.config.get("glyphData", []):
+                        build_step["args"] += " --glyph-data " + shell_quote(gd)
+            else:
+                steps.append(
+                    {
+                        "operation": "instantiateUfo",
+                        "instance_name": instancename,
+                        "glyphData": self.config.get("glyphData"),
+                    }
+                )
         steps += (
-            [
-                {
-                    "operation": "buildTTF" if output == "ttf" else "buildOTF",
-                    "args": self.fontmake_args(source, variable=False),
-                }
-            ]
+            [build_step]
             + self.config.get("postCompile", [])
             + self._autohint_steps(target)
             + self._vtt_steps(target)
@@ -618,6 +634,16 @@ class GFBuilder(RecipeProviderBase):
             self.recipe[
                 self._static_filename(instance, extension=output, suffix="SC")
             ] = self._smallcap_steps(source, target)
+
+    @staticmethod
+    def _instance_name(instance: InstanceDescriptor) -> str:
+        if instance.name is not None:
+            return instance.name
+        if not instance.familyName or not instance.styleName:
+            raise ValueError(
+                f"Instance {instance.filename} must have a name, or familyName and styleName"
+            )
+        return instance.familyName + " " + instance.styleName
 
     def build_a_webfont(self, original_target, wf_filename):
         if not self.config["buildWebfont"]:
@@ -724,3 +750,95 @@ name->setName: ["Italic", 17, 3, 1, 0x409]
                 "args": "--include-source-fixes",
             },
         ]
+
+
+def _fontc_can_build_instance(
+    source: File, instance: InstanceDescriptor, instancename: str
+) -> bool:
+    """Whether fontc can build the instance with --export, i.e. it sits on a
+    master, as fontc doesn't interpolate static instances."""
+    if source.is_glyphs:
+        return _glyphs_instance_on_master(source.gsfont, instancename)
+    if source.is_designspace:
+        return _designspace_instance_on_source(source.designspace, instance)
+    return False
+
+
+def _glyphs_instance_on_master(gsfont, instancename: str) -> bool:
+    """Whether the active static instance glyphsLib names `instancename` sits
+    on a master along every axis where the masters, virtual ones included,
+    are not all at the same location."""
+    from glyphsLib.classes import InstanceType
+
+    gsinstance = next(
+        (
+            gsinstance
+            for gsinstance in gsfont.instances
+            if gsinstance.active
+            and gsinstance.type == InstanceType.SINGLE
+            and f"{gsinstance.familyName} {gsinstance.name}" == instancename
+        ),
+        None,
+    )
+    if gsinstance is None:
+        return False
+    masters = [master.axes for master in gsfont.masters]
+    virtual = [
+        {location["Axis"]: location["Location"] for location in parameter.value}
+        for parameter in gsfont.customParameters
+        if parameter.name == "Virtual Master"
+    ]
+    varies = [
+        any(master[i] != masters[0][i] for master in masters)
+        or any(axis.name in v and v[axis.name] != masters[0][i] for v in virtual)
+        for i, axis in enumerate(gsfont.axes)
+    ]
+    return any(
+        all(
+            master[i] == gsinstance.axes[i]
+            for i, varying in enumerate(varies)
+            if varying
+        )
+        for master in masters
+    )
+
+
+def _designspace_instance_on_source(designspace, instance) -> bool:
+    """Whether the instance sits on a source with all the glyphs of the
+    default one (fontc doesn't interpolate the missing ones), or the
+    designspace has a single source, which is the same everywhere.
+
+    Locations are compared at the 16.16 precision fontc uses."""
+    from fontTools.misc.fixedTools import floatToFixed
+
+    if len(designspace.sources) == 1:
+        return True
+
+    def fixed(location):
+        return {name: floatToFixed(value, 16) for name, value in location.items()}
+
+    def source_at(location):
+        return next(
+            (
+                source
+                for source in designspace.sources
+                if source.layerName is None
+                and fixed(source.getFullDesignLocation(designspace)) == location
+            ),
+            None,
+        )
+
+    source = source_at(fixed(instance.getFullDesignLocation(designspace)))
+    if source is None:
+        return False
+    default = source_at(fixed(designspace.newDefaultLocation()))
+    if default is None or default is source:
+        # without a default source fontc fails, like fontmake -i
+        return True
+    return _ufo_glyphs(default) <= _ufo_glyphs(source)
+
+
+def _ufo_glyphs(source) -> set:
+    from fontTools.ufoLib import UFOReader
+
+    return set(UFOReader(source.path).getGlyphSet(layerName=source.layerName).keys())
