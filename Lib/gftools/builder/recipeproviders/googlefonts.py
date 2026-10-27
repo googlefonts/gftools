@@ -768,6 +768,7 @@ def _glyphs_instance_on_master(gsfont, instancename: str) -> bool:
     """Whether the active static instance glyphsLib names `instancename` sits
     on a master along every axis where the masters, virtual ones included,
     are not all at the same location."""
+    from glyphsLib.builder.axes import get_axis_definitions
     from glyphsLib.classes import InstanceType
 
     gsinstance = next(
@@ -782,7 +783,13 @@ def _glyphs_instance_on_master(gsfont, instancename: str) -> bool:
     )
     if gsinstance is None:
         return False
-    masters = [master.axes for master in gsfont.masters]
+    # locations as glyphsLib puts them in the designspace: a .glyphs file can
+    # leave out a master's or instance's value for an axis
+    axes = get_axis_definitions(gsfont)
+    masters = [
+        [axis.get_design_loc(master) for axis in axes] for master in gsfont.masters
+    ]
+    instance = [axis.get_design_loc(gsinstance) for axis in axes]
     virtual = [
         {location["Axis"]: location["Location"] for location in parameter.value}
         for parameter in gsfont.customParameters
@@ -791,14 +798,10 @@ def _glyphs_instance_on_master(gsfont, instancename: str) -> bool:
     varies = [
         any(master[i] != masters[0][i] for master in masters)
         or any(axis.name in v and v[axis.name] != masters[0][i] for v in virtual)
-        for i, axis in enumerate(gsfont.axes)
+        for i, axis in enumerate(axes)
     ]
     return any(
-        all(
-            master[i] == gsinstance.axes[i]
-            for i, varying in enumerate(varies)
-            if varying
-        )
+        all(master[i] == instance[i] for i, varying in enumerate(varies) if varying)
         for master in masters
     )
 
