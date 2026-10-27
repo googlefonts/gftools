@@ -505,3 +505,39 @@ def test_single_instance(tmp_path, monkeypatch, fontc):
             fontc=fontc,
             single_instance="Test Family Bold",
         )
+
+
+@pytest.mark.parametrize(
+    "instance, built",
+    [
+        # the master has no Serif value, which is 0, and the Virtual Master's
+        # Serif makes that axis vary
+        ("interpolationCustom = 100;", "instantiateUfo"),
+        ("interpolationCustom = 0;", "--export My Font Regular"),
+        # the instance can leave it out too
+        ("", "--export My Font Regular"),
+    ],
+)
+def test_fontc_glyphs_master_with_fewer_axis_values(
+    tmp_path, monkeypatch, instance, built
+):
+    # A .glyphs file can leave out axis values, as DM Serif Display and Text
+    # (googlefonts/dm-fonts) do
+    text = (
+        "{\n"
+        "customParameters = (\n"
+        "{ name = Axes; value = ({ Name = Weight; Tag = wght; },"
+        " { Name = Contrast; Tag = CONT; }, { Name = Serif; Tag = SERF; }); },\n"
+        '{ name = "Virtual Master"; value = ({ Axis = Weight; Location = 150; },'
+        " { Axis = Contrast; Location = 100; }, { Axis = Serif; Location = 100; }); }\n"
+        ");\n"
+        'familyName = "My Font";\n'
+        "fontMaster = ({ id = m01; weightValue = 723; widthValue = 200; });\n"
+        "glyphs = ();\n"
+        "instances = ({ name = Regular; interpolationWeight = 723;"
+        f" interpolationWidth = 200; {instance} }});\n"
+        "unitsPerEm = 1000;\n"
+        "}\n"
+    )
+    recipe = _static_recipe(tmp_path, monkeypatch, "MyFont.glyphs", text)
+    assert _how_instances_are_built(recipe) == {"MyFont-Regular.ttf": built}
