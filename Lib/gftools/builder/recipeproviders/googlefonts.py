@@ -162,7 +162,10 @@ class GFBuilder(RecipeProviderBase):
     def _vf_filename(
         self, source, suffix="", extension="ttf", italic_ds=None, roman=False
     ):
-        """Determine the file name for a variable font."""
+        """Determine the file name for a variable font.
+
+        Hidden axes are left out of the axis tag list in the file name.
+        """
         sourcebase = os.path.splitext(source.basename)[0]
         if source.is_glyphs_file or source.is_glyphspackage:
             if source.is_glyphspackage:
@@ -171,7 +174,9 @@ class GFBuilder(RecipeProviderBase):
                 info = source.glyphs_plist
             # Optimisation: avoid parsing the full GSFont here
             if source.glyphs_format >= 3:
-                tags = [ax["tag"] for ax in info.get("axes", [])]
+                tags = [
+                    ax["tag"] for ax in info.get("axes", []) if not ax.get("hidden")
+                ]
             else:
                 # Without an "Axes" parameter, glyphsLib defaults to Weight and Width
                 axes = next(
@@ -182,12 +187,12 @@ class GFBuilder(RecipeProviderBase):
                     ),
                     [{"Tag": "wght"}, {"Tag": "wdth"}],
                 )
-                tags = [axis["Tag"] for axis in axes]
+                tags = [axis["Tag"] for axis in axes if not axis.get("Hidden")]
         elif source.is_designspace:
             tags = [
                 ax.tag
                 for ax in source.designspace.axes
-                if not isinstance(ax, DiscreteAxisDescriptor)
+                if not isinstance(ax, DiscreteAxisDescriptor) and not ax.hidden
             ]
         else:
             raise ValueError("Unknown source type")
@@ -198,7 +203,8 @@ class GFBuilder(RecipeProviderBase):
         if italic_ds:
             if not roman:
                 sourcebase += "-Italic"
-            tags.remove(italic_ds[0])
+            if italic_ds[0] in tags:
+                tags.remove(italic_ds[0])
         axis_tags = ",".join(sorted(tags))
         directory = self.config["vfDir"]
         if extension == "woff2":
