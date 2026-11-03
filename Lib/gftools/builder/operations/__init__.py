@@ -8,6 +8,7 @@ import inspect
 import platform
 import sys
 from os.path import dirname
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Dict
 
@@ -155,6 +156,11 @@ class FontmakeOperationBase(OperationBase):
             vars["fontmake_type"] = "-m"
         elif self.first_source.is_ufo:
             vars["fontmake_type"] = "-u"
+        else:
+            op_name = Path(inspect.getfile(self.__class__)).stem
+            raise ValueError(
+                f"{op_name}: unable to determine font source format of {self.first_source}, check its extension"
+            )
         if "--verbose" not in vars["fontmake_args"]:
             vars["fontmake_args"] += " --verbose WARNING "
 
