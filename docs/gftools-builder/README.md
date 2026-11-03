@@ -380,7 +380,7 @@ build process by leaving a `graph.png` file in the `sources` directory:
 - *fix*: Runs `gftools-fix` on a binary font.
 - *compress*: Creates a WOFF2 web font.
 - *rename*: Renames a font's family name to the provided `name` argument.
-- *exec*: An escape hatch for arbitrary processing - executes the executable named in the `exe` argument with the arguments provided in `args`.
+- *exec*: An escape hatch for arbitrary processing - executes the executable named in the `exe` argument with the arguments provided in `args`. Within `args`, use `$in` to read from the previous step and write to `$out`. If your output file needs a specific name, set `out` to it (e.g. for passing to `buildVariable`).
 - *copy*: Copies a file. Used internally when generating multiple variants from the same intermediate file.
 - *featureFreeze*: Runs `pyftfeaturefreeze` with the arguments provided in `args`.
 - *subspace*: Runs `fonttools varLib.instancer` to subspace a variable font according to the values in `axes`. `args` are added to the command line.
