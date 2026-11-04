@@ -31,7 +31,7 @@ class FontcOperationBase(OperationBase):
         # is split on whitespace, because it is a single argument.
         instance = vars.pop("instance", None)
         if instance is not None:
-            vars["instance_args"] = "--export " + escape(shell_quote(instance))
+            vars["instance_args"] = "--instance " + escape(shell_quote(instance))
 
         return vars
 

@@ -761,7 +761,7 @@ name->setName: ["Italic", 17, 3, 1, 0x409]
 def _fontc_can_build_instance(
     source: File, instance: InstanceDescriptor, instancename: str
 ) -> bool:
-    """Whether fontc can build the instance with --export, i.e. it sits on a
+    """Whether fontc can build the instance with --instance, i.e. it sits on a
     master, as fontc doesn't interpolate static instances."""
     if source.is_glyphs:
         return _glyphs_instance_on_master(source.gsfont, instancename)
