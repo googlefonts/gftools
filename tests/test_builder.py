@@ -442,18 +442,18 @@ def _static_recipe(
 
 def _how_instances_are_built(recipe):
     """For each static target, how its instance is taken from the source:
-    "--export <name>" when fontc builds it, or "instantiateUfo" when fontmake
+    "--instance <name>" when fontc builds it, or "instantiateUfo" when fontmake
     cuts it first."""
     built = {}
     for target, steps in recipe.items():
         build = next(s for s in steps if s["operation"] == "buildTTF")
         cut = any(s["operation"] == "instantiateUfo" for s in steps)
         assert cut != ("instance" in build), steps
-        built[target] = "instantiateUfo" if cut else f"--export {build['instance']}"
+        built[target] = "instantiateUfo" if cut else f"--instance {build['instance']}"
     return built
 
 
-def test_fontc_builds_static_instances_with_export(tmp_path, monkeypatch):
+def test_fontc_builds_static_instances_with_instance_flag(tmp_path, monkeypatch):
     text = open(
         os.path.join(TEST_DIR, "basic_family_glyphs_0", "TestFamily.glyphs")
     ).read()
@@ -466,9 +466,9 @@ def test_fontc_builds_static_instances_with_export(tmp_path, monkeypatch):
     )
     # fontc doesn't interpolate, so fontmake cuts Regular, between the masters
     assert _how_instances_are_built(recipe) == {
-        "TestFamily-Thin.ttf": "--export Test Family Thin",
+        "TestFamily-Thin.ttf": "--instance Test Family Thin",
         "TestFamily-Regular.ttf": "instantiateUfo",
-        "TestFamily-Black.ttf": "--export Test Family Black",
+        "TestFamily-Black.ttf": "--instance Test Family Black",
     }
     assert "--glyph-data GlyphData.xml" in recipe["TestFamily-Thin.ttf"][0]["args"]
     # unless strict, so that fontc fails on it
@@ -476,7 +476,7 @@ def test_fontc_builds_static_instances_with_export(tmp_path, monkeypatch):
         tmp_path, monkeypatch, "TestFamily.glyphs", text, strict=True
     )
     assert _how_instances_are_built(recipe)["TestFamily-Regular.ttf"] == (
-        "--export Test Family Regular"
+        "--instance Test Family Regular"
     )
     # without fontc, fontmake cuts the instances as before
     recipe = _static_recipe(
@@ -488,7 +488,7 @@ def test_fontc_builds_static_instances_with_export(tmp_path, monkeypatch):
 @pytest.mark.parametrize(
     "black_glyphs, black",
     [
-        (["a", "b"], "--export My Font Black"),
+        (["a", "b"], "--instance My Font Black"),
         # fontc doesn't interpolate the glyphs the instance's source lacks
         (["a"], "instantiateUfo"),
     ],
@@ -523,13 +523,13 @@ def test_fontc_builds_designspace_instances_on_a_source(
 """
     recipe = _static_recipe(tmp_path, monkeypatch, "MyFont.designspace", text)
     assert _how_instances_are_built(recipe) == {
-        "MyFont-Thin.ttf": "--export My Font Thin",
+        "MyFont-Thin.ttf": "--instance My Font Thin",
         "MyFont-Regular.ttf": "instantiateUfo",
         "MyFont-Black.ttf": black,
     }
 
 
-def test_fontc_export_name_is_one_quoted_argument():
+def test_fontc_instance_name_is_one_quoted_argument():
     from gftools.builder.operations.fontc.fontcBuildTTF import FontcBuildTTF
     from gftools.utils import shell_quote
 
@@ -541,7 +541,7 @@ def test_fontc_export_name_is_one_quoted_argument():
     assert variables["args"] == "--no-production-names"
     # quoted as one argument for the platform's shell, with the $ doubled for
     # ninja, which undoes it before the shell sees the command
-    assert variables["instance_args"] == "--export " + shell_quote("My Font's $$Bold")
+    assert variables["instance_args"] == "--instance " + shell_quote("My Font's $$Bold")
 
 
 @pytest.mark.parametrize("fontc", [True, False])
@@ -562,7 +562,7 @@ def test_single_instance(tmp_path, monkeypatch, fontc):
     )
     assert _how_instances_are_built(recipe) == {
         "TestFamily-Black.ttf": (
-            "--export Test Family Black" if fontc else "instantiateUfo"
+            "--instance Test Family Black" if fontc else "instantiateUfo"
         )
     }
     with pytest.raises(ValueError, match='No instance named "Test Family Bold"'):
@@ -582,9 +582,9 @@ def test_single_instance(tmp_path, monkeypatch, fontc):
         # the master has no Serif value, which is 0, and the Virtual Master's
         # Serif makes that axis vary
         ("interpolationCustom = 100;", "instantiateUfo"),
-        ("interpolationCustom = 0;", "--export My Font Regular"),
+        ("interpolationCustom = 0;", "--instance My Font Regular"),
         # the instance can leave it out too
-        ("", "--export My Font Regular"),
+        ("", "--instance My Font Regular"),
     ],
 )
 def test_fontc_glyphs_master_with_fewer_axis_values(
