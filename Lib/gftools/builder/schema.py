@@ -123,6 +123,7 @@ GOOGLEFONTS_SCHEMA = Map(
         Optional("recipeProvider"): Str(),
         "sources": Seq(Str()),
         Optional("vttSources"): MapPattern(Str(), Str()),
+        Optional("hintingFiles"): MapPattern(Str(), Str()),
         Optional("fvarInstanceAxisDflts"): MapPattern(Str(), Float()),
         Optional("logLevel"): Str(),
         Optional("spacingAxis"): MapPattern(Str(), Int()),

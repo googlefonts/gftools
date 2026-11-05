@@ -631,6 +631,7 @@ class GFBuilder(RecipeProviderBase):
             [build_step]
             + self.config.get("postCompile", [])
             + self._autohint_steps(target)
+            + self._hinting_steps(target)
             + self._vtt_steps(target)
             + self._fix_step()
         )
@@ -660,7 +661,15 @@ class GFBuilder(RecipeProviderBase):
             {"operation": "compress"}
         ]
 
+    def _hinting_steps(self, target):
+        hinting = self.config.get("hintingFiles", {}).get(os.path.basename(target))
+        if hinting:
+            return [{"operation": "applyHinting", "hintingfile": hinting}]
+        return []
+
     def _autohint_steps(self, target):
+        if os.path.basename(target) in self.config.get("hintingFiles", {}):
+            return []
         if bool(self.config.get("autohintTTF")) and target.endswith("ttf"):
             args = "--fail-ok "
             if self.config.get("ttfaUseScript"):
