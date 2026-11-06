@@ -10,6 +10,8 @@ compiled font, which must have the same points:
 - ``gasp``: ``{ppem: behavior}``
 - ``maxp``: the TrueType limits (maxZones ... maxSizeOfInstructions)
 - ``head_flag_3``: whether ppem is rounded to an integer
+- ``head_flags_2_4``: head flags bits 2 (instructions may depend on point size)
+  and 4 (instructions may alter advance width), as the release sets them
 - ``hdmx``, ``LTSH``, ``VDMX``: device metrics, when the font has them
 - ``glyphs``: ``{glyph: {"assembly": program, "id": digest}}``; the id is
   the SHA-256 of the glyph's point text (see ``point_text``)
@@ -21,9 +23,13 @@ compiled font, which must have the same points:
   keep at four decimals
 - ``lsb_shifts``: ``{glyph: {"xmin": x, "lsb": lsb, "bbox": [xMin, yMin,
   xMax, yMax]}}``, a simple glyph whose left side bearing differs from its
-  recorded xMin (a converter may draw it shifted by the difference): its
+  recorded xMin (a converter may draw it shifted by the difference), or whose
+  recorded box differs from its points' (a stale box): its
   points are moved so that the leftmost is at ``x`` again, and its recorded box
   and side bearing restored, which a TrueType rasterizer places it by
+- ``boxes``: ``{composite: {"bbox": [xMin, yMin, xMax, yMax], "lsb": lsb}}``,
+  a composite whose recorded box differs from the one its components give (a
+  stale box, which a TrueType rasterizer places the glyph by): restored
 - ``offsets``: ``{composite: [[x, y], ...]}``, the component offsets of a
   composite that places a shifted glyph, or is shifted itself
 - ``glyph_order``: the font's glyph names in order; a name the compiled font
@@ -39,6 +45,7 @@ would address other points), and saves nothing in that case.
 
 import argparse
 import array
+import copy
 import hashlib
 import json
 import sys
@@ -135,6 +142,7 @@ def extract(font):
         data["gasp"] = {str(k): v for k, v in sorted(font["gasp"].gaspRange.items())}
     data["maxp"] = {k: getattr(font["maxp"], k) for k in MAXP}
     data["head_flag_3"] = bool(font["head"].flags & 8)
+    data["head_flags_2_4"] = font["head"].flags & 0x14
     if "hdmx" in font:
         data["hdmx"] = {str(p): dict(w) for p, w in sorted(font["hdmx"].hdmx.items())}
     if "LTSH" in font:
@@ -152,12 +160,24 @@ def extract(font):
         glyph = glyf[name]
         if not glyph.isComposite() and glyph.numberOfContours > 0:
             shift = font["hmtx"][name][1] - glyph.xMin
-            if shift:
+            xs = [x for x, _ in glyph.coordinates]
+            ys = [y for _, y in glyph.coordinates]
+            actual = [min(xs), min(ys), max(xs), max(ys)]
+            if shift or actual != [glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax]:
                 shifts[name] = {
                     "xmin": min(x for x, _ in glyph.coordinates),
                     "lsb": font["hmtx"][name][1],
                     "bbox": [glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax],
                 }
+    boxes = {}
+    for name in font.getGlyphOrder():
+        glyph = glyf[name]
+        if glyph.isComposite():
+            recorded = [glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax]
+            fresh = copy.deepcopy(glyph)
+            fresh.recalcBounds(glyf)
+            if recorded != [fresh.xMin, fresh.yMin, fresh.xMax, fresh.yMax]:
+                boxes[name] = {"bbox": recorded, "lsb": font["hmtx"][name][1]}
     for name in font.getGlyphOrder():
         glyph = glyf[name]
         if glyph.isComposite() and (
@@ -204,6 +224,7 @@ def extract(font):
         midpoints=midpoints,
         lsb_shifts=shifts,
         offsets=offsets,
+        boxes=boxes,
     )
     return data
 
@@ -328,6 +349,7 @@ GLYPH_KEYED = (
     "midpoints",
     "lsb_shifts",
     "offsets",
+    "boxes",
     "LTSH",
 )
 
@@ -387,6 +409,13 @@ def apply(font, data):
         for component, off in zip(glyph.components, offs):
             if off is not None and not hasattr(component, "firstPt"):
                 component.x, component.y = off
+    for name, entry in data.get("boxes", {}).items():
+        glyph = glyf[name] if name in glyf else None
+        if glyph is None or not glyph.isComposite():
+            bad.append(name)
+            continue
+        glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax = entry["bbox"]
+        font["hmtx"][name] = (font["hmtx"][name][0], entry["lsb"])
     for name, starts in data.get("contour_starts", {}).items():
         if (
             name not in glyf
@@ -430,6 +459,23 @@ def apply(font, data):
             "%d glyph(s) do not have the points or components the hinting file was "
             "written for: %s" % (len(bad), " ".join(sorted(set(bad))[:20]))
         )
+    # every other glyph's box is its points', composites' from their components'
+    # points, as a compiler computes it; recorded (stale) boxes stay
+    kept = set(data.get("lsb_shifts", {})) | set(data.get("boxes", {}))
+    order = font.getGlyphOrder()
+    for name in order:
+        if name not in kept and not glyf[name].isComposite():
+            glyf[name].recalcBounds(glyf)
+    for name in order:
+        if name not in kept and glyf[name].isComposite():
+            glyf[name].recalcBounds(glyf)
+    # a composite's recalculation recalculates its components too: put back the
+    # recorded boxes
+    for key in ("lsb_shifts", "boxes"):
+        for name, entry in data.get(key, {}).items():
+            if name in glyf:
+                g = glyf[name]
+                g.xMin, g.yMin, g.xMax, g.yMax = entry["bbox"]
     for name in font.getGlyphOrder():
         glyph = glyf[name]
         if name in data["glyphs"]:
@@ -455,6 +501,8 @@ def apply(font, data):
     for key, value in data["maxp"].items():
         setattr(font["maxp"], key, value)
     font["head"].flags = (font["head"].flags & ~8) | (8 if data["head_flag_3"] else 0)
+    if "head_flags_2_4" in data:
+        font["head"].flags = (font["head"].flags & ~0x14) | data["head_flags_2_4"]
     for tag in ("hdmx", "LTSH", "VDMX"):
         if tag in font and tag not in data:
             del font[tag]
