@@ -66,15 +66,37 @@ jobs:
       name: pypi
       url: https://pypi.org/p/gftools
     permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      contents: read
+      id-token: write
     steps:
       - name: Download all the dists
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: python-package-distributions
           path: dist/
-      - name: Publish distribution 📦 to PyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
-          # repository-url: https://test.pypi.org/legacy/ # for testing purposes
-          verify-metadata: false # twine previously didn't verify metadata when uploading
+          workload_identity_provider: 'projects/305452601764/locations/global/workloadIdentityPools/builders/providers/github'
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+      - name: Stage distributions and trigger OSS Exit Gate release
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          python3 -m venv .exit-gate-venv
+          .exit-gate-venv/bin/python -m pip install --upgrade pip twine keyrings.google-artifactregistry-auth
+          .exit-gate-venv/bin/python -m twine upload \
+            --repository-url https://us-python.pkg.dev/oss-exit-gate-prod/gftools--pypi/ \
+            --non-interactive \
+            --skip-existing \
+            dist/*
+          cat <<EOF > manifest.json
+          {
+            "publish_all": true
+          }
+          EOF
+          gcloud storage cp manifest.json \
+            "gs://oss-exit-gate-prod-projects-bucket/gftools/pypi/manifests/manifest-${RUN_ID}-${RUN_ATTEMPT}.json"
