@@ -53,7 +53,7 @@ class GFBuilder:
             # typed nature makes it hard to work with. So we use it to
             # validate the input, but just treat it as a regular Python dict.
             try:
-                # False positive: strictyaml is type-safe and does not execute arbitrary code
+                # UnsafeYamlRemediationExemption: strictyaml is type-safe and does not execute arbitrary code
                 strictyaml.load(config, BASE_SCHEMA)  # noqa
             except Exception as e:
                 raise ValueError("Could not validate configuration") from e
