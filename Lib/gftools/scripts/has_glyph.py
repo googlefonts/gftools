@@ -39,6 +39,9 @@ def main(args=None):
     if len(args.glyph) != 1:
         parser.error("Please provide exactly one character as the glyph argument.")
 
+    if not os.path.isdir(args.directory):
+        parser.error(f"Directory does not exist: {args.directory}")
+
     scan_directory(args.directory, args.glyph)
 
 
