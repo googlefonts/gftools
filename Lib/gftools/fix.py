@@ -511,8 +511,8 @@ def fix_ascii_fontmetadata(font: TTFont) -> FixResult:
         title = normalize_unicode_marks(old)
         if title != old:
             name.string = title.encode(name.getEncoding())
-            results.append(f"Updated nameID={name.nameId} '{old}' to '{title}'")
-    return font, results
+            results.append(f"Updated nameID={name.nameID} '{old}' to '{title}'")
+    return bool(results), results
 
 
 def convert_cmap_subtables_to_v4(font):

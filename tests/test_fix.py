@@ -281,3 +281,37 @@ def test_ofl_license_strings(static_font):
     fix_license_strings(static_font)
     for id, expected in ((13, OFL_LICENSE_INFO), (14, OFL_LICENSE_URL)):
         assert expected == static_font["name"].getName(id, 3, 1, 0x409).toUnicode()
+
+
+COPYRIGHT_WITH_SIGN = "Copyright © 2011 The Lora Project Authors"
+COPYRIGHT_ASCII = "Copyright (c) 2011 The Lora Project Authors"
+
+
+def test_fix_ascii_fontmetadata(static_font, tmp_path):
+    static_font["name"].setName(COPYRIGHT_WITH_SIGN, 0, 3, 1, 0x409)
+    # Reload so the name records hold encoded bytes, as in a font read from disk
+    path = tmp_path / "Lora-Regular.ttf"
+    static_font.save(path)
+    font = TTFont(path)
+
+    changed, messages = fix_ascii_fontmetadata(font)
+    assert changed is True
+    assert font["name"].getName(0, 3, 1, 0x409).toUnicode() == COPYRIGHT_ASCII
+    assert any("nameID=0" in m for m in messages)
+
+
+def test_fix_ascii_fontmetadata_ascii_font_unchanged(static_font):
+    assert fix_ascii_fontmetadata(static_font) == (False, [])
+
+
+def test_fix_ascii_fontmetadata_script_saves_font(static_font, tmp_path):
+    from gftools.scripts.fix_ascii_fontmetadata import main
+
+    static_font["name"].setName(COPYRIGHT_WITH_SIGN, 0, 3, 1, 0x409)
+    path = tmp_path / "Lora-Regular.ttf"
+    static_font.save(path)
+
+    main([str(path)])
+
+    fixed = TTFont(f"{path}.fix")
+    assert fixed["name"].getName(0, 3, 1, 0x409).toUnicode() == COPYRIGHT_ASCII

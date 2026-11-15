@@ -17,8 +17,7 @@
 # See AUTHORS.txt for the list of Authors and LICENSE.txt for the License.
 #
 import argparse
-from fontTools import ttLib
-from gftools.fix import fix_ascii_fontmetadata
+from gftools.fix import fix_ascii_fontmetadata, FontFixer
 
 
 description = "Fixes TTF NAME table strings to be ascii only"
@@ -29,7 +28,7 @@ parser.add_argument("ttf_font", nargs="+", help="Font in OpenType (TTF/OTF) form
 def main(args=None):
     args = parser.parse_args(args)
     for path in args.ttf_font:
-        fix_ascii_fontmetadata(ttLib.TTFont(path))
+        FontFixer(path, fixes=[fix_ascii_fontmetadata], verbose=True).fix()
 
 
 if __name__ == "__main__":
