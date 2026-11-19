@@ -18,6 +18,8 @@
 
 import os
 import re
+import shutil
+import tempfile
 from glob import glob
 import unittest
 import subprocess
@@ -105,6 +107,18 @@ class TestGFToolsScripts(unittest.TestCase):
         from gftools.scripts.fix_cmap import main
 
         main([self.example_font])
+
+    def test_fix_cmap_format_4_subtables(self):
+        from fontTools.ttLib import TTFont
+        from gftools.scripts.fix_cmap import main
+
+        with tempfile.TemporaryDirectory() as tmp:
+            font_path = os.path.join(tmp, "Cabin-Regular.ttf")
+            shutil.copy(self.example_font, font_path)
+            # The test font has a format 6 Mac subtable, so it gets converted.
+            main(["--format-4-subtables", font_path])
+            fixed = TTFont(font_path + ".fix")
+            self.assertEqual({t.format for t in fixed["cmap"].tables}, {4})
 
     def test_fix_familymetadata(self):
         from gftools.scripts.fix_familymetadata import main
