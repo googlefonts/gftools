@@ -33,7 +33,7 @@ def convert_cmap_subtables_to_v4_with_report(font):
                 "Converted format {} cmap subtable"
                 " with Platform ID = {} and Encoding ID = {}"
                 " to format 4."
-            ).format(c)
+            ).format(*c)
         )
     return converted
 
