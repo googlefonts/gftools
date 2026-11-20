@@ -664,7 +664,7 @@ class GFBuilder(RecipeProviderBase):
     def _hinting_steps(self, target):
         hinting = self.config.get("hintingFiles", {}).get(os.path.basename(target))
         if hinting:
-            return [{"operation": "applyHinting", "hintingfile": hinting}]
+            return [{"operation": "transferHints", "hints": hinting}]
         return []
 
     def _autohint_steps(self, target):
