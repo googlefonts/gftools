@@ -18,6 +18,8 @@ from fontTools.ttLib.tables._f_v_a_r import Axis
 from fontTools.ttLib.tables.TupleVariation import TupleVariation
 from fontTools.varLib.hvar import add_HVAR
 
+ELIDABLE_AXIS_VALUE_NAME = 0x0002
+
 
 def add_spacing_axis(
     font: TTFont,
@@ -29,28 +31,35 @@ def add_spacing_axis(
 ) -> None:
     assert "fvar" in font, "Font must have an 'fvar' table"
     gvar = font["gvar"]
+    glyf = font["glyf"]
     for glyph_name in font.getGlyphOrder():
-        glyph = font["glyf"][glyph_name]
-        if not hasattr(glyph, "coordinates"):
-            continue
-        glyph_variations = gvar.variations.get(glyph_name)
-        if not glyph_variations:
-            continue
-        min_coords: list[tuple[int, int] | None] = [None] * len(
-            glyph_variations[0].coordinates
-        )
+        glyph = glyf[glyph_name]
+        # Every glyph gets spacing, including empty glyphs such as space and
+        # composites such as Aacute. Neither has outline coordinates, and an
+        # empty glyph may have no gvar tuples at all, so size the tuple from
+        # the glyph itself: one entry per point or component, plus the four
+        # phantom points.
+        if glyph.isComposite():
+            num_points = len(glyph.components)
+        elif glyph.numberOfContours > 0:
+            num_points = len(glyph.coordinates)
+        else:
+            num_points = 0
+        num_points += 4
+        glyph_variations = gvar.variations.setdefault(glyph_name, [])
+
+        # The last four entries are the phantom points. Moving the left one
+        # (-4) outward and the right one (-3) outward adds the amount to each
+        # side bearing.
+        min_coords: list[tuple[int, int] | None] = [None] * num_points
         min_coords[-3] = (min_amount, 0)
         min_coords[-4] = (-min_amount, 0)
-        min_tp = TupleVariation({"SPAC": (-1.0, -1.0, 0.0)}, min_coords)
-        gvar.variations[glyph_name].append(min_tp)
+        glyph_variations.append(TupleVariation({"SPAC": (-1.0, -1.0, 0.0)}, min_coords))
 
-        max_coords: list[tuple[int, int] | None] = [None] * len(
-            glyph_variations[0].coordinates
-        )
+        max_coords: list[tuple[int, int] | None] = [None] * num_points
         max_coords[-3] = (max_amount, 0)
         max_coords[-4] = (-max_amount, 0)
-        max_tp = TupleVariation({"SPAC": (0.0, 1.0, 1.0)}, max_coords)
-        gvar.variations[glyph_name].append(max_tp)
+        glyph_variations.append(TupleVariation({"SPAC": (0.0, 1.0, 1.0)}, max_coords))
 
     name_table = font["name"]
 
@@ -67,11 +76,24 @@ def add_spacing_axis(
         inst.coordinates["SPAC"] = 0.0
     add_HVAR(font)
 
+    if "STAT" in font:
+        add_spacing_axis_to_STAT(font, axis.axisNameID)
+    else:
+        print("Font has no STAT table, so SPAC was not added to it")
+
+    if "avar" in font:
+        # avar must list every fvar axis. CoreText rejects the whole variation
+        # when the counts differ, so give SPAC an identity segment map.
+        avar = font["avar"]
+        avar.segments["SPAC"] = {-1.0: -1.0, 0.0: 0.0, 1.0: 1.0}
+
     print("Update various VarStores")
     stores = []
     for table in ("MVAR", "HVAR", "BASE", "VVAR", "COLR", "GDEF"):
         if table in font and hasattr(font[table].table, "VarStore"):
             stores.append(font[table].table.VarStore)
+    if "avar" in font and getattr(font["avar"].table, "VarStore", None):
+        stores.append(font["avar"].table.VarStore)
     spacRegion = otTables.VarRegionAxis()
     spacRegion.StartCoord = -1
     spacRegion.PeakCoord = 0
@@ -81,6 +103,32 @@ def add_spacing_axis(
         for region in store.VarRegionList.Region:
             while len(region.VarRegionAxis) < len(fvar.axes):
                 region.VarRegionAxis.append(spacRegion)
+
+
+def add_spacing_axis_to_STAT(font: TTFont, axis_name_id: int) -> None:
+    """Add a SPAC axis record to STAT with one axis value, "Default", at 0.0."""
+    stat = font["STAT"].table
+    name_table = font["name"]
+
+    axis_record = otTables.AxisRecord()
+    axis_record.AxisTag = "SPAC"
+    axis_record.AxisNameID = axis_name_id
+    axis_record.AxisOrdering = len(stat.DesignAxisRecord.Axis)
+    stat.DesignAxisRecord.Axis.append(axis_record)
+    stat.DesignAxisCount = len(stat.DesignAxisRecord.Axis)
+
+    axis_value = otTables.AxisValue()
+    axis_value.Format = 1
+    axis_value.AxisIndex = axis_record.AxisOrdering
+    # The default value is elidable, so it does not appear in style names.
+    axis_value.Flags = ELIDABLE_AXIS_VALUE_NAME
+    axis_value.ValueNameID = name_table.addMultilingualName({"en": "Default"})
+    axis_value.Value = 0.0
+    if stat.AxisValueArray is None:
+        stat.AxisValueArray = otTables.AxisValueArray()
+        stat.AxisValueArray.AxisValue = []
+    stat.AxisValueArray.AxisValue.append(axis_value)
+    stat.AxisValueCount = len(stat.AxisValueArray.AxisValue)
 
 
 def main(args=None):
