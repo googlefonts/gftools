@@ -1,31 +1,31 @@
-# Skip check for now (2026-11-27) since sandbox server isn't accessible to non-Google employees 
-#import pytest
-#from gftools.push.servers import GFServers, GFServer
-#from gftools.push.items import Family, Designer, FamilyMeta
+# Skip check for now (2026-11-27) since sandbox server isn't accessible to non-Google employees
+# import pytest
+# from gftools.push.servers import GFServers, GFServer
+# from gftools.push.items import Family, Designer, FamilyMeta
 #
 #
-#DATA = {
+# DATA = {
 #    "sandbox": {"families": {"Abel": {"name": "Abel", "version": "0.999"}}},
 #    "production": {"families": {"Abel": {"name": "Abel", "version": "0.999"}}},
 #    "last_checked": "2023-01-01",
-#}
+# }
 #
 #
-#@pytest.fixture
-#def servers():
+# @pytest.fixture
+# def servers():
 #    return GFServers.from_dict(DATA)
 #
 #
-#def test_servers_open_and_save(servers):
+# def test_servers_open_and_save(servers):
 #    assert servers != None
 #    assert servers.to_json() != None
 #
 #
-#def test_iter(servers):
+# def test_iter(servers):
 #    assert ["sandbox", "production"] == [s.name for s in servers]
 #
 #
-#@pytest.mark.parametrize(
+# @pytest.mark.parametrize(
 #    "item, res",
 #    [
 #        (
@@ -38,18 +38,18 @@
 #            },
 #        )
 #    ],
-#)
-#def test_compare_items(servers, item, res):
+# )
+# def test_compare_items(servers, item, res):
 #    # TODO may be worth using a dataclass instead of dict
 #    assert servers.compare_item(item) == res
 #
 #
-#@pytest.fixture
-#def server():
+# @pytest.fixture
+# def server():
 #    return GFServer(name="Prod")
 #
 #
-#@pytest.mark.parametrize(
+# @pytest.mark.parametrize(
 #    "method, family_name, res",
 #    [
 #        # Test on a family which isn't updated regularly. We should
@@ -71,8 +71,8 @@
 #            ),
 #        ),
 #    ],
-#)
-#def test_update_server(server, method, family_name, res):
+# )
+# def test_update_server(server, method, family_name, res):
 #    assert server.find_item(res) == None
 #    funcc = getattr(server, method)
 #    funcc(family_name)
